@@ -21,3 +21,9 @@ jobs:
 
       - name: Build
         run: cmake --build --preset debug-msvc
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-debug-msvc
+          path: build_debug-msvc/
