@@ -7,6 +7,11 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE project_deps)
 
+# ______ MSVC 전용 매크로 ______
+if(MSVC)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE WIN32 _WINDOWS)
+endif()
+
 # ______ 리소스/셰이더 복사 ______
 if(EXISTS ${CMAKE_SOURCE_DIR}/resources)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
