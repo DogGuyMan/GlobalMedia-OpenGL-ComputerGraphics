@@ -36,22 +36,22 @@ else()
         IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libsb7_d.a)
 endif()
 set_target_properties(sb7 PROPERTIES
-    PUBLIC_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include")
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include")
 
-# ====== project_deps PUBLIC 타겟 ======
-add_library(project_deps PUBLIC)
-target_link_libraries(project_deps PUBLIC sb7 glfw3 ${OPENGL_LIBRARIES})
+# ====== project_deps INTERFACE 타겟 ======
+add_library(project_deps INTERFACE)
+target_link_libraries(project_deps INTERFACE sb7 glfw3 ${OPENGL_LIBRARIES})
 
 # ====== 플랫폼별 의존성 ======
 if(APPLE)
-    target_link_libraries(project_deps PUBLIC
+    target_link_libraries(project_deps INTERFACE
         "-framework Cocoa"
         "-framework IOKit"
         "-framework CoreVideo"
         "-framework CoreFoundation")
-    target_compile_definitions(project_deps PUBLIC
+    target_compile_definitions(project_deps INTERFACE
         GL_SILENCE_DEPRECATION
         __glext_h_)
 elseif(WIN32)
-    target_link_libraries(project_deps PUBLIC opengl32 gdi32 winmm)
+    target_link_libraries(project_deps INTERFACE opengl32 gdi32 winmm)
 endif()
