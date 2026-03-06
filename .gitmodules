@@ -1,0 +1,3 @@
+[submodule "extern/sb7code"]
+	path = extern/sb7code
+	url = https://github.com/openglsuperbible/sb7code.git
