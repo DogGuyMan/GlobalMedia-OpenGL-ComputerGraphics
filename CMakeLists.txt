@@ -11,6 +11,10 @@ include(cmake/CXXStandard.cmake)
 # lib/, include/ 는 build_extern.sh (또는 .bat) 로 사전 빌드
 include(cmake/Dependency.cmake)
 
-# ______ Source modules (내부 라이브러리) ______
-add_subdirectory(src)
-add_subdirectory(app)
+# ______ 공용 라이브러리 (모든 챕터에서 사용) ______
+if(EXISTS ${CMAKE_SOURCE_DIR}/src/CMakeLists.txt)
+    add_subdirectory(src)
+endif()
+
+# ______ 챕터별 실행 파일 ______
+add_subdirectory(apps)
