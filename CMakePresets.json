@@ -4,27 +4,27 @@
         {
             "name": "base",
             "hidden": true,
-            "generator": "Ninja",
             "binaryDir": "${sourceDir}/build_${presetName}",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
         {
-            "name": "base-macos",
+            "name": "base-ninja",
             "hidden": true,
             "inherits": "base",
+            "generator": "Ninja",
             "condition": {
-                "type": "equals",
+                "type": "notEquals",
                 "lhs": "${hostSystemName}",
-                "rhs": "Darwin"
+                "rhs": "Windows"
             }
         },
         {
             "name": "base-msvc",
             "hidden": true,
             "generator": "Visual Studio 17 2022",
-            "binaryDir": "${sourceDir}/build_${presetName}",
+            "binaryDir": "${sourceDir}/build_msvc",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
@@ -37,30 +37,31 @@
             }
         },
         {
-            "name": "debug",
-            "inherits": "base-macos",
-            "displayName": "Debug (macOS)",
+            "name": "ninja",
+            "inherits": "base-ninja",
+            "displayName": "Ninja Debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
             }
         },
         {
-            "name": "release",
-            "inherits": "base-macos",
-            "displayName": "Release (macOS)",
+            "name": "ninja-release",
+            "inherits": "base-ninja",
+            "displayName": "Ninja Release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "debug-msvc",
+            "name": "msvc",
             "inherits": "base-msvc",
-            "displayName": "Debug (MSVC)"
+            "displayName": "MSVC (Visual Studio 2022)"
         }
     ],
     "buildPresets": [
-        { "name": "debug", "configurePreset": "debug" },
-        { "name": "release", "configurePreset": "release" },
-        { "name": "debug-msvc", "configurePreset": "debug-msvc", "configuration": "Debug" }
+        { "name": "ninja",         "configurePreset": "ninja" },
+        { "name": "ninja-release", "configurePreset": "ninja-release" },
+        { "name": "msvc",         "configurePreset": "msvc", "configuration": "Debug" },
+        { "name": "msvc-release", "configurePreset": "msvc", "configuration": "Release" }
     ]
 }
