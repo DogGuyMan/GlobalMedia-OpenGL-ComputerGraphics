@@ -17,13 +17,13 @@ jobs:
           submodules: true
 
       - name: Configure
-        run: cmake --preset debug-msvc
+        run: cmake --preset msvc
 
       - name: Build
-        run: cmake --build --preset debug-msvc
+        run: cmake --build --preset msvc
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-debug-msvc
-          path: build_debug-msvc/
+          name: build-msvc
+          path: build_msvc/
