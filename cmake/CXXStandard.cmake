@@ -17,6 +17,6 @@ if(NOT MSVC)
         $<$<CONFIG:Debug>:-Wno-unused-function>
         $<$<CONFIG:Debug>:-Wno-unused-parameter>
         # sb7 외부 헤더의 #warning (gl.h + gl3.h 동시 포함)을 에러로 처리하지 않음
-        $<$<CONFIG:Debug>:-Wno-error=#warnings>
+        "$<$<CONFIG:Debug>:-Wno-error=#warnings>"
     )
 endif()
