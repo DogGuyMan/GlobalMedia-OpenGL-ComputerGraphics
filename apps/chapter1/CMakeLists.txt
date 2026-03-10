@@ -6,24 +6,20 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/CMakeLists.txt)
     add_subdirectory(src)
 endif()
 
-# ______ 챕터 라이브러리 (entry.h / entry.cpp) ______
-add_library(${CHAPTER_NAME}_lib STATIC entry.cpp)
-target_link_libraries(${CHAPTER_NAME}_lib PUBLIC project_deps)
-target_include_directories(${CHAPTER_NAME}_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# ______ 실행 파일 (main.cpp + entry.cpp) ______
+if(WIN32)
+    add_executable(${CHAPTER_NAME} WIN32 main.cpp entry.cpp)
+else()
+    add_executable(${CHAPTER_NAME} main.cpp entry.cpp)
+endif()
+
+target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps)
+target_include_directories(${CHAPTER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # src/ 내부 모듈이 있으면 링크
 if(TARGET ${CHAPTER_NAME}_src)
-    target_link_libraries(${CHAPTER_NAME}_lib PRIVATE ${CHAPTER_NAME}_src)
+    target_link_libraries(${CHAPTER_NAME} PRIVATE ${CHAPTER_NAME}_src)
 endif()
-
-# ______ 실행 파일 (main.cpp) ______
-if(WIN32)
-    add_executable(${CHAPTER_NAME} WIN32 main.cpp)
-else()
-    add_executable(${CHAPTER_NAME} main.cpp)
-endif()
-
-target_link_libraries(${CHAPTER_NAME} PRIVATE ${CHAPTER_NAME}_lib)
 
 # ______ MSVC 전용 매크로 ______
 if(MSVC)
