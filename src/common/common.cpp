@@ -1,4 +1,4 @@
-#include <SJH/common.h>
+#include <common/common.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>

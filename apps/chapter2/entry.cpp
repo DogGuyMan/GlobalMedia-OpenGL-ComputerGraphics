@@ -2,7 +2,7 @@
 #include <GL/gl3w.h>
 #include <GL/glcorearb.h>
 #include <vmath.h>
-#include <SJH/common.h>
+#include <common/common.h>
 
 // sb7::application 상속받음
 // class에서 상속 시 접근 지정자를 생략하면 기본값은 private 상속입니다.
