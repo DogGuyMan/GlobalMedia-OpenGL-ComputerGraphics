@@ -13,7 +13,7 @@ else()
     add_executable(${CHAPTER_NAME} main.cpp entry.cpp)
 endif()
 
-target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps)
+target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps SJH)
 target_include_directories(${CHAPTER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # src/ 내부 모듈이 있으면 링크
