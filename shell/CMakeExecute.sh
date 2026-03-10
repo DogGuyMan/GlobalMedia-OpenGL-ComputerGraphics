@@ -17,10 +17,16 @@ else
     exit 1
 fi
 
-EXECUTABLE="./$BUILD_DIR/apps/$TARGET/$TARGET"
+# 바이너리가 위치한 디렉토리로 이동하여 실행 (resources, shaders 경로 일치를 위해)
+EXEC_DIR="./$BUILD_DIR/apps/$TARGET"
+EXECUTABLE="./$TARGET"
+
+pushd "$EXEC_DIR" > /dev/null || { echo "디렉토리 이동 실패: $EXEC_DIR"; exit 1; }
 
 if [ "$MEM_CHECK" = "leaks" ]; then
     MallocStackLogging=1 leaks --atExit --list -- "$EXECUTABLE"
 else
     "$EXECUTABLE"
 fi
+
+popd > /dev/null

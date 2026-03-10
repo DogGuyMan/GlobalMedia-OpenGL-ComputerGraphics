@@ -8,12 +8,13 @@ endif()
 
 # ______ 실행 파일 (main.cpp + entry.cpp) ______
 if(WIN32)
-    add_executable(${CHAPTER_NAME} WIN32 main.cpp entry.cpp)
+    add_executable(${CHAPTER_NAME} WIN32 main.cpp)
 else()
-    add_executable(${CHAPTER_NAME} main.cpp entry.cpp)
+    add_executable(${CHAPTER_NAME} main.cpp)
 endif()
 
-target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps SJH)
+target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps)
+
 target_include_directories(${CHAPTER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # src/ 내부 모듈이 있으면 링크

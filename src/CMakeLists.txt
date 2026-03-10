@@ -9,5 +9,4 @@ add_subdirectory(common)
 target_include_directories(SJH PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(SJH PRIVATE cxx_std_17)
 
-# project_deps에 SJH 추가 → 모든 챕터에서 자동 링크
-target_link_libraries(project_deps INTERFACE SJH)
+# SJH가 필요한 챕터에서 직접 링크: target_link_libraries(... SJH)
