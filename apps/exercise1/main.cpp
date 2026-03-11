@@ -1,11 +1,13 @@
-#include <GL/glcorearb.h>
 #include <sb7.h>
+#include <GL/glcorearb.h>
 #include <GL/gl3w.h>
 #include <vmath.h>
+#include <iostream>
 
-namespace SJH::quiz1
+namespace SJH::exercise1
 {
-
+	int print_shader_log(GLuint shader);
+	int print_program_log(GLuint prog);
 	class my_application : public sb7::application
 	{
 	protected:
@@ -21,9 +23,48 @@ namespace SJH::quiz1
 		virtual void shutdown() override;
 		virtual void render(double currentTime) override;
 	};
+
+	class my_application_shader_lopper : public my_application
+	{
+	public:
+		virtual GLuint compile_shaders(void) override;
+	};
 };
 
-namespace SJH::quiz1
+namespace SJH::exercise1
+{
+	int print_shader_log(GLuint shader)
+	{
+		int len = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+		if (len > 0)
+		{
+			char log_buf[512];
+			glGetShaderInfoLog(shader, len, nullptr, log_buf);
+			std::printf("Err: Shader program link failed: %s\n", log_buf);
+			std::fflush(stdout);
+			return -1;
+		}
+		return 0;
+	}
+
+	int print_program_log(GLuint prog)
+	{
+		int len = 0;
+		glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &len);
+		if (len > 0)
+		{
+			char log_buf[512];
+			glGetProgramInfoLog(prog, len, nullptr, log_buf);
+			std::printf("Err: Shader program link failed: %s\n", log_buf);
+			std::fflush(stdout);
+			return -1;
+		}
+		return 0;
+	}
+};
+
+namespace SJH::exercise1
 {
 	GLuint my_application::compile_shaders()
 	{
@@ -34,7 +75,7 @@ namespace SJH::quiz1
 #version 410 core
 void main(void)
 {
-const vec4 vertices[12] = vec4[12](
+const vec4 vertices[13] = vec4[13](
     vec4(0.25	-0.25, -0.25	+ 0.25, 0.5, 1.0),
     vec4(-0.25	-0.25, 0.25	+ 0.25, 0.5, 1.0),
     vec4(0.25	-0.25, 0.25	+ 0.25, 0.5, 1.0),
@@ -50,10 +91,15 @@ const vec4 vertices[12] = vec4[12](
 );
 gl_Position = vertices[gl_VertexID];
 }
-		    )"};
+		)"};
 		vertex_shader = glCreateShader(GL_VERTEX_SHADER);
 		glShaderSource(vertex_shader, 1, vertex_shader_source, NULL);
 		glCompileShader(vertex_shader);
+		if (print_shader_log(vertex_shader) == -1)
+		{
+			glDeleteShader(vertex_shader);
+			return -1;
+		}
 
 		// 쉐이더 포인터
 		GLuint fragment_shader;
@@ -71,6 +117,12 @@ void main(void)
 		fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 		glShaderSource(fragment_shader, 1, fragment_shader_source, NULL);
 		glCompileShader(fragment_shader);
+		if (print_shader_log(fragment_shader) == -1)
+		{
+			glDeleteShader(vertex_shader);
+			glDeleteShader(fragment_shader);
+			return -1;
+		}
 
 		GLuint program;
 		program = glCreateProgram();
@@ -79,6 +131,13 @@ void main(void)
 		glAttachShader(program, fragment_shader);
 
 		glLinkProgram(program);
+		if (print_program_log(program) == -1)
+		{
+			glDeleteShader(vertex_shader);
+			glDeleteShader(fragment_shader);
+			glDeleteProgram(program);
+			return -1;
+		}
 
 		// 쉐이더는 삭제해도 됨
 		glDeleteShader(vertex_shader);
@@ -114,4 +173,12 @@ void main(void)
 	}
 };
 
-DECLARE_MAIN(SJH::quiz1::my_application);
+namespace SJH::exercise1
+{
+	GLuint my_application_shader_lopper::compile_shaders(void)
+	{
+		return -1;
+	}
+}
+
+DECLARE_MAIN(SJH::exercise1::my_application);

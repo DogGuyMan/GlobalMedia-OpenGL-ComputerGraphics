@@ -7,7 +7,7 @@ namespace SJH::Common
 {
 	std::optional<std::string> LoadTextFile(const std::string &filename)
 	{
-		// cpp 스타일의 파일 로팅 방식이다.
+		// cpp 스타일의 파일 로딩 방식이다.
 		std::ifstream fin(filename);
 		if (!fin.is_open())
 		{

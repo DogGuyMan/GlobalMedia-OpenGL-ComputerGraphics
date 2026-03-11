@@ -1,1 +1,2 @@
-rm -rf build*
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+rm -rf "$ROOT_DIR"/build*

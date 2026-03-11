@@ -1,3 +1,4 @@
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_TYPE="${1:-debug}"
 TARGET="$2"
 MEM_CHECK="$3"
@@ -18,7 +19,7 @@ else
 fi
 
 # 바이너리가 위치한 디렉토리로 이동하여 실행 (resources, shaders 경로 일치를 위해)
-EXEC_DIR="./$BUILD_DIR/apps/$TARGET"
+EXEC_DIR="$ROOT_DIR/$BUILD_DIR/apps/$TARGET"
 EXECUTABLE="./$TARGET"
 
 pushd "$EXEC_DIR" > /dev/null || { echo "디렉토리 이동 실패: $EXEC_DIR"; exit 1; }
