@@ -30,7 +30,7 @@ namespace SJH::Chapter3
 			);
 
 			gl_Position = vertices[gl_VertexID] + offset;
-			vs_out color = color;
+			vs_out.color = color;
 		}
 	)";
 	const GLchar *FRAGMENT_SHADER_SOURCE_STR = R"(
@@ -44,6 +44,36 @@ namespace SJH::Chapter3
 			color = fs_in.color;
 		}
 	)";
+
+	int print_shader_log(GLuint shader)
+	{
+		int len = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+		if (len > 0)
+		{
+			char log_buf[512];
+			glGetShaderInfoLog(shader, len, nullptr, log_buf);
+			std::printf("Err: Shader program link failed: %s\n", log_buf);
+			std::fflush(stdout);
+			return -1;
+		}
+		return 0;
+	}
+
+	int print_program_log(GLuint prog)
+	{
+		int len = 0;
+		glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &len);
+		if (len > 0)
+		{
+			char log_buf[512];
+			glGetProgramInfoLog(prog, len, nullptr, log_buf);
+			std::printf("Err: Shader program link failed: %s\n", log_buf);
+			std::fflush(stdout);
+			return -1;
+		}
+		return 0;
+	}
 
 	class my_application : public sb7::application
 	{
@@ -67,6 +97,11 @@ namespace SJH::Chapter3
 			GLuint temp_vs_addr = glCreateShader(GL_VERTEX_SHADER);
 			glShaderSource(temp_vs_addr, 1, &VERTEX_SHADER_SOURCE_STR, NULL);
 			glCompileShader(temp_vs_addr);
+			if (print_shader_log(temp_vs_addr) == -1)
+			{
+				glDeleteShader(temp_vs_addr);
+				abort();
+			}
 			return temp_vs_addr;
 		}
 
@@ -75,6 +110,11 @@ namespace SJH::Chapter3
 			GLuint temp_fs_addr = glCreateShader(GL_FRAGMENT_SHADER);
 			glShaderSource(temp_fs_addr, 1, &FRAGMENT_SHADER_SOURCE_STR, NULL);
 			glCompileShader(temp_fs_addr);
+			if (print_shader_log(temp_fs_addr) == -1)
+			{
+				glDeleteShader(temp_fs_addr);
+				abort();
+			}
 			return temp_fs_addr;
 		}
 
