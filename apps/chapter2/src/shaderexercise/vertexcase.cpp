@@ -12,7 +12,7 @@ namespace SJH::exercise1::vertexcase
 		std::ifstream fin(path);
 		if (!fin.is_open())
 		{
-			std::cout << "failed to open file" << std::endl;
+			fprintf(stderr, "Failed to initialize GLFW\n");
 			return {};
 		}
 		std::stringstream text;
@@ -23,13 +23,26 @@ namespace SJH::exercise1::vertexcase
 	class vc_application_base : public sb7::application
 	{
 	public:
-		GLuint CompileShader(const char *path);
 		virtual void startup();
 		virtual void render(float currentTime);
+		virtual void shutdown();
 	};
 
-	class vc_application_base : public vc_application_base
+	class vc_application_1 : public vc_application_base
 	{
+	private:
+	public:
+		virtual void startup() override
+		{
+		}
+
+		virtual void render(float currentTime) override
+		{
+		}
+
+		virtual void shutdown() override
+		{
+		}
 	};
 
 };

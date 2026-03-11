@@ -11,7 +11,7 @@ namespace SJH::Common
 		std::ifstream fin(filename);
 		if (!fin.is_open())
 		{
-			std::cout << "failed to open file: {}" << std::endl;
+			std::cout << "failed to open file: " << filename << std::endl;
 			return {};
 		}
 		std::stringstream text;

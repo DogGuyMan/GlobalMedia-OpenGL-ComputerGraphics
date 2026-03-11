@@ -1,33 +1,22 @@
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_TYPE="${1:-debug}"
-TARGET="$2"
-MEM_CHECK="$3"
+TARGET_NAME="$2"
 
-if [ -z "$TARGET" ]; then
-    echo "사용법: $0 [debug|release] <타겟명> [leaks]"
-    echo "예시:  $0 debug chapter1"
+if [ -z "$TARGET_NAME" ]; then
+    echo "실행할 타겟 이름을 두 번째 인자로 입력해야 합니다. (예: chapter1, chapter2)"
     exit 1
 fi
 
 if [ "$BUILD_TYPE" = "debug" ]; then
-    BUILD_DIR="build_ninja"
+    EXEC_DIR="$ROOT_DIR/build_ninja/apps/$TARGET_NAME"
 elif [ "$BUILD_TYPE" = "release" ]; then
-    BUILD_DIR="build_ninja-release"
+    EXEC_DIR="$ROOT_DIR/build_ninja-release/apps/$TARGET_NAME"
 else
-    echo "사용법: $0 [debug|release] <타겟명> [leaks]"
+    echo "사용법: $0 [debug|release] <타겟명>"
     exit 1
 fi
 
-# 바이너리가 위치한 디렉토리로 이동하여 실행 (resources, shaders 경로 일치를 위해)
-EXEC_DIR="$ROOT_DIR/$BUILD_DIR/apps/$TARGET"
-EXECUTABLE="./$TARGET"
-
-pushd "$EXEC_DIR" > /dev/null || { echo "디렉토리 이동 실패: $EXEC_DIR"; exit 1; }
-
-if [ "$MEM_CHECK" = "leaks" ]; then
-    MallocStackLogging=1 leaks --atExit --list -- "$EXECUTABLE"
-else
-    "$EXECUTABLE"
-fi
-
+# 실행 파일 디렉토리로 이동 후 실행 (리소스 상대경로 해결)
+pushd "$EXEC_DIR" > /dev/null
+"./$TARGET_NAME"
 popd > /dev/null
