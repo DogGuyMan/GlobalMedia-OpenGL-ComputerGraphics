@@ -100,7 +100,7 @@ void init()
 #endif
 }
 
-int main(int argc, const char **argv)
+int entry()
 {
 	SJH::Chapter2::app = new SJH::Chapter2::my_application_4();
 	bool running = true;
@@ -149,3 +149,16 @@ int main(int argc, const char **argv)
 	delete SJH::Chapter2::app;
 	return 0;
 }
+
+#if defined _WIN32
+int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+		     LPSTR lpCmdLine, int nCmdShow)
+{
+	return entry();
+}
+#else
+int main(int argc, const char **argv)
+{
+	return entry();
+}
+#endif
