@@ -92,7 +92,7 @@ namespace SJH::Chapter2
 {
 	GLuint my_application_3::compile_vertex_shader()
 	{
-		auto vs_shader_source_string = SJH::Common::LoadTextFile("shaders/vertex_shader_1.glsl");
+		auto vs_shader_source_string = SJH::Common::LoadTextFile("shaders/vertex_shader_2.glsl");
 		auto vs_shader_object = glCreateShader(GL_VERTEX_SHADER);
 		const GLchar *vs_str = vs_shader_source_string->c_str();
 		glShaderSource(vs_shader_object, 1, &vs_str, NULL);
@@ -144,6 +144,68 @@ namespace SJH::Chapter2
 		glClearBufferfv(GL_COLOR, 0, colorVectors);
 
 		glUseProgram(rendering_program);
+		glDrawArrays(GL_TRIANGLES, 0, 12);
+	}
+};
+
+namespace SJH::Chapter2
+{
+	GLuint my_application_4::compile_vertex_shader()
+	{
+		auto vs_shader_source_string = SJH::Common::LoadTextFile("shaders/vertex_shader_rotation_0.glsl");
+		auto vs_shader_object = glCreateShader(GL_VERTEX_SHADER);
+		const GLchar *vs_str = vs_shader_source_string->c_str();
+		glShaderSource(vs_shader_object, 1, &vs_str, NULL);
+		glCompileShader(vs_shader_object);
+		return vs_shader_object;
+	}
+
+	GLuint my_application_4::compile_fragment_shader()
+	{
+		auto fs_shader_source_string = SJH::Common::LoadTextFile("shaders/fragment_shader.glsl");
+		auto fs_shader_object = glCreateShader(GL_FRAGMENT_SHADER);
+		const GLchar *fs_str = fs_shader_source_string->c_str();
+		glShaderSource(fs_shader_object, 1, &fs_str, NULL);
+		glCompileShader(fs_shader_object);
+		return fs_shader_object;
+	}
+
+	GLuint my_application_4::create_program(GLuint vertex_shader, GLuint fragment_shader)
+	{
+		GLuint program = glCreateProgram();
+		glAttachShader(program, vertex_shader);
+		glAttachShader(program, fragment_shader);
+		glLinkProgram(program);
+
+		glDeleteShader(vertex_shader);
+		glDeleteShader(fragment_shader);
+		return program;
+	}
+
+	void my_application_4::startup()
+	{
+		rendering_program = create_program(compile_vertex_shader(), compile_fragment_shader());
+		glGenVertexArrays(1, &vertex_array_object);
+		glBindVertexArray(vertex_array_object);
+		loc_time = glGetUniformLocation(rendering_program, "vs_time");
+	}
+
+	void my_application_4::shutdown()
+	{
+		glDeleteProgram(rendering_program);
+		glDeleteVertexArrays(1, &vertex_array_object);
+	}
+
+	void my_application_4::render(double currentTime)
+	{
+		colorVectors[0] = (GLfloat)sin(currentTime) * 0.5f + 0.5f;
+		colorVectors[1] = (GLfloat)cos(currentTime) * 0.5f + 0.5f;
+		colorVectors[2] = (GLfloat)sin(currentTime) * 0.5f + 0.5f;
+		colorVectors[3] = (GLfloat)1.0f;
+		glClearBufferfv(GL_COLOR, 0, colorVectors);
+
+		glUseProgram(rendering_program);
+		glUniform1f(loc_time, (float)currentTime * 4);
 		glDrawArrays(GL_TRIANGLES, 0, 12);
 	}
 };

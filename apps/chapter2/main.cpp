@@ -5,7 +5,7 @@ GLFWwindow *window;
 
 namespace SJH::Chapter2
 {
-	SJH::Chapter2::my_application_3 *app;
+	sb7::application *app;
 	void inline OnResize(GLFWwindow *window, int w, int h)
 	{
 		app->onResize(w, h);
@@ -66,6 +66,20 @@ void setupWindowHints()
 	glfwWindowHint(GLFW_STEREO, info.flags.stereo ? GL_TRUE : GL_FALSE);
 }
 
+void setupIOCallbacks()
+{
+	glfwSetWindowSizeCallback(window, SJH::Chapter2::OnResize);
+	glfwSetKeyCallback(window, SJH::Chapter2::OnKey);
+	glfwSetMouseButtonCallback(window, SJH::Chapter2::OnMouseButton);
+	glfwSetCursorPosCallback(window, SJH::Chapter2::OnMouseMove);
+	glfwSetScrollCallback(window, SJH::Chapter2::OnMouseWheel);
+
+	if (!info.flags.cursor)
+	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+	}
+}
+
 void init()
 {
 	strcpy(info.title, "OpenGL SuperBible Example");
@@ -88,7 +102,7 @@ void init()
 
 int main(int argc, const char **argv)
 {
-	SJH::Chapter2::app = new SJH::Chapter2::my_application_3();
+	SJH::Chapter2::app = new SJH::Chapter2::my_application_4();
 	bool running = true;
 
 	if (!glfwInit())
@@ -112,18 +126,7 @@ int main(int argc, const char **argv)
 
 	glfwMakeContextCurrent(window);
 
-	glfwSetWindowSizeCallback(window, SJH::Chapter2::OnResize);
-	glfwSetKeyCallback(window, SJH::Chapter2::OnKey);
-	glfwSetMouseButtonCallback(window, SJH::Chapter2::OnMouseButton);
-	glfwSetCursorPosCallback(window, SJH::Chapter2::OnMouseMove);
-	glfwSetScrollCallback(window, SJH::Chapter2::OnMouseWheel);
-
-	if (!info.flags.cursor)
-	{
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-	}
-
-	// info.flags.stereo = (glfwGetWindowParam(GLFW_STEREO) ? 1 : 0);
+	setupIOCallbacks();
 
 	gl3wInit();
 
@@ -138,11 +141,10 @@ int main(int argc, const char **argv)
 		running &= (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_RELEASE);
 		running &= (glfwWindowShouldClose(window) != GL_TRUE);
 	} while (running);
-
-	SJH::Chapter2::app->shutdown();
-
 	glfwDestroyWindow(window);
 	glfwTerminate();
+
+	SJH::Chapter2::app->shutdown();
 
 	delete SJH::Chapter2::app;
 	return 0;
