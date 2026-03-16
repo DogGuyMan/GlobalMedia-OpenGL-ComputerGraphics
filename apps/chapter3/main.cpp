@@ -164,6 +164,7 @@ namespace SJH::Chapter3::Tesselation
 	const GLchar *VERTEX_SHADER_SOURCE_STR = R"(
 #version 410 core
 layout (location = 0) in vec4 offset;
+out vec4 vs_out_color;
 void main(void) {
     const vec4 vertices[3] = vec4[3](
         vec4(0.25, -0.25, 0.5, 1.0),
@@ -171,6 +172,11 @@ void main(void) {
         vec4(0.25, 0.25, 0.5, 1.0)
     );
     gl_Position = vertices[gl_VertexID] + offset;
+    const vec4 colors[3] = vec4[3](
+	vec4(1.0, 0.0, 0.0, 1.0),
+	vec4(0.0, 1.0, 0.0, 1.0),
+	vec4(0.0, 0.0, 1.0, 1.0));
+	vs_out_color = colors[gl_VertexID];
 }
 	)";
 	
@@ -218,14 +224,11 @@ void main(void) {
 
 	const GLchar *FRAGMENT_SHADER_SOURCE_STR = R"(
 #version 410 core
+in vec4 vs_out_color; // 변수명 맞춰주는거 잊지 말고
 out vec4 color;
 void main(void) {
-    color = vec4(
-    	sin(gl_FragCoord.x * 0.25f) * 0.5 + 0.25, 
-	cos(gl_FragCoord.y * 0.25f) * 0.5 + 0.25, 
-	sin(gl_FragCoord.x * 0.25f) * cos(gl_FragCoord.y * 0.25f), 
-	1.0);
-}
+    color = vs_out_color;
+} // 중괄호 닫아주는거 잊지 말고.
 	)";
 
 	int PRINT_SHADER_LOG(GLuint shaderAddr)
