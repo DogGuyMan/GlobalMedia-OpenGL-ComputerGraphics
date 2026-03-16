@@ -209,8 +209,8 @@ void main(void) {
     for (int i = 0; i < gl_in.length(); i++) {
         gl_Position = gl_in[i].gl_Position;
         EmitVertex();
-	gl_Position[0] *= -1;
-	gl_Position[1] *= -1;
+	gl_Position[0] *= -1; // y축 대칭 
+	gl_Position[1] *= -1; // X축대칭
         EmitVertex();
     }
 }
