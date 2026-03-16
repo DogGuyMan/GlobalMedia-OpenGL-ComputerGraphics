@@ -177,6 +177,51 @@ namespace SJH::Chapter3::Tesselation
 			vs_out.color = color;
 		}
 	)";
+	
+	const GLchar * TESSCONTROLL_SHADER_SOURCE_STR =R"(
+		#version 410 core
+		layout (vertices = 3) out;
+
+		in VS_OUT { vec4 color; } tcs_in[];
+		out TCS_OUT { vec4 color; } tcs_out[];
+
+		void main(void)
+		{
+			if(gl_InvocationID == 0)
+			{
+				gl_TessLevelInner[0] = 5.0;
+				gl_TessLevelOuter[0] = 5.0;
+				gl_TessLevelOuter[1] = 5.0;
+				gl_TessLevelOuter[2] = 5.0;
+			}
+			gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+			tcs_out[gl_InvocationID].color = tcs_in[gl_InvocationID].color;
+		}
+	)";
+
+	const GLchar * TESSEVALUATION_SHADER_SOURCE_STR = R"(
+		#version 410 core
+
+		layout (triangles, equal_spacing, cw) in;
+
+		in TCS_OUT { vec4 color; } tes_in[];
+		out VS_OUT { vec4 color; } fs_out;
+
+		void main(void)
+		{
+			gl_Position = (
+				gl_TessCoord.x * gl_in[0].gl_Position +
+				gl_TessCoord.y * gl_in[1].gl_Position +
+				gl_TessCoord.z * gl_in[2].gl_Position
+			);
+			// 무게중심 좌표로 색상도 보간
+			fs_out.color = (
+				gl_TessCoord.x * tes_in[0].color +
+				gl_TessCoord.y * tes_in[1].color +
+				gl_TessCoord.z * tes_in[2].color
+			);
+		}
+	)";
 
 	const GLchar *FRAGMENT_SHADER_SOURCE_STR = R"(
 		#version 410 core
@@ -245,7 +290,7 @@ namespace SJH::Chapter3::Tesselation
 		GLuint createVertexShader()
 		{
 			GLuint tempvs = glCreateShader(GL_VERTEX_SHADER);
-			glShaderSource(tempvs, 1, &VERTEX_SHADER_SOURCE_STR, NULL);
+			glShaderSource(tempvs, 1, &VERTEX_SHADER_SOURCE_STR, nullptr);
 			glCompileShader(tempvs);
 			if (PRINT_SHADER_LOG(tempvs) != 0)
 			{
@@ -257,12 +302,26 @@ namespace SJH::Chapter3::Tesselation
 
 		GLuint createTessControllShader()
 		{
-			return -1;
+			GLuint temptc = glCreateShader(GL_TESS_CONTROL_SHADER);
+			glShaderSource(temptc, 1, &TESSCONTROLL_SHADER_SOURCE_STR, nullptr);
+			glCompileShader(temptc);
+			if(PRINT_SHADER_LOG(temptc) != 0) {
+				glDeleteShader(temptc);
+				abort();
+			}
+			return temptc;
 		}
 
 		GLuint createTessEvaluationShader()
 		{
-			return -1;
+			GLuint tempte = glCreateShader(GL_TESS_EVALUATION_SHADER);
+			glShaderSource(tempte, 1, &TESSEVALUATION_SHADER_SOURCE_STR, nullptr);
+			glCompileShader(tempte);
+			if(PRINT_SHADER_LOG(tempte) != 0) {
+				glDeleteShader(tempte);
+				abort();
+			}
+			return tempte;
 		}
 
 		GLuint createFragmentShader()
@@ -281,11 +340,17 @@ namespace SJH::Chapter3::Tesselation
 	public:
 		virtual void startup() override
 		{
-			programAddr = createProgram(std::vector<GLuint>{createVertexShader(), createFragmentShader()});
-			// glGenVertexArrays(1, vertexArrayObjectPtr);
-			// glBindVertexArray(*vertexArrayObjectPtr);
+			glPatchParameteri(GL_PATCH_VERTICES, 3); // 패치 1개 = 버텍스 3개 (삼각형)
 			glGenVertexArrays(1, &vertexArrayObjectAddr);
 			glBindVertexArray(vertexArrayObjectAddr);
+			programAddr = createProgram(std::vector<GLuint>{
+				createVertexShader(), 
+				createTessControllShader(), 
+				createTessEvaluationShader(),
+				createFragmentShader()
+			});
+			// glGenVertexArrays(1, vertexArrayObjectPtr);
+			// glBindVertexArray(*vertexArrayObjectPtr);
 		}
 
 		virtual void render(double currentTime) override
@@ -295,13 +360,14 @@ namespace SJH::Chapter3::Tesselation
 
 			glUseProgram(programAddr);
 			GLfloat vertexPositions[] = {
-			    (float)sin(currentTime) * 0.8f,
-			    (float)cos(currentTime) * 0.8f,
+			    (float)sin(currentTime) * 0.5f,
+			    (float)cos(currentTime) * 0.5f,
 			    0.0f, 0.0f};
 			GLfloat vertexColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
 			glVertexAttrib4fv(0, vertexPositions);
 			glVertexAttrib4fv(1, vertexColor);
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // 망형 렌더링
+			glDrawArrays(GL_PATCHES, 0, 3);            // 테셀레이션은 GL_PATCHES 필수
 		}
 
 		virtual void shutdown() override
