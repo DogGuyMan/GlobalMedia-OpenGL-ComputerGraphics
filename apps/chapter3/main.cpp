@@ -162,75 +162,66 @@ namespace SJH::Chapter3::Tesselation
 {
 
 	const GLchar *VERTEX_SHADER_SOURCE_STR = R"(
-		#version 410 core
-		layout (location = 0) in vec4 offset;
-		layout (location = 1) in vec4 color;
-		out VS_OUT { vec4 color; } vs_out;
-		void main(void)
-		{
-			const vec4 vertices[3] = vec4[3](
-				vec4(0.25, -0.25, 0.5, 1.0),
-				vec4(-0.25, 0.25, 0.5, 1.0),
-				vec4(0.25, 0.25, 0.5, 1.0)
-			);
-			gl_Position = vertices[gl_VertexID] + offset;
-			vs_out.color = color;
-		}
+#version 410 core
+layout (location = 0) in vec4 offset;
+void main(void) {
+    const vec4 vertices[3] = vec4[3](
+        vec4(0.25, -0.25, 0.5, 1.0),
+        vec4(-0.25, 0.25, 0.5, 1.0),
+        vec4(0.25, 0.25, 0.5, 1.0)
+    );
+    gl_Position = vertices[gl_VertexID] + offset;
+}
 	)";
 	
 	const GLchar * TESSCONTROLL_SHADER_SOURCE_STR =R"(
-		#version 410 core
-		layout (vertices = 3) out;
-
-		in VS_OUT { vec4 color; } tcs_in[];
-		out TCS_OUT { vec4 color; } tcs_out[];
-
-		void main(void)
-		{
-			if(gl_InvocationID == 0)
-			{
-				gl_TessLevelInner[0] = 5.0;
-				gl_TessLevelOuter[0] = 5.0;
-				gl_TessLevelOuter[1] = 5.0;
-				gl_TessLevelOuter[2] = 5.0;
-			}
-			gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
-			tcs_out[gl_InvocationID].color = tcs_in[gl_InvocationID].color;
-		}
+#version 410 core
+layout (vertices = 3) out;
+void main(void) {
+    if(gl_InvocationID == 0) {
+        gl_TessLevelInner[0] = 5.0;
+        gl_TessLevelOuter[0] = 5.0;
+        gl_TessLevelOuter[1] = 5.0;
+        gl_TessLevelOuter[2] = 5.0;
+    }
+    gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+}
 	)";
 
 	const GLchar * TESSEVALUATION_SHADER_SOURCE_STR = R"(
-		#version 410 core
+#version 410 core
+layout (triangles, equal_spacing, cw) in;
+void main(void) {
+    gl_Position = (
+        gl_TessCoord.x * gl_in[0].gl_Position +
+        gl_TessCoord.y * gl_in[1].gl_Position +
+        gl_TessCoord.z * gl_in[2].gl_Position
+    );
+}
+	)";
 
-		layout (triangles, equal_spacing, cw) in;
-
-		in TCS_OUT { vec4 color; } tes_in[];
-		out VS_OUT { vec4 color; } fs_out;
-
-		void main(void)
-		{
-			gl_Position = (
-				gl_TessCoord.x * gl_in[0].gl_Position +
-				gl_TessCoord.y * gl_in[1].gl_Position +
-				gl_TessCoord.z * gl_in[2].gl_Position
-			);
-			// 무게중심 좌표로 색상도 보간
-			fs_out.color = (
-				gl_TessCoord.x * tes_in[0].color +
-				gl_TessCoord.y * tes_in[1].color +
-				gl_TessCoord.z * tes_in[2].color
-			);
-		}
+	const GLchar * GEOMETRY_SHADER_SOURCE_STR = R"(
+#version 410 core
+layout (triangles) in;
+layout (points, max_vertices = 6) out; // 원본 3 + 반전 3
+void main(void) {
+    int i;
+    for (int i = 0; i < gl_in.length(); i++) {
+        gl_Position = gl_in[i].gl_Position;
+        EmitVertex();
+	gl_Position[0] *= -1;
+	gl_Position[1] *= -1;
+        EmitVertex();
+    }
+}
 	)";
 
 	const GLchar *FRAGMENT_SHADER_SOURCE_STR = R"(
-		#version 410 core
-		in VS_OUT {vec4 color;} fs_in;
-		out vec4 color;
-		void main(void) 
-		{
-			color = fs_in.color;
-		}
+#version 410 core
+out vec4 color;
+void main(void) {
+    color = vec4(1.0, 1.0, 0.0, 1.0);
+}
 	)";
 
 	int PRINT_SHADER_LOG(GLuint shaderAddr)
@@ -276,14 +267,12 @@ namespace SJH::Chapter3::Tesselation
 		{
 			GLuint tempprogram = glCreateProgram();
 			for (auto shader_addr : shader_addrs)
-			{
 				glAttachShader(tempprogram, shader_addr);
-			}
+			if(PRINT_PROGRAM_LOG(tempprogram) != 0) 
+				abort();
 			glLinkProgram(tempprogram);
 			for (auto shader_addr : shader_addrs)
-			{
 				glDeleteShader(shader_addr);
-			}
 			return tempprogram;
 		}
 
@@ -310,6 +299,18 @@ namespace SJH::Chapter3::Tesselation
 				abort();
 			}
 			return temptc;
+		}
+
+		GLuint createGeometryShader()
+		{
+			GLuint tempgeo = glCreateShader(GL_GEOMETRY_SHADER);
+			glShaderSource(tempgeo, 1, &GEOMETRY_SHADER_SOURCE_STR, nullptr);
+			glCompileShader(tempgeo);
+			if(PRINT_SHADER_LOG(tempgeo) != 0) {
+				glDeleteShader(tempgeo);
+				abort();
+			}
+			return tempgeo;
 		}
 
 		GLuint createTessEvaluationShader()
@@ -347,6 +348,7 @@ namespace SJH::Chapter3::Tesselation
 				createVertexShader(), 
 				createTessControllShader(), 
 				createTessEvaluationShader(),
+				createGeometryShader(),
 				createFragmentShader()
 			});
 			// glGenVertexArrays(1, vertexArrayObjectPtr);
@@ -366,7 +368,7 @@ namespace SJH::Chapter3::Tesselation
 			GLfloat vertexColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
 			glVertexAttrib4fv(0, vertexPositions);
 			glVertexAttrib4fv(1, vertexColor);
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // 망형 렌더링
+			glPointSize(5.0f);                          // 점 크기 (기본 1px → 안보임)
 			glDrawArrays(GL_PATCHES, 0, 3);            // 테셀레이션은 GL_PATCHES 필수
 		}
 
