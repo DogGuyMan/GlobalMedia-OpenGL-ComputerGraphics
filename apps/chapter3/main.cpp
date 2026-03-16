@@ -158,9 +158,10 @@ namespace SJH::Chapter3::DataTransfer
 	};
 }
 
-namespace SJH::Chapter3::Tesselation {
-	
-	const GLchar *VERTEX_SHADER_SOURCE_STR= R"(
+namespace SJH::Chapter3::Tesselation
+{
+
+	const GLchar *VERTEX_SHADER_SOURCE_STR = R"(
 		#version 410 core
 		layout (location = 0) in vec4 offset;
 		layout (location = 1) in vec4 color;
@@ -177,79 +178,138 @@ namespace SJH::Chapter3::Tesselation {
 		}
 	)";
 
-	const GLchar * FRAGMENT_SHADER_SOURCE_STR = R"(
+	const GLchar *FRAGMENT_SHADER_SOURCE_STR = R"(
 		#version 410 core
 		in VS_OUT {vec4 color;} fs_in;
+		out vec4 color;
 		void main(void) 
 		{
 			color = fs_in.color;
 		}
 	)";
 
-	class my_application : public sb7::application {
-		private :
-			GLuint programAddr; 
-			GLuint *vertexArrayObjectPtr;
+	int PRINT_SHADER_LOG(GLuint shaderAddr)
+	{
+		GLint len = 0;
+		glGetShaderiv(shaderAddr, GL_INFO_LOG_LENGTH, &len);
+		if (len > 0)
+		{
+			char LOG_BUF[512] = {
+			    0,
+			};
+			glGetShaderInfoLog(shaderAddr, len, nullptr, LOG_BUF);
+			fprintf(stderr, "쉐이더 에러 발생 : %s", LOG_BUF);
+			return -1;
+		}
+		return 0;
+	}
 
-			GLuint createProgram(std::vector<GLuint> && shader_addrs) {
-				GLuint tempprogram = glCreateProgram();
-				for(auto shader_addr : shader_addrs) {
-					glAttachShader(tempprogram, shader_addr);
-				}
-				glLinkProgram(tempprogram);
-				for(auto shader_addr : shader_addrs) {
-					glDeleteShader(shader_addr);
-				}
-				return tempprogram;
-			}
+	int PRINT_PROGRAM_LOG(GLuint programAddr)
+	{
+		GLint len = 0;
+		glGetProgramiv(programAddr, GL_INFO_LOG_LENGTH, &len);
+		if (len > 0)
+		{
+			char LOG_BUF[512] = {
+			    0,
+			};
+			glGetProgramInfoLog(programAddr, len, nullptr, LOG_BUF);
+			fprintf(stderr, "프로그램 에러 발생 %s", LOG_BUF);
+			return -1;
+		}
+		return 0;
+	}
 
-			GLuint createVertexShader() {
-				GLuint tempvs = glCreateShader(GL_VERTEX_SHADER);
-				glShaderSource(tempvs, 1, &VERTEX_SHADER_SOURCE_STR, NULL);
-				glCompileShader(tempvs);
-				return tempvs;
-			}
+	class my_application : public sb7::application
+	{
+	private:
+		GLuint programAddr;
+		// GLuint *vertexArrayObjectPtr;
+		GLuint vertexArrayObjectAddr;
 
-			GLuint createTessControllShader() {
-				return -1;
+		GLuint createProgram(std::vector<GLuint> &&shader_addrs)
+		{
+			GLuint tempprogram = glCreateProgram();
+			for (auto shader_addr : shader_addrs)
+			{
+				glAttachShader(tempprogram, shader_addr);
 			}
+			glLinkProgram(tempprogram);
+			for (auto shader_addr : shader_addrs)
+			{
+				glDeleteShader(shader_addr);
+			}
+			return tempprogram;
+		}
 
-			GLuint createTessEvaluationShader() {
-				return -1;
+		GLuint createVertexShader()
+		{
+			GLuint tempvs = glCreateShader(GL_VERTEX_SHADER);
+			glShaderSource(tempvs, 1, &VERTEX_SHADER_SOURCE_STR, NULL);
+			glCompileShader(tempvs);
+			if (PRINT_SHADER_LOG(tempvs) != 0)
+			{
+				glDeleteShader(tempvs);
+				abort();
 			}
+			return tempvs;
+		}
 
-			GLuint createFragmentShader() {
-				GLuint tempfs = glCreateShader(GL_FRAGMENT_SHADER);
-				glShaderSource(tempfs, 1, &FRAGMENT_SHADER_SOURCE_STR, NULL);
-				glCompileShader(tempfs);
-				return tempfs;
-			}
-		public : 
-			virtual void startup() override {
-				programAddr = createProgram(std::vector<GLuint>{createVertexShader(), createFragmentShader()});
-				glGenVertexArrays(1, vertexArrayObjectPtr);
-				glBindVertexArray(*vertexArrayObjectPtr);
-			}
+		GLuint createTessControllShader()
+		{
+			return -1;
+		}
 
-			virtual void render(double currentTime) override {
-				GLfloat backgroundColor[] = {0.5f, 0.5f,0.5f,1.0f};
-				glClearBufferfv(GL_COLOR, 0, backgroundColor);
+		GLuint createTessEvaluationShader()
+		{
+			return -1;
+		}
 
-				glUseProgram(programAddr);
-				GLfloat vertexPositions[] = {
-					sin(currentTime) * 0.5 + 0.5f,
-					cos(currentTime) * 0.5 + 0.5f,
-					0.0f, 0.0f
-				};
-				GLfloat vertexColor[] = {0.1f, 0.0f, 0.0f, 1.0f};
-				glVertexAttrib4fv(0, vertexPositions);
-				glVertexAttrib4fv(1, vertexColor);
+		GLuint createFragmentShader()
+		{
+			GLuint tempfs = glCreateShader(GL_FRAGMENT_SHADER);
+			glShaderSource(tempfs, 1, &FRAGMENT_SHADER_SOURCE_STR, NULL);
+			glCompileShader(tempfs);
+			if (PRINT_SHADER_LOG(tempfs) != 0)
+			{
+				glDeleteShader(tempfs);
+				abort();
 			}
+			return tempfs;
+		}
 
-			virtual void shutdown() override {
-				glDeleteVertexArrays(1, vertexArrayObjectPtr);
-				glDeleteProgram(programAddr);
-			}
+	public:
+		virtual void startup() override
+		{
+			programAddr = createProgram(std::vector<GLuint>{createVertexShader(), createFragmentShader()});
+			// glGenVertexArrays(1, vertexArrayObjectPtr);
+			// glBindVertexArray(*vertexArrayObjectPtr);
+			glGenVertexArrays(1, &vertexArrayObjectAddr);
+			glBindVertexArray(vertexArrayObjectAddr);
+		}
+
+		virtual void render(double currentTime) override
+		{
+			GLfloat backgroundColor[] = {0.5f, 0.5f, 0.5f, 1.0f};
+			glClearBufferfv(GL_COLOR, 0, backgroundColor);
+
+			glUseProgram(programAddr);
+			GLfloat vertexPositions[] = {
+			    (float)sin(currentTime) * 0.8f,
+			    (float)cos(currentTime) * 0.8f,
+			    0.0f, 0.0f};
+			GLfloat vertexColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
+			glVertexAttrib4fv(0, vertexPositions);
+			glVertexAttrib4fv(1, vertexColor);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+		}
+
+		virtual void shutdown() override
+		{
+			// glDeleteVertexArrays(1, vertexArrayObjectPtr);
+			glDeleteVertexArrays(1, &vertexArrayObjectAddr);
+			glDeleteProgram(programAddr);
+		}
 	};
 }
 
