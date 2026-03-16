@@ -220,7 +220,11 @@ void main(void) {
 #version 410 core
 out vec4 color;
 void main(void) {
-    color = vec4(1.0, 1.0, 0.0, 1.0);
+    color = vec4(
+    	sin(gl_FragCoord.x * 0.25f) * 0.5 + 0.25, 
+	cos(gl_FragCoord.y * 0.25f) * 0.5 + 0.25, 
+	sin(gl_FragCoord.x * 0.25f) * cos(gl_FragCoord.y * 0.25f), 
+	1.0);
 }
 	)";
 
@@ -346,9 +350,9 @@ void main(void) {
 			glBindVertexArray(vertexArrayObjectAddr);
 			programAddr = createProgram(std::vector<GLuint>{
 				createVertexShader(), 
-				createTessControllShader(), 
-				createTessEvaluationShader(),
-				createGeometryShader(),
+				// createTessControllShader(), 
+				// createTessEvaluationShader(),
+				// createGeometryShader(),
 				createFragmentShader()
 			});
 			// glGenVertexArrays(1, vertexArrayObjectPtr);
@@ -368,8 +372,8 @@ void main(void) {
 			GLfloat vertexColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
 			glVertexAttrib4fv(0, vertexPositions);
 			glVertexAttrib4fv(1, vertexColor);
-			glPointSize(5.0f);                          // 점 크기 (기본 1px → 안보임)
-			glDrawArrays(GL_PATCHES, 0, 3);            // 테셀레이션은 GL_PATCHES 필수
+			// glPointSize(5.0f);                          // 점 크기 (기본 1px → 안보임)
+			glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
 
 		virtual void shutdown() override
