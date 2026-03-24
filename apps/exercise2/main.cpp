@@ -6,7 +6,7 @@
 #include <iostream>
 #include <memory>
 
-namespace exercise2
+namespace exercise3
 {
 	struct shader_source
 	{
@@ -100,7 +100,7 @@ namespace exercise2
 	class pinwheel_program : public program_base
 	{
 		static constexpr const GLchar *vs = R"(
-			#version 410 core
+			#version 430 core
 			layout (location = 0) in float currentTime; 
 			// [1] layout(location = 0) in vec4 vertexColor;
 
@@ -161,7 +161,7 @@ namespace exercise2
 			}
 		)";
 		static constexpr const GLchar *fs = R"(
-			#version 410 core
+			#version 430 core
 			out vec4 color;
 
 			in VS_OUT {
@@ -185,7 +185,7 @@ namespace exercise2
 	class stick_program : public program_base
 	{
 		static constexpr const GLchar *vs = R"(
-			#version 410 core
+			#version 430 core
 			layout (location = 0) in float currentTime; 
 
 			void main(void) {
@@ -212,7 +212,7 @@ namespace exercise2
 			}
 		)";
 		static constexpr const GLchar *fs = R"(
-			#version 410 core
+			#version 430 core
 			out vec4 color;
 
 			in VS_OUT {
@@ -264,4 +264,4 @@ namespace exercise2
 	};
 }
 
-DECLARE_MAIN(exercise2::my_application);
+DECLARE_MAIN(exercise3::my_application);
