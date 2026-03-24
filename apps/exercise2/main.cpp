@@ -92,34 +92,92 @@ namespace exercise2
 			glUseProgram(programAddr);
 		}
 
-		void Draw() const {
+		virtual void Draw(float currentTime) const {
 			glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
 	};
+	
 	class pinwheel_program : public program_base
 	{
 		static constexpr const GLchar *vs = R"(
 			#version 410 core
+			layout (location = 0) in float currentTime; 
+			// [1] 
+			layout(location = 0) in vec4 vertexColor;
+
+			out VS_OUT {
+				vec4 color;
+			} vs_out;
+
 			void main(void) {
-				const vec4 vertices[3] = vec4[3](
-				    vec4(0.0, 0.2887, 0.0, 1.0),
-				    vec4(-0.25, -0.1443, 0.0, 1.0),
-				    vec4(0.25, -0.1443, 0.0, 1.0)
+				const vec4 base[3] = vec4[3](
+					vec4(0.0, 0.0, 0.0, 1.0),
+					vec4(0.0, 0.5, 0.0, 1.0),
+					vec4(-0.5, 0.5, 0.0, 1.0)
 				);
-				gl_Position = vertices[gl_VertexID];
+
+				// [2]
+				// const vec4 bladeColors[4] = vec4[4](
+				// 	vec4(1.0, 0.0, 0.0, 1.0),  // blade 0: 빨강
+				// 	vec4(0.0, 1.0, 0.0, 1.0),  // blade 1: 초록
+				// 	vec4(0.0, 0.0, 1.0, 1.0),  // blade 2: 파랑
+				// 	vec4(1.0, 1.0, 0.0, 1.0)   // blade 3: 노랑
+				// );
+
+				// [3]
+				float curTimeCos = cos(currentTime) * 0.5 + 0.5f;
+				float curTimeSin = sin(currentTime) * 0.5 + 0.5f;
+				vec4 vertexTints[3] = vec4[3](
+					vec4(curTimeCos, curTimeSin, curTimeCos, 1.0),
+					vec4(curTimeSin, curTimeCos, curTimeSin, 1.0),
+					vec4(curTimeSin, curTimeSin, curTimeCos, 1.0)
+				);
+
+				int bladeID = gl_VertexID / 3;
+				int bladeVertID = gl_VertexID % 3;
+				
+				float angle = float(bladeID) * radians(90.0) + currentTime;
+				float curRotateCos = cos(angle);
+				float curRotateSin = sin(angle);
+				mat2 rot = mat2(
+					curRotateCos, curRotateSin,
+					-curRotateSin, curRotateCos
+				);
+				vec2 rotated = rot * base[bladeVertID].xy;
+				gl_Position = vec4(rotated, 0.0, 1.0);
+				// [1] 
+				vs_out.color = vertexColor;
+				// [2] vs_out.color = bladeColors[bladeID];
+				// [3] vs_out.color = vec4(vertexTints[bladeVertID].rgb, 1.0);
 			}
 		)";
 		static constexpr const GLchar *fs = R"(
 			#version 410 core
 			out vec4 color;
+
+			in VS_OUT {
+				vec4 color;
+			} fs_in;
 			void main(void) {
-				color = vec4(0.0, 0.3, 0.8, 1.0);
+				color = fs_in.color;
 			}
 		)";
 
 	public:
 		pinwheel_program() : program_base({{GL_VERTEX_SHADER, vs},
 						   {GL_FRAGMENT_SHADER, fs}}) {}
+		
+		virtual void Draw(float currentTime) const override { 
+			GLfloat bladeColors[] = {
+				1.0, 0.0, 0.0, 1.0,  // blade 0: 빨강
+				0.0, 1.0, 0.0, 1.0,  // blade 1: 초록
+				0.0, 0.0, 1.0, 1.0,  // blade 2: 파랑
+				1.0, 1.0, 0.0, 1.0   // blade 3: 노랑
+			};
+			glVertexAttrib4fv(1, bladeColors);
+			// glVertexAttrib1f(0, (float)currentTime);
+			glDrawArrays(GL_TRIANGLES, 0, 12);
+		}
 	};
 
 	class my_application : public sb7::application
@@ -137,14 +195,17 @@ namespace exercise2
 
 		virtual void render(double currentTime) override
 		{
-			glClearBufferfv(GL_COLOR_BUFFER_BIT, 0, background_color);
+			glClearBufferfv(GL_COLOR, 0, background_color);
 			for (const auto &program : programs){
 				program->UseProgram();
-				program->Draw();
+				program->Draw(currentTime);
 			}
 		}
+		
 		virtual void shutdown() override
 		{
+			for(auto& program : programs)
+				program.reset();
 		}
 	};
 }
