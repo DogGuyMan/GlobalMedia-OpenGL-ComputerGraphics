@@ -7,7 +7,7 @@
 #include <iostream>
 #include <memory>
 
-namespace exercise3
+namespace exercise4
 {
 	struct shader_source
 	{
@@ -23,8 +23,11 @@ namespace exercise3
 
 		GLuint create_shader(const shader_source &source) const
 		{
-			std::cout << "loaded" << std::endl;
-			return sb7::shader::load(source.shader_path, source.shader_type, true);
+			GLuint shaderAddr = sb7::shader::load(source.shader_path, source.shader_type);
+			if (shaderAddr == 0) {
+				std::cerr << "셰이더 로드 실패: " << source.shader_path << std::endl;
+			}
+			return shaderAddr;
 		}
 
 		GLuint create_program(const std::vector<shader_source> &sources)
@@ -36,18 +39,6 @@ namespace exercise3
 				glAttachShader(addr, created_shaders.back());
 			}
 			glLinkProgram(addr);
-			int success = 0;
-			glGetProgramiv(addr, GL_LINK_STATUS, &success);
-			if (!success)
-			{
-				char logBuff[1024] = {
-				    0,
-				};
-				glGetProgramInfoLog(programAddr, 1024, nullptr, logBuff);
-				std::cerr << "fail to link program" << std::endl;
-				std::cerr << "reason " << logBuff << std::endl;
-				glDeleteProgram(programAddr);
-			}
 			for (const auto &shader : created_shaders)
 				glDeleteShader(shader);
 			return addr;
@@ -121,50 +112,29 @@ namespace exercise3
 	class my_application : public sb7::application
 	{
 	private:
-		std::vector<std::unique_ptr<program_base>> programs;
+		std::vector<program_base> programs;
 		GLfloat background_color[4] = {0.0f,0.0f,0.0f, 1.0f};
 
 	public:
 		virtual void startup() override
 		{
-			// programs = std::vector<program_base>(2);
-			programs.push_back(std::make_unique<stick_program>());
-			programs.push_back(std::make_unique<pinwheel_program>());
+			programs.push_back(stick_program());
+			programs.push_back(pinwheel_program());
 		}
 
 		virtual void render(double currentTime) override
 		{
 			glClearBufferfv(GL_COLOR, 0, background_color);
 			for (const auto &program : programs){
-				program->UseProgram();
-				program->Draw(currentTime);
+				program.UseProgram();
+				program.Draw(currentTime);
 			}
 		}
 		
 		virtual void shutdown() override
 		{
-			for(auto& program : programs)
-				program.reset();
 		}
 	};
 }
 
-DECLARE_MAIN(exercise3::my_application);
-
-/*
-        // vec3 dirVec = (camPos - targetPos) * normalize(camPos - targetPos);
-        // vec3 rightVec = normalize(worldUpVec * dirVec);
-        // vec3 camUpVec = cross(dirVec, rightVec);
-
-        // mat4 lookAt = mat4(
-        //                 1.0, 0.0, 0.0, 0.0,
-        //                 0.0, 1.0, 0.0, 0.0,
-        //                 0.0, 0.0, 1.0, 0.0,
-        //                 -camPos.x, -camPos.y, -camPos.z, 1
-        //         ) * mat4(
-        //                         rightVec.x, camUpVec.x, dirVec.x, 0.0,
-        //                         rightVec.y, camUpVec.y, dirVec.y, 0.0,
-        //                         rightVec.z, camUpVec.z, dirVec.z, 0.0,
-        //                         0.0, 0.0, 0.0, 1
-        //                 );
-*/
+DECLARE_MAIN(exercise4::my_application);

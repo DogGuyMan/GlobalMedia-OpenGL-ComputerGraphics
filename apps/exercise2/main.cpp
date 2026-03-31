@@ -11,7 +11,7 @@ namespace exercise3
 	struct shader_source
 	{
 		GLenum shader_type;
-		const GLchar *shader_str;
+		const GLchar *shader_path;
 	};
 
 	class program_base
@@ -23,7 +23,7 @@ namespace exercise3
 		GLuint create_shader(const shader_source &source) const
 		{
 			GLuint addr = glCreateShader(source.shader_type);
-			glShaderSource(addr, 1, &source.shader_str, nullptr);
+			glShaderSource(addr, 1, &source.shader_path, nullptr);
 			glCompileShader(addr);
 
 			int success = 0;
@@ -34,7 +34,7 @@ namespace exercise3
 				    0,
 				};
 				glGetShaderInfoLog(addr, 1024, nullptr, logBuff);
-				std::cerr << "fail to compile " << source.shader_str << "shader" << std::endl;
+				std::cerr << "fail to compile " << source.shader_path << "shader" << std::endl;
 				std::cerr << "reason " << logBuff << std::endl;
 				glDeleteShader(addr);
 			}

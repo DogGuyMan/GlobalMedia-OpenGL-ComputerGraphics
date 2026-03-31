@@ -34,9 +34,3 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/resources)
         COMMENT "${CHAPTER_NAME} 빌드 후 리소스를 build 디렉터리에 복사")
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/shaders)
-    add_custom_command(TARGET ${CHAPTER_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/shaders $<TARGET_FILE_DIR:${CHAPTER_NAME}>/shaders
-        COMMENT "${CHAPTER_NAME} 빌드 후 셰이더를 build 디렉터리에 복사")
-endif()

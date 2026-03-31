@@ -8,9 +8,9 @@ out VS_OUT {
 
 void main(void) {
         const vec4 base[3] = vec4[3](
-                        vec4(0.0, 0.0, 0.0, 1.0),
-                        vec4(0.0, 0.5, 0.0, 1.0),
-                        vec4(-0.5, 0.5, 0.0, 1.0)
+                        vec4(0.0, 0.0, 0.5, 1.0),
+                        vec4(0.0, 0.5, 0.5, 1.0),
+                        vec4(-0.5, 0.5, 0.5, 1.0)
                 );
 
         float curTimeCos = cos(currentTime) * 0.5 + 0.5f;
@@ -30,9 +30,11 @@ void main(void) {
         float angle = float(bladeID) * radians(90.0) + currentTime;
         float curRotateCos = cos(angle);
         float curRotateSin = sin(angle);
-        mat2 rot = mat2(
-                        curRotateCos, curRotateSin,
-                        -curRotateSin, curRotateCos
+        mat4 rot = mat4(
+                        curRotateCos, curRotateSin, 0, 0,
+                        -curRotateSin, curRotateCos, 0, 0,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1
                 );
         mat4 mov = mat4(
                         1.0, 0.0, 0.0, 0.0,
@@ -48,17 +50,20 @@ void main(void) {
         vec3 rightVec = cross(worldUpVec, dirVec);
         vec3 camUpVec = cross(dirVec, rightVec);
 
-        mat4 lookAt = mat4(
+        mat4 lookRotate = mat4(
                         rightVec.x, camUpVec.x, dirVec.x, 0.0,
                         rightVec.y, camUpVec.y, dirVec.y, 0.0,
                         rightVec.z, camUpVec.z, dirVec.z, 0.0,
-                        0.0, 0.0, 0.0, 1
-                ) * mat4(
-                                1.0, 0.0, 0.0, 0.0,
-                                0.0, 1.0, 0.0, 0.0,
-                                0.0, 0.0, 1.0, 0.0,
-                                -camPos.x, -camPos.y, -camPos.z, 1
-                        );
+                        0.0, 0.0, 0.0, 1.0
+                );
+        mat4 lookMove = mat4(
+                        1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        -camPos.x, -camPos.y, -camPos.z, 1.0
+                );
+
+        mat4 lookAt = lookRotate * lookMove;
 
         float left = -0.1;
         float right = 0.1;
@@ -74,8 +79,8 @@ void main(void) {
                         0, 0, (2 * near * far) / (near - far), 0
                 );
 
-        vec2 rotated = rot * base[bladeVertID].xy;
-        vec4 moved = mov * vec4(rotated.xy, 0.0, 1.0);
+        vec4 rotated = rot * base[bladeVertID];
+        vec4 moved = mov * rotated;
         vec4 viewed = lookAt * moved;
         vec4 projed = proj * viewed;
         gl_Position = projed;

@@ -3,12 +3,12 @@ layout(location = 0) in float currentTime;
 
 void main(void) {
         const vec4 base[6] = vec4[6](
-                        vec4(0.01, 0.0, 0.0, 1.0),
-                        vec4(-0.01, 0.0, 0.0, 1.0),
-                        vec4(-0.01, -0.5, 0.0, 1.0),
-                        vec4(0.01, 0.0, 0.0, 1.0),
-                        vec4(-0.01, -0.5, 0.0, 1.0),
-                        vec4(-0.01, -0.5, 0.0, 1.0)
+                        vec4(0.01, 0.0, 0.5, 1.0),
+                        vec4(-0.01, 0.0, 0.5, 1.0),
+                        vec4(-0.01, -0.5, 0.5, 1.0),
+                        vec4(0.01, 0.0, 0.5, 1.0),
+                        vec4(-0.01, -0.5, 0.5, 1.0),
+                        vec4(0.01, -0.5, 0.5, 1.0)
                 );
 
         int bladeID = gl_VertexID / 3;
@@ -28,17 +28,20 @@ void main(void) {
         vec3 rightVec = cross(worldUpVec, dirVec);
         vec3 camUpVec = cross(dirVec, rightVec);
 
-        mat4 lookAt = mat4(
+        mat4 lookRotate = mat4(
                         rightVec.x, camUpVec.x, dirVec.x, 0.0,
                         rightVec.y, camUpVec.y, dirVec.y, 0.0,
                         rightVec.z, camUpVec.z, dirVec.z, 0.0,
                         0.0, 0.0, 0.0, 1.0
-                ) * mat4(
-                                1.0, 0.0, 0.0, 0.0,
-                                0.0, 1.0, 0.0, 0.0,
-                                0.0, 0.0, 1.0, 0.0,
-                                -camPos.x, -camPos.y, -camPos.z, 1.0
-                        );
+                );
+        mat4 lookMove = mat4(
+                        1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 0.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        -camPos.x, -camPos.y, -camPos.z, 1.0
+                );
+
+        mat4 lookAt = lookRotate * lookMove;
 
         float left = -0.1;
         float right = 0.1;
@@ -54,7 +57,7 @@ void main(void) {
                         0, 0, (2 * near * far) / (near - far), 0
                 );
 
-        vec4 moved = mov * base[bladeVertID];
+        vec4 moved = mov * base[gl_VertexID];
         vec4 viewed = lookAt * moved;
         vec4 projed = proj * viewed;
         gl_Position = projed;
