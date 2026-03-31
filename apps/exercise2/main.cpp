@@ -100,7 +100,7 @@ namespace exercise3
 	class pinwheel_program : public program_base
 	{
 		static constexpr const GLchar *vs = R"(
-			#version 430 core
+			#version 410 core
 			layout (location = 0) in float currentTime; 
 			// [1] layout(location = 0) in vec4 vertexColor;
 
@@ -115,53 +115,37 @@ namespace exercise3
 					vec4(-0.5, 0.5, 0.0, 1.0)
 				);
 
-				// [2]
-				// const vec4 bladeColors[4] = vec4[4](
-				// 	vec4(1.0, 0.0, 0.0, 1.0),  // blade 0: 빨강
-				// 	vec4(0.0, 1.0, 0.0, 1.0),  // blade 1: 초록
-				// 	vec4(0.0, 0.0, 1.0, 1.0),  // blade 2: 파랑
-				// 	vec4(1.0, 1.0, 0.0, 1.0)   // blade 3: 노랑
-				// );
-
-				// [3]
 				float curTimeCos = cos(currentTime) * 0.5 + 0.5f;
 				float curTimeSin = sin(currentTime) * 0.5 + 0.5f;
-				vec4 vertexTints[3] = vec4[3](
-					vec4(1, 0, 0, 1.0),
-					vec4(0, 1, 0, 1.0),
-					vec4(0, 0, 1, 1.0)
-				);
-				vertexTints[0] = (vertexTints[0] * 0.5 + curTimeCos * 0.5);
-				vertexTints[1] = (vertexTints[1] * 0.5 + curTimeSin * 0.5);
-				vertexTints[2] = (vertexTints[2] * 0.5 + curTimeSin * 0.5);
-
 				int bladeID = gl_VertexID / 3;
 				int bladeVertID = gl_VertexID % 3;
+
+				// 단위 행렬에서 각 정점의 기본 색상 추출 (R, G, B)
+				mat3 tintMatrix = mat3(1.0);
+				vec3 baseTint = tintMatrix[bladeVertID];
+
+				// 중심점(0,0,0)으로부터의 거리 계산 후 정규화
+				float dist = length(base[bladeVertID].xyz);
+				float maxDist = length(vec3(-0.5, 0.5, 0.0)); // 가장 먼 정점 거리
+				float t = clamp(dist / maxDist, 0.0, 1.0);
+				// 중심: curTimeCos, 멀리: curTimeSin
+				float timeFactor = mix(curTimeCos, curTimeSin, t);
 				
-				float angle = float(bladeID) * radians(90.0) + currentTime;
-				float curRotateCos = cos(angle);
-				float curRotateSin = sin(angle);
-				mat2 rot = mat2(
-					curRotateCos, curRotateSin,
-					-curRotateSin, curRotateCos
-				);
-				mat4 mov = mat4(
-					1.0, 0.0, 0.0, 0.0,
-					0.0, 1.0, 0.0, 0.0,
+				float angle = float(bladeID) * radians(90.0);
+				
+				mat4 rot = mat4(
+					cos(angle), -sin(angle), 0.0, 0.0,
+					sin(angle), cos(angle), 0.0, 0.0,
 					0.0, 0.0, 1.0, 0.0,
-					cos(currentTime) * 0.5, 0.0, 0.0, 1.0
+					0.0, 0.0, 0.0, 1.0
 				);
-				vec2 rotated = rot * base[bladeVertID].xy;
-				vec4 moved = mov * vec4(rotated.xy, 0.0, 1.0);
-				gl_Position = moved;
-				// [1] vs_out.color = vertexColor;
-				// [2] vs_out.color = bladeColors[bladeID];
-				// [3]
-				vs_out.color = vec4(vertexTints[bladeVertID].rgb, 1.0);
+
+				gl_Position = rot * base[bladeVertID];
+				vs_out.color = vec4(baseTint * 0.5 + timeFactor * 0.5, 1.0);
 			}
 		)";
 		static constexpr const GLchar *fs = R"(
-			#version 430 core
+			#version 410 core
 			out vec4 color;
 
 			in VS_OUT {
@@ -185,7 +169,7 @@ namespace exercise3
 	class stick_program : public program_base
 	{
 		static constexpr const GLchar *vs = R"(
-			#version 430 core
+			#version 410 core
 			layout (location = 0) in float currentTime; 
 
 			void main(void) {
@@ -201,18 +185,11 @@ namespace exercise3
 				int bladeID = gl_VertexID / 3;
 				int bladeVertID = gl_VertexID % 3;
 				
-				mat4 mov = mat4(
-					1.0, 0.0, 0.0, 0.0,
-					0.0, 1.0, 0.0, 0.0,
-					0.0, 0.0, 1.0, 0.0,
-					cos(currentTime) * 0.5, 0.0, 0.0, 1.0
-				);
-				vec4 moved = mov * base[bladeVertID];
-				gl_Position = moved;
+				gl_Position = base[bladeVertID];
 			}
 		)";
 		static constexpr const GLchar *fs = R"(
-			#version 430 core
+			#version 410 core
 			out vec4 color;
 
 			in VS_OUT {
