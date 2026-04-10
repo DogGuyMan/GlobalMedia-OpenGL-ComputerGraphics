@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-namespace chapter6
+namespace exercise5
 {
 
 	class my_application : public sb7::application
@@ -183,4 +183,4 @@ namespace chapter6
 	};
 }
 
-DECLARE_MAIN(chapter6::my_application);
+DECLARE_MAIN(exercise5::my_application);
