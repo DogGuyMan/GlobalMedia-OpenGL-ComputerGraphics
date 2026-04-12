@@ -35,12 +35,11 @@ else()
         IMPORTED_LOCATION         ${LIB_DIR}/libsb7.a
         IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libsb7_d.a)
 endif()
-set_target_properties(sb7 PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include")
 
 # ====== project_deps INTERFACE 타겟 ======
 add_library(project_deps INTERFACE)
 target_link_libraries(project_deps INTERFACE sb7 glfw3 ${OPENGL_LIBRARIES})
+target_include_directories(project_deps INTERFACE "${CMAKE_SOURCE_DIR}/include") 
 
 # ====== 플랫폼별 의존성 ======
 if(APPLE)
