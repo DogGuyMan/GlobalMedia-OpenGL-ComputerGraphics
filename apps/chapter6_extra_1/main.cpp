@@ -10,6 +10,15 @@
 namespace chapter6
 {
 
+// 면 색상 6색 순환
+static const vmath::vec4 mBaseColors[6] = {
+    vmath::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+    vmath::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+    vmath::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+    vmath::vec4(0.0f, 1.0f, 1.0f, 1.0f),
+    vmath::vec4(1.0f, 0.0f, 1.0f, 1.0f),
+    vmath::vec4(1.0f, 1.0f, 0.0f, 1.0f)};
+    
 class ITranslatable
 {
   public:
@@ -96,41 +105,53 @@ class Transformer : public ITransformable
 	vmath::mat4 GetModelMatrix() const
 	{
 		vmath::mat4 transMat = vmath::translate(mPosition);
-		vmath::mat4 rotX =
-		    vmath::rotate(mEulerAngles[0], vmath::vec3(1.0f, 0.0f, 0.0f));
-		vmath::mat4 rotY =
-		    vmath::rotate(mEulerAngles[1], vmath::vec3(0.0f, 1.0f, 0.0f));
-		vmath::mat4 rotZ =
-		    vmath::rotate(mEulerAngles[2], vmath::vec3(0.0f, 0.0f, 1.0f));
+		vmath::mat4 rotX = vmath::rotate(mEulerAngles[0], vmath::vec3(1.0f, 0.0f, 0.0f));
+		vmath::mat4 rotY = vmath::rotate(mEulerAngles[1], vmath::vec3(0.0f, 1.0f, 0.0f));
+		vmath::mat4 rotZ = vmath::rotate(mEulerAngles[2], vmath::vec3(0.0f, 0.0f, 1.0f));
 		vmath::mat4 scaleMat = vmath::scale(mScale);
 		return transMat * rotY * rotX * rotZ * scaleMat;
 	}
 
-	virtual vmath::vec3 GetPosition() const override { return mPosition; }
-	virtual void SetPosition(vmath::vec3 t) override { mPosition = t; }
-	virtual void Translate(vmath::vec3 toward) override { mPosition += toward; }
+	virtual vmath::vec3 GetPosition() const override
+	{
+		return mPosition;
+	}
+	virtual void SetPosition(vmath::vec3 t) override
+	{
+		mPosition = t;
+	}
+	virtual void Translate(vmath::vec3 toward) override
+	{
+		mPosition += toward;
+	}
 
-	virtual vmath::vec3 GetRotation() const override { return mEulerAngles; }
-	virtual void SetRotation(vmath::vec3 euler) override { mEulerAngles = euler; }
+	virtual vmath::vec3 GetRotation() const override
+	{
+		return mEulerAngles;
+	}
+	virtual void SetRotation(vmath::vec3 euler) override
+	{
+		mEulerAngles = euler;
+	}
 	virtual void Rotate(float angle, vmath::vec3 axis) override
 	{
 		// 축 방향에 해당하는 오일러 성분에 누적
 		mEulerAngles += axis * angle;
 	}
 
-	virtual vmath::vec3 GetScale() const override { return mScale; }
-	virtual void SetScale(vmath::vec3 s) override { mScale = s; }
-	virtual void Scale(vmath::vec3 adj) override { mScale += adj; }
+	virtual vmath::vec3 GetScale() const override
+	{
+		return mScale;
+	}
+	virtual void SetScale(vmath::vec3 s) override
+	{
+		mScale = s;
+	}
+	virtual void Scale(vmath::vec3 adj) override
+	{
+		mScale += adj;
+	}
 };
-
-// 면 색상 6색 순환
-static const vmath::vec4 mBaseColors[6] = {
-    vmath::vec4(1.0f, 0.0f, 0.0f, 1.0f),
-    vmath::vec4(0.0f, 1.0f, 0.0f, 1.0f),
-    vmath::vec4(0.0f, 0.0f, 1.0f, 1.0f),
-    vmath::vec4(0.0f, 1.0f, 1.0f, 1.0f),
-    vmath::vec4(1.0f, 0.0f, 1.0f, 1.0f),
-    vmath::vec4(1.0f, 1.0f, 0.0f, 1.0f)};
 
 class Model
 {
@@ -159,8 +180,14 @@ class Model
 	}
 
 	// ITransformable 구현체인 Transformer를 getter로 노출
-	Transformer &GetTransform() { return mTransformer; }
-	const Transformer &GetTransform() const { return mTransformer; }
+	Transformer &GetTransform()
+	{
+		return mTransformer;
+	}
+	const Transformer &GetTransform() const
+	{
+		return mTransformer;
+	}
 
 	vmath::mat4 GetModelMatrix() const
 	{
@@ -269,60 +296,60 @@ class Cube : public Model
 		// 앞면 (z=1, +Z 법선) — 카메라를 향하는 면
 		{
 			const vmath::vec4 verts[4] = {
-			    mBaseVertices[1][0][0],  // (0,0,1)
-			    mBaseVertices[1][0][1],  // (1,0,1)
-			    mBaseVertices[1][1][1],  // (1,1,1)
-			    mBaseVertices[1][1][0]}; // (0,1,1)
+			    mBaseVertices[1][0][0],
+			    mBaseVertices[1][0][1],
+			    mBaseVertices[1][1][1],
+			    mBaseVertices[1][1][0]};
 			pushQuad(verts, 0);
 		}
 
 		// 뒷면 (z=0, -Z 법선)
 		{
 			const vmath::vec4 verts[4] = {
-			    mBaseVertices[0][0][0],  // (0,0,0)
-			    mBaseVertices[0][1][0],  // (0,1,0)
-			    mBaseVertices[0][1][1],  // (1,1,0)
-			    mBaseVertices[0][0][1]}; // (1,0,0)
+			    mBaseVertices[0][1][0],
+			    mBaseVertices[0][1][1],
+			    mBaseVertices[0][0][1],
+			    mBaseVertices[0][0][0]};
 			pushQuad(verts, 1);
 		}
 
 		// 윗면 (y=1, +Y 법선)
 		{
 			const vmath::vec4 verts[4] = {
-			    mBaseVertices[0][1][0],  // (0,1,0)
-			    mBaseVertices[1][1][0],  // (0,1,1)
-			    mBaseVertices[1][1][1],  // (1,1,1)
-			    mBaseVertices[0][1][1]}; // (1,1,0)
+			    mBaseVertices[1][1][0],
+			    mBaseVertices[1][1][1],
+			    mBaseVertices[0][1][1],
+			    mBaseVertices[0][1][0]};
 			pushQuad(verts, 2);
 		}
 
 		// 아래면 (y=0, -Y 법선)
 		{
 			const vmath::vec4 verts[4] = {
-			    mBaseVertices[0][0][0],  // (0,0,0)
-			    mBaseVertices[0][0][1],  // (1,0,0)
-			    mBaseVertices[1][0][1],  // (1,0,1)
-			    mBaseVertices[1][0][0]}; // (0,0,1)
+			    mBaseVertices[0][0][0],
+			    mBaseVertices[0][0][1],
+			    mBaseVertices[1][0][1],
+			    mBaseVertices[1][0][0]};
 			pushQuad(verts, 3);
 		}
 
 		// 오른면 (x=1, +X 법선)
 		{
 			const vmath::vec4 verts[4] = {
-			    mBaseVertices[0][0][1],  // (1,0,0)
-			    mBaseVertices[0][1][1],  // (1,1,0)
-			    mBaseVertices[1][1][1],  // (1,1,1)
-			    mBaseVertices[1][0][1]}; // (1,0,1)
+			    mBaseVertices[1][0][1],
+			    mBaseVertices[0][0][1],
+			    mBaseVertices[0][1][1],
+			    mBaseVertices[1][1][1]};
 			pushQuad(verts, 4);
 		}
 
 		// 왼면 (x=0, -X 법선)
 		{
 			const vmath::vec4 verts[4] = {
-			    mBaseVertices[0][0][0],  // (0,0,0)
-			    mBaseVertices[1][0][0],  // (0,0,1)
-			    mBaseVertices[1][1][0],  // (0,1,1)
-			    mBaseVertices[0][1][0]}; // (0,1,0)
+			    mBaseVertices[0][0][0],
+			    mBaseVertices[1][0][0],
+			    mBaseVertices[1][1][0],
+			    mBaseVertices[0][1][0]};
 			pushQuad(verts, 5);
 		}
 	}
@@ -390,10 +417,10 @@ class ParametricGeometry : public Model
 					//    |     |
 					//   [0]---[1]
 					const vmath::vec4 verts[4] = {
-					    grid[i + 0][j + 0],   // [0] = (u,   v)
-					    grid[i + 1][j + 0],   // [1] = (u+1, v)
-					    grid[i + 1][j + 1],   // [2] = (u+1, v+1)
-					    grid[i + 0][j + 1],   // [3] = (u,   v+1)
+					    grid[i + 0][j + 0], // [0] = (u,   v)
+					    grid[i + 1][j + 0], // [1] = (u+1, v)
+					    grid[i + 1][j + 1], // [2] = (u+1, v+1)
+					    grid[i + 0][j + 1], // [3] = (u,   v+1)
 					};
 					quadIndex++;
 					pushQuad(verts, quadIndex % 3);
@@ -434,7 +461,8 @@ class Plane : public ParametricGeometry
 		build();
 	}
 
-	virtual vmath::vec4 SurfaceFunction(double u, double v) const override {
+	virtual vmath::vec4 SurfaceFunction(double u, double v) const override
+	{
 		return vmath::vec4(u, v, 0.0, 1.0);
 	};
 };
@@ -496,8 +524,8 @@ class Disk : public ParametricGeometry
 {
   private:
 	float mRadius;
-	float mY;     // 고정 높이
-	float mFlip;  // +1.0 = 윗면(+Y 법선), -1.0 = 아랫면(-Y 법선)
+	float mY;    // 고정 높이
+	float mFlip; // +1.0 = 윗면(+Y 법선), -1.0 = 아랫면(-Y 법선)
 
   public:
 	Disk(double u_start, double u_end, size_t u_res,
@@ -596,7 +624,9 @@ class CappedCylinder : public Model
 		build();
 	}
 
-	virtual ~CappedCylinder() {}
+	virtual ~CappedCylinder()
+	{
+	}
 };
 
 // 물방울 형태
@@ -664,8 +694,14 @@ class Camera
 	}
 
 	// ITransformable 구현체인 Transformer를 getter로 노출
-	Transformer &GetTransform() { return mTransformer; }
-	const Transformer &GetTransform() const { return mTransformer; }
+	Transformer &GetTransform()
+	{
+		return mTransformer;
+	}
+	const Transformer &GetTransform() const
+	{
+		return mTransformer;
+	}
 
 	// target 지점을 바라보도록 회전 설정 (position + rotation ↔ target 상호 변환)
 	void LookAt(vmath::vec3 target)
@@ -733,7 +769,6 @@ class Camera
 		           : vmath::ortho(-window_width / 2, window_width / 2,
 		                          -window_height / 2, window_height / 2, nearPlane, farPlane);
 	}
-
 };
 
 class my_application : public sb7::application
@@ -795,7 +830,7 @@ class my_application : public sb7::application
 		float angle = vmath::degrees((float)currentTime * 2);
 		camera.GetTransform().SetPosition(vmath::vec3(
 		    (float)cos(currentTime * 2) * 5,
-		    1,
+		    (float)sin(currentTime * 2) * 5,
 		    (float)sin(currentTime * 2) * 5));
 		camera.LookAt(vmath::vec3(0.0, 0.0, 0.0));
 	}
@@ -806,17 +841,17 @@ class my_application : public sb7::application
 		programAddr = create_program();
 		// 구 매개변수 곡면: f(u,v) -> (x,y,z), u : [0, pi], v : [0, pi]
 
+		models.push_back(std::make_unique<Cube>(vmath::vec4{-0.5, -0.5, -0.5, 0}));
+
 		// models.push_back(std::make_unique<Sphere>(
 		//     0.0, 2.0 * M_PI, 32,
 		//     0.0, M_PI, 16));
-		
+
 		// models.push_back(std::make_unique<Plane>(
 		//     0.0, 1.0, 16,
 		//     0.0, 1.0, 16,
 		//     vmath::vec4{-0.5, -0.5, 0, 0}
 		// ));
-
-		// models.push_back(std::make_unique<Cube>(vmath::vec4{-0.5, -0.5, -0.5, 0}));
 
 		// 물방울: u : [0, pi], v : [0, pi], fatness=0.5
 		// models.push_back(std::make_unique<WaterDrop>(
@@ -824,7 +859,8 @@ class my_application : public sb7::application
 		//     0.5, M_PI, 16,
 		//     1.0f, 0.5f, vmath::vec4(0.0, 1, 0.0, 0.0)));
 		// models.back()->GetTransform().SetPosition(vmath::vec3(0,-1, 0));
-		models.push_back(std::make_unique<CappedCylinder>(1.0f, sqrt(2.0), 4, 1));
+
+		// models.push_back(std::make_unique<CappedCylinder>(1.0f, sqrt(2.0), 4, 1));
 
 		camera.SetPerspective();
 		camera.GetTransform().SetPosition(vmath::vec3(0.0f, 1.0f, 3.0f));
