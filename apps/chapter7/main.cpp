@@ -1,5 +1,6 @@
 #include <GL/gl3w.h>
 #include <GL/glcorearb.h>
+#include <ostream>
 #include <sb7.h>
 #include <shader.h>
 #define STB_IMAGE_IMPLEMENTATION
@@ -185,7 +186,7 @@ namespace Chapter7::Surfaces
  *
  *********************************************************************************/
 
- namespace Chapter7::Meshes
+namespace Chapter7::Meshes
 {
 	// Cube 하나의 텍스쳐, 서로 다른면 텍스쳐링
 
@@ -205,106 +206,109 @@ namespace Chapter7::Surfaces
 
 	namespace Triangle
 	{
-		static const std::vector<std::vector<vmath::vec3>> TRIANGLE_BASE_POSITIONS = {
-		    std::vector<vmath::vec3>{
-		        {0.0, 0.0, 0.0},
-		        {1.0, 0.0, 0.0},
-		        {1.0, 1.0, 0.0},
+		// ! 폐기 : 이전 버전은 w=0 (direction vector)였음
+		//          → homogeneous perspective divide에서 ±∞/NaN, 렌더링 안 됨
+		//          OpenGL point는 반드시 w=1 (point)이어야 함
+		static const std::vector<std::vector<vmath::vec4>> TRIANGLE_BASE_POSITIONS = {
+		    std::vector<vmath::vec4>{
+		        {0.0, 0.0, 0.0, 1.0},
+		        {1.0, 0.0, 0.0, 1.0},
+		        {1.0, 1.0, 0.0, 1.0},
 		    },
-		    std::vector<vmath::vec3>{
-		        {0.0, 0.0, 0.0},
-		        {1.0, 0.0, 0.0},
-		        {0.5, 0.866, 0.0},
+		    std::vector<vmath::vec4>{
+		        {0.0, 0.0, 0.0, 1.0},
+		        {1.0, 0.0, 0.0, 1.0},
+		        {0.5, 0.866, 0.0, 1.0},
 		    }};
 
-		static const std::vector<unsigned int> TRIANGLE_BASE_INDICES = {
+		static const std::vector<GLuint> TRIANGLE_BASE_INDICES = {
 		    0, 1, 2};
 	} // namespace Triangle
 
 	namespace Plane
 	{
-		static const std::vector<std::vector<vmath::vec3>> QUAD_BASE_POSITIONS = {
-		    std::vector<vmath::vec3>{
-		        {0.0, 0.0, 0.0},
-		        {1.0, 0.0, 0.0},
-		        {1.0, 1.0, 0.0},
-		        {0.0, 1.0, 0.0},
+		static const std::vector<std::vector<vmath::vec4>> QUAD_BASE_POSITIONS = {
+		    std::vector<vmath::vec4>{
+		        {0.0, 0.0, 0.0, 0.0},
+		        {1.0, 0.0, 0.0, 0.0},
+		        {1.0, 1.0, 0.0, 0.0},
+		        {0.0, 1.0, 0.0, 0.0},
 		    }};
-		static const std::vector<unsigned int> QUAD_BASE_INDICES = {
+		static const std::vector<GLuint> QUAD_BASE_INDICES = {
 		    0, 1, 2, 0, 2, 3};
 
 	} // namespace Plane
 
 	namespace Cube
 	{
-		static const vmath::vec3 CUBE_BASE_POSITIONS[2][2][2] = {
+		static const vmath::vec4 CUBE_BASE_POSITIONS[2][2][2] = {
 		    {
 		        {
-		            {0.0, 0.0, 0.0}, // 4
-		            {1.0, 0.0, 0.0}, // 5
+		            {0.0, 0.0, 0.0, 0.0}, // 4
+		            {1.0, 0.0, 0.0, 0.0}, // 5
 		        },
 		        {
-		            {0.0, 1.0, 0.0}, // 6
-		            {1.0, 1.0, 0.0}, // 7
+		            {0.0, 1.0, 0.0, 0.0}, // 6
+		            {1.0, 1.0, 0.0, 0.0}, // 7
 		        },
 		    },
 		    {
 		        {
-		            {0.0, 0.0, 1.0}, // 0
-		            {1.0, 0.0, 1.0}, // 1
+		            {0.0, 0.0, 1.0, 0.0}, // 0
+		            {1.0, 0.0, 1.0, 0.0}, // 1
 		        },
 		        {
-		            {0.0, 1.0, 1.0}, // 2
-		            {1.0, 1.0, 1.0}, // 3
+		            {0.0, 1.0, 1.0, 0.0}, // 2
+		            {1.0, 1.0, 1.0, 0.0}, // 3
 		        },
 		    }};
-		static const std::vector<std::vector<vmath::vec3>> CUBE_QUADS = {
-			std::vector<vmath::vec3> // +Z 
-			{
-				CUBE_BASE_POSITIONS[1][0][0],
-				CUBE_BASE_POSITIONS[1][0][1],
-				CUBE_BASE_POSITIONS[1][1][1],
-				CUBE_BASE_POSITIONS[1][1][0],
-			},
-			std::vector<vmath::vec3>  // -Z
-			{
-				CUBE_BASE_POSITIONS[0][1][0],
-				CUBE_BASE_POSITIONS[1][1][0],
-				CUBE_BASE_POSITIONS[1][0][0],
-				CUBE_BASE_POSITIONS[0][0][0],
-			},
-			std::vector<vmath::vec3>  // +Y
-			{
-				CUBE_BASE_POSITIONS[0][1][1],
-				CUBE_BASE_POSITIONS[1][1][1],
-				CUBE_BASE_POSITIONS[1][1][0],
-				CUBE_BASE_POSITIONS[0][1][0],
-			},
-			std::vector<vmath::vec3>  // -Y
-			{
-				CUBE_BASE_POSITIONS[0][0][0],
-				CUBE_BASE_POSITIONS[1][0][0],
-				CUBE_BASE_POSITIONS[0][0][1],
-				CUBE_BASE_POSITIONS[1][0][1],
-			},
-			std::vector<vmath::vec3>  // +X
-			{
-				CUBE_BASE_POSITIONS[1][0][1],
-				CUBE_BASE_POSITIONS[1][0][0],
-				CUBE_BASE_POSITIONS[1][1][0],
-				CUBE_BASE_POSITIONS[1][0][1],
-			},
-			std::vector<vmath::vec3>  // -X
-			{
-				CUBE_BASE_POSITIONS[0][0][0],
-				CUBE_BASE_POSITIONS[0][0][1],
-				CUBE_BASE_POSITIONS[0][1][1],
-				CUBE_BASE_POSITIONS[0][1][0],
-			},
+		static const std::vector<std::vector<vmath::vec4>> CUBE_QUADS = {
+		    std::vector<vmath::vec4> // +Z
+		    {
+		        CUBE_BASE_POSITIONS[1][0][0],
+		        CUBE_BASE_POSITIONS[1][0][1],
+		        CUBE_BASE_POSITIONS[1][1][1],
+		        CUBE_BASE_POSITIONS[1][1][0],
+		    },
+		    std::vector<vmath::vec4> // -Z
+		    {
+		        CUBE_BASE_POSITIONS[0][1][0],
+		        CUBE_BASE_POSITIONS[1][1][0],
+		        CUBE_BASE_POSITIONS[1][0][0],
+		        CUBE_BASE_POSITIONS[0][0][0],
+		    },
+		    std::vector<vmath::vec4> // +Y
+		    {
+		        CUBE_BASE_POSITIONS[0][1][1],
+		        CUBE_BASE_POSITIONS[1][1][1],
+		        CUBE_BASE_POSITIONS[1][1][0],
+		        CUBE_BASE_POSITIONS[0][1][0],
+		    },
+		    std::vector<vmath::vec4> // -Y
+		    {
+		        CUBE_BASE_POSITIONS[0][0][0],
+		        CUBE_BASE_POSITIONS[1][0][0],
+		        CUBE_BASE_POSITIONS[0][0][1],
+		        CUBE_BASE_POSITIONS[1][0][1],
+		    },
+		    std::vector<vmath::vec4> // +X
+		    {
+		        CUBE_BASE_POSITIONS[1][0][1],
+		        CUBE_BASE_POSITIONS[1][0][0],
+		        CUBE_BASE_POSITIONS[1][1][0],
+		        CUBE_BASE_POSITIONS[1][0][1],
+		    },
+		    std::vector<vmath::vec4> // -X
+		    {
+		        CUBE_BASE_POSITIONS[0][0][0],
+		        CUBE_BASE_POSITIONS[0][0][1],
+		        CUBE_BASE_POSITIONS[0][1][1],
+		        CUBE_BASE_POSITIONS[0][1][0],
+		    },
 		};
 
-		static const std::vector<unsigned int> QUAD_BASE_INDICES[6] = {
-			{0, 1, 2, 0, 2, 3},
+		static const std::vector<GLuint> QUAD_BASE_INDICES[6] = {
+		    {0, 1, 2, 0, 2, 3},
 		};
 
 		// ! 폐기 : inline MeshData Cube() { ... }
@@ -407,14 +411,6 @@ namespace Chapter7::Model
 		//   samplerName : 셰이더의 uniform sampler 이름
 		//   unit        : texture unit 번호 (0, 1, 2 ...)
 		Material &AddTexture2D(const std::string &samplerName, const char *image_path, int unit);
-
-		// Cube Map 텍스처 추가 — 6 face 이미지로 GL_TEXTURE_CUBE_MAP 생성
-		//   Material을 data-oriented로 확장하는 예시 : subclass 없이 method만 추가하면 됨
-		//   6 경로 순서 : POSITIVE_X, NEGATIVE_X, POSITIVE_Y, NEGATIVE_Y, POSITIVE_Z, NEGATIVE_Z
-		Material &AddTextureCube(const std::string &samplerName, int unit,
-		                         const char *posX, const char *negX,
-		                         const char *posY, const char *negY,
-		                         const char *posZ, const char *negZ);
 
 		// 모든 Material 상태를 program에 적용 (glDrawElements 직전에 호출)
 		void Apply(Program::ProgramBase &prog);
@@ -716,61 +712,6 @@ namespace Chapter7::Model
 		return *this;
 	}
 
-	// Cube Map 텍스처 추가 — 6 face 이미지로 GL_TEXTURE_CUBE_MAP 구성
-	//   Apply() / Deconstruct는 변경 불필요 : target 필드가 CUBE_MAP인 것만 다름
-	//   Material 클래스의 구조는 그대로이면서 "data oriented extension point"로 새 텍스처 종류 추가
-	Material &Material::AddTextureCube(
-	    const std::string &samplerName, int unit,
-	    const char *posX, const char *negX,
-	    const char *posY, const char *negY,
-	    const char *posZ, const char *negZ)
-	{
-		TextureSlot slot;
-		slot.target = GL_TEXTURE_CUBE_MAP;
-		slot.samplerName = samplerName;
-		slot.unit = unit;
-
-		glGenTextures(1, &slot.addr);
-		glActiveTexture(GL_TEXTURE0 + unit);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, slot.addr);
-
-		const char *paths[6] = {posX, negX, posY, negY, posZ, negZ};
-		const GLenum targets[6] = {
-		    GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-		    GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-		    GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-		    GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-		    GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-		    GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
-		};
-
-		for (int i = 0; i < 6; i++)
-		{
-			int w, h, ch;
-			auto *tex_ptr = stbi_load(paths[i], &w, &h, &ch, 0);
-			if (tex_ptr != nullptr)
-			{
-				GLenum fmt = (ch == 4) ? GL_RGBA : GL_RGB;
-				glTexImage2D(targets[i], 0, fmt, w, h, 0, fmt, GL_UNSIGNED_BYTE, tex_ptr);
-				stbi_image_free(tex_ptr);
-			}
-			else
-			{
-				std::cerr << "cube map face load fail : " << paths[i] << std::endl;
-			}
-		}
-
-		// cube map은 CLAMP_TO_EDGE + LINEAR가 표준 (seam 방지)
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-		mTextures.push_back(slot);
-		return *this;
-	}
-
 	// 정적 멤버 정의
 	GLuint Material::sDefaultWhiteTex2D = 0;
 
@@ -848,11 +789,11 @@ namespace Chapter7::Model
 	}
 
 	// (C) Direct-mesh 생성자 : 하드코딩된 raw vertex/index 주입
-	ModelBase::ModelBase(
-	    std::vector<GLfloat> vertices, std::vector<GLuint> indices,
-	    vmath::vec3 _pivot)
+	ModelBase::ModelBase(std::vector<GLfloat> vertices, std::vector<GLuint> indices, vmath::vec3 _pivot)
 	    : mTransform(_pivot),
 	      mMaterial(),
+	      mBufferObject(vertices),
+	      mElementBuffer(indices),
 	      mUseDirectMesh(true)
 	{
 	}
@@ -891,12 +832,11 @@ namespace Chapter7::Model
 	 *********************************************************************************/
 
 	// initModelData() : CPU only — GL 호출 0개
-	//   - Direct-mesh : 하드코딩 raw data를 그대로 사용
-	//   - Compound parametric : mSurfaceParts를 순차 실행하며 인덱스 offset 누적 + winding 적용
+	//   Direct-mesh는 Build()에서 이 함수를 호출하지 않음 (생성자가 이미 mBufferObject에 복사)
+	//   Compound parametric : mSurfaceParts를 순차 실행하며 인덱스 offset 누적 + winding 적용
 	//     각 part의 정점/인덱스는 이전 part의 결과 뒤에 이어붙임
 	void ModelBase::initModelData()
 	{
-
 		// Compound parametric 경로 : mSurfaceParts 순차 실행
 		// 정점 레이아웃 : pos4 + uv2 = 6 float/정점
 		mBufferObject.clear();
@@ -926,6 +866,11 @@ namespace Chapter7::Model
 					mBufferObject.push_back(pos[1]);
 					mBufferObject.push_back(pos[2]);
 					mBufferObject.push_back(pos[3]);
+
+					mBufferObject.push_back(Meshes::BASE_COLORS[0][0]);
+					mBufferObject.push_back(Meshes::BASE_COLORS[0][1]);
+					mBufferObject.push_back(Meshes::BASE_COLORS[0][2]);
+					mBufferObject.push_back(Meshes::BASE_COLORS[0][3]);
 					// UV : 정규화된 격자 좌표
 					mBufferObject.push_back((float)i / (float)part.u_res);
 					mBufferObject.push_back((float)j / (float)part.v_res);
@@ -967,8 +912,6 @@ namespace Chapter7::Model
 				}
 			}
 		}
-
-		mIndexCount = (GLsizei)mElementBuffer.size();
 	}
 
 	// Build() : GPU 업로드 boilerplate
@@ -985,7 +928,25 @@ namespace Chapter7::Model
 			return *this;
 
 		// 1) CPU 데이터 준비 (GL 호출 0개)
-		initModelData();
+		if (!mUseDirectMesh)
+			initModelData();
+		mIndexCount = (GLsizei)mElementBuffer.size();
+
+		std::cout << "mBufferObject : ";
+		for (auto &e : mBufferObject)
+		{
+			std::cout << e << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "mElementBuffer : ";
+		for (auto &e : mElementBuffer)
+		{
+			std::cout << e << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "mIndexCount : " << mIndexCount << std::endl;
 
 		// 2) VAO 생성/바인딩 — 이후 attribute pointer / EBO 바인딩이 VAO에 기록됨
 		glGenVertexArrays(1, &mVAOAddr);
@@ -1002,14 +963,16 @@ namespace Chapter7::Model
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementBuffer.size() * sizeof(GLuint), mElementBuffer.data(), GL_STATIC_DRAW);
 
 		// 5) attribute layout (VAO에 기록)
-		// ! 폐기 : stride = 10 * sizeof(float), location 1 = color(vec4), location 2 = uv(vec2)
-		GLuint stride = 6 * sizeof(GLfloat);
+
+		GLuint stride = 10 * sizeof(GLfloat);
 		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, (void *)(0)); // position  // ! 함수 이름 외우기
 		glEnableVertexAttribArray(0);
+
 		glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (void *)(4 * sizeof(float))); // color        // ! 함수 이름 외우기
 		glEnableVertexAttribArray(1);
+
 		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void *)(8 * sizeof(float))); // uv        // ! 함수 이름 외우기
-		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
 
 		mIsBuilted = true;
 		return *this;
@@ -1022,7 +985,7 @@ namespace Chapter7::Model
 		glDeleteVertexArrays(1, &mVAOAddr);
 		glDeleteBuffers(1, &mVBOAddr);
 		glDeleteBuffers(1, &mEBOAddr);
-		// ! 폐기 : glDeleteTextures(1, &mTexAddr);  — 텍스처는 Material이 소유
+
 		mIsBuilted = false;
 	}
 
@@ -1037,6 +1000,7 @@ namespace Chapter7::Model
 
 		// 3) Material 적용 : baseColor, uvOffset, uvRatio, 모든 텍스처 바인딩
 		//    (모델별 uniform은 glDrawElements 직전에 "한 묶음"으로 set해야 다른 모델과 섞이지 않음)
+
 		mMaterial.Apply(prog);
 
 		// 4) Draw
@@ -1050,14 +1014,14 @@ namespace Chapter7::Model
 	//   snprintf 사용 — std::cout 포맷 flag에 부작용 주지 않음
 	void ModelBase::PrintMeshData(std::ostream &os) const
 	{
-		const size_t floatsPerVertex = 6; // pos4 + uv2
-		const size_t indicesPerQuad = 6;  // 2 triangle × 3 vertex
+		const size_t floatsPerVertex = 10; // pos4 + uv2
+		const size_t indicesPerQuad = 10;  // 2 triangle × 3 vertex
 
 		const size_t vertexCount = mBufferObject.size() / floatsPerVertex;
 		const size_t quadCount = mElementBuffer.size() / indicesPerQuad;
 
 		os << "// ===== ModelBase::PrintMeshData =====\n";
-		os << "// layout  : vertex = pos(x,y,z,w) + uv(u,v)  [6 float/vertex]\n";
+		os << "// layout  : vertex = pos(x,y,z,w) + color(x,y,z,w) + uv(u,v)  [10 float/vertex]\n";
 		os << "// vertex  : " << vertexCount << "\n";
 		os << "// index   : " << mElementBuffer.size() << "  (quad = " << quadCount << ")\n";
 		os << "\n";
@@ -1132,10 +1096,6 @@ namespace Chapter7::Program
 
 		glDeleteShader(vsAddr);
 		glDeleteShader(fsAddr);
-
-		// ! 폐기 : glUniform1i(..., "tex1", 0)  — 특정 셰이더에만 있는 uniform을 하드코딩
-		// 각 프로그램은 자기가 쓰는 sampler가 다를 수 있으므로 (tex1, cubeMap 등)
-		// sampler->unit 매핑은 Material::Apply() 안에서 slot.samplerName으로 동적으로 설정
 	}
 
 	ProgramBase::~ProgramBase()
@@ -1235,47 +1195,106 @@ namespace Chapter7
 		double deltaTime = 1.0 / 60;
 		virtual void startup() override
 		{
-			// stbi_set_flip_vertically_on_load(true);
 			programs.push_back(std::make_unique<Program::ProgramBase>());
 			camera = Camera::Camera(
 			    {0.0, 0.0, 2.0}, {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0},
 			    60, 0.1, 1000.0);
 
+			// stbi_set_flip_vertically_on_load(true);
+
 			// 현재 : 단일 SurfacePart + capStart + capEnd
 			//   - Cylinder 측면만 생성 후 EBO에 cap fan을 덧붙여 닫음
 			//   - 정점 추가 0개, parametric 생성 결과 그대로 사용
 			//   - u_res=4, v_res=1 -> 10 vertex, 24(side) + 4(top fan) + 4(bottom fan) = 32 index
-			//
-			auto cube = std::make_unique<Model::ModelBase>(
-			    Surfaces::Cylinder,
-			    0.0, 2 * PI, 4,
-			    0.0, 1, 1);
-			cube->Build();
-			// 콘솔에 정점/인덱스 덤프 — cap fan이 어떻게 추가됐는지 확인용
-			std::cout << "\n";
-			cube->PrintMeshData();
-			std::cout << "\n";
 
-			cube->GetMaterial().SetBaseColor(vmath::vec4(1.0, 0.0, 0.0, 1.0));
+			// auto cube = std::make_unique<Model::ModelBase>(
+			//     Surfaces::Cylinder,
+			//     0.0, 2 * PI, 4,
+			//     0.0, 1, 1);
+			// cube->Build();
+			// // 콘솔에 정점/인덱스 덤프 — cap fan이 어떻게 추가됐는지 확인용
+			// std::cout << "\n";
+			// cube->PrintMeshData();
+			// std::cout << "\n";
 
-			// // cube map 텍스처 — 6 face 경로 순서 : POS_X, NEG_X, POS_Y, NEG_Y, POS_Z, NEG_Z
-			// cube->GetMaterial().AddTextureCube(
-			//     "cubeMap", 0,
-			//     "./textures/side1.jpg", // +X (right)
-			//     "./textures/side2.jpg", // -X (left)
-			//     "./textures/side3.jpg", // +Y (top)
-			//     "./textures/side4.jpg", // -Y (bottom)
-			//     "./textures/side5.jpg", // +Z (front)
-			//     "./textures/side6.jpg"  // -Z (back)
-			// );
+			// cube->GetMaterial().SetBaseColor(vmath::vec4(1.0, 0.0, 0.0, 1.0));
+			// programs.back()->PushModel(std::move(cube));
 
-			// 큐브 위치/크기 설정
-			cube->GetTransform()
-			    .SetTranslate({0.0f, 0.0f, 0.0f})
-			    .SetScale({0.5f, 0.5f, 0.5f});
+			{
+				std::vector<float> vertices;
+				for (int i = 0; i < 3; i++)
+				{
+					for (int j = 0; j < 4; j++)
+						vertices.push_back(Meshes::Triangle::TRIANGLE_BASE_POSITIONS[1][i][j]);
+					for (int c = 0; c < 4; c++)
+						vertices.push_back(Meshes::BASE_COLORS[i][c]);
+					for (int axis = 0; axis < 2; axis++)
+						vertices.push_back(Meshes::BASE_MESH_UVS[i][axis]);
+				}
 
-			programs.back()->PushModel(std::move(cube));
+				auto model = std::make_unique<Model::ModelBase>(
+				    vertices,
+				    Meshes::Triangle::TRIANGLE_BASE_INDICES,
+				    vmath::vec3(0.5, 0.5, -0.0f));
+
+				model->Build();
+				model->PrintMeshData();
+				programs.back()->PushModel(std::move(model));
+			}
+
+			{
+				std::vector<float> vertices;
+				for (int i = 0; i < 3; i++)
+				{
+					for (int j = 0; j < 4; j++)
+						vertices.push_back(Meshes::Triangle::TRIANGLE_BASE_POSITIONS[0][i][j]);
+					for (int c = 0; c < 4; c++)
+						vertices.push_back(Meshes::BASE_COLORS[i][c]);
+					for (int axis = 0; axis < 2; axis++)
+						vertices.push_back(Meshes::BASE_MESH_UVS[i][axis]);
+				}
+
+				auto model = std::make_unique<Model::ModelBase>(
+				    vertices,
+				    Meshes::Triangle::TRIANGLE_BASE_INDICES,
+				    vmath::vec3(0.5, 0.5, -0.0f));
+
+				model->Build();
+				model->PrintMeshData();
+				programs.back()->PushModel(std::move(model));
+			}
+
+			{
+				std::vector<float> vertices;
+				for (int i = 0; i < 4; i++)
+				{
+					for (int j = 0; j < 4; j++)
+						vertices.push_back(Meshes::Plane::QUAD_BASE_POSITIONS[0][i][j]);
+					for (int c = 0; c < 4; c++)
+						vertices.push_back(Meshes::BASE_COLORS[i][c]);
+					for (int axis = 0; axis < 2; axis++)
+						vertices.push_back(Meshes::BASE_MESH_UVS[i][axis]);
+				}
+
+				auto model = std::make_unique<Model::ModelBase>(
+				    vertices,
+				    Meshes::Triangle::TRIANGLE_BASE_INDICES,
+				    vmath::vec3(0.5, 0.5, -0.0f));
+
+				model->Build();
+				model->PrintMeshData();
+				programs.back()->PushModel(std::move(model));
+			}
+
+			// 	auto sides = std::make_unique<Model::ModelBase>(
+			// 	    vertices, Meshes::Cube::QUAD_BASE_INDICES[0], vmath::vec3(-0.5, -0.5, -0.5));
+			// 	sides->Build();
+			// 	sides->PrintMeshData();
+			// 	sides->GetMaterial().SetBaseColor(vmath::vec4(1.0,1.0,1.0,1.0));
+			// 	programs.back()->PushModel(std::move(sides));
+			// }
 		}
+
 		virtual void render(double currentTime) override
 		{
 
