@@ -3,6 +3,7 @@
 #include "vmath.h"
 #include <iostream>
 #include <memory>
+#include <ostream>
 #include <sb7.h>
 #include <shader.h>
 #include <utility>
@@ -23,12 +24,14 @@ namespace exercise6
 
 	static const char *SHADER_VS_PATH = "./shaders/default_vs.glsl";
 	static const char *SHADER_FS_PATH = "./shaders/default_fs.glsl";
+	static const char *TEXTURE_FS_PATH = "./shaders/texture_fs.glsl";
 
 	static const char *UNIFORM_MODEL_MAT = "modelMat";
 	static const char *UNIFORM_VIEW_MAT = "viewMat";
 	static const char *UNIFORM_PROJ_MAT = "projMat";
 	static const char *UNIFORM_UV_OFFSET = "uvOffset";
 	static const char *UNIFORM_UV_RATIO = "uvRatio";
+	static const char *UNIFORM_BASE_COLOR = "baseColor";
 
 	static const char *SAMPLER_TEX1 = "tex1";
 	static const char *SAMPLER_TEX2 = "tex2";
@@ -206,14 +209,14 @@ namespace exercise6
 		int numRows = vRes + 1; // 세로 정점 개수
 
 		vector<vec4> uvColors = {
-			{1.0, 0.0, 0.0, 1.0},
-			{1.0, 1.0, 0.0, 1.0},
-			{0.0, 1.0, 0.0, 1.0},
-			{0.0, 1.0, 1.0, 1.0},
-			// {1.0, 1.0, 1.0, 1.0},
-			// {1.0, 1.0, 1.0, 1.0},
-			// {1.0, 1.0, 1.0, 1.0},
-			// {1.0, 1.0, 1.0, 1.0},
+		    {1.0, 0.0, 0.0, 1.0},
+		    {1.0, 1.0, 0.0, 1.0},
+		    {0.0, 1.0, 0.0, 1.0},
+		    {0.0, 1.0, 1.0, 1.0},
+		    // {1.0, 1.0, 1.0, 1.0},
+		    // {1.0, 1.0, 1.0, 1.0},
+		    // {1.0, 1.0, 1.0, 1.0},
+		    // {1.0, 1.0, 1.0, 1.0},
 		};
 		vector<vec4> diskPositions;
 		vector<vec4> diskColors;
@@ -239,7 +242,7 @@ namespace exercise6
 				float adjV = (float)row / vRes; // v축에 더 가까움
 				auto u1Color = (1 - adjU) * uvColors[0] + (adjU)*uvColors[1];
 				auto u2Color = (1 - adjU) * uvColors[3] + (adjU)*uvColors[2];
-				auto interpoatedColor = (1 - adjV) * u2Color + (adjV) * u1Color;
+				auto interpoatedColor = (1 - adjV) * u2Color + (adjV)*u1Color;
 				diskColors.push_back(interpoatedColor);
 			}
 		}
@@ -273,7 +276,7 @@ namespace exercise6
 
 		GLuint createShader(GLenum shader_type, const char *shader_path)
 		{
-			GLuint shaderAddr = sb7::shader::load(shader_path, shader_type, false);
+			GLuint shaderAddr = sb7::shader::load(shader_path, shader_type, true);
 			return shaderAddr;
 		};
 
@@ -310,7 +313,7 @@ namespace exercise6
 
 	class ModelBase
 	{
-	  private:
+	  protected:
 		GLuint mVAOAddr;
 		GLuint mVBOAddr;
 		GLuint mEBOAddr;
@@ -320,31 +323,52 @@ namespace exercise6
 		vector<GLuint> mElementData;
 		GLuint mIndexCount;
 
-	  public:
-		vec3 mTranslate = vec3(0.0f, 0.0f, 0.0f);
-		vec3 mEulerRot = vec3(0.0f, 0.0f, 0.0f);
-		vec3 mScale = vec3(1.0f, 1.0f, 1.0f);
+		bool isBuilted = false;
 
-		vec2 mUVOffset = vec2(0.0f, 0.0f);
-		vec2 mUVRatio = vec2(1.0f, 1.0f);
+	  public:
+		vec3 Translate = vec3(0.0f, 0.0f, 0.0f);
+		vec3 EulerRot = vec3(0.0f, 0.0f, 0.0f);
+		vec3 Scale = vec3(1.0f, 1.0f, 1.0f);
+
+		vec4 BaseColor = vec4(1.0, 1.0, 1.0, 1.0);
+		vec2 UVOffset = vec2(0.0f, 0.0f);
+		vec2 UVRatio = vec2(1.0f, 1.0f);
 
 		ModelBase()
 		{
 		}
 
-		~ModelBase()
+		virtual ~ModelBase()
 		{
+			Deconstruct();
+		}
+
+		void Deconstruct()
+		{
+			if (!isBuilted)
+				return;
+
 			glDeleteBuffers(1, &mEBOAddr);
 			glDeleteBuffers(1, &mVBOAddr);
 			glDeleteVertexArrays(1, &mVAOAddr);
+			isBuilted = false;
 		}
 
 		void Build(const vector<GLfloat> &buffer_data)
 		{
+			if (isBuilted)
+				return;
 			mBufferData = vector<GLfloat>(buffer_data);
+
 			mIndexCount = mBufferData.size() / VERTEX_LEN;
 			for (GLuint i = 0; i < mIndexCount; i++)
 				mElementData.push_back(i);
+
+			// for(int i = 0;i < mIndexCount; i++) {
+			// 	for(int j = 0; j < VERTEX_LEN; j++)
+			// 		cout << buffer_data[i * VERTEX_LEN + j] << " ";
+			// 	cout << endl;
+			// }
 
 			glGenVertexArrays(1, &mVAOAddr);
 			glBindVertexArray(mVAOAddr);
@@ -368,35 +392,30 @@ namespace exercise6
 			glEnableVertexAttribArray(1);
 			glVertexAttribPointer(2, VERTEX_UV_SIZE, GL_FLOAT, false, stride, uvoffset);
 			glEnableVertexAttribArray(2);
+			isBuilted = true;
 		}
 
 		mat4 GetModelMatrix()
 		{
-			return translate(mTranslate) * vmath::rotate<float>(mEulerRot[2], 0.0, 0.0, 1.0) * vmath::rotate<float>(mEulerRot[1], 0.0, 1.0, 0.0) * vmath::rotate<float>(mEulerRot[0], 1.0, 0.0, 0.0) * vmath::scale<float>(mScale);
+			return translate(Translate) * vmath::rotate<float>(EulerRot[2], 0.0, 0.0, 1.0) * vmath::rotate<float>(EulerRot[1], 0.0, 1.0, 0.0) * vmath::rotate<float>(EulerRot[0], 1.0, 0.0, 0.0) * vmath::scale<float>(Scale);
 		}
 
-		void Draw(GLuint prog_addr)
+		virtual void Draw(GLuint prog_addr)
 		{
 			glBindVertexArray(mVAOAddr);
 			glUniformMatrix4fv(glGetUniformLocation(prog_addr, UNIFORM_MODEL_MAT),
 			                   1, false, GetModelMatrix());
-			// vec2 uniform 은 glUniform2fv — Matrix4fv 는 mat4 (16 float) 용
-			glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET), 1, mUVOffset);
-			glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_RATIO), 1, mUVRatio);
+			glUniform4fv(glGetUniformLocation(prog_addr, UNIFORM_BASE_COLOR), 1, BaseColor);
+			if (mTextureAddrs.size())
+			{
+				glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET), 1, UVOffset);
+				glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_RATIO), 1, UVRatio);
 
-			glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);
-			// glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX2), 1);
+				glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);
-
-			// for (int f = 0; f < 6; f++)
-			// {
-			// 	glActiveTexture(GL_TEXTURE1);
-			// 	glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);
-			// 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)(f * 6 * sizeof(GLuint)));
-			// }
-
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);
+			}
 			glDrawElements(GL_TRIANGLES, mIndexCount, GL_UNSIGNED_INT, 0);
 		}
 
@@ -424,10 +443,92 @@ namespace exercise6
 		}
 	};
 
+	class Cube : public ModelBase
+	{
+	  public:
+		Cube()
+		{
+		}
+		virtual ~Cube()
+		{
+		}
+		void Build()
+		{
+			vector<GLfloat> cubeVertices;
+			BuildCube(cubeVertices);
+			ModelBase::Build(cubeVertices);
+		}
+
+		virtual void Draw(GLuint prog_addr) override
+		{
+			glBindVertexArray(mVAOAddr);
+			glUniformMatrix4fv(glGetUniformLocation(prog_addr, UNIFORM_MODEL_MAT),
+			                   1, false, GetModelMatrix());
+			glUniform4fv(glGetUniformLocation(prog_addr, UNIFORM_BASE_COLOR), 1, BaseColor);
+			if (mTextureAddrs.size())
+			{
+				glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET), 1, UVOffset);
+				glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_RATIO), 1, UVRatio);
+
+				glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);
+				glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX2), 1);
+				if (mTextureAddrs.size() + 1 <= 6)
+					return;
+				// for (int f = 0; f < 6; f++)
+				// {
+				// 	glActiveTexture(GL_TEXTURE0);
+				// 	if (f % 4 == 0)
+				// 		glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);
+				// 	else
+				// 		glBindTexture(GL_TEXTURE_2D, mTextureAddrs[5 - (1 + f)]);
+				// 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)(f * 6 * sizeof(GLuint)));
+				// 	// cout << "glBindTexture(GL_TEXTURE_2D, mTextureAddrs[" << 1 + f << "]" << endl;
+				// }
+				// if (mTextureAddrs.size() + 1 <= 12)
+				// 	return;
+				for (int f = 0; f < 6; f++)
+				{
+					glActiveTexture(GL_TEXTURE1);
+					glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);
+					glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)(f * 6 * sizeof(GLuint)));
+					// cout << "glBindTexture(GL_TEXTURE_2D, mTextureAddrs[" << 1 + f << "]" << endl;
+				}
+			}
+		}
+
+		void AddCubeTexture(unsigned int texCounts, const char **image_paths)
+		{
+			for (int tIdx = 0; tIdx < texCounts; tIdx++)
+			{
+				GLuint texture;
+				glGenTextures(1, &texture);
+				glBindTexture(GL_TEXTURE_2D, texture);
+
+				int width, height, nrChannels;
+				unsigned char *data = stbi_load(image_paths[tIdx], &width, &height, &nrChannels, 0);
+				if (data)
+				{
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+					glGenerateMipmap(GL_TEXTURE_2D);
+				}
+				stbi_image_free(data);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+				mTextureAddrs.push_back(texture);
+			}
+		}
+	};
+
 	class MyApplication : public sb7::application
 	{
-		unique_ptr<ProgramBase> program;
-		vector<unique_ptr<ModelBase>> models;
+		unique_ptr<ProgramBase> default_program;
+		unique_ptr<ProgramBase> texture_program;
+		vector<unique_ptr<ModelBase>> default_models;
+		vector<unique_ptr<ModelBase>> texture_models;
 
 		vec3 eye = vec3(0.0, 1.0, 3.0);
 		vec3 target = vec3(0.0, 0.0, 0.0);
@@ -441,52 +542,44 @@ namespace exercise6
 		virtual void startup() override
 		{
 			stbi_set_flip_vertically_on_load(true);
-			program = std::make_unique<ProgramBase>();
+			default_program = std::make_unique<ProgramBase>();
 
-			vector<GLfloat> vertices;
 			{
-				// BuildCube(vertices);
-				// auto model = std::make_unique<ModelBase>();
-				// model->Build(vertices);
+				vector<GLfloat> vertices;
+				BuildCone(vertices);
 
-				// model->AddTexture(TEXTURE_CONTAINER);
-				// for (int f = 0; f < 6; f++)
-				// 	model->AddTexture(TEXTURE_SIDES[f]);
+				auto model = std::make_unique<ModelBase>();
+				model->Build(vertices);
 
-				// model->mScale = vec3(0.75, 0.75, 0.75);
-				// models.push_back(std::move(model));
+				model->Scale = vec3(0.75, 0.75, 0.75);
+				default_models.push_back(std::move(model));
 			}
+
+			texture_program = std::make_unique<ProgramBase>(SHADER_VS_PATH, TEXTURE_FS_PATH);
+
 			{
-				// BuildCone(vertices);
+				auto model = std::make_unique<Cube>();
+				model->Build();
 
-				// auto model = std::make_unique<ModelBase>();
-				// model->Build(vertices);
+				model->AddTexture(TEXTURE_CONTAINER);
+				model->AddCubeTexture(6, TEXTURE_SIDES);
 
-				// model->AddTexture(TEXTURE_CONTAINER);
-				// for (int f = 0; f < 4; f++)
-				// 	model->AddTexture(TEXTURE_SIDES[0]);
-				// model->mScale = vec3(0.75, 0.75, 0.75);
-				// models.push_back(std::move(model));
+				model->Scale = vec3(0.75, 0.75, 0.75);
+				texture_models.push_back(std::move(model));
 			}
 
 			{
+				vector<GLfloat> vertices;
 				double disRad = 1.0f;
 				BuildDisk(vertices,
 				          0, 2 * M_PI, 32,
 				          0.5, 1.0, 1, disRad);
-				for (int j = 0; j < vertices.size() / 10; j++)
-				{
-					for (int i = 0; i < 10; i++)
-					{
-						cout << vertices[j * 10 + i] << " ";
-					}
-					cout << endl;
-				}
+
 				auto model = std::make_unique<ModelBase>();
 				model->Build(vertices);
 				model->AddTexture(TEXTURE_CONTAINER);
-				model->mScale = vec3(1.0, 1.0, 1.0);
-				models.push_back(std::move(model));
+				model->Scale = vec3(1.0, 1.0, 1.0);
+				texture_models.push_back(std::move(model));
 			}
 		};
 
@@ -500,21 +593,38 @@ namespace exercise6
 
 			float angle = vmath::radians((currentTime * 180) / M_PI) * 90;
 
-			glUseProgram(program->GetProgramAddr());
-			glUniformMatrix4fv(
-			    glGetUniformLocation(program->GetProgramAddr(), UNIFORM_VIEW_MAT),
-			    1, false, vmath::lookat(eye, target, worldup));
-			glUniformMatrix4fv(
-			    glGetUniformLocation(program->GetProgramAddr(), UNIFORM_PROJ_MAT),
-			    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
-
-			models.back()->mTranslate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
-			// models.back()->mEulerRot = vmath::vec3(angle, angle, angle);
-			models.back()->mUVOffset = vmath::vec2(currentTime, 1.0f);
-
-			for (auto &model : models)
 			{
-				model->Draw(program->GetProgramAddr());	
+				glUseProgram(default_program->GetProgramAddr());
+				glUniformMatrix4fv(
+				    glGetUniformLocation(default_program->GetProgramAddr(), UNIFORM_VIEW_MAT),
+				    1, false, vmath::lookat(eye, target, worldup));
+				glUniformMatrix4fv(
+				    glGetUniformLocation(default_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
+				    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
+
+				for (auto &model : default_models) {
+					model->Translate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
+					model->EulerRot = vmath::vec3(angle, angle, angle);
+				}
+
+				for (auto &model : default_models){
+					model->Draw(default_program->GetProgramAddr());
+				}
+			}
+			{
+				glUseProgram(texture_program->GetProgramAddr());
+				glUniformMatrix4fv(
+				    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_VIEW_MAT),
+				    1, false, vmath::lookat(eye, target, worldup));
+				glUniformMatrix4fv(
+				    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
+				    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
+
+				texture_models.back()->EulerRot = vmath::vec3(angle, angle, angle);
+				texture_models.back()->UVOffset = vmath::vec2(currentTime, 1.0f);
+
+				for (auto &model : texture_models)
+					model->Draw(texture_program->GetProgramAddr());
 			}
 		}
 

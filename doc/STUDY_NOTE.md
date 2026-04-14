@@ -1415,3 +1415,446 @@ float angle = static_cast<float>(currentTime) * 90.0f;   // 초당 90도
 5. **상태를 바꾸는 루프에는 draw call 이 같이 들어가야 한다** — OpenGL 은 draw 시점의 상태 하나로만 그린다.
 6. **단위는 한 번만 변환** — degrees/radians 혼용은 그 함수의 규약을 먼저 확인해서 해결.
 7. **복사-붙여넣기는 diff 로 검증** — 블록/파일 복제 시 누락은 런타임 증상만 보고 원인 추적이 어렵다.
+
+---
+
+# Exercise6 — 파라메트릭 서피스 (Disk) 확장 노트
+
+> 위의 Exercise6 섹션을 `BuildDisk` 를 추가하는 과정에서 발견한 새 실수들을 이어받아 확장.
+> 파라메트릭 생성, 색 보간, 범용 Draw, glUniform 타입 매칭 등 **"렌더는 되는데 결과가 이상한"** 새로운 실수들이 등장.
+
+## 🚨 또 재발한 실수 (Exercise6 원본 노트 참조)
+
+### 🔴 R-4. [REPEATED] 빈/부족한 vector 에 `operator[]` 접근 → UB
+
+**이전 경고**: Exercise6 Priority 1-4 ("빈 vector operator[] → UB → SEGV")
+**이번 재현**: Disk 쪽 작업 중, `Draw()` 가 **큐브 전용 하드코딩** 상태였던 탓에 `mTextureAddrs[1 + f]` (f=0..5) 로 접근. 그런데 Disk 는 `AddTexture(TEXTURE_CONTAINER)` 를 **한 번만** 호출해서 `size()==1` → `[1]`, `[2]`, … 접근이 **out-of-bounds UB**.
+
+```cpp
+// ❌ Draw() 안
+for (int f = 0; f < 6; f++)
+    glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);  // size=1 인데 [1] 접근
+```
+
+**증상**: `glBindTexture` 가 쓰레기 texture name 을 받아 드라이버가 **`UNSUPPORTED: unit 1 GLD_TEXTURE_INDEX_2D is unloadable ... using zero texture`** 경고 발생. 렌더는 진행되지만 unit 1 은 zero texture 로 폴백.
+
+**교훈**: "빈 vector `[0]`" 뿐 아니라 **"모자란 vector `[N]`"** 도 똑같은 UB. vector 인덱싱은 언제나 `size()` 로 가드.
+
+---
+
+## Priority 1: 치명적 실수
+
+### 1-6. [NEW] `glUniform*` 함수와 쉐이더 타입 불일치 → 조용히 거절 🔴
+
+```cpp
+// ❌ vec2 uniform 을 mat4 용 함수로 업로드
+glUniformMatrix4fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET),
+                   1, false, mUVOffset);   // ← mUVOffset 은 vec2 (8 bytes)
+
+// ✅ vec2 는 glUniform2fv
+glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET), 1, mUVOffset);
+```
+
+**발생 체인**:
+1. `glUniformMatrix4fv` 는 **16 float (64 bytes)** 을 읽으려고 함
+2. `mUVOffset` 은 **vec2, 8 bytes** 뿐 → 나머지 56 bytes 는 스택의 쓰레기 메모리
+3. 드라이버는 "uniform 타입 vec2 인데 mat4 로 업로드? 타입 불일치" → **`GL_INVALID_OPERATION` 조용히 반환**
+4. 셰이더의 `uniform vec2 uvOffset` / `uvRatio` 가 **영원히 기본값 (0, 0)** 에 머무름
+
+**2차 증상**:
+- VS 에서 `vec2 rUv = vec2(uvCoords.x * uvRatio.x, uvCoords.y * uvRatio.y) = (0, 0)` — 모든 정점 UV 가 (0,0)
+- FS 에서 `texture(tex1, (0, 0))` — 텍스처의 **단 한 픽셀만 샘플링** → 디스크 전체가 **단색**
+- 매 프레임 `mUVOffset = vec2(currentTime, 1.0)` 으로 바꿔도 uniform 업로드 자체가 실패 → **애니메이션 무반응**
+
+**이번 함정**: 행렬을 mat4 로 다루는 데 익숙해져서 "uniform 넘길 때는 `glUniformMatrix4fv` 쓰면 된다" 는 잘못된 패턴이 손에 배어버림. 실제로는 **uniform 함수가 쉐이더 타입과 1:1 매칭** 되어야 한다.
+
+**OpenGL uniform 함수 매핑 표** (반드시 외울 것):
+
+| 쉐이더 타입 | CPU 함수 | 주로 쓰는 데 |
+|-----------|---------|-------------|
+| `float`   | `glUniform1f` / `glUniform1fv`   | scalar |
+| `vec2`    | `glUniform2f` / **`glUniform2fv`** | UV, 2D 위치 |
+| `vec3`    | `glUniform3f` / `glUniform3fv`   | RGB, 3D 방향 |
+| `vec4`    | `glUniform4f` / `glUniform4fv`   | RGBA, 4D 벡터, baseColor |
+| `int`     | `glUniform1i`   | ⚠️ **sampler 도 int** (`sampler2D`/`samplerCube`) |
+| `mat3`    | **`glUniformMatrix3fv`** | normal matrix |
+| `mat4`    | **`glUniformMatrix4fv`** | model/view/proj |
+
+**특히 주의**: `sampler2D` 는 정수 unit 번호로 지정. `glUniform1f` 로 소수점 넘기면 똑같이 조용히 거절. 반드시 `glUniform1i(loc, texture_unit_index)`.
+
+**판별법**: "CPU 에선 uniform 을 매 프레임 바꾸는데 셰이더에 반영이 안 됨" → 가장 먼저 `glUniform*` 함수 이름부터 확인. `glGetError()` 를 draw 직후에 한 번 호출해보는 것도 빠른 진단.
+
+---
+
+## Priority 2: 렌더는 되지만 결과가 엉뚱한 실수
+
+### 2-5. [NEW] 파라메트릭 서피스의 누적 변수 스코프 오류 → 아르키메데스 나선 🔴
+
+```cpp
+// ❌ currentRad 가 col 루프 안에서 누적 → 정점마다 반지름 증가
+double currentRad = vs;
+double currentAngle = us;
+for (int row = 0; row < numRows; row++) {
+    for (int col = 0; col < numCols; col++) {
+        currentRad += deltaRad;       // ← col 마다 누적
+        currentAngle += deltaAngle;   // ← col 마다 누적
+        // ... pos = (currentRad * cos, 0, -currentRad * sin) ...
+    }
+}
+```
+
+**추적**: `vRes=1, uRes=32` 에서 시작:
+
+| col | currentRad | currentAngle |
+|-----|-----------|--------------|
+| 0   | 1         | 0.196        |
+| 1   | 2         | 0.392        |
+| 16  | 17        | 3.14         |
+| 32  | 33        | 6.28         |
+
+→ 반지름이 1 → 33 으로 **선형 증가** 하면서 각도도 한 바퀴 회전 = **아르키메데스 나선**. 육안으로 "점점 커지는 칼날 형태" 로 보임.
+
+또한 `currentRad`/`currentAngle` 이 **row 간에도 reset 되지 않음** → row 0 끝 지점 값부터 이어서 계속 증가 → row 0 과 row 1 이 전혀 다른 궤적.
+
+```cpp
+// ✅ 누적 대신 인덱스로 직접 계산
+for (int row = 0; row < numRows; row++) {
+    double currentRad = (vs + row * deltaRad) * radius;   // row 만 의존
+    for (int col = 0; col < numCols; col++) {
+        double currentAngle = us + col * deltaAngle;       // col 만 의존
+        // ... 계산 ...
+    }
+}
+```
+
+**원칙**: **중첩 루프에서 누적 증분은 위험**. 각 축이 독립적이어야 하는 파라메트릭 표면에서는 `index × delta + start` **공식으로 직접 계산** 이 훨씬 안전. 누적 방식의 유일한 장점은 연속 증분 시 성능이지만, 정점 생성은 frame 당 한 번이라 성능 이점이 무의미.
+
+**판별법**: "내가 파라메트릭으로 만든 곡면이 나선/칼날 모양이 되면" → 누적 변수의 스코프 먼저 확인. 특히 outer loop 의 누적이 inner loop 에 들어가 있는지.
+
+---
+
+### 2-6. [NEW] Per-quad 색 할당 → 부드러운 그라데이션 불가능
+
+```cpp
+// ❌ quad 하나당 색 하나 — 4 정점에 같은 값 주입
+for (row, col) {
+    float adjU = (float)col / numCols;
+    float adjV = (float)row / numRows;
+    auto color = bilinearLerp(cornerColors, adjU, adjV);  // quad 전체 색 계산
+
+    for (int idx : indices)
+        PushVertex(..., diskPositions[idx], color, ...);   // 모든 정점 같은 색
+}
+
+// ✅ per-vertex 색 — 정점 생성 시 위치 기반 색 계산, GPU 가 보간
+for (row, col) {
+    // 정점 만들면서 정점별 색 계산
+    float t = (float)row / (float)(numRows - 1);   // 0..1
+    diskVertexColors.push_back(lerp(colorInner, colorOuter, t));
+}
+// face 루프에서는 정점별 색을 그대로 lookup
+for (...) for (int idx : indices)
+    PushVertex(..., diskPositions[idx], diskVertexColors[idx], ...);
+```
+
+**핵심**: GPU rasterizer 는 **삼각형의 정점 속성을 자동으로 barycentric 보간** 함. CPU 에서 직접 색을 보간하지 말고 **정점에만 값을 주면 된다**. Per-quad 색 할당은 GPU 의 핵심 기능을 포기하는 꼴.
+
+**증상 예시**: `vRes=1, row` 루프가 `row < vRes=1` 이라 **row=0 만 실행** → `adjV=0` 고정 → `interp = (1-0)*u2Color + 0*u1Color = u2Color` → 모든 quad 가 u2Color 한 색으로만 보임. 안쪽 파랑/바깥쪽 빨강 그라데이션을 의도해도 바깥쪽은 절대 나오지 못함.
+
+**판별법**: "bilinear lerp 코드는 있는데 결과가 단색이거나 블로키" → per-quad 계산인지 확인. 색은 **반드시 per-vertex**.
+
+**보너스**: RGB 공간 4 코너의 bilinear lerp 로는 **무지개 (hue 원)** 를 표현할 수 없다. 무지개가 필요하면:
+- HSV/HSL 의 H 축을 직접 파라미터화 후 RGB 로 변환
+- 또는 YCbCr 의 Cb/Cr 를 원 위에 배치해서 chroma 원 = hue 원 효과
+
+---
+
+### 2-7. [NEW] `Draw()` 에 특정 메쉬의 상수 하드코딩 → 범용성 파괴
+
+```cpp
+// ❌ "큐브 = 6면 × 6 인덱스 = 36" 이 Draw 에 하드코딩
+void Draw(GLuint prog_addr) {
+    // ...
+    for (int f = 0; f < 6; f++) {   // ← 6 면 고정
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);
+        glDrawElements(GL_TRIANGLES, 6,    // ← 면당 6 인덱스 고정
+                       GL_UNSIGNED_INT,
+                       (void *)(f * 6 * sizeof(GLuint)));   // ← f*6 오프셋 가정
+    }
+}
+
+// ✅ 모델 자신의 인덱스 수를 쓰는 범용 draw
+void Draw(GLuint prog_addr) {
+    // ... 텍스처 바인딩 (gate + size check) ...
+    glDrawElements(GL_TRIANGLES, mIndexCount, GL_UNSIGNED_INT, 0);
+}
+```
+
+**증상**: Disk (384 인덱스, 64 slice) 를 이 Draw 로 그리면 **앞 36 인덱스 = 앞 6 slice 만** 그려짐. 육안으로 `36/384 ≈ 9.375%` = 약 **33.75° 부채꼴**. 전체 원의 1/10 정도만 보여서 "한 바퀴를 못 돈다" 고 오해하기 쉽지만 **BuildDisk 의 정점 데이터는 정상** — 드로우 쪽이 앞부분만 잘라 그린 것.
+
+**핵심**: `ModelBase::Draw()` 같은 범용 함수에는 **특정 메쉬의 상수(`6`, `f*6`, `36`) 를 절대 하드코딩하지 말 것**. 인덱스 개수는 객체 상태(`mIndexCount`) 에서, 면별 상태(텍스처 등)는 서브메쉬 구조에서 가져와야 함.
+
+**단일 책임 원칙**:
+- "큐브 면별 텍스처" 같은 특수 기능은 서브클래스 / sub-mesh 리스트 / 별도 Model 로 분리
+- 범용 `Draw()` 는 "VAO 바인딩 → uniform → `glDrawElements(mIndexCount)`" 만 해야 함
+
+**판별법**: 다른 메쉬를 넣었는데 **부분만 그려짐** = `Draw()` 의 인덱스 카운트가 mesh 에 맞춰 계산되는지 확인.
+
+---
+
+### 2-8. [NEW] 정규화 분모 off-by-one: `/numCols` vs `/uRes`
+
+```cpp
+int numCols = uRes + 1;   // 정점 개수 = 면 개수 + 1
+int numRows = vRes + 1;
+
+// ❌ [0, 1] 전체를 못 덮음 — 최대값이 uRes/(uRes+1) 에서 멈춤
+float adjU = (float)col / numCols;
+float adjV = (float)row / numRows;
+
+// ✅ [0, 1] 풀 범위
+float adjU = (float)col / uRes;    // col ∈ [0, uRes] → adjU ∈ [0, 1]
+float adjV = (float)row / vRes;    // row ∈ [0, vRes] → adjV ∈ [0, 1]
+```
+
+**영향**: `vRes=1` 일 때:
+- `adjV = row / numRows = 0/2 = 0` (max)
+- 색 보간 / UV 매핑이 [0, 1] 대신 [0, 0] 구간에서만 평가
+- `vRes=10` 이어도 `adjV` 최대는 `9/11 ≈ 0.82` — 1.0 에 도달 못함
+
+**일반 규칙**:
+- **"N 등분 = 정점 N+1 개"**: UV/색 정규화할 때는 **"등분 수 (= `uRes`/`vRes`)"** 로 나눠야 [0, 1] 을 모두 덮는다
+- numCols/numRows 는 정점 개수 세는 용도일 뿐, 정규화 분모가 아님
+
+---
+
+## Priority 3: Mental Model / 개념적 오해
+
+### 3-1. [NEW] Texture Unit 은 global state, 한 draw 는 여러 unit 을 동시 샘플링 🔴
+
+**오해**: "draw call 하나 = 텍스처 하나를 그림". 따라서 "7개 텍스처를 쓰려면 draw 도 7번 해야 한다".
+
+**실제**: OpenGL 의 texture unit (`GL_TEXTURE0`, `GL_TEXTURE1`, …) 은 **독립된 글로벌 슬롯**이고, 한 draw call 의 shader invocation 은 **여러 unit 에서 동시에** 샘플링할 수 있다. 한 번 `glBindTexture` 로 꽂힌 텍스처는 **새로 bind 하기 전까지 그 unit 에 영구 유지**.
+
+### 핵심 모델
+
+```
+OpenGL Context State
+├── Texture Unit 0  →  [ 무엇이 꽂혀있음 ]   ← glBindTexture 전까지 유지
+├── Texture Unit 1  →  [ 무엇이 꽂혀있음 ]
+├── Texture Unit 2  →  [ 무엇이 꽂혀있음 ]
+├── ...
+```
+
+각 unit 은 **독립 슬롯**이고, bind 호출은 "현재 active unit 에 새 texture 를 끼워넣는" 동작일 뿐. **unbind 자체가 없다** — 그냥 다른 걸로 덮어쓰거나 프로그램이 종료될 때까지 그대로.
+
+### 전형적인 예시 (exercise6 Cube::Draw)
+
+```cpp
+// 루프 밖 — unit 0 에 container 를 한 번만 꽂음
+glActiveTexture(GL_TEXTURE0);
+glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);   // container
+
+// 루프 안 — unit 1 만 매 iteration 마다 교체
+for (int f = 0; f < 6; f++) {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);   // side[f]
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)(f * 6 * sizeof(GLuint)));
+}
+```
+
+**각 draw 시점의 실제 state**:
+
+| draw | unit 0 (tex1) | unit 1 (tex2) |
+|------|---------------|---------------|
+| 1 | container | side1 |
+| 2 | container | side2 |
+| 3 | container | side3 |
+| 4 | container | side4 |
+| 5 | container | side5 |
+| 6 | container | side6 |
+
+**container 가 모든 draw 에서 unit 0 에 존재** 하는 이유: 아무도 unit 0 에 새 bind 를 안 걸었기 때문. GL 은 "관리 안 하면 자동으로 꺼지는" 방식이 아니라 **"새로 꽂기 전까지는 그대로"** 방식.
+
+### 수학적으로 정리
+
+- **draw call 수**: 6
+- **고유 텍스처 수**: 7 (container 1 + side 6)
+- **활성 (sampler, texture) 매핑 수**: 6 × 2 = **12** (매 draw 마다 tex1 과 tex2 둘 다 읽음)
+
+**공식**: `activations = draws × samplers_per_draw`, 이는 `draws == textures` 와 전혀 다른 값.
+
+### 게임 엔진 표준 패턴
+
+Texture unit 을 **"bind 빈도"** 로 구분해서 관리:
+
+| Unit | 용도 | bind 빈도 | 예시 |
+|------|------|----------|------|
+| 0 | albedo/diffuse | 모델마다 | 캐릭터 피부, 벽돌, 천 |
+| 1 | normal map | 모델마다 | 범프 디테일 |
+| 2 | lightmap | 씬 시작 시 1회 | 미리 구운 조명 |
+| 3 | shadow map | 프레임마다 1회 | 동적 그림자 |
+| 4 | environment cubemap | 거의 영구 | IBL 반사 |
+
+**핵심**: "자주 바뀌는 유닛만 매 draw 마다 rebind, 공유 유닛은 프레임 시작 시 한 번만 bind". Draw call 별 GL 호출 수가 극적으로 줄어듦.
+
+### ⚠️ 함정: bind 는 했는데 FS 가 샘플링 안 하는 경우
+
+```glsl
+uniform sampler2D tex1;
+uniform sampler2D tex2;
+
+void main() {
+    vec4 c1 = texture(tex1, fs_in.vsTexCoord);
+    // vec4 c2 = texture(tex2, fs_in.vsTexCoord);   ← 주석 처리
+    fragColor = c1 * fs_in.vsColor;
+}
+```
+
+이 상태에서 CPU 가 아무리 열심히 `glBindTexture(GL_TEXTURE1, ...)` 를 루프에서 돌려도, **FS 는 tex2 를 안 읽으므로 모든 면이 tex1 (container) 만으로 그려짐**. Draw call 수·텍스처 바인딩 수와 실제 화면은 별개.
+
+**판별법**: "루프에서 분명히 텍스처를 바꾸는데 면이 전부 같은 이미지로 보임" → FS 가 해당 sampler 를 실제로 사용하는지 확인.
+
+### 원칙 정리
+
+1. **Texture unit = global persistent slot**. "해제" 가 아니라 "덮어쓰기" 로 관리.
+2. **한 draw 는 여러 unit 을 동시에** 읽는다. `sampler2D` uniform 이 n 개면 이론상 n 개의 동시 샘플링.
+3. **Draw call 수 ≠ 텍스처 수**. 둘 사이 관계는 설계에 따라 자유로움.
+4. **"자주 바뀌는 것만 rebind, 공유 자원은 한 번만"** — 엔진 성능 최적화의 기본.
+5. **bind 만으로는 반영 안 됨** — FS 가 실제로 해당 sampler 를 샘플링해야 화면에 나타남.
+
+---
+
+### 3-2. [NEW] 대량 텍스처 렌더링은 "시분할" 이 아닌 "집합화 + 가상화"
+
+**흔한 오해**: "texture unit 을 시분할로 계속 교체하면 수백만 개 텍스처도 그릴 수 있다."
+
+**현실**: 시분할 접근은 **3단계의 독립적인 제약** 에 부딪혀서 10~100 개 정도에서만 실용적이다. 그 이상은 전혀 다른 기법이 필요.
+
+### 3단계 제약 벽
+
+#### ① Per-draw unit 상한 (하드웨어)
+```cpp
+GLint maxUnits;
+glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxUnits);
+// 대부분 하드웨어: 16~192
+```
+| 플랫폼 | 상한 |
+|-------|------|
+| 모바일 | 16 |
+| 데스크탑 GL 4.x | 48~96 |
+| 최신 고급 | 192 |
+| Vulkan (descriptor indexing) | 수천~수만 |
+
+**한 draw call 의 shader invocation 이 참조 가능한 "서로 다른 텍스처"** 의 상한. 192 를 넘기려면 아래의 집합화 기법 필요.
+
+#### ② Draw call overhead (CPU)
+```
+60 FPS = 16.67 ms / frame
+draw call 1회 ≈ 5~50 μs  (드라이버 호출 + state 검증)
+100,000 draws × 20 μs = 2000 ms = 2 초 → 0.5 FPS ❌
+```
+
+**현실 예산** (프레임당 draw call):
+| 게임 | 예산 |
+|------|------|
+| 모바일 | 200~500 |
+| 콘솔/PC | 1,000~5,000 |
+| AAA 최적화 | 5,000~15,000 |
+| Vulkan/D3D12 극한 | 30,000~100,000 |
+
+즉 **"100만 텍스처 = 100만 draw"** 는 드라이버 호출만으로 프레임이 수십 초 걸려서 실격.
+
+#### ③ VRAM 용량 (GPU 메모리)
+| 해상도 | RGBA8 + mips |
+|-------|--------------|
+| 64×64 | ~21 KB |
+| 512×512 | ~1.3 MB |
+| 2048×2048 | ~21 MB |
+| 4096×4096 | ~85 MB |
+
+**100만 개 × 64×64** ≈ 21 GB (RTX 4090 급도 겨우 수용)
+**100만 개 × 512×512** ≈ 1.3 TB (물리적 불가)
+
+현실 GPU VRAM:
+| GPU | VRAM |
+|-----|------|
+| RTX 4090 | 24 GB |
+| RTX 3060 | 12 GB |
+| 모바일 통합 | 2~4 GB |
+
+### 실전 해법: "시분할" 대신 "집합화 + 가상화"
+
+| 기법 | 핵심 아이디어 | 규모 | 한계 |
+|------|--------------|------|------|
+| **Texture Array** (`GL_TEXTURE_2D_ARRAY`) | 1 객체에 N 레이어, 1 bind 로 전체 접근 | 수백~수천 | 모두 같은 해상도/포맷 |
+| **Texture Atlas** | 여러 이미지를 큰 하나로 합침, UV 로 영역 선택 | 수백 (2D/UI 표준) | padding 필요, mipmap 제약 |
+| **Bindless Textures** (`ARB_bindless_texture`) | 텍스처 = 64-bit handle, unit 대신 배열 인덱싱 | 수천~수만 | 드라이버 지원 필요 |
+| **Sparse Textures / Virtual Texturing** | 거대한 logical texture, 페이지 단위 상주 | 사실상 무제한 | 구현 복잡도 높음 |
+| **LOD Streaming** | 거리에 따라 해상도 동적 조정/언로드 | Open world 전체 | 스트리밍 로직 필요 |
+
+### 실제 게임 사례
+
+- **id Software의 Rage (2011) — MegaTexture**: 전 월드가 **단일 거대 virtual texture**, 페이지 스트리밍
+- **UE5 Nanite + Virtual Shadow Maps**: 기하와 텍스처 모두 가상화
+- **오픈월드 RPG**: 디스크에 50~200 GB 텍스처, 프레임당 활성은 3000~10000 장, 실제 동시 샘플링은 4~16 개
+
+### 질문별 정량 답
+
+| "몇 개를 동시에 그릴 수 있나?" | 답 |
+|-----|-----|
+| 10개 | 쉬움. 한 draw 에 10 unit bind, 일반 OpenGL 범위 |
+| 100개 | 가능하나 비효율. Texture Array / Atlas 가 정답 |
+| 1,000개 | Bindless Textures 또는 Texture Array 필수 |
+| 100,000개 | Virtual Texturing + 스트리밍 필요 |
+| 1,000,000개 | "동시에" 라는 말 자체가 성립 안 함. 월드 존재량일 뿐, 매 순간 활성은 수백~수천 |
+
+### 실전 셰이더가 실제로 읽는 텍스처 수
+
+**PBR 표준 머티리얼 1 개가 쓰는 텍스처**:
+- Albedo / Normal / Roughness / Metallic / AO / Emissive = **6**
+- + Lightmap / Shadow map / Env cubemap = **+3**
+- + Detail / Mask = **+2~5**
+
+**합계 10~15 개**. 실전 셰이더에서 한 픽셀을 그리는 데 쓰이는 숫자. 그 이상은 엔진 구조만 복잡해지고 성능은 떨어지는 "다이미니싱 리턴" 영역.
+
+### 원칙 정리 (보강)
+
+6. **"몇 개를 그릴 수 있나" 질문은 세분화 필요**:
+   - 한 shader invocation 당 → 10~192 (하드웨어 상한)
+   - 한 frame 당 고유 텍스처 → 수천~수만 (VRAM + draw call 예산)
+   - 월드 전체 존재량 → 수십만~백만 (디스크 + 스트리밍)
+   - VRAM 상주량 → 수천~수만 (용량 제약)
+7. **규모가 커지면 "bind 를 빠르게 바꾸기" 가 아니라 "bind 횟수 자체를 줄이는 기법"** 으로 전환해야 함. Texture Array, Atlas, Bindless 가 그 관문.
+8. **"시분할" 은 수십~수백 개까지만 실용적**. 수천 개 이상은 집합화, 수만 개 이상은 가상화/스트리밍이 아니면 프레임이 통째로 날아감.
+
+---
+
+## 체크리스트 (Exercise6 확장)
+
+| # | 항목 | 확인 |
+|---|------|------|
+| 18 | 🔴 **`glUniform*` 함수가 쉐이더 타입과 1:1 매칭**되는가? (vec2→`2fv`, mat4→`Matrix4fv`, sampler→`1i`) | |
+| 19 | 🔴 파라메트릭 서피스의 누적 변수가 **올바른 루프 스코프**에 있는가? (가능하면 인덱스 직접 계산) | |
+| 20 | 색 보간이 **per-vertex** 인가? (per-quad 아님 — GPU 에게 맡김) | |
+| 21 | `Draw()` 가 `mIndexCount` 를 쓰는가? (특정 메쉬 상수 하드코딩 금지) | |
+| 22 | UV/색 정규화 분모가 **`uRes`/`vRes`** 인가? (`numCols`/`numRows` 아님) | |
+| 23 | `std::vector::operator[]` 접근 전에 **out-of-bounds 도** 체크했는가? (빈 체크만으로 부족) | |
+| 24 | `glGetError()` 를 개발 중에 주기적으로 호출하는가? (특히 uniform 업로드 후) | |
+| 25 | 🔴 Texture unit 이 **글로벌 지속 상태** 라는 사실을 기억하는가? (bind = persistent) | |
+| 26 | 공유 텍스처는 **루프 밖에서 한 번만** bind 하는가? (자주 바뀌는 것만 루프 안) | |
+| 27 | CPU 에서 bind 한 텍스처를 **FS 가 실제로 샘플링** 하는지 확인했는가? | |
+
+---
+
+## 핵심 교훈 요약 (Exercise6 확장)
+
+1. 🔴 **`glUniform*` 은 쉐이더 타입과 반드시 매칭** — mat4 함수로 vec2 업로드 같은 미스매치는 드라이버가 조용히 거절하고 uniform 은 기본값 (0) 에 머무름. 이게 "단색 텍스처" 와 "애니메이션 무반응" 같은 복합 증상으로 나타난다.
+2. **파라메트릭 생성은 인덱스 직접 계산** — 누적 변수는 outer/inner 루프 스코프를 혼동하기 쉽고, row 전환 시 reset 을 빼먹으면 나선/엉뚱한 형태가 된다. `index × delta + start` 공식이 안전.
+3. **색은 per-vertex, 보간은 GPU 에게** — CPU 에서 quad 평균색을 계산해서 넣는 것은 rasterizer 의 기본 기능을 포기하는 꼴. 정점 속성만 주면 자동 보간됨.
+4. **범용 `Draw()` 에 특정 메쉬 상수 금지** — `6` 면, `36` 인덱스, `f*6` 오프셋 같은 "큐브 가정" 이 범용 코드에 박히면 다른 메쉬에서 부채꼴/부분만 그려지는 증상을 낳는다. `mIndexCount` 와 sub-mesh 구조로 분리.
+5. **정규화 분모는 "등분 수"** — `uRes`/`vRes` (면 개수) 로 나눠야 [0, 1] 을 덮는다. `numCols`/`numRows` (정점 수) 로 나누면 off-by-one 으로 1 에 도달 못함.
+6. **같은 실수 두 번 — vector 인덱스 가드** — 빈 vector `[0]` UB (Exercise6 원 노트 1-4) 에 이어서 **out-of-bounds `[N]`** 으로 한 번 더 재발. **"vector 인덱싱 = 크기 검사 필수"** 를 조건반사로 만들 것.
+7. **GL 은 기본적으로 조용함** — 어떤 문제든 "eh? 코드 맞는데 안 되네" 가 들면 `glGetError()` 부터 찔러본다. 특히 uniform 업로드/sampler 바인딩 이후는 함정 천국.
+8. **Texture unit = global persistent slot** — "draw 1회 = 텍스처 1개" 라는 오해를 버릴 것. 한 draw 가 여러 unit 을 동시에 읽고, 공유 텍스처는 한 번만 bind 하면 모든 후속 draw 가 자동으로 사용함. Draw call 수와 텍스처 수는 독립 변수. 다만 **FS 가 해당 sampler 를 실제로 읽어야** 화면에 반영됨 (bind ≠ render).
