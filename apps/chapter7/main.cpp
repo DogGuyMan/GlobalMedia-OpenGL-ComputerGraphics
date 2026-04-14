@@ -480,7 +480,7 @@ namespace Chapter7::Model
 		// 2D 텍스처 추가
 		//   samplerName : 셰이더의 uniform sampler 이름
 		//   unit        : texture unit 번호 (0, 1, 2 ...)
-		Material &AddTexture2D(const std::string &samplerName, const char *image_path, int unit);
+		Material &AddTexture2D(const std::string &samplerName, const char *image_path, int unit = 0, int texNum = GL_TEXTURE0);
 
 		// 모든 Material 상태를 program에 적용 (glDrawElements 직전에 호출)
 		void Apply(Program::ProgramBase &prog);
@@ -744,7 +744,7 @@ namespace Chapter7::Model
 	}
 
 	// 2D 텍스처 추가 — 여러 번 호출하여 복수 텍스처 슬롯 구성 가능
-	Material &Material::AddTexture2D(const std::string &samplerName, const char *image_path, int unit = 0, int texNum = GL_TEXTURE0)
+	Material &Material::AddTexture2D(const std::string &samplerName, const char *image_path, int unit, int texNum)
 	{
 		TextureSlot slot;
 		slot.target = GL_TEXTURE_2D;

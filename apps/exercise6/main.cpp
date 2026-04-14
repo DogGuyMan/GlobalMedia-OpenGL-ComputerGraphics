@@ -281,7 +281,7 @@ namespace exercise6
 
 			aspect = ((float)info.windowWidth) / info.windowHeight;
 
-			float angle = vmath::radians((currentTime * 180) / 3.14) * 10;
+			float angle = vmath::radians((currentTime * 180) / 3.14) * 90;
 
 			glUseProgram(program->GetProgramAddr());
 			glUniformMatrix4fv(
@@ -292,7 +292,7 @@ namespace exercise6
 			    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
 
 			models.back()->mTranslate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
-			models.back()->mEulerRot = vmath::vec3(angle, angle, angle);
+			// models.back()->mEulerRot = vmath::vec3(angle, angle, angle);
 
 			for (auto &model : models)
 			{
