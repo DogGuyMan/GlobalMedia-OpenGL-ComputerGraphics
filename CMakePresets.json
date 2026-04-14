@@ -23,7 +23,6 @@
         {
             "name": "base-msvc",
             "hidden": true,
-            "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/build_msvc",
             "condition": {
                 "type": "equals",
@@ -55,13 +54,24 @@
         {
             "name": "msvc",
             "inherits": "base-msvc",
-            "displayName": "MSVC (Visual Studio 2022)"
+            "displayName": "MSVC (Visual Studio 2019, v142)",
+            "generator": "Visual Studio 16 2019",
+            "toolset": "v142"
+        },
+        {
+            "name": "msvc-2022",
+            "inherits": "base-msvc",
+            "displayName": "MSVC (Visual Studio 2022, v143)",
+            "generator": "Visual Studio 17 2022",
+            "toolset": "v143"
         }
     ],
     "buildPresets": [
         { "name": "ninja",         "configurePreset": "ninja" },
         { "name": "ninja-release", "configurePreset": "ninja-release" },
-        { "name": "msvc",         "configurePreset": "msvc", "configuration": "Debug" },
-        { "name": "msvc-release", "configurePreset": "msvc", "configuration": "Release" }
+        { "name": "msvc",          "configurePreset": "msvc",      "configuration": "Debug" },
+        { "name": "msvc-release",  "configurePreset": "msvc",      "configuration": "Release" },
+        { "name": "msvc-2022",         "configurePreset": "msvc-2022", "configuration": "Debug" },
+        { "name": "msvc-2022-release", "configurePreset": "msvc-2022", "configuration": "Release" }
     ]
 }
