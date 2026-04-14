@@ -31,12 +31,12 @@ namespace exercise6
 	    }};
 
 	static const std::vector<GLuint> CUBE_FACE_INDICES[6] = {
-	    {0, 1, 5, 0, 5, 4}, // -Z
-	    {1, 2, 6, 1, 6, 5}, // +X
-	    {2, 3, 7, 2, 7, 6}, // +Z
-	    {3, 0, 4, 3, 4, 7}, // -X
-	    {0, 1, 2, 0, 2, 3}, // -Y
-	    {4, 5, 6, 4, 6, 7}, // +Y
+	    {0, 1, 5, 0, 5, 4},
+	    {1, 2, 6, 1, 6, 5},
+	    {2, 3, 7, 2, 7, 6},
+	    {3, 0, 4, 3, 4, 7},
+	    {0, 1, 2, 0, 2, 3},
+	    {4, 5, 6, 4, 6, 7},
 	};
 
 	static const std::vector<vmath::vec2> BASE_MESH_UVS{
@@ -54,27 +54,28 @@ namespace exercise6
 	    vmath::vec4(1.0, 1.0, 1.0, 1.0),
 	    vmath::vec4(1.0, 1.0, 1.0, 1.0)};
 
+	// 면마다 6 정점 unrolled — 총 36 정점, 면별 독립 UV
+	//   CUBE_FACE_INDICES[f] 의 6 인덱스 → CUBE_BASE_POSITIONS lookup → 면마다 정점 복제
+	//   UV 는 면 내부 {0,1,2,0,2,3} 패턴으로 BASE_MESH_UVS 4 코너 재사용 → 각 면이 (0,0)~(1,1) 완전 매핑
 	inline void BuildCube(vector<GLfloat> &vertices, const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
 	{
-
 		const int uvIdx[6] = {0, 1, 2, 0, 2, 3};
 		const vmath::vec4 *cubeVertices = &CUBE_BASE_POSITIONS[0][0];
 		for (int f = 0; f < 6; f++)
 		{
-			const auto &faceIdx = CUBE_FACE_INDICES[f]; // 8정점 공간 면 인덱스
-			const auto &color = BASE_COLORS[f];         // 면별 색 
+			const auto &faceIdx = CUBE_FACE_INDICES[f];
 			for (int i = 0; i < 6; i++)
 			{
-				const auto &pos = cubeVertices[faceIdx[i]]; // i 로 인덱싱 (f 아님)
+				const auto &pos = cubeVertices[faceIdx[i]];
 				const auto &uv = BASE_MESH_UVS[uvIdx[i]];
 				vertices.push_back(pos[0] + offset[0]);
 				vertices.push_back(pos[1] + offset[1]);
 				vertices.push_back(pos[2] + offset[2]);
-				vertices.push_back(pos[3]); // w 유지
+				vertices.push_back(pos[3]);
 				for (int c = 0; c < 4; c++)
-					vertices.push_back(color[c]);
-				for (int a = 0; a < 2; a++)
-					vertices.push_back(uv[a]);
+					vertices.push_back(BASE_COLORS[f][c]);
+				vertices.push_back(uv[0]);
+				vertices.push_back(uv[1]);
 			}
 		}
 	}
@@ -133,7 +134,7 @@ namespace exercise6
 		GLuint mVAOAddr;
 		GLuint mVBOAddr;
 		GLuint mEBOAddr;
-		vector<pair<const char*, GLuint>> mTextureAddrs;
+		vector<GLuint> mTextureAddrs;
 
 		vector<GLfloat> mBufferData;
 		vector<GLuint> mElementData;
@@ -157,7 +158,8 @@ namespace exercise6
 		void Build(const vector<GLfloat> &buffer_data)
 		{
 			mBufferData = vector<GLfloat>(buffer_data);
-			for (int i = 0; i < 36; i++)
+			// BuildCube 가 면마다 6 정점을 순차 unrolled 로 넣었으니 elements 는 0..35 순차
+			for (GLuint i = 0; i < 36; i++)
 				mElementData.push_back(i);
 
 			glGenVertexArrays(1, &mVAOAddr);
@@ -165,7 +167,7 @@ namespace exercise6
 
 			glGenBuffers(1, &mVBOAddr);
 			glBindBuffer(GL_ARRAY_BUFFER, mVBOAddr);
-			glBufferData(GL_ARRAY_BUFFER, mBufferData.size() * sizeof(GLfloat), mBufferData.data(), GL_STATIC_DRAW); // ??
+			glBufferData(GL_ARRAY_BUFFER, mBufferData.size() * sizeof(GLfloat), mBufferData.data(), GL_STATIC_DRAW);
 
 			glGenBuffers(1, &mEBOAddr);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEBOAddr);
@@ -195,33 +197,22 @@ namespace exercise6
 			glUniformMatrix4fv(glGetUniformLocation(prog_addr, "modelMat"),
 			                   1, false, GetModelMatrix());
 
-			// 규약: mTextureAddrs[0]     = tex1 (모든 면 공용) → unit 0
-			//       mTextureAddrs[1 + f] = tex2 (면 f=0..5)    → unit 2
-			//
-			// sampler uniform 은 "unit 번호" 를 int 로 받음. 한 번만 세팅하면 돼.
-			glUniform1i(glGetUniformLocation(prog_addr, "tex1"), 0);
-			glUniform1i(glGetUniformLocation(prog_addr, "tex2"), 2);
 
-			// tex1 : unit 0 에 한 번만 바인딩 (루프 밖)
+			glUniform1i(glGetUniformLocation(prog_addr, "tex1"), 0);
+			glUniform1i(glGetUniformLocation(prog_addr, "tex2"), 1);
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0].second);
+			glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);
 
-			// tex2 + draw : 면마다 텍스처 교체 → 그 면의 6 인덱스만 드로우
-			//   BuildCube 가 면마다 6정점을 0..35 순차로 펼쳐 넣었으니 f*6 오프셋
-			//   draw call 을 루프 안으로 옮겨야 면마다 다른 텍스처가 실제로 반영됨
 			for (int f = 0; f < 6; f++)
 			{
-				glActiveTexture(GL_TEXTURE2);
-				glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f].second);
-				glDrawElements(GL_TRIANGLES,
-				               6,
-				               GL_UNSIGNED_INT,
-				               (void *)(f * 6 * sizeof(GLuint)));
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);
+				glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)(f * 6 * sizeof(GLuint)));
 			}
 		}
 
-		void AddTexture(const char *sampler_name, const char *image_path)
+		void AddTexture(const char *image_path)
 		{
 			GLuint texture;
 			glGenTextures(1, &texture);
@@ -234,10 +225,6 @@ namespace exercise6
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 				glGenerateMipmap(GL_TEXTURE_2D);
 			}
-			else
-			{
-				cerr << "failed to load texture: " << image_path << endl;
-			}
 			stbi_image_free(data);
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -245,7 +232,7 @@ namespace exercise6
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-			mTextureAddrs.push_back({sampler_name, texture});
+			mTextureAddrs.push_back(texture);
 		}
 	};
 
@@ -273,15 +260,17 @@ namespace exercise6
 			auto model = std::make_unique<ModelBase>();
 			model->Build(vertices);
 
-			model->AddTexture("tex1", "./textures/side1.jpg");
-			model->AddTexture("tex2", "./textures/side1.jpg");
-			model->AddTexture("tex2", "./textures/side2.jpg");
-			model->AddTexture("tex2", "./textures/side3.jpg");
-			model->AddTexture("tex2", "./textures/side4.jpg");
-			model->AddTexture("tex2", "./textures/side5.jpg");
-			model->AddTexture("tex2", "./textures/side6.jpg");
+			model->AddTexture("./textures/container.jpg");
+			model->AddTexture("./textures/side1.jpg");
+			model->AddTexture("./textures/side2.jpg");
+			model->AddTexture("./textures/side3.jpg");
+			model->AddTexture("./textures/side4.jpg");
+			model->AddTexture("./textures/side5.jpg");
+			model->AddTexture("./textures/side6.jpg");
 
+			model->mScale = vec3(0.75, 0.75, 0.75);
 			models.push_back(std::move(model));
+
 		};
 
 		virtual void render(double currentTime) override
@@ -292,6 +281,8 @@ namespace exercise6
 
 			aspect = ((float)info.windowWidth) / info.windowHeight;
 
+			float angle = vmath::radians((currentTime * 180) / 3.14) * 10;
+
 			glUseProgram(program->GetProgramAddr());
 			glUniformMatrix4fv(
 			    glGetUniformLocation(program->GetProgramAddr(), "viewMat"),
@@ -300,12 +291,13 @@ namespace exercise6
 			    glGetUniformLocation(program->GetProgramAddr(), "projMat"),
 			    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
 
+			models.back()->mTranslate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
+			models.back()->mEulerRot = vmath::vec3(angle, angle, angle);
+
 			for (auto &model : models)
 			{
 				model->Draw(program->GetProgramAddr());
 			}
-
-			// glDrawArrays(GL_TRIANGLES, 0, 12);
 		}
 
 		virtual void shutdown() override

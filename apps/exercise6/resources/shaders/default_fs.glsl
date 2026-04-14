@@ -16,9 +16,7 @@ void main(void)
         vec4 tex1 = texture(tex1, fs_in.vsTexCoord);
         vec4 tex2 = texture(tex2, fs_in.vsTexCoord);
         colors = tex1;
-        // if (tex1.x < 0.9 | tex1.y < 0.9 | tex1.z < 0.9) {
-        //         colors = tex2;
-        // }
-        // s
+        if ((tex2.x + tex2.y + tex2.z) / 3 < 0.95)
+                colors = tex2;
         // colors = vec4(1.0, 1.0, 1.0, 1.0);
 }
