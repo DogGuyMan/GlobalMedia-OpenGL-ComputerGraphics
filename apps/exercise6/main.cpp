@@ -16,6 +16,33 @@ using namespace vmath;
 namespace exercise6
 {
 
+	static const int VERTEX_POSITION_SIZE = 4;
+	static const int VERTEX_COLOR_SIZE = 4;
+	static const int VERTEX_UV_SIZE = 2;
+	static constexpr int VERTEX_LEN = VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE + VERTEX_UV_SIZE;
+
+	static const char *SHADER_VS_PATH = "./shaders/default_vs.glsl";
+	static const char *SHADER_FS_PATH = "./shaders/default_fs.glsl";
+
+
+	static const char *UNIFORM_MODEL_MAT = "modelMat";
+	static const char *UNIFORM_VIEW_MAT = "viewMat";
+	static const char *UNIFORM_PROJ_MAT = "projMat";
+
+
+	static const char *SAMPLER_TEX1 = "tex1";
+	static const char *SAMPLER_TEX2 = "tex2";
+
+
+	static const char *TEXTURE_CONTAINER = "./textures/container.jpg";
+	static const char *TEXTURE_SIDES[6] = {
+	    "./textures/side1.jpg",
+	    "./textures/side2.jpg",
+	    "./textures/side3.jpg",
+	    "./textures/side4.jpg",
+	    "./textures/side5.jpg",
+	    "./textures/side6.jpg",
+	};
 	static const vmath::vec4 CUBE_BASE_POSITIONS[2][4] = {
 	    {
 	        {0.0, 0.0, 0.0, 1.0},
@@ -31,12 +58,12 @@ namespace exercise6
 	    }};
 
 	static const std::vector<GLuint> CUBE_FACE_INDICES[6] = {
-	    {0, 1, 5, 0, 5, 4},
-	    {1, 2, 6, 1, 6, 5},
-	    {2, 3, 7, 2, 7, 6},
-	    {3, 0, 4, 3, 4, 7},
-	    {0, 1, 2, 0, 2, 3},
-	    {4, 5, 6, 4, 6, 7},
+	    {1, 0, 4, 1, 4, 5}, // -Z
+	    {2, 1, 5, 2, 5, 6}, // +X
+	    {3, 2, 6, 3, 6, 7}, // +Z
+	    {0, 3, 7, 0, 7, 4}, // -X
+	    {0, 1, 2, 0, 2, 3}, // -Y
+	    {7, 6, 5, 7, 5, 4}, // +Y
 	};
 
 	static const std::vector<vmath::vec2> BASE_MESH_UVS{
@@ -80,10 +107,8 @@ namespace exercise6
 		}
 	}
 
-	static const int VERTEX_POSITION_SIZE = 4;
-	static const int VERTEX_COLOR_SIZE = 4;
-	static const int VERTEX_UV_SIZE = 2;
 	static const vmath::vec4 BG_COLOR = vmath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
 	class ModelBase;
 
 	class ProgramBase
@@ -113,7 +138,7 @@ namespace exercise6
 			glDeleteShader(fsAddr);
 		}
 		ProgramBase()
-		    : ProgramBase("./shaders/default_vs.glsl", "./shaders/default_fs.glsl")
+		    : ProgramBase(SHADER_VS_PATH, SHADER_FS_PATH)
 		{
 		}
 
@@ -138,6 +163,7 @@ namespace exercise6
 
 		vector<GLfloat> mBufferData;
 		vector<GLuint> mElementData;
+		GLuint mIndexCount;
 
 	  public:
 		vec3 mTranslate = vec3(0.0f, 0.0f, 0.0f);
@@ -158,8 +184,8 @@ namespace exercise6
 		void Build(const vector<GLfloat> &buffer_data)
 		{
 			mBufferData = vector<GLfloat>(buffer_data);
-			// BuildCube 가 면마다 6 정점을 순차 unrolled 로 넣었으니 elements 는 0..35 순차
-			for (GLuint i = 0; i < 36; i++)
+			mIndexCount = mBufferData.size() / VERTEX_LEN;
+			for (GLuint i = 0; i < mIndexCount; i++)
 				mElementData.push_back(i);
 
 			glGenVertexArrays(1, &mVAOAddr);
@@ -173,7 +199,7 @@ namespace exercise6
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEBOAddr);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementData.size() * sizeof(GLuint), mElementData.data(), GL_STATIC_DRAW);
 
-			GLuint stride = 10 * sizeof(GLfloat);
+			GLuint stride = VERTEX_LEN * sizeof(GLfloat);
 			void *poffset = (void *)0;
 			void *coffset = (void *)(VERTEX_POSITION_SIZE * sizeof(GLfloat));
 			void *uvoffset = (void *)((VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE) * sizeof(GLfloat));
@@ -194,12 +220,12 @@ namespace exercise6
 		void Draw(GLuint prog_addr)
 		{
 			glBindVertexArray(mVAOAddr);
-			glUniformMatrix4fv(glGetUniformLocation(prog_addr, "modelMat"),
+			glUniformMatrix4fv(glGetUniformLocation(prog_addr, UNIFORM_MODEL_MAT),
 			                   1, false, GetModelMatrix());
 
 
-			glUniform1i(glGetUniformLocation(prog_addr, "tex1"), 0);
-			glUniform1i(glGetUniformLocation(prog_addr, "tex2"), 1);
+			glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);
+			glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX2), 1);
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);
@@ -245,7 +271,7 @@ namespace exercise6
 		vec3 target = vec3(0.0, 0.0, 0.0);
 		vec3 worldup = vec3(0.0, 1.0, 0.0);
 
-		float fov = 50;
+		float fov = 60;
 		float aspect = 0;
 		float nearplane = 0.1;
 		float farplane = 1000.0;
@@ -260,13 +286,9 @@ namespace exercise6
 			auto model = std::make_unique<ModelBase>();
 			model->Build(vertices);
 
-			model->AddTexture("./textures/container.jpg");
-			model->AddTexture("./textures/side1.jpg");
-			model->AddTexture("./textures/side2.jpg");
-			model->AddTexture("./textures/side3.jpg");
-			model->AddTexture("./textures/side4.jpg");
-			model->AddTexture("./textures/side5.jpg");
-			model->AddTexture("./textures/side6.jpg");
+			model->AddTexture(TEXTURE_CONTAINER);
+			for (int f = 0; f < 6; f++)
+				model->AddTexture(TEXTURE_SIDES[f]);
 
 			model->mScale = vec3(0.75, 0.75, 0.75);
 			models.push_back(std::move(model));
@@ -281,18 +303,18 @@ namespace exercise6
 
 			aspect = ((float)info.windowWidth) / info.windowHeight;
 
-			float angle = vmath::radians((currentTime * 180) / 3.14) * 90;
+			float angle = vmath::radians((currentTime * 180) / M_PI) * 90;
 
 			glUseProgram(program->GetProgramAddr());
 			glUniformMatrix4fv(
-			    glGetUniformLocation(program->GetProgramAddr(), "viewMat"),
+			    glGetUniformLocation(program->GetProgramAddr(), UNIFORM_VIEW_MAT),
 			    1, false, vmath::lookat(eye, target, worldup));
 			glUniformMatrix4fv(
-			    glGetUniformLocation(program->GetProgramAddr(), "projMat"),
+			    glGetUniformLocation(program->GetProgramAddr(), UNIFORM_PROJ_MAT),
 			    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
 
 			models.back()->mTranslate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
-			// models.back()->mEulerRot = vmath::vec3(angle, angle, angle);
+			models.back()->mEulerRot = vmath::vec3(angle, angle, angle);
 
 			for (auto &model : models)
 			{
