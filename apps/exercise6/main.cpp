@@ -21,8 +21,8 @@ namespace exercise6
 	static const int VERTEX_UV_SIZE = 2;
 	static constexpr int VERTEX_LEN = VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE + VERTEX_UV_SIZE;
 
-	static const char *SHADER_VS_PATH = "./shaders/default_vs.glsl";
-	static const char *SHADER_FS_PATH = "./shaders/default_fs.glsl";
+	static const char *SHADER_VS_PATH = "./resources/shaders/default_vs.glsl";
+	static const char *SHADER_FS_PATH = "./resources/shaders/default_fs.glsl";
 
 
 	static const char *UNIFORM_MODEL_MAT = "modelMat";
@@ -34,14 +34,14 @@ namespace exercise6
 	static const char *SAMPLER_TEX2 = "tex2";
 
 
-	static const char *TEXTURE_CONTAINER = "./textures/container.jpg";
+	static const char *TEXTURE_CONTAINER = "./resources/textures/container.jpg";
 	static const char *TEXTURE_SIDES[6] = {
-	    "./textures/side1.jpg",
-	    "./textures/side2.jpg",
-	    "./textures/side3.jpg",
-	    "./textures/side4.jpg",
-	    "./textures/side5.jpg",
-	    "./textures/side6.jpg",
+	    "./resources/textures/side1.jpg",
+	    "./resources/textures/side2.jpg",
+	    "./resources/textures/side3.jpg",
+	    "./resources/textures/side4.jpg",
+	    "./resources/textures/side5.jpg",
+	    "./resources/textures/side6.jpg",
 	};
 	static const vmath::vec4 CUBE_BASE_POSITIONS[2][4] = {
 	    {
