@@ -269,6 +269,25 @@ namespace Chapter7::Meshes
 		//        cube map 전용 정점 배치는 사용자가 콘솔 출력을 기반으로 직접 편집하는 워크플로우
 	} // namespace Cube
 
+	namespace Cone
+	{
+		// static const vmath::vec4 CONE_BASE_POSITIONS[5] = {
+		//         {0.0, 0.0, 0.0, 1.0},
+		//         {1.0, 0.0, 0.0, 1.0},
+		//         {1.0, 0.0, 1.0, 1.0},
+		//         {0.0, 0.0, 1.0, 1.0},
+		//         {0.5, 1.0, 0.5, 1.0},
+		// };
+
+		// static const std::vector<GLuint> TRI_BASE_INDICES[6] = {
+		//     {0, 1, 4}, // A
+		//     {1, 2, 4}, // B
+		//     {2, 3, 4}, // C
+		//     {3, 0, 4}, // D
+		//     {0, 1,}, // B
+		// };
+	}
+
 	// =============================================================================
 	// Build* — 각 mesh 유형을 (vertices, elements) pair 로 반환하는 전역 헬퍼
 	// =============================================================================
@@ -353,11 +372,17 @@ namespace Chapter7::Meshes
 		{
 			MeshData face = BuildCubeFace(f, offset);
 			const GLuint base = static_cast<GLuint>(md.vertices.size() / 10); // 10 float/vertex
-			md.vertices.insert(md.vertices.end(),
-			                   face.vertices.begin(), face.vertices.end());
+			for (float v : face.vertices)
+				md.vertices.push_back(v);
 			for (GLuint idx : face.elements)
 				md.elements.push_back(base + idx);
 		}
+		return md;
+	}
+
+	inline MeshData BuildDisk(const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
+	{
+		MeshData md;
 		return md;
 	}
 } // namespace Chapter7::Meshes
@@ -719,7 +744,7 @@ namespace Chapter7::Model
 	}
 
 	// 2D 텍스처 추가 — 여러 번 호출하여 복수 텍스처 슬롯 구성 가능
-	Material &Material::AddTexture2D(const std::string &samplerName, const char *image_path, int unit = 0)
+	Material &Material::AddTexture2D(const std::string &samplerName, const char *image_path, int unit = 0, int texNum = GL_TEXTURE0)
 	{
 		TextureSlot slot;
 		slot.target = GL_TEXTURE_2D;
@@ -788,7 +813,7 @@ namespace Chapter7::Model
 		//   -> "unit 0 GLD_TEXTURE_INDEX_2D is unloadable" 에러 방지
 		//   -> baseColor * white(1,1,1,1) = baseColor 렌더링 가능
 		//   사용자 텍스처는 아래 루프에서 바인딩되어 이 default를 덮어씀
-		EnsureDefaultTextures();
+		// EnsureDefaultTextures();
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, sDefaultWhiteTex2D);
 		GLint tex1Loc = glGetUniformLocation(progAddr, "tex1");
@@ -1238,74 +1263,34 @@ namespace Chapter7
 			    {0.0, 0.0, 2.0}, {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0},
 			    60, 0.1, 1000.0);
 
-
-			// stbi_set_flip_vertically_on_load(true);
-
-			// 현재 : 단일 SurfacePart + capStart + capEnd
-			//   - Cylinder 측면만 생성 후 EBO에 cap fan을 덧붙여 닫음
-			//   - 정점 추가 0개, parametric 생성 결과 그대로 사용
-			//   - u_res=4, v_res=1 -> 10 vertex, 24(side) + 4(top fan) + 4(bottom fan) = 32 index
-
-			// auto cube = std::make_unique<Model::ModelBase>(
-			//     Surfaces::Cylinder,
-			//     0.0, 2 * PI, 4,
-			//     0.0, 1, 1);
-			// cube->Build();
-			// // 콘솔에 정점/인덱스 덤프 — cap fan이 어떻게 추가됐는지 확인용
-			// std::cout << "\n";
-			// cube->PrintMeshData();
-			// std::cout << "\n";
-
-			// cube->GetMaterial().SetBaseColor(vmath::vec4(1.0, 0.0, 0.0, 1.0));
-			// programs.back()->PushModel(std::move(cube));
-
-			/* 삼각형 */
+			// // Parametric Cube — 단일 Model (6면 합침, elements 0..35)
 			// {
-			// 	auto md = Meshes::BuildTriangle(1);
+			// 	auto md = Meshes::BuildCube();
 			// 	auto model = std::make_unique<Model::ModelBase>(
-			// 	    std::move(md.vertices), std::move(md.elements),
-			// 	    vmath::vec3(0.5, 0.5, 0.0f));
+			// 	    std::move(md.vertices), std::move(md.elements));
 			// 	model->Build();
-			// 	model->PrintMeshData();
+			// 	model->GetTransform().SetScale(vmath::vec3{0.5, 0.5, 0.5});
+			// 	model->GetTransform().SetTranslate(vmath::vec3{-1.0, 0.0, 0.0});
 			// 	programs.back()->PushModel(std::move(model));
 			// }
-
-			// {
-			// 	auto md = Meshes::BuildPlane();
-			// 	auto model = std::make_unique<Model::ModelBase>(
-			// 	    std::move(md.vertices), std::move(md.elements),
-			// 	    vmath::vec3(0.5, 0.5, 0.0f));
-			// 	model->Build();
-			// 	model->PrintMeshData();
-			// 	programs.back()->PushModel(std::move(model));
-			// }
-
-			// Parametric Cube — 단일 Model (6면 합침, elements 0..35)
-			{
-				auto md = Meshes::BuildCube();
-				auto model = std::make_unique<Model::ModelBase>(
-				    std::move(md.vertices), std::move(md.elements));
-				model->Build();
-				model->GetTransform().SetScale(vmath::vec3{0.5, 0.5, 0.5});
-				model->GetTransform().SetTranslate(vmath::vec3{-1.0, 0.0, 0.0});
-				programs.back()->PushModel(std::move(model));
-			}
 
 			programs.push_back(std::make_unique<Program::ProgramBase>(
-				"./shaders/default_vs.glsl", 	"./shaders/texture_fs.glsl"
-			));
+			    "./shaders/default_vs.glsl", "./shaders/texture_fs.glsl"));
 
 			// Textured Cube — 면마다 독립 ModelBase + GetMaterial().AddTexture2D()
 			//   texture_fs.glsl 은 sampler2D tex1 하나만 쓰므로 1 Material = 1 texture.
 			//   면 6개를 서로 다른 텍스처로 그리려면 6개의 Model 로 분리하는 게 최소 변경.
 			{
-				const char *texPaths[6] = {
+				const char *texPaths1[6] = {
 				    "./textures/side1.jpg",
 				    "./textures/side2.jpg",
 				    "./textures/side3.jpg",
 				    "./textures/side4.jpg",
 				    "./textures/side5.jpg",
 				    "./textures/side6.jpg",
+				};
+				const char *texPaths2[1] = {
+				    "./textures/container.jpg",
 				};
 
 				for (int f = 0; f < 6; f++)
@@ -1316,7 +1301,8 @@ namespace Chapter7
 					model->Build();
 					model->GetTransform().SetScale(vmath::vec3{0.5, 0.5, 0.5});
 					model->GetTransform().SetTranslate(vmath::vec3{1.0, 0.0, 0.0});
-					model->GetMaterial().AddTexture2D("tex1", texPaths[f], 0);
+					model->GetMaterial().AddTexture2D("tex1", texPaths1[f], 0, GL_TEXTURE0);
+					model->GetMaterial().AddTexture2D("tex2", texPaths2[0], 0, GL_TEXTURE1);
 					programs.back()->PushModel(std::move(model));
 				}
 			}
@@ -1374,12 +1360,3 @@ namespace Chapter7
 }; // namespace Chapter7
 
 DECLARE_MAIN(Chapter7::MyApplicaion);
-
-
-namespace Chapter7::Meshes {
-	namespace Disk {
-		// static vmath::vec4 SurfaceFunction(int r, std::pair<int, int> u, std::pair<int, int> v) {
-
-		// }
-	}
-};
