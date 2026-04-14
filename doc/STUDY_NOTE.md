@@ -908,3 +908,510 @@ public:
 4. **자동완성/복붙 후 반드시 변수명 검토** — `height/height`, `programs.back()`, 정점 인덱스 중복
 5. **GPU 리소스 생성 후 항상 상태 검사** — 컴파일/링크/바인딩 실패는 무음으로 까만 화면이 됨
 6. **CPU 데이터 작성과 GPU 업로드 분리** — `initModelData()`는 도형 정의 전용, `Build()`는 GPU 업로드 boilerplate
+
+---
+
+# Exercise6 — 텍스처 큐브 실수 & 주의사항 학습 노트
+
+> 면별 숫자 텍스처가 붙은 회전 큐브를 만드는 과정에서 발견한 실수들.
+> `ModelBase` / `ProgramBase` + 2개 sampler (`tex1` 고정, `tex2` 면별 교체) 구조.
+
+## 🚨 재발한 실수 (최우선 주의)
+
+이전 챕터 노트에서 이미 경고한 내용인데 **같은 실수를 똑같이 반복**했다. 이 세 가지는 머리에 각인시킬 것.
+
+---
+
+### 🔴 R-1. [REPEATED] `mScale` 초기화 누락 → 모델이 한 점으로 찌부러짐
+
+**이전 경고**: Chapter7 Priority 1-2 — "scale=0이면 모델이 한 점으로 찌부러진다"
+**이번 재현**: [apps/exercise6/main.cpp](apps/exercise6/main.cpp) 의 `ModelBase` 에 `vec3 mScale;` 로만 선언, 초기화 없음.
+
+```cpp
+// ❌ 이번에 반복한 실수
+class ModelBase {
+public:
+    vec3 mTranslate;   // 기본값 (0,0,0)
+    vec3 mEulerRot;    // 기본값 (0,0,0)
+    vec3 mScale;       // 기본값 (0,0,0) ← 문제!
+};
+
+// GetModelMatrix() 안에서:
+vmath::scale<float>(mScale);   // scale(0,0,0) = 0 행렬
+// → 모든 정점이 원점으로 찌그러짐 → 1픽셀 도트 → 시각적으로 "안 보임"
+
+// ✅ 기본값 명시
+class ModelBase {
+public:
+    vec3 mTranslate = vec3(0.0f, 0.0f, 0.0f);
+    vec3 mEulerRot  = vec3(0.0f, 0.0f, 0.0f);
+    vec3 mScale     = vec3(1.0f, 1.0f, 1.0f);   // ← scale은 반드시 1
+};
+```
+
+**증상**: 렌더가 되긴 되는데 화면에 "아무것도 안 보임". 쉐이더 문제, VAO 문제 등 다른 원인을 먼저 의심하게 돼서 디버깅이 길어졌다.
+
+**판별법**: 화면이 검정일 때 Chapter7 노트의 3가지 의심 중 **scale=0** 을 가장 먼저 확인한다.
+
+**교훈**: 클래스 멤버 선언 시 `=` 로 기본값을 바로 적는 습관. C++11 이후 in-class member initializer 는 디폴트 생성자에서 무조건 적용된다.
+
+---
+
+### 🔴 R-2. [REPEATED] EBO `glBufferData` 에 vertex 데이터 업로드
+
+**이전 경고**: Chapter7 Priority 1-4 — "mElementBuffer는 vector<GLuint>인데 sizeof(GLfloat) 사용"
+**이번 재현**: 타입 불일치를 넘어서 **아예 vertex 데이터 자체**를 EBO 에 업로드.
+
+```cpp
+// ❌ 이번에 반복한 실수 (Chapter7 경고의 "상위호환")
+glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+             mBufferData.size() * sizeof(GLfloat),  // ← vertices 크기 × float
+             mBufferData.data(),                     // ← vertices 포인터
+             GL_STATIC_DRAW);
+
+// ✅ EBO 에는 mElementData (인덱스) 가 들어가야 함
+glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+             mElementData.size() * sizeof(GLuint),   // ← indices × GLuint
+             mElementData.data(),                     // ← indices 포인터
+             GL_STATIC_DRAW);
+```
+
+**증상**: `glDrawElements` 가 float bit pattern 을 GLuint 인덱스로 해석 → 엄청나게 큰 값 → VBO 범위 밖 접근 → **화면에 아무것도 안 나옴**. GL 에러도 조용함.
+
+**왜 반복했나**: Chapter7 노트는 `sizeof(GLfloat)` vs `sizeof(GLuint)` 에 초점이 있었는데, 이번엔 **완전히 다른 vector (mBufferData)** 를 넘긴 수준이라 "같은 실수" 라고 인지하지 못했다. 본질은 같다: **EBO 에는 인덱스를, VBO 에는 vertex 를** 넣어야 한다.
+
+**교훈**: `glBufferData` 호출마다 "target + size + pointer" 세 개가 일관되게 맞는지 한 번 더 확인. 변수명에 `Buffer` 가 붙어 있어도 vertex 용인지 element 용인지 명확히 구분해서 쓸 것.
+
+---
+
+### 🔴 R-3. [REPEATED] Attribute offset 계산 오류
+
+**이전 경고**: Chapter6 Priority 2-2 — "offset은 이전 attribute가 차지하는 총 바이트 수"
+**이번 재현**: UV attribute 의 offset 을 "color 시작 위치(16)" 로 계산.
+
+```cpp
+// ❌ 이번에 반복한 실수
+void *coffset  = (void *)(VERTEX_POSITION_SIZE * sizeof(GLfloat));  // 4*4 = 16 ✓
+void *uvoffset = (void *)(VERTEX_COLOR_SIZE    * sizeof(GLfloat));  // 4*4 = 16 ❌
+
+// ✅ UV 는 pos(4) + color(4) = 8 float 뒤에 시작
+void *uvoffset = (void *)((VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE) * sizeof(GLfloat));  // 8*4 = 32
+```
+
+또한 `glVertexAttribPointer` 의 **size 인자도 틀렸다**:
+
+```cpp
+// ❌ UV 는 vec2 인데 size=4 로 읽음
+glVertexAttribPointer(2, 4, GL_FLOAT, false, stride, uvoffset);
+
+// ✅
+glVertexAttribPointer(2, VERTEX_UV_SIZE, GL_FLOAT, false, stride, uvoffset);  // size=2
+```
+
+**증상**: UV attribute 가 color 데이터를 읽음. 면 전체가 "색상값 = UV 좌표" 로 단일 점 샘플링. FS 가 색상만 쓸 때는 안 보이고, 텍스처를 붙이려는 순간 드러난다.
+
+**왜 반복했나**: Chapter6 노트는 `sizeof(float)` 을 `4 * sizeof(float)` 로 고치는 단순 사례였다. 이번엔 "`VERTEX_COLOR_SIZE` 라는 상수를 쓴 것" 자체는 올바른 패턴처럼 보여서 오류를 놓쳤다. 본질: **offset 은 "내 attribute 이전까지의 누적" 이어야 한다** — color 에 `VERTEX_POSITION_SIZE`, UV 에 `VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE`.
+
+**교훈**: offset 상수를 만들 때 "cumulative" 라는 개념을 코드에서 드러내면 좋다:
+
+```cpp
+constexpr int POS_OFFSET   = 0;
+constexpr int COLOR_OFFSET = POS_OFFSET + VERTEX_POSITION_SIZE;   // 4
+constexpr int UV_OFFSET    = COLOR_OFFSET + VERTEX_COLOR_SIZE;    // 8
+constexpr int VERTEX_LEN   = UV_OFFSET + VERTEX_UV_SIZE;          // 10
+// → glVertexAttribPointer(..., (void*)(UV_OFFSET * sizeof(GLfloat)));
+```
+
+---
+
+## Priority 1: 렌더가 아예 안 되는 치명적 실수
+
+### 1-1. Fragment Shader 의 interface block 을 `out` 으로 선언
+
+```glsl
+// ❌ FS 에서 VS 로부터 값을 받아야 하는데 out 으로 선언
+out VS_OUT {
+    vec4 vsColor;
+    vec2 vsTexCoord;
+} fs_in;
+
+void main() {
+    colors = fs_in.vsColor;  // ← 출력 블록을 읽음 = undefined
+}
+
+// ✅ FS 는 in, VS 는 out
+in VS_OUT {
+    vec4 vsColor;
+    vec2 vsTexCoord;
+} fs_in;
+```
+
+**핵심**: interface block 키워드는 stage 방향을 나타낸다. VS 에서 `out VS_OUT`, FS 에서 `in VS_OUT` — 블록 이름(`VS_OUT`)은 같아야 link 되지만, 인스턴스명(`vs_out` / `fs_in`)은 달라도 된다.
+
+**증상**: FS 가 "출력 블록" 을 선언한 꼴이 돼서 `fs_in.vsColor` 를 읽으면 초기화 안 된 output 을 읽는 셈. 대부분 드라이버는 0 을 반환 → 모든 픽셀 검정. BG 도 검정이면 "아무것도 안 보임".
+
+**판별법**: FS 에서 블록을 읽고 있는데 결과가 검정이라면 `in`/`out` 키워드부터 확인.
+
+---
+
+### 1-2. GL 객체를 "값 멤버" 로 보유 → 생성자 순서 함정
+
+```cpp
+// ❌ ProgramBase 가 glCreateProgram 을 호출하는데, 이게 MyApplication 의 값 멤버
+class MyApplication : public sb7::application {
+    ProgramBase program;   // ← MyApplication 생성 시 default-construct
+    // ↓
+    // 1. new MyApplication() 실행 → member "program" default construct
+    // 2. ProgramBase() → glCreateProgram() 호출
+    // 3. 하지만 이 시점엔 아직 GLFW 초기화 전 → GL 컨텍스트 없음
+    // 4. glCreateProgram 은 함수 포인터 변수 (gl3w 로더) 인데 아직 load 안 됨
+    // 5. null pointer dereference → SEGV
+};
+
+// ✅ unique_ptr 로 지연 생성
+class MyApplication : public sb7::application {
+    std::unique_ptr<ProgramBase> program;   // 기본값 nullptr, GL 호출 없음
+
+    virtual void startup() override {
+        // 여기선 GL 컨텍스트가 이미 준비됨
+        program = std::make_unique<ProgramBase>();
+    }
+};
+```
+
+**핵심**: sb7 의 실행 흐름은 `main() → new MyApplication → run() → startup() → render()` 순. **멤버 객체의 생성자는 `new MyApplication` 시점** 에 실행되므로 `startup()` 이전이다. GL 호출이 있는 생성자는 이 시점에 부를 수 없다.
+
+**원칙**: GL 리소스를 다루는 객체는 **`unique_ptr` 로 감싸서 `startup()` 안에서 생성**. Chapter7 / exercise6 에서 쓰는 표준 패턴.
+
+---
+
+### 1-3. `vector<ModelBase>` 에 값 타입 push → GL 핸들 dangling
+
+```cpp
+// ❌ ModelBase 가 소멸자에서 glDelete* 를 호출하는데 복사 금지 선언이 없음
+class ModelBase {
+    GLuint mVAOAddr, mVBOAddr, mEBOAddr;
+    ~ModelBase() {
+        glDeleteBuffers(1, &mEBOAddr);
+        glDeleteBuffers(1, &mVBOAddr);
+        glDeleteVertexArrays(1, &mVAOAddr);
+    }
+};
+
+vector<ModelBase> models;
+auto model = ModelBase();
+model.Build(vertices);       // VAO=7, VBO=3, EBO=4 할당
+models.push_back(model);     // 암묵적 복사 — models[0]: VAO=7, VBO=3, EBO=4
+// startup() 끝 → 지역 model 소멸 → VAO 7 파괴
+// render() 에서 models[0].Draw() → glBindVertexArray(7) = 이미 파괴된 핸들 → 드로우 실패
+
+// ✅ unique_ptr 로 감싸기 (가장 깨끗)
+vector<unique_ptr<ModelBase>> models;
+auto model = std::make_unique<ModelBase>();
+model->Build(vertices);
+models.push_back(std::move(model));   // unique_ptr 이동, ModelBase 자체는 heap 에 고정
+```
+
+**핵심**: GL 핸들은 **파일 디스크립터 같은 독점 자원**. 암묵적 복사로 복사본이 만들어지면 둘이 같은 핸들을 공유하고, 먼저 소멸하는 쪽이 그 핸들을 파괴하면 나머지 쪽은 dangling.
+
+**세 가지 해결책**:
+1. **`vector<unique_ptr<T>>`** — 포인터만 이동, 실체는 heap 고정 (권장, Chapter7 표준)
+2. **Move-only 로 만들기** — `T(const T&) = delete;` + 명시적 move ctor 정의
+3. **Deep copy** — 복사 시 새 GL 오브젝트 생성 + 데이터 재업로드 (비용 큼, 의미론 혼란)
+
+**원칙**: GL 리소스 소유 클래스는 복사 의미론을 명시적으로 정의하지 않는 한 **복사되면 안 된다**. 개발 초기부터 `= delete` 로 막거나 unique_ptr 로 감싼다.
+
+---
+
+### 1-4. 빈 `std::vector` 에 `operator[]` 접근 → UB → SEGV
+
+```cpp
+// ❌ AddTexture 를 호출하지 않은 상태에서 Draw 진입
+class ModelBase {
+    vector<GLuint> mTextureAddrs;   // 비어있음
+
+    void Draw() {
+        glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);   // ← empty[0] = UB
+    }
+};
+
+// ✅ 계약을 명확히 하거나 방어 코드 추가
+void Draw() {
+    if (mTextureAddrs.empty()) return;   // fail-safe
+    glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);
+
+    for (int f = 0; f < 6; f++) {
+        if (1 + f >= (int)mTextureAddrs.size()) break;
+        glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);
+        // draw face f
+    }
+}
+```
+
+**핵심**: `std::vector::operator[]` 는 **bounds check 가 없다**. 빈 vector 를 `[0]` 으로 접근하면 정의되지 않은 메모리를 읽는 것. macOS debug 빌드에선 즉시 SEGV.
+
+**이번 경로**: `exercise_6` (underscore) 에서 `exercise6` 으로 파일을 분기할 때 `startup()` 의 `AddTexture` 호출 7개가 따라오지 않음 → `mTextureAddrs` 비어있음 → Draw 에서 SEGV.
+
+**원칙**: `Draw` 와 `AddTexture` 사이의 "이만큼 호출해야 한다" 라는 암묵적 계약은 **호출자 한 곳만 실수해도 크래시**로 이어진다. 방어 코드를 넣거나 `Build()` 안에서 텍스처 슬롯을 강제 할당하도록 API 를 바꾼다.
+
+---
+
+### 1-5. GLSL 에서 bool 에 bitwise OR (`|`) 사용 → 셰이더 컴파일 실패
+
+```glsl
+// ❌ GLSL 에서 | 는 정수 비트연산자 — bool 에 쓸 수 없음
+if (tex1.x < 0.9 | tex1.y < 0.9 | tex1.z < 0.9) { /* ... */ }
+
+// ✅ 논리 OR 는 ||
+if (tex1.x < 0.9 || tex1.y < 0.9 || tex1.z < 0.9) { /* ... */ }
+```
+
+**핵심**: C/C++ 과 달리 GLSL 은 엄격하다. `|` 는 **정수 비트연산 전용**, bool 에는 `||` 만 허용.
+
+**발생 체인**:
+1. FS 컴파일 실패 → `sb7::shader::load` 가 0 반환
+2. `createShader` 가 `check_errors=false` 라 **조용히** 0 핸들 반환
+3. `glAttachShader(prog, 0)` → 링크 실패 (역시 조용히)
+4. `glUseProgram(prog)` → invalid program 활성화
+5. 모든 draw call drop → 화면에 아무것도 없음
+
+**이번 함정**: 같은 FS 파일에서 텍스처 샘플링 블록을 주석 처리했다가 **나중에 다시 주석 해제** 하면서 `|` 버그가 부활. 해당 블록이 주석 처리됐을 때는 컴파일러가 그 줄을 보지 않아 정상 동작하던 것. "이전에 되던 코드를 되살렸는데 안 됨" 상황 = 주석 영역 안의 구문 오류를 의심.
+
+**원칙**: **개발 중에는 `check_errors=true`**. `sb7::shader::load` 반환값이 0 이면 최소한 stderr 로 뿜어주는 체크 한 줄 필수.
+
+```cpp
+GLuint createShader(GLenum shader_type, const char *shader_path) {
+    GLuint shaderAddr = sb7::shader::load(shader_path, shader_type, true);  // ← true
+    if (shaderAddr == 0) {
+        std::cerr << "shader load fail: " << shader_path << std::endl;
+        std::exit(1);
+    }
+    return shaderAddr;
+}
+```
+
+---
+
+## Priority 2: 렌더는 되지만 결과가 엉뚱한 실수
+
+### 2-1. Texture 교체 루프 바깥에 draw call
+
+```cpp
+// ❌ 루프 안에서 6번 텍스처 교체 → 루프 밖에서 1번 draw
+for (int f = 0; f < 6; f++) {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, faceTextures[f]);
+}
+glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+// → 마지막에 바인딩된 6번째 텍스처로 36정점 전부 그려짐
+
+// ✅ 각 면을 자기 텍스처와 묶어서 draw 를 루프 안으로
+for (int f = 0; f < 6; f++) {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, faceTextures[f]);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT,
+                   (void*)(f * 6 * sizeof(GLuint)));   // 면당 6 인덱스
+}
+```
+
+**핵심**: OpenGL 은 **draw call 시점** 의 상태로 그린다. 상태를 루프에서 바꿔도 draw 가 한 번만 나가면 최종 상태 하나로만 그려진다.
+
+**원칙**: 상태가 면/모델마다 다르면 draw 도 그만큼 분할. 같은 VBO 안에서 부분만 그리려면 `glDrawElements` 의 **4번째 인자 (indices offset)** 를 활용.
+
+---
+
+### 2-2. Face index 의 winding 일관성 결여 → 텍스처 X축 mirror
+
+```cpp
+// ❌ 각 면이 제각각의 "시작 코너" 에서 시작 → UV 가 어떤 면은 정상, 어떤 면은 mirror
+static const std::vector<GLuint> CUBE_FACE_INDICES[6] = {
+    {0, 1, 5, 0, 5, 4},  // -Z (BR 시작)
+    {1, 2, 6, 1, 6, 5},  // +X (BR 시작)
+    {2, 3, 7, 2, 7, 6},  // +Z (BR 시작) ← 기본 시점에서 x축 mirror 보임
+    // ...
+};
+
+// ✅ 모든 면이 "외부 시점에서 CCW, BL 시작" 으로 통일
+static const std::vector<GLuint> CUBE_FACE_INDICES[6] = {
+    {1, 0, 4, 1, 4, 5},  // -Z (BL=1)
+    {2, 1, 5, 2, 5, 6},  // +X (BL=2)
+    {3, 2, 6, 3, 6, 7},  // +Z (BL=3)
+    {0, 3, 7, 0, 7, 4},  // -X (BL=0)
+    {0, 1, 2, 0, 2, 3},  // -Y (BL=0)
+    {7, 6, 5, 7, 5, 4},  // +Y (BL=7)
+};
+```
+
+**핵심**: `uvIdx = {0, 1, 2, 0, 2, 3}` 와 `BASE_MESH_UVS = {BL, BR, TR, TL}` 을 결합하면 **면의 첫 슬롯 `[0]` 이 "BL 코너" 에 와야** 텍스처가 정방향으로 붙는다. 면마다 시작 코너가 다르면 텍스처가 rotate/mirror 된다.
+
+**BL 판정법**:
+- `view forward`: 그 면의 outward normal
+- `view up`: +Y (±X, ±Z 면) 또는 ±Z (±Y 면)
+- `view right = forward × up`
+- BL = (min view-right, min view-up) 에 해당하는 월드 코너
+
+**원칙**: 테이블 기반 데이터는 한 면을 설계하고 나머지를 "회전 패턴" 으로 확장하면 안 된다 — 시점이 다른 면은 UV 매핑이 달라져야 함을 잊기 쉽다. **각 면을 "외부에서 정면으로 본다는 가정" 으로 독립 판정**하는 게 안전.
+
+---
+
+### 2-3. Sampler uniform 에 엉뚱한 슬롯 연결
+
+```cpp
+// ❌ tex1 에 모든 면 공용 텍스처를 넣어놓고, FS 는 tex1 만 출력
+model->AddTexture("side1.jpg");   // mTextureAddrs[0] = tex1 (모든 면 공용)
+for (f = 0..5)
+    model->AddTexture(side[f]);   // mTextureAddrs[1..6] = tex2 (면별 교체)
+
+// FS:
+colors = tex1;   // ← 모든 면이 side1.jpg 만 보임
+```
+
+**원인**: 두 개의 sampler (`tex1`/`tex2`) 가 서로 다른 의미(고정 vs 면별) 인데 FS 에서 **의도와 다른 쪽을 출력**. 쉐이더를 작성한 본인조차 `tex1` / `tex2` 중 어느 게 면별인지 헷갈림.
+
+**원칙**: Sampler 이름을 역할로 지어라 (`maskTex`, `fillTex`, `staticTex`, `perFaceTex`). 혹은 주석으로 "tex1 = 고정, tex2 = per-face" 를 양쪽 코드에 달아둔다.
+
+---
+
+### 2-4. UV attribute size 4 로 읽기
+
+→ R-3 참조 (재발한 실수).
+
+---
+
+## Priority 3: 설계 / 코드 품질 실수
+
+### 3-1. 함수 파라미터 이름 누락
+
+```cpp
+// ❌ 이름 없이 타입만 — 본문에서 접근 불가
+void AddTexture(const char* texture_name, const char* ) {
+    // 두 번째 인자를 어떻게 쓰지?
+    auto *data = stbi_load("wall.jpg", ...);  // ← 하드코딩으로 돌아감
+}
+
+// ✅
+void AddTexture(const char* sampler_name, const char* image_path) {
+    auto *data = stbi_load(image_path, ...);
+}
+```
+
+**핵심**: C++ 에서 함수 파라미터는 이름을 생략하면 **"사용 안 할 값"** 이라는 선언이다(주로 오버라이드 시그니처 맞추기용). 실제로 본문에서 쓰려는 값에 이름을 빼먹으면 컴파일은 되지만 접근 방법이 없다.
+
+**판별법**: 함수 시그니처에 `(Type, Type ...)` 처럼 이름 없는 파라미터가 있으면 **의도한 것인지 확인**. 대부분은 오타.
+
+---
+
+### 3-2. Namespace scope 에 orphan 문자열 리터럴
+
+```cpp
+// ❌ 변수 선언 없이 떠 있는 문자열들
+namespace exercise6 {
+    "./shaders/default_vs.glsl"
+    "./shaders/default_fs.glsl"
+    "modelMat"
+    // ...
+}
+```
+
+**어떻게 컴파일이 될까**: 문자열 리터럴은 C++ 표현식으로 유효하고, 표현식 statement 는 namespace 스코프에서 허용되지 않지만 일부 컴파일러가 관대하게 파싱해줄 수 있다. 하지만 **의도한 동작이 전혀 없다** — 변수로 저장되지 않아서 어디서도 참조 불가.
+
+**원인**: "이 문자열들을 상수로 뽑을 예정" 인데 선언 키워드(`static const char*`) 를 빠뜨림.
+
+**✅ 올바른 형태**:
+```cpp
+static const char *SHADER_VS_PATH = "./shaders/default_vs.glsl";
+static const char *UNIFORM_MODEL_MAT = "modelMat";
+static const char *TEXTURE_SIDES[6] = {
+    "./textures/side1.jpg", /* ... */
+};
+```
+
+**원칙**: 매직 문자열/숫자는 **선언 키워드 + 이름** 을 붙여 상수로 뽑는다. 리터럴만 남기는 형태는 없다.
+
+---
+
+### 3-3. Shader 컴파일 에러 무음
+
+→ 1-5 참조. `createShader(..., true)` 로 `check_errors` 활성화.
+
+---
+
+### 3-4. Draw 와 AddTexture 간 암묵적 크기 계약
+
+→ 1-4 참조. 빈 vector `[0]` 접근은 UB.
+
+---
+
+### 3-5. "복사-붙여넣기 후 부분 누락" 패턴
+
+`exercise_6` → `exercise6` 로 파일을 복제했을 때 **`startup()` 의 AddTexture 호출 7개가 따라오지 않아** 크래시. 같은 프로젝트의 Chapter6 노트 4-1 ("복사-붙여넣기 후 정점 인덱스 누락"), Chapter7 2-4 ("for-each 안 `programs.back()`") 와 **동일 계열 실수**.
+
+**원칙**: 파일/블록을 복제할 때는 **diff** 를 먼저 떠서 양쪽이 정확히 무엇이 다른지 확인한다. "뭔가 복사했는데 실행이 안 된다" 면 가장 먼저 누락된 호출/선언을 찾는다.
+
+---
+
+## Priority 4: 수학 / 단위 혼동
+
+### 4-1. `vmath::rotate` 는 degrees 를 받는다
+
+```glsl
+// vmath.h 안:
+float rads = float(angle) * 0.0174532925f;  // π/180 — 내부에서 radians 변환
+```
+
+즉 **입력은 degrees**. `mEulerRot` 성분도 degrees 로 저장/주입해야 한다.
+
+---
+
+### 4-2. 회전 속도 계산에서 불필요한 이중 변환
+
+```cpp
+// ❌ radians() 와 180/π 가 서로 상쇄돼서 의도가 흐릿함
+float angle = vmath::radians((currentTime * 180) / 3.14) * 20;
+//          = currentTime * 57.32 * (π/180) * 20
+//          ≈ currentTime * 1.0 * 20
+//          = currentTime * 20   (여전히 degrees 로 해석됨)
+
+// ✅ 초당 N도 회전이면 그냥 currentTime * N
+float angle = static_cast<float>(currentTime) * 90.0f;   // 초당 90도
+```
+
+**핵심**: **단위 변환은 한 쪽에서 한 번만**. 호출 대상 함수(`vmath::rotate`)가 degrees 를 받으면 degrees 로, radians 를 받으면 radians 로 준비한다. "혹시 몰라서" 변환을 여러 번 거치면 코드가 의도와 다른 속도로 동작하면서도 컴파일/실행은 정상이라 디버깅이 어렵다.
+
+**원칙**: 새 수학 함수 쓰기 전에 **단위 규약** 부터 확인(`vmath.h` 소스 또는 문서). 확인이 번거로우면 단위를 변수명에 넣는다: `float angleDeg`, `float angleRad`.
+
+---
+
+## 체크리스트 (Exercise6)
+
+| # | 항목 | 확인 |
+|---|------|------|
+| 1 | 🔴 **`mScale` 등 TRS 멤버를 `(1,1,1)` / `(0,0,0)` 로 초기화**했는가? [R-1] | |
+| 2 | 🔴 **EBO `glBufferData` 가 `mElementData` (인덱스) 를 사용**하는가? [R-2] | |
+| 3 | 🔴 **각 attribute offset 이 "이전까지 누적"** 으로 계산됐는가? [R-3] | |
+| 4 | FS interface block 이 `in VS_OUT` 인가? (`out` 아님) | |
+| 5 | GL 리소스 소유 클래스가 `unique_ptr` 로 감싸져 있는가? | |
+| 6 | `ProgramBase` / `ModelBase` 를 값 멤버로 두지 않았는가? | |
+| 7 | `std::vector::operator[]` 접근 전 크기 검사를 했는가? | |
+| 8 | GLSL 에서 bool 에 `|` 대신 `||` 를 쓰는가? | |
+| 9 | `sb7::shader::load` 의 `check_errors` 가 `true` 인가? | |
+| 10 | 텍스처 교체 루프 안에 `glDrawElements` 가 함께 있는가? | |
+| 11 | CUBE_FACE_INDICES 의 `[0]` 슬롯이 외부 시점 BL 코너인가? | |
+| 12 | Sampler uniform 이름이 역할(고정/per-face)을 반영하는가? | |
+| 13 | `glVertexAttribPointer` 의 size 가 실제 컴포넌트 수(vec2=2, vec3=3, vec4=4) 인가? | |
+| 14 | 함수 파라미터에 이름이 모두 있는가? | |
+| 15 | 매직 문자열/숫자를 `static const` 로 뽑았는가? | |
+| 16 | `vmath::rotate` 에 degrees 를 넘기는가? (불필요한 변환 없음) | |
+| 17 | 코드 복제 시 누락된 호출이 없는지 diff 로 확인했는가? | |
+
+---
+
+## 핵심 교훈 요약 (Exercise6)
+
+1. 🔴 **같은 실수를 또 하지 말 것** — `mScale=0`, EBO 에 vertex 업로드, attribute offset 누적 계산 세 가지는 이전 노트에 이미 경고한 내용인데 다시 발생했다. 코드 작성 전 **체크리스트 항목 1~3 을 의식적으로 읽는 습관**.
+2. **GL 리소스는 값 타입으로 다루지 말 것** — `unique_ptr` 로 감싸서 소유권을 명시. 복사는 기본적으로 금지.
+3. **생성자가 GL 을 부르는 객체는 지연 생성** — `startup()` 안에서 `make_unique` 로. 값 멤버는 컨텍스트 전에 초기화된다.
+4. **Shader 에러는 기본적으로 무음** — `check_errors=true` 를 프로젝트 시작 시점부터 적용. 특히 주석 처리/해제 반복 중엔 언제든 에러가 숨어들 수 있다.
+5. **상태를 바꾸는 루프에는 draw call 이 같이 들어가야 한다** — OpenGL 은 draw 시점의 상태 하나로만 그린다.
+6. **단위는 한 번만 변환** — degrees/radians 혼용은 그 함수의 규약을 먼저 확인해서 해결.
+7. **복사-붙여넣기는 diff 로 검증** — 블록/파일 복제 시 누락은 런타임 증상만 보고 원인 추적이 어렵다.

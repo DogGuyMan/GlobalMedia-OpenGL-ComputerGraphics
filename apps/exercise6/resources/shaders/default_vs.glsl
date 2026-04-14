@@ -1,4 +1,4 @@
-#version 430 core
+#version 410 core
 
 layout(location = 0) in vec4 positions;
 layout(location = 1) in vec4 colors;
@@ -23,13 +23,12 @@ void main(void) {
 
         gl_Position = pPos;
 
-        // vec2 rUv = vec2(
-        //                 uvCoords.x * uvRatio.x,
-        //                 uvCoords.y * uvRatio.y
-        //         );
-        // vs_out.vsTexCoord = rUv + uvOffset;
+        vec2 rUv = vec2(
+                        uvCoords.x * uvRatio.x,
+                        uvCoords.y * uvRatio.y
+                );
+        vs_out.vsTexCoord = rUv + uvOffset;
         vs_out.vsColor = colors;
-        vs_out.vsTexCoord = uvCoords;
 
         // const vec4 vertices[12] = vec4[12](
         //                 vec4(0.25 - 0.25, -0.25 + 0.25, 0.5, 1.0),
