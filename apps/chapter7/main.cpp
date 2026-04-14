@@ -229,10 +229,10 @@ namespace Chapter7::Meshes
 	{
 		static const std::vector<std::vector<vmath::vec4>> QUAD_BASE_POSITIONS = {
 		    std::vector<vmath::vec4>{
-		        {0.0, 0.0, 0.0, 0.0},
-		        {1.0, 0.0, 0.0, 0.0},
-		        {1.0, 1.0, 0.0, 0.0},
-		        {0.0, 1.0, 0.0, 0.0},
+		        {0.0, 0.0, 0.0, 1.0},
+		        {1.0, 0.0, 0.0, 1.0},
+		        {1.0, 1.0, 0.0, 1.0},
+		        {0.0, 1.0, 0.0, 1.0},
 		    }};
 		static const std::vector<GLuint> QUAD_BASE_INDICES = {
 		    0, 1, 2, 0, 2, 3};
@@ -241,80 +241,125 @@ namespace Chapter7::Meshes
 
 	namespace Cube
 	{
-		static const vmath::vec4 CUBE_BASE_POSITIONS[2][2][2] = {
+		static const vmath::vec4 CUBE_BASE_POSITIONS[2][4] = {
 		    {
-		        {
-		            {0.0, 0.0, 0.0, 0.0}, // 4
-		            {1.0, 0.0, 0.0, 0.0}, // 5
-		        },
-		        {
-		            {0.0, 1.0, 0.0, 0.0}, // 6
-		            {1.0, 1.0, 0.0, 0.0}, // 7
-		        },
+		        {0.0, 0.0, 0.0, 1.0},
+		        {1.0, 0.0, 0.0, 1.0},
+		        {1.0, 0.0, 1.0, 1.0},
+		        {0.0, 0.0, 1.0, 1.0},
 		    },
 		    {
-		        {
-		            {0.0, 0.0, 1.0, 0.0}, // 0
-		            {1.0, 0.0, 1.0, 0.0}, // 1
-		        },
-		        {
-		            {0.0, 1.0, 1.0, 0.0}, // 2
-		            {1.0, 1.0, 1.0, 0.0}, // 3
-		        },
+		        {0.0, 1.0, 0.0, 1.0},
+		        {1.0, 1.0, 0.0, 1.0},
+		        {1.0, 1.0, 1.0, 1.0},
+		        {0.0, 1.0, 1.0, 1.0},
 		    }};
-		static const std::vector<std::vector<vmath::vec4>> CUBE_QUADS = {
-		    std::vector<vmath::vec4> // +Z
-		    {
-		        CUBE_BASE_POSITIONS[1][0][0],
-		        CUBE_BASE_POSITIONS[1][0][1],
-		        CUBE_BASE_POSITIONS[1][1][1],
-		        CUBE_BASE_POSITIONS[1][1][0],
-		    },
-		    std::vector<vmath::vec4> // -Z
-		    {
-		        CUBE_BASE_POSITIONS[0][1][0],
-		        CUBE_BASE_POSITIONS[1][1][0],
-		        CUBE_BASE_POSITIONS[1][0][0],
-		        CUBE_BASE_POSITIONS[0][0][0],
-		    },
-		    std::vector<vmath::vec4> // +Y
-		    {
-		        CUBE_BASE_POSITIONS[0][1][1],
-		        CUBE_BASE_POSITIONS[1][1][1],
-		        CUBE_BASE_POSITIONS[1][1][0],
-		        CUBE_BASE_POSITIONS[0][1][0],
-		    },
-		    std::vector<vmath::vec4> // -Y
-		    {
-		        CUBE_BASE_POSITIONS[0][0][0],
-		        CUBE_BASE_POSITIONS[1][0][0],
-		        CUBE_BASE_POSITIONS[0][0][1],
-		        CUBE_BASE_POSITIONS[1][0][1],
-		    },
-		    std::vector<vmath::vec4> // +X
-		    {
-		        CUBE_BASE_POSITIONS[1][0][1],
-		        CUBE_BASE_POSITIONS[1][0][0],
-		        CUBE_BASE_POSITIONS[1][1][0],
-		        CUBE_BASE_POSITIONS[1][0][1],
-		    },
-		    std::vector<vmath::vec4> // -X
-		    {
-		        CUBE_BASE_POSITIONS[0][0][0],
-		        CUBE_BASE_POSITIONS[0][0][1],
-		        CUBE_BASE_POSITIONS[0][1][1],
-		        CUBE_BASE_POSITIONS[0][1][0],
-		    },
-		};
 
 		static const std::vector<GLuint> QUAD_BASE_INDICES[6] = {
-		    {0, 1, 2, 0, 2, 3},
+		    {0, 1, 5, 0, 5, 4}, // -Z
+		    {1, 2, 6, 1, 6, 5}, // +X
+		    {2, 3, 7, 2, 7, 6}, // +Z
+		    {3, 0, 4, 3, 4, 7}, // -X
+		    {0, 1, 2, 0, 2, 3}, // -Y
+		    {4, 5, 6, 4, 6, 7}, // +Y
 		};
 
 		// ! 폐기 : inline MeshData Cube() { ... }
 		// 이유 : Surfaces::Cylinder + u_res=4 로 비슷한 4면 프리즘을 만들 수 있고,
 		//        cube map 전용 정점 배치는 사용자가 콘솔 출력을 기반으로 직접 편집하는 워크플로우
 	} // namespace Cube
+
+	// =============================================================================
+	// Build* — 각 mesh 유형을 (vertices, elements) pair 로 반환하는 전역 헬퍼
+	// =============================================================================
+	// 정점 레이아웃 : pos(vec4) + color(vec4) + uv(vec2) = 10 float / vertex
+	//   (ModelBase::Build() 의 VAO stride 와 일치)
+	// startup() 안의 mesh 생성 보일러플레이트를 모아둔 것. ModelBase 생성 직전까지만 책임.
+
+	struct MeshData
+	{
+		std::vector<float> vertices;
+		std::vector<GLuint> elements;
+	};
+
+	// Triangle — TRIANGLE_BASE_POSITIONS[variant] 3정점 + 기본 색/UV
+	//   variant : 0 = 직각삼각형, 1 = 정삼각형 (TRIANGLE_BASE_POSITIONS 의 두 variant)
+	inline MeshData BuildTriangle(int variant = 1)
+	{
+		MeshData md;
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 4; j++)
+				md.vertices.push_back(Triangle::TRIANGLE_BASE_POSITIONS[variant][i][j]);
+			for (int c = 0; c < 4; c++)
+				md.vertices.push_back(BASE_COLORS[i][c]);
+			for (int a = 0; a < 2; a++)
+				md.vertices.push_back(BASE_MESH_UVS[i][a]);
+		}
+		md.elements = Triangle::TRIANGLE_BASE_INDICES;
+		return md;
+	}
+
+	// Plane — QUAD_BASE_POSITIONS 4정점 + 기본 색/UV, QUAD_BASE_INDICES 재사용
+	inline MeshData BuildPlane()
+	{
+		MeshData md;
+		for (int i = 0; i < 4; i++)
+		{
+			for (int j = 0; j < 4; j++)
+				md.vertices.push_back(Plane::QUAD_BASE_POSITIONS[0][i][j]);
+			for (int c = 0; c < 4; c++)
+				md.vertices.push_back(BASE_COLORS[i][c]);
+			for (int a = 0; a < 2; a++)
+				md.vertices.push_back(BASE_MESH_UVS[i][a]);
+		}
+		md.elements = Plane::QUAD_BASE_INDICES;
+		return md;
+	}
+
+	// Cube 한 면 — QUAD_BASE_INDICES[f] 를 6정점으로 펼침
+	//   offset : xyz 에 더할 값 (원점 중심화 용도, 기본 (-0.5,-0.5,-0.5))
+	//   elements 는 {0..5} local — 단독 Model 로 사용 가능 (면별 텍스처 등)
+	inline MeshData BuildCubeFace(int f, const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
+	{
+		MeshData md;
+		const int uvIdx[6] = {0, 1, 2, 0, 2, 3};
+		const vmath::vec4 *cubeVertices = &Cube::CUBE_BASE_POSITIONS[0][0];
+
+		const auto &faceIdx = Cube::QUAD_BASE_INDICES[f];
+		const auto &color = BASE_COLORS[f];
+		for (int i = 0; i < 6; i++)
+		{
+			const auto &pos = cubeVertices[faceIdx[i]];
+			const auto &uv = BASE_MESH_UVS[uvIdx[i]];
+			md.vertices.push_back(pos[0] + offset[0]);
+			md.vertices.push_back(pos[1] + offset[1]);
+			md.vertices.push_back(pos[2] + offset[2]);
+			md.vertices.push_back(pos[3]); // w 유지
+			for (int c = 0; c < 4; c++)
+				md.vertices.push_back(color[c]);
+			for (int a = 0; a < 2; a++)
+				md.vertices.push_back(uv[a]);
+		}
+		md.elements = {0, 1, 2, 3, 4, 5};
+		return md;
+	}
+
+	// Cube 전체 — 6면을 하나의 mesh 로 합침, elements 는 0..35 순차
+	inline MeshData BuildCube(const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
+	{
+		MeshData md;
+		for (int f = 0; f < 6; f++)
+		{
+			MeshData face = BuildCubeFace(f, offset);
+			const GLuint base = static_cast<GLuint>(md.vertices.size() / 10); // 10 float/vertex
+			md.vertices.insert(md.vertices.end(),
+			                   face.vertices.begin(), face.vertices.end());
+			for (GLuint idx : face.elements)
+				md.elements.push_back(base + idx);
+		}
+		return md;
+	}
 } // namespace Chapter7::Meshes
 
 /*********************************************************************************
@@ -545,13 +590,6 @@ namespace Chapter7::Camera
 		vmath::mat4 GetProjectionMatrix(int window_width, int window_height) const;
 	};
 }; // namespace Chapter7::Camera
-
-namespace Chapter7::Resources
-{
-	class ResourceManager
-	{
-	};
-} // namespace Chapter7::Resources
 
 /*********************************************************************************
  *
@@ -880,7 +918,6 @@ namespace Chapter7::Model
 			// EBO : 각 cell을 2개 삼각형으로 + winding 적용 + baseIndex offset
 			for (size_t i = 0; i < part.u_res; i++)
 			{
-
 				for (size_t j = 0; j < part.v_res; j++)
 				{
 					GLuint idx00 = baseIndex + (GLuint)(i * colCount + j);
@@ -1195,10 +1232,12 @@ namespace Chapter7
 		double deltaTime = 1.0 / 60;
 		virtual void startup() override
 		{
+
 			programs.push_back(std::make_unique<Program::ProgramBase>());
 			camera = Camera::Camera(
 			    {0.0, 0.0, 2.0}, {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0},
 			    60, 0.1, 1000.0);
+
 
 			// stbi_set_flip_vertically_on_load(true);
 
@@ -1220,79 +1259,67 @@ namespace Chapter7
 			// cube->GetMaterial().SetBaseColor(vmath::vec4(1.0, 0.0, 0.0, 1.0));
 			// programs.back()->PushModel(std::move(cube));
 
-			{
-				std::vector<float> vertices;
-				for (int i = 0; i < 3; i++)
-				{
-					for (int j = 0; j < 4; j++)
-						vertices.push_back(Meshes::Triangle::TRIANGLE_BASE_POSITIONS[1][i][j]);
-					for (int c = 0; c < 4; c++)
-						vertices.push_back(Meshes::BASE_COLORS[i][c]);
-					for (int axis = 0; axis < 2; axis++)
-						vertices.push_back(Meshes::BASE_MESH_UVS[i][axis]);
-				}
-
-				auto model = std::make_unique<Model::ModelBase>(
-				    vertices,
-				    Meshes::Triangle::TRIANGLE_BASE_INDICES,
-				    vmath::vec3(0.5, 0.5, -0.0f));
-
-				model->Build();
-				model->PrintMeshData();
-				programs.back()->PushModel(std::move(model));
-			}
-
-			{
-				std::vector<float> vertices;
-				for (int i = 0; i < 3; i++)
-				{
-					for (int j = 0; j < 4; j++)
-						vertices.push_back(Meshes::Triangle::TRIANGLE_BASE_POSITIONS[0][i][j]);
-					for (int c = 0; c < 4; c++)
-						vertices.push_back(Meshes::BASE_COLORS[i][c]);
-					for (int axis = 0; axis < 2; axis++)
-						vertices.push_back(Meshes::BASE_MESH_UVS[i][axis]);
-				}
-
-				auto model = std::make_unique<Model::ModelBase>(
-				    vertices,
-				    Meshes::Triangle::TRIANGLE_BASE_INDICES,
-				    vmath::vec3(0.5, 0.5, -0.0f));
-
-				model->Build();
-				model->PrintMeshData();
-				programs.back()->PushModel(std::move(model));
-			}
-
-			{
-				std::vector<float> vertices;
-				for (int i = 0; i < 4; i++)
-				{
-					for (int j = 0; j < 4; j++)
-						vertices.push_back(Meshes::Plane::QUAD_BASE_POSITIONS[0][i][j]);
-					for (int c = 0; c < 4; c++)
-						vertices.push_back(Meshes::BASE_COLORS[i][c]);
-					for (int axis = 0; axis < 2; axis++)
-						vertices.push_back(Meshes::BASE_MESH_UVS[i][axis]);
-				}
-
-				auto model = std::make_unique<Model::ModelBase>(
-				    vertices,
-				    Meshes::Triangle::TRIANGLE_BASE_INDICES,
-				    vmath::vec3(0.5, 0.5, -0.0f));
-
-				model->Build();
-				model->PrintMeshData();
-				programs.back()->PushModel(std::move(model));
-			}
-
-			// 	auto sides = std::make_unique<Model::ModelBase>(
-			// 	    vertices, Meshes::Cube::QUAD_BASE_INDICES[0], vmath::vec3(-0.5, -0.5, -0.5));
-			// 	sides->Build();
-			// 	sides->PrintMeshData();
-			// 	sides->GetMaterial().SetBaseColor(vmath::vec4(1.0,1.0,1.0,1.0));
-			// 	programs.back()->PushModel(std::move(sides));
+			/* 삼각형 */
+			// {
+			// 	auto md = Meshes::BuildTriangle(1);
+			// 	auto model = std::make_unique<Model::ModelBase>(
+			// 	    std::move(md.vertices), std::move(md.elements),
+			// 	    vmath::vec3(0.5, 0.5, 0.0f));
+			// 	model->Build();
+			// 	model->PrintMeshData();
+			// 	programs.back()->PushModel(std::move(model));
 			// }
+
+			// {
+			// 	auto md = Meshes::BuildPlane();
+			// 	auto model = std::make_unique<Model::ModelBase>(
+			// 	    std::move(md.vertices), std::move(md.elements),
+			// 	    vmath::vec3(0.5, 0.5, 0.0f));
+			// 	model->Build();
+			// 	model->PrintMeshData();
+			// 	programs.back()->PushModel(std::move(model));
+			// }
+
+			// Parametric Cube — 단일 Model (6면 합침, elements 0..35)
+			{
+				auto md = Meshes::BuildCube();
+				auto model = std::make_unique<Model::ModelBase>(
+				    std::move(md.vertices), std::move(md.elements));
+				model->Build();
+				model->GetTransform().SetScale(vmath::vec3{0.5, 0.5, 0.5});
+				model->GetTransform().SetTranslate(vmath::vec3{-1.0, 0.0, 0.0});
+				programs.back()->PushModel(std::move(model));
+			}
+
+			programs.push_back(std::make_unique<Program::ProgramBase>(
+				"./shaders/default_vs.glsl", 	"./shaders/texture_fs.glsl"
+			));
+
+			// Textured Cube — 면마다 독립 ModelBase + GetMaterial().AddTexture2D()
+			//   texture_fs.glsl 은 sampler2D tex1 하나만 쓰므로 1 Material = 1 texture.
+			//   면 6개를 서로 다른 텍스처로 그리려면 6개의 Model 로 분리하는 게 최소 변경.
+			{
+				const char *texPaths[6] = {
+				    "./textures/side1.jpg",
+				    "./textures/side2.jpg",
+				    "./textures/side3.jpg",
+				    "./textures/side4.jpg",
+				    "./textures/side5.jpg",
+				    "./textures/side6.jpg",
+				};
+
+				for (int f = 0; f < 6; f++)
+				{
+					auto md = Meshes::BuildCubeFace(f);
+					auto model = std::make_unique<Model::ModelBase>(
+					    std::move(md.vertices), std::move(md.elements));
+					model->Build();
+					model->GetTransform().SetScale(vmath::vec3{0.5, 0.5, 0.5});
+					model->GetTransform().SetTranslate(vmath::vec3{1.0, 0.0, 0.0});
+					model->GetMaterial().AddTexture2D("tex1", texPaths[f], 0);
+					programs.back()->PushModel(std::move(model));
+				}
+			}
 		}
 
 		virtual void render(double currentTime) override
@@ -1301,7 +1328,6 @@ namespace Chapter7
 			glClearBufferfv(GL_COLOR, 0, backgroundColor);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
-			glEnable(GL_CULL_FACE);
 
 			float angle = vmath::radians((currentTime * 180) / 3.14) * 10;
 
@@ -1322,11 +1348,13 @@ namespace Chapter7
 				auto &models = prog->GetModels();
 
 				// cube program : 큐브에 자동 회전 적용 (6면을 볼 수 있도록)
+				//   program 2 는 면마다 별도 Model 이라 전체에 동일 회전 적용 → 하나의 큐브처럼 회전
 				if (!models.empty())
 				{
 					float degY = (float)currentTime * 30.0f;
 					float degX = (float)currentTime * 15.0f;
-					models[0]->GetTransform().SetEulerRotate({degX, degY, 0.0f});
+					for (auto &m : models)
+						m->GetTransform().SetEulerRotate({degX, degY, 0.0f});
 				}
 
 				// ! 폐기 : 메인 루프 뒤에 추가 draw call로 uniform을 별도로 설정하려 했던 코드
@@ -1346,3 +1374,12 @@ namespace Chapter7
 }; // namespace Chapter7
 
 DECLARE_MAIN(Chapter7::MyApplicaion);
+
+
+namespace Chapter7::Meshes {
+	namespace Disk {
+		// static vmath::vec4 SurfaceFunction(int r, std::pair<int, int> u, std::pair<int, int> v) {
+
+		// }
+	}
+};
