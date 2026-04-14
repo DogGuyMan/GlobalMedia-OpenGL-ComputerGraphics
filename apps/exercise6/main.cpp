@@ -81,9 +81,6 @@ namespace exercise6
 	    vmath::vec4(1.0, 1.0, 1.0, 1.0),
 	    vmath::vec4(1.0, 1.0, 1.0, 1.0)};
 
-	// 면마다 6 정점 unrolled — 총 36 정점, 면별 독립 UV
-	//   CUBE_FACE_INDICES[f] 의 6 인덱스 → CUBE_BASE_POSITIONS lookup → 면마다 정점 복제
-	//   UV 는 면 내부 {0,1,2,0,2,3} 패턴으로 BASE_MESH_UVS 4 코너 재사용 → 각 면이 (0,0)~(1,1) 완전 매핑
 	inline void BuildCube(vector<GLfloat> &vertices, const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
 	{
 		const int uvIdx[6] = {0, 1, 2, 0, 2, 3};
