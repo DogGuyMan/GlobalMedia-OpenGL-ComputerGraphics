@@ -10,10 +10,6 @@
 #include <vector>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
-using namespace std;
-using namespace vmath;
-
 namespace exercise6
 {
 
@@ -61,14 +57,28 @@ namespace exercise6
 	const std::vector<GLuint> TRIANGLE_FACE_INDICES = {{0, 1, 2}};
 	const std::vector<GLuint> QUAD_FACE_INDICES = {{0, 1, 2, 0, 2, 3}};
 
-	static const vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
+
+	static const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
+		{0.0, 0.0, 0.0, 1.0},
+		{1.0, 0.0, 0.0, 1.0},
+		{0.5, 0.0, 0.866, 1.0},
+		{0.5, 0.816, 0.2886, 1.0},
+	};
+	static const std::vector<std::vector<GLuint>> TETRA_FACE_INDICES = {
+		{1, 0, 3},
+		{2, 1, 3},
+		{0, 2, 3},
+		{1, 0, 2},
+	};
+
+	static const std::vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
 	    {0.0, 0.0, 0.0, 1.0},
 	    {1.0, 0.0, 0.0, 1.0},
 	    {1.0, 0.0, 1.0, 1.0},
 	    {0.0, 0.0, 1.0, 1.0},
 	    {0.5, 1.0, 0.5, 1.0}};
 
-	static const vector<vmath::vec4> CONE_BOTTOM_BASE_POSITION = {
+	static const std::vector<vmath::vec4> CONE_BOTTOM_BASE_POSITION = {
 	    CONE_SIDE_BASE_POSITION[0],
 	    CONE_SIDE_BASE_POSITION[1],
 	    CONE_SIDE_BASE_POSITION[2],
@@ -82,14 +92,14 @@ namespace exercise6
 	    {0, 3, 4},
 	};
 
-	static const vector<vmath::vec4> CONE_SIDE_BASE_COLORS{
+	static const std::vector<vmath::vec4> CONE_SIDE_BASE_COLORS{
 	    vmath::vec4(1.0, 0.0, 0.0, 1.0),
 	    vmath::vec4(0.0, 1.0, 1.0, 1.0),
 	    vmath::vec4(0.0, 1.0, 1.0, 1.0),
 	    vmath::vec4(1.0, 0.0, 1.0, 1.0),
 	};
 
-	static const vector<vmath::vec4> CUBE_BASE_POSITIONS = {
+	static const std::vector<vmath::vec4> CUBE_BASE_POSITIONS = {
 	    {0.0, 0.0, 0.0, 1.0},
 	    {1.0, 0.0, 0.0, 1.0},
 	    {1.0, 0.0, 1.0, 1.0},
@@ -109,7 +119,7 @@ namespace exercise6
 	    {7, 6, 5, 7, 5, 4}, // +Y
 	};
 
-	static const vector<vmath::vec4> CUBE_BASE_COLORS{
+	static const std::vector<vmath::vec4> CUBE_BASE_COLORS{
 	    vmath::vec4(1.0, 0.0, 0.0, 1.0),
 	    vmath::vec4(0.0, 1.0, 0.0, 1.0),
 	    vmath::vec4(0.0, 0.0, 1.0, 1.0),
@@ -117,7 +127,7 @@ namespace exercise6
 	    vmath::vec4(1.0, 0.0, 1.0, 1.0),
 	    vmath::vec4(1.0, 1.0, 0.0, 1.0)};
 
-	void PushVertex(vector<GLfloat> &vertices,
+	void PushVertex(std::vector<GLfloat> &vertices,
 	                const vmath::vec4 pos,
 	                const vmath::vec4 color,
 	                const vmath::vec2 uv,
@@ -136,11 +146,11 @@ namespace exercise6
 	}
 
 	void BuildTriangle(
-	    vector<GLfloat> &buffer_data,
-	    const vector<vmath::vec4> &positions,
-	    const vector<vmath::vec4> &colors,
-	    const vector<vmath::vec2> &uvs,
-	    const vector<GLuint> &position_idxs,
+	    std::vector<GLfloat> &buffer_data,
+	    const std::vector<vmath::vec4> &positions,
+	    const std::vector<vmath::vec4> &colors,
+	    const std::vector<vmath::vec2> &uvs,
+	    const std::vector<GLuint> &position_idxs,
 	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
 	{
 		for (int i = 0; i < 3; i++)
@@ -152,11 +162,11 @@ namespace exercise6
 	}
 
 	void BuildQuad(
-	    vector<GLfloat> &buffer_data,
-	    const vector<vmath::vec4> &positions,
-	    const vector<vmath::vec4> &colors,
-	    const vector<vmath::vec2> &uvs,
-	    const vector<GLuint> &position_idxs,
+	    std::vector<GLfloat> &buffer_data,
+	    const std::vector<vmath::vec4> &positions,
+	    const std::vector<vmath::vec4> &colors,
+	    const std::vector<vmath::vec2> &uvs,
+	    const std::vector<GLuint> &position_idxs,
 	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
 	{
 		for (int i = 0; i < 6; i++)
@@ -168,7 +178,7 @@ namespace exercise6
 	}
 
 	void BuildCube(
-	    vector<GLfloat> &buffer_data,
+	    std::vector<GLfloat> &buffer_data,
 	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
 	{
 		for (int f = 0; f < 6; f++)
@@ -181,7 +191,7 @@ namespace exercise6
 	}
 
 	void BuildCone(
-	    vector<GLfloat> &buffer_data,
+	    std::vector<GLfloat> &buffer_data,
 	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
 	{
 		for (int f = 0; f < 4; f++)
@@ -199,7 +209,21 @@ namespace exercise6
 		          offset);
 	}
 
-	void BuildDisk(vector<GLfloat> &buffer_data,
+	void BuildTetrahedron(
+	    std::vector<GLfloat> &buffer_data,
+	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f)) {
+		for (int f = 0; f < 4; f++)
+			BuildTriangle(buffer_data,
+			              TETRA_BASE_POSITION,
+			              CONE_SIDE_BASE_COLORS,
+			              BASE_TRIANGLE_MESH_UVS,
+			              TETRA_FACE_INDICES[f],
+			              offset);
+	    }
+
+	// void Octahedron {}
+
+	void BuildDisk(std::vector<GLfloat> &buffer_data,
 	               double us, double ue, int uRes, // 각도 (0 ~ 2*PI)
 	               double vs, double ve, int vRes, // 반지름 비율 (0 ~ 1)
 	               float radius = 1.0f,
@@ -208,7 +232,7 @@ namespace exercise6
 		int numCols = uRes + 1; // 가로 정점 개수
 		int numRows = vRes + 1; // 세로 정점 개수
 
-		vector<vec4> uvColors = {
+		std::vector<vmath::vec4> uvColors = {
 		    {1.0, 0.0, 0.0, 1.0},
 		    {1.0, 1.0, 0.0, 1.0},
 		    {0.0, 1.0, 0.0, 1.0},
@@ -218,9 +242,9 @@ namespace exercise6
 		    // {1.0, 1.0, 1.0, 1.0},
 		    // {1.0, 1.0, 1.0, 1.0},
 		};
-		vector<vec4> diskPositions;
-		vector<vec4> diskColors;
-		vector<vec2> diskUVs;
+		std::vector<vmath::vec4> diskPositions;
+		std::vector<vmath::vec4> diskColors;
+		std::vector<vmath::vec2> diskUVs;
 		double deltaRad = (ve - vs) / vRes;
 		double deltaAngle = (ue - us) / uRes;
 		for (int row = 0; row < numRows; row++)
@@ -235,7 +259,7 @@ namespace exercise6
 				    0.0,
 				    -currentRad * sin(currentAngle),
 				    1.0f));
-				diskUVs.push_back(vec2((float)col / uRes, (float)row / vRes));
+				diskUVs.push_back(vmath::vec2((float)col / uRes, (float)row / vRes));
 
 				// u 축으로 2차 선형보간
 				float adjU = (float)col / uRes; // u축에 더 가까움
@@ -265,51 +289,12 @@ namespace exercise6
 		}
 	}
 
+	// void BuildCylinder
+
+	// void HemiSphere
+
+
 	static const vmath::vec4 BG_COLOR = vmath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-
-	class ModelBase;
-
-	class ProgramBase
-	{
-	  private:
-		GLuint mProgramAddr;
-
-		GLuint createShader(GLenum shader_type, const char *shader_path)
-		{
-			GLuint shaderAddr = sb7::shader::load(shader_path, shader_type, true);
-			return shaderAddr;
-		};
-
-	  public:
-		ProgramBase(const char *VS_PATH, const char *FS_PATH)
-		{
-			mProgramAddr = glCreateProgram();
-			auto vsAddr = createShader(GL_VERTEX_SHADER, VS_PATH);
-			auto fsAddr = createShader(GL_FRAGMENT_SHADER, FS_PATH);
-
-			glAttachShader(mProgramAddr, vsAddr);
-			glAttachShader(mProgramAddr, fsAddr);
-
-			glLinkProgram(mProgramAddr);
-
-			glDeleteShader(vsAddr);
-			glDeleteShader(fsAddr);
-		}
-		ProgramBase()
-		    : ProgramBase(SHADER_VS_PATH, SHADER_FS_PATH)
-		{
-		}
-
-		~ProgramBase()
-		{
-			glDeleteProgram(mProgramAddr);
-		}
-
-		GLuint GetProgramAddr() const
-		{
-			return mProgramAddr;
-		}
-	};
 
 	class ModelBase
 	{
@@ -317,22 +302,22 @@ namespace exercise6
 		GLuint mVAOAddr;
 		GLuint mVBOAddr;
 		GLuint mEBOAddr;
-		vector<GLuint> mTextureAddrs;
+		std::vector<GLuint> mTextureAddrs;
 
-		vector<GLfloat> mBufferData;
-		vector<GLuint> mElementData;
+		std::vector<GLfloat> mBufferData;
+		std::vector<GLuint> mElementData;
 		GLuint mIndexCount;
 
 		bool isBuilted = false;
 
 	  public:
-		vec3 Translate = vec3(0.0f, 0.0f, 0.0f);
-		vec3 EulerRot = vec3(0.0f, 0.0f, 0.0f);
-		vec3 Scale = vec3(1.0f, 1.0f, 1.0f);
+		vmath::vec3 Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
+		vmath::vec3 EulerRot = vmath::vec3(0.0f, 0.0f, 0.0f);
+		vmath::vec3 Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
 
-		vec4 BaseColor = vec4(1.0, 1.0, 1.0, 1.0);
-		vec2 UVOffset = vec2(0.0f, 0.0f);
-		vec2 UVRatio = vec2(1.0f, 1.0f);
+		vmath::vec4 BaseColor = vmath::vec4(1.0, 1.0, 1.0, 1.0);
+		vmath::vec2 UVOffset = vmath::vec2(0.0f, 0.0f);
+		vmath::vec2 UVRatio = vmath::vec2(1.0f, 1.0f);
 
 		ModelBase()
 		{
@@ -354,11 +339,11 @@ namespace exercise6
 			isBuilted = false;
 		}
 
-		void Build(const vector<GLfloat> &buffer_data)
+		void Build(const std::vector<GLfloat> &buffer_data)
 		{
 			if (isBuilted)
 				return;
-			mBufferData = vector<GLfloat>(buffer_data);
+			mBufferData = std::vector<GLfloat>(buffer_data);
 
 			mIndexCount = mBufferData.size() / VERTEX_LEN;
 			for (GLuint i = 0; i < mIndexCount; i++)
@@ -395,9 +380,13 @@ namespace exercise6
 			isBuilted = true;
 		}
 
-		mat4 GetModelMatrix()
+		vmath::mat4 GetModelMatrix()
 		{
-			return translate(Translate) * vmath::rotate<float>(EulerRot[2], 0.0, 0.0, 1.0) * vmath::rotate<float>(EulerRot[1], 0.0, 1.0, 0.0) * vmath::rotate<float>(EulerRot[0], 1.0, 0.0, 0.0) * vmath::scale<float>(Scale);
+			return	vmath::translate<float>(Translate) * 
+				vmath::rotate<float>(EulerRot[2], 0.0, 0.0, 1.0) * 
+				vmath::rotate<float>(EulerRot[1], 0.0, 1.0, 0.0) * 
+				vmath::rotate<float>(EulerRot[0], 1.0, 0.0, 0.0) * 
+				vmath::scale<float>(Scale);
 		}
 
 		virtual void Draw(GLuint prog_addr)
@@ -454,7 +443,7 @@ namespace exercise6
 		}
 		void Build()
 		{
-			vector<GLfloat> cubeVertices;
+			std::vector<GLfloat> cubeVertices;
 			BuildCube(cubeVertices);
 			ModelBase::Build(cubeVertices);
 		}
@@ -523,16 +512,58 @@ namespace exercise6
 		}
 	};
 
+	class ProgramBase
+	{
+	  private:
+		GLuint mProgramAddr;
+
+		GLuint createShader(GLenum shader_type, const char *shader_path)
+		{
+			GLuint shaderAddr = sb7::shader::load(shader_path, shader_type, true);
+			return shaderAddr;
+		};
+
+	  public:
+		ProgramBase(const char *VS_PATH, const char *FS_PATH)
+		{
+			mProgramAddr = glCreateProgram();
+			auto vsAddr = createShader(GL_VERTEX_SHADER, VS_PATH);
+			auto fsAddr = createShader(GL_FRAGMENT_SHADER, FS_PATH);
+
+			glAttachShader(mProgramAddr, vsAddr);
+			glAttachShader(mProgramAddr, fsAddr);
+
+			glLinkProgram(mProgramAddr);
+
+			glDeleteShader(vsAddr);
+			glDeleteShader(fsAddr);
+		}
+		ProgramBase()
+		    : ProgramBase(SHADER_VS_PATH, SHADER_FS_PATH)
+		{
+		}
+
+		~ProgramBase()
+		{
+			glDeleteProgram(mProgramAddr);
+		}
+
+		GLuint GetProgramAddr() const
+		{
+			return mProgramAddr;
+		}
+	};
+
 	class MyApplication : public sb7::application
 	{
-		unique_ptr<ProgramBase> default_program;
-		unique_ptr<ProgramBase> texture_program;
-		vector<unique_ptr<ModelBase>> default_models;
-		vector<unique_ptr<ModelBase>> texture_models;
+		std::unique_ptr<ProgramBase> default_program;
+		std::unique_ptr<ProgramBase> texture_program;
+		std::vector<std::unique_ptr<ModelBase>> default_models;
+		std::vector<std::unique_ptr<ModelBase>> texture_models;
 
-		vec3 eye = vec3(0.0, 1.0, 3.0);
-		vec3 target = vec3(0.0, 0.0, 0.0);
-		vec3 worldup = vec3(0.0, 1.0, 0.0);
+		vmath::vec3 eye = vmath::vec3(0.0, 1.0, 3.0);
+		vmath::vec3 target = vmath::vec3(0.0, 0.0, 0.0);
+		vmath::vec3 worldup = vmath::vec3(0.0, 1.0, 0.0);
 
 		float fov = 60;
 		float aspect = 0;
@@ -543,45 +574,54 @@ namespace exercise6
 		{
 			stbi_set_flip_vertically_on_load(true);
 			default_program = std::make_unique<ProgramBase>();
+			texture_program = std::make_unique<ProgramBase>(SHADER_VS_PATH, TEXTURE_FS_PATH);
+
+			// {
+			// 	std::vector<GLfloat> vertices;
+			// 	BuildCone(vertices);
+
+			// 	auto model = std::make_unique<ModelBase>();
+			// 	model->Build(vertices);
+
+			// 	model->Scale = vmath::vec3(0.75, 0.75, 0.75);
+			// 	default_models.push_back(std::move(model));
+			// }
 
 			{
-				vector<GLfloat> vertices;
-				BuildCone(vertices);
+				std::vector<GLfloat> vertices; 
 
+				BuildTetrahedron(vertices);
 				auto model = std::make_unique<ModelBase>();
 				model->Build(vertices);
-
-				model->Scale = vec3(0.75, 0.75, 0.75);
 				default_models.push_back(std::move(model));
 			}
 
-			texture_program = std::make_unique<ProgramBase>(SHADER_VS_PATH, TEXTURE_FS_PATH);
+			// {
+			// 	auto model = std::make_unique<Cube>();
+			// 	model->Build();
 
-			{
-				auto model = std::make_unique<Cube>();
-				model->Build();
+			// 	model->AddTexture(TEXTURE_CONTAINER);
+			// 	model->AddCubeTexture(6, TEXTURE_SIDES);
 
-				model->AddTexture(TEXTURE_CONTAINER);
-				model->AddCubeTexture(6, TEXTURE_SIDES);
+			// 	model->Scale = vmath::vec3(0.75, 0.75, 0.75);
+			// 	texture_models.push_back(std::move(model));
+			// }
 
-				model->Scale = vec3(0.75, 0.75, 0.75);
-				texture_models.push_back(std::move(model));
-			}
+			// {
+			// 	std::vector<GLfloat> vertices;
+			// 	double disRad = 1.0f;
+			// 	BuildDisk(vertices,
+			// 	          0, 2 * M_PI, 32,
+			// 	          0.5, 1.0, 1, disRad);
 
-			{
-				vector<GLfloat> vertices;
-				double disRad = 1.0f;
-				BuildDisk(vertices,
-				          0, 2 * M_PI, 32,
-				          0.5, 1.0, 1, disRad);
-
-				auto model = std::make_unique<ModelBase>();
-				model->Build(vertices);
-				model->AddTexture(TEXTURE_CONTAINER);
-				model->Scale = vec3(1.0, 1.0, 1.0);
-				texture_models.push_back(std::move(model));
-			}
-		};
+			// 	auto model = std::make_unique<ModelBase>();
+			// 	model->Build(vertices);
+			// 	model->AddTexture(TEXTURE_CONTAINER);
+			// 	model->Scale = vmath::vec3(1.0, 1.0, 1.0);
+			// 	model->UVRatio = vmath::vec2(4.0, 1.0);
+			// 	texture_models.push_back(std::move(model));
+			// }
+		}
 
 		virtual void render(double currentTime) override
 		{
@@ -602,30 +642,32 @@ namespace exercise6
 				    glGetUniformLocation(default_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
 				    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
 
-				for (auto &model : default_models) {
-					model->Translate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
-					model->EulerRot = vmath::vec3(angle, angle, angle);
+				for (auto &model : default_models)
+				{
+					default_models[0]->Translate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
+					default_models[0]->EulerRot = vmath::vec3(angle, angle, angle);
 				}
 
-				for (auto &model : default_models){
+				for (auto &model : default_models)
+				{
 					model->Draw(default_program->GetProgramAddr());
 				}
 			}
-			{
-				glUseProgram(texture_program->GetProgramAddr());
-				glUniformMatrix4fv(
-				    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_VIEW_MAT),
-				    1, false, vmath::lookat(eye, target, worldup));
-				glUniformMatrix4fv(
-				    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
-				    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
+			// {
+			// 	glUseProgram(texture_program->GetProgramAddr());
+			// 	glUniformMatrix4fv(
+			// 	    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_VIEW_MAT),
+			// 	    1, false, vmath::lookat(eye, target, worldup));
+			// 	glUniformMatrix4fv(
+			// 	    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
+			// 	    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
 
-				texture_models.back()->EulerRot = vmath::vec3(angle, angle, angle);
-				texture_models.back()->UVOffset = vmath::vec2(currentTime, 1.0f);
+			// 	// texture_models.back()->EulerRot = vmath::vec3(angle, angle, angle);
+			// 	texture_models.back()->UVOffset = vmath::vec2(currentTime, 1.0f);
 
-				for (auto &model : texture_models)
-					model->Draw(texture_program->GetProgramAddr());
-			}
+			// 	for (auto &model : texture_models)
+			// 		model->Draw(texture_program->GetProgramAddr());
+			// }
 		}
 
 		virtual void shutdown() override
