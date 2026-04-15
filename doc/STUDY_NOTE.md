@@ -1831,6 +1831,142 @@ draw call 1회 ≈ 5~50 μs  (드라이버 호출 + state 검증)
 
 ---
 
+### 3-3. [NEW] vmath 의 곱셈 컨벤션 — `mat·mat` 은 column, `vec·mat` 은 row (비대칭) 🔴
+
+**오해**: "vmath 는 GLSL 처럼 column convention 이니까 `mat * vec` 으로 변환 적용하면 되겠지."
+
+**현실**: vmath 는 **두 곱셈의 컨벤션이 서로 다른** 비대칭 라이브러리. 같은 행렬을 GLSL 에선 정상으로 쓰는데, C++ 에서 vec 에 곱하면 **반대 방향 변환** 이 일어남.
+
+### vmath 컨벤션 한 줄 요약
+
+| 연산 | 정의됨? | 컨벤션 | 결과 |
+|------|--------|--------|------|
+| `mat * mat` | ✅ | **Column convention** (표준) | 일반 수학 곱셈 그대로 |
+| `mat * vec` | ❌ | — | **컴파일 에러** |
+| `vec * mat` | ✅ | **Row vector convention** | 수학적으로 **`M^T · v`** |
+
+→ `mat * mat` 은 GLSL 과 똑같지만, `vec * mat` 만 row 컨벤션이라 결과가 **transpose 된 변환** 이 적용됨.
+
+### 검증 — 구체 예시
+
+Y축 +90° 회전 행렬 (column-major 표준):
+```
+R = ┌  0  0  1  0 ┐
+    │  0  1  0  0 │
+    │ -1  0  0  0 │
+    └  0  0  0  1 ┘
+```
+
+벡터 `(1, 0, 0, 1)` 에 적용:
+
+| 방법 | 결과 | 의미 |
+|------|------|------|
+| GLSL `R * v` (column convention) | `(0, 0, -1, 1)` | **+90° 정상** |
+| vmath `pos * R` (C++) | `(0, 0, +1, 1)` | **−90° 반대 방향** ❌ |
+
+회전 행렬은 직교 (`R^T = R^{-1}`) 라서 vmath 의 `vec * R` 는 **inverse rotation** 을 적용하는 꼴.
+
+### 왜 이렇게 됐나
+
+vmath 의 헬퍼 (`vmath::rotate`, `vmath::translate`, `vmath::scale`) 는 **GLSL 호환 column-major 행렬** 을 생성. 그래서 GLSL 에 업로드해서 `mat * vec` 으로 쓰면 정상.
+
+하지만 vmath 의 C++ `operator*` 는 [vmath.h:1235](include/vmath.h#L1235) 에 **`vec * mat` 만** 정의돼 있고, 그 구현이 row vector 컨벤션 (`v^T · M`). 결과적으로:
+- 같은 행렬이 GLSL 에선 `M·v`, vmath C++ 에선 `M^T·v` 로 동작 → **부호/방향이 반대**.
+
+### 실전 규칙 5가지
+
+#### Rule 1 — `mat * mat` 은 GLSL 과 동일
+```cpp
+auto model = vmath::translate(...) * vmath::rotate(...) * vmath::scale(...);
+//           T  ·  R  ·  S — 표준 column 순서, 정점 입장에선 S → R → T
+```
+이 매트릭스를 GLSL 에 uniform 으로 올리면 정상 작동.
+
+#### Rule 2 — CPU 에서 vec 변환은 가능한 한 피하기
+정점 변환은 **GLSL 에서** 일어나는 게 표준. C++ 에서 vec 에 매트릭스를 곱할 일이 거의 없어야 함. CPU 측 vec 변환은 보통:
+- 디버깅용 좌표 출력
+- AABB / culling 계산
+- 픽킹 (마우스 클릭 → world ray)
+
+#### Rule 3 — CPU 에서 vec 에 변환을 꼭 적용해야 한다면
+
+**(A) 안전한 길** — **대각 행렬** (`M = M^T`) 만 `vec * mat` 사용
+- Identity, Scale, **Mirror** 는 symmetric 이라 `pos * M = M * pos`
+- 회전/이동은 **절대 `vec * mat` 으로 직접 적용 금지**
+
+**(B) 일반적인 길** — 명시적 `transpose()` 사용
+```cpp
+vmath::vec4 v_new = pos * M.transpose();   // 표준 M·v 효과
+```
+`mat4::transpose()` 는 vmath 에 정의돼 있음 ([vmath.h:845](include/vmath.h#L845)).
+
+#### Rule 4 — `vmath::translate / rotate / scale` 출력은 GLSL 호환
+이 헬퍼들이 만든 행렬은 column-major standard. GLSL 에서 `mat * vec` 로 쓰면 정상.
+
+#### Rule 5 — `mat * mat` 합성 순서는 column convention 그대로
+```cpp
+auto M = T * R * S;     // 정점 입장에서 S → R → T 순으로 적용
+```
+이건 직관적 — GLSL 책에 있는 것과 동일.
+
+### 빠른 참고 — CPU 에서 헷갈리는 케이스
+
+| 코드 | 결과 | 의도 일치? |
+|------|------|----------|
+| `T * R * S` (mat-mat) | 표준 column 순서 | ✅ |
+| `pos * scale_mat` | scale 적용 | ✅ (대각이라 OK) |
+| `pos * mirror_mat` | mirror 적용 | ✅ (symmetric) |
+| `pos * rotate_mat` | **반대 방향 회전** | ❌ |
+| `pos * translate_mat` | **잘못된 결과** | ❌ |
+| `pos * (T*R*S)` | **inverse 변환** | ❌ |
+| `pos * (T*R*S).transpose()` | **표준 column M·v 효과** | ✅ |
+| `mat * vec` | **컴파일 에러** | — |
+
+### 다른 라이브러리와 비교
+
+| 라이브러리 | mat × mat | mat × vec | vec × mat | 컨벤션 |
+|----------|-----------|-----------|-----------|--------|
+| **vmath** (sb7) | column 표준 | ❌ 없음 | row vec (`M^T·v`) | **혼합** ⚠️ |
+| **GLM** | column 표준 | ✅ `M*v` | ✅ `v*M` (= `M^T·v`) | column |
+| **GLSL** | column 표준 | ✅ `M*v` | ✅ `v*M` (= `M^T·v`) | column |
+| **DirectXMath** | row 표준 | ❌ | ✅ `v*M` | row |
+| **Eigen** | column 표준 | ✅ `M*v` | ❌ | column |
+
+→ **vmath 만 유독 `mat * vec` 이 없어서** "column 인 줄 알았는데 vec 만 row" 라는 함정이 생김.
+
+### 이번 함정 (Octahedron Mirror 변환)
+
+```cpp
+vmath::mat4 xzMirror = vmath::mat4::identity();
+xzMirror[1][1] = -1;
+
+// ✓ 첫 시도 (결과는 우연히 맞지만 의미 불명확)
+for (const auto &pos : positions)
+    result.push_back(pos * xzMirror);
+
+// ❌ "표준대로" 바꿔본 두 번째 시도 (mat * vec 는 vmath 에 없음 → 컴파일 에러)
+for (const auto &pos : positions)
+    result.push_back(xzMirror * pos);
+
+// ✅ 정답: vmath 컨벤션 인정 + 주석으로 대각 행렬임을 명시
+//   vmath 는 vec * mat 만 정의. 일반 행렬엔 M^T·v 효과지만,
+//   xzMirror 는 대각이라 결과는 표준 M·v 와 동일.
+for (const auto &pos : positions)
+    result.push_back(pos * xzMirror);
+```
+
+**교훈**: 라이브러리 컨벤션을 모르고 "표준" 을 가정해서 mat-vec 순서를 바꿨다가, 그게 일치하는 컨벤션이 없어서 컴파일 에러. **반드시 사용 중인 라이브러리의 실제 operator 정의를 확인하고 수용**.
+
+### 외워둘 한 줄 멘토링
+
+> **"vmath 에서는 mat 끼리 곱은 표준이지만, vec 가 끼면 모든 게 transpose 된다."**
+
+또는 더 실용적으로:
+
+> **"CPU 에서 정점 변환하지 마라. mat 만 만들고 GLSL 에 보내라."**
+
+---
+
 ## 체크리스트 (Exercise6 확장)
 
 | # | 항목 | 확인 |
@@ -1845,6 +1981,9 @@ draw call 1회 ≈ 5~50 μs  (드라이버 호출 + state 검증)
 | 25 | 🔴 Texture unit 이 **글로벌 지속 상태** 라는 사실을 기억하는가? (bind = persistent) | |
 | 26 | 공유 텍스처는 **루프 밖에서 한 번만** bind 하는가? (자주 바뀌는 것만 루프 안) | |
 | 27 | CPU 에서 bind 한 텍스처를 **FS 가 실제로 샘플링** 하는지 확인했는가? | |
+| 28 | 🔴 vmath 에서 `mat * vec` 는 **컴파일 에러** 임을 알고 있는가? | |
+| 29 | 🔴 vmath 의 `vec * mat` 는 **`M^T · v`** 임을 알고 있는가? (대각 행렬 외에는 결과가 다름) | |
+| 30 | CPU 에서 vec 변환은 **대각 행렬에만** 직접 적용하는가? (회전/이동은 transpose 나 GLSL 위임) | |
 
 ---
 
@@ -1858,3 +1997,4 @@ draw call 1회 ≈ 5~50 μs  (드라이버 호출 + state 검증)
 6. **같은 실수 두 번 — vector 인덱스 가드** — 빈 vector `[0]` UB (Exercise6 원 노트 1-4) 에 이어서 **out-of-bounds `[N]`** 으로 한 번 더 재발. **"vector 인덱싱 = 크기 검사 필수"** 를 조건반사로 만들 것.
 7. **GL 은 기본적으로 조용함** — 어떤 문제든 "eh? 코드 맞는데 안 되네" 가 들면 `glGetError()` 부터 찔러본다. 특히 uniform 업로드/sampler 바인딩 이후는 함정 천국.
 8. **Texture unit = global persistent slot** — "draw 1회 = 텍스처 1개" 라는 오해를 버릴 것. 한 draw 가 여러 unit 을 동시에 읽고, 공유 텍스처는 한 번만 bind 하면 모든 후속 draw 가 자동으로 사용함. Draw call 수와 텍스처 수는 독립 변수. 다만 **FS 가 해당 sampler 를 실제로 읽어야** 화면에 반영됨 (bind ≠ render).
+9. **라이브러리 컨벤션은 "표준" 을 가정하지 말고 검증할 것** — vmath 의 `mat * mat` 은 표준 column convention 인데 `vec * mat` 만 row convention 이라 비대칭. "GLSL 처럼 `M * v` 로 쓰면 되겠지" 가 컴파일 에러 + 회전 부호 반전을 동시에 부른다. **CPU 에서 정점 변환은 가능한 한 피하고, 꼭 필요하면 대각 행렬에만 적용 또는 `M.transpose()` 사용**. 더 일반적으로: "내가 쓰는 라이브러리의 operator 정의를 직접 본 적이 없으면 가정하지 말 것".

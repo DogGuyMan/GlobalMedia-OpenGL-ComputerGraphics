@@ -1,6 +1,7 @@
 #include "GL/gl3w.h"
 #include "GL/glcorearb.h"
 #include "vmath.h"
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <ostream>
@@ -48,6 +49,12 @@ namespace exercise6
 	    {0.5, 1.0},
 	};
 
+	static const std::vector<vmath::vec2> BASE_TRIANGLE_INV_MESH_UVS{
+		{0.0, 1.0},
+		{0.5, 0.0},
+		{1.0, 1.0},
+	};
+
 	static const std::vector<vmath::vec2> BASE_QUAD_MESH_UVS{
 	    {0.0, 0.0},
 	    {1.0, 0.0},
@@ -55,20 +62,20 @@ namespace exercise6
 	    {0.0, 1.0}};
 
 	const std::vector<GLuint> TRIANGLE_FACE_INDICES = {{0, 1, 2}};
+
 	const std::vector<GLuint> QUAD_FACE_INDICES = {{0, 1, 2, 0, 2, 3}};
 
-
 	static const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
-		{0.0, 0.0, 0.0, 1.0},
-		{1.0, 0.0, 0.0, 1.0},
-		{0.5, 0.0, 0.866, 1.0},
-		{0.5, 0.816, 0.2886, 1.0},
+	    {0.0, 0.0, 0.0, 1.0},
+	    {1.0, 0.0, 0.0, 1.0},
+	    {0.5, 0.0, 0.866, 1.0},
+	    {0.5, 0.816, 0.2886, 1.0},
 	};
 	static const std::vector<std::vector<GLuint>> TETRA_FACE_INDICES = {
-		{1, 0, 3},
-		{2, 1, 3},
-		{0, 2, 3},
-		{1, 0, 2},
+	    {1, 0, 3},
+	    {2, 1, 3},
+	    {0, 2, 3},
+	    {1, 0, 2},
 	};
 
 	static const std::vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
@@ -90,6 +97,13 @@ namespace exercise6
 	    {2, 1, 4},
 	    {3, 2, 4},
 	    {0, 3, 4},
+	};
+
+	static const std::vector<std::vector<GLuint>> OCTA_DOWN_SIDE_FACE_INDICES = {
+	    {1, 4, 0},
+	    {2, 4, 1},
+	    {3, 4, 2},
+	    {0, 4, 3},
 	};
 
 	static const std::vector<vmath::vec4> CONE_SIDE_BASE_COLORS{
@@ -211,7 +225,8 @@ namespace exercise6
 
 	void BuildTetrahedron(
 	    std::vector<GLfloat> &buffer_data,
-	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f)) {
+	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
+	{
 		for (int f = 0; f < 4; f++)
 			BuildTriangle(buffer_data,
 			              TETRA_BASE_POSITION,
@@ -219,9 +234,33 @@ namespace exercise6
 			              BASE_TRIANGLE_MESH_UVS,
 			              TETRA_FACE_INDICES[f],
 			              offset);
-	    }
+	}
 
-	// void Octahedron {}
+	void BuildOctahedron(std::vector<GLfloat> &buffer_data,
+	                     const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
+	{
+
+		for (int f = 0; f < 4; f++)
+			BuildTriangle(buffer_data,
+			              CONE_SIDE_BASE_POSITION,
+			              CONE_SIDE_BASE_COLORS,
+			              BASE_TRIANGLE_MESH_UVS,
+			              CONE_SIDE_FACE_INDICES[f],
+			              offset);
+		std::vector<vmath::vec4> coneDownSideBasePosition;
+		vmath::mat4 xzMirrorMat = vmath::mat4::identity();
+		xzMirrorMat[1][1] = -1;
+		for (const auto &pos : CONE_SIDE_BASE_POSITION)
+			coneDownSideBasePosition.push_back(pos * xzMirrorMat);
+
+		for (int f = 0; f < 4; f++)
+			BuildTriangle(buffer_data,
+			              coneDownSideBasePosition,
+			              CONE_SIDE_BASE_COLORS,
+			              BASE_TRIANGLE_INV_MESH_UVS,
+			              OCTA_DOWN_SIDE_FACE_INDICES[f],
+			              offset);
+	}
 
 	void BuildDisk(std::vector<GLfloat> &buffer_data,
 	               double us, double ue, int uRes, // 각도 (0 ~ 2*PI)
@@ -292,7 +331,6 @@ namespace exercise6
 	// void BuildCylinder
 
 	// void HemiSphere
-
 
 	static const vmath::vec4 BG_COLOR = vmath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -382,11 +420,11 @@ namespace exercise6
 
 		vmath::mat4 GetModelMatrix()
 		{
-			return	vmath::translate<float>(Translate) * 
-				vmath::rotate<float>(EulerRot[2], 0.0, 0.0, 1.0) * 
-				vmath::rotate<float>(EulerRot[1], 0.0, 1.0, 0.0) * 
-				vmath::rotate<float>(EulerRot[0], 1.0, 0.0, 0.0) * 
-				vmath::scale<float>(Scale);
+			return vmath::translate<float>(Translate) *
+			       vmath::rotate<float>(EulerRot[2], 0.0, 0.0, 1.0) *
+			       vmath::rotate<float>(EulerRot[1], 0.0, 1.0, 0.0) *
+			       vmath::rotate<float>(EulerRot[0], 1.0, 0.0, 0.0) *
+			       vmath::scale<float>(Scale);
 		}
 
 		virtual void Draw(GLuint prog_addr)
@@ -461,7 +499,7 @@ namespace exercise6
 
 				glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);
 				glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX2), 1);
-				if (mTextureAddrs.size() + 1 <= 6)
+				if (mTextureAddrs.size() < 7)
 					return;
 				// for (int f = 0; f < 6; f++)
 				// {
@@ -473,7 +511,7 @@ namespace exercise6
 				// 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)(f * 6 * sizeof(GLuint)));
 				// 	// cout << "glBindTexture(GL_TEXTURE_2D, mTextureAddrs[" << 1 + f << "]" << endl;
 				// }
-				// if (mTextureAddrs.size() + 1 <= 12)
+				// if (mTextureAddrs.size() < 13)
 				// 	return;
 				for (int f = 0; f < 6; f++)
 				{
@@ -588,12 +626,24 @@ namespace exercise6
 			// }
 
 			{
-				std::vector<GLfloat> vertices; 
+				std::vector<GLfloat> vertices;
 
 				BuildTetrahedron(vertices);
 				auto model = std::make_unique<ModelBase>();
 				model->Build(vertices);
-				default_models.push_back(std::move(model));
+				model->AddTexture(TEXTURE_SIDES[0]);
+				texture_models.push_back(std::move(model));
+			}
+
+			{
+				std::vector<GLfloat> vertices;
+
+				BuildOctahedron(vertices);
+				auto model = std::make_unique<ModelBase>();
+				model->Build(vertices);
+				model->AddTexture(TEXTURE_SIDES[0]);
+				model->Scale = vmath::vec3(1.0, sqrt(2) / 2, 1.0);
+				texture_models.push_back(std::move(model));
 			}
 
 			// {
@@ -628,11 +678,13 @@ namespace exercise6
 			glClearBufferfv(GL_COLOR, 0, BG_COLOR);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
+			glEnable(GL_CULL_FACE);
 
 			aspect = ((float)info.windowWidth) / info.windowHeight;
 
 			float angle = vmath::radians((currentTime * 180) / M_PI) * 90;
 
+			if (default_models.size())
 			{
 				glUseProgram(default_program->GetProgramAddr());
 				glUniformMatrix4fv(
@@ -642,32 +694,36 @@ namespace exercise6
 				    glGetUniformLocation(default_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
 				    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
 
-				for (auto &model : default_models)
-				{
-					default_models[0]->Translate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
-					default_models[0]->EulerRot = vmath::vec3(angle, angle, angle);
-				}
+				// for (auto &model : default_models)
+				// {
+				// 	model->Translate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
+				// 	model->EulerRot = vmath::vec3(angle, angle, angle);
+				// }
+
+				default_models.back()->Translate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
+				default_models.back()->EulerRot = vmath::vec3(angle, angle, angle);
 
 				for (auto &model : default_models)
 				{
 					model->Draw(default_program->GetProgramAddr());
 				}
 			}
-			// {
-			// 	glUseProgram(texture_program->GetProgramAddr());
-			// 	glUniformMatrix4fv(
-			// 	    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_VIEW_MAT),
-			// 	    1, false, vmath::lookat(eye, target, worldup));
-			// 	glUniformMatrix4fv(
-			// 	    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
-			// 	    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
+			if (texture_models.size())
+			{
+				glUseProgram(texture_program->GetProgramAddr());
+				glUniformMatrix4fv(
+				    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_VIEW_MAT),
+				    1, false, vmath::lookat(eye, target, worldup));
+				glUniformMatrix4fv(
+				    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
+				    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
 
-			// 	// texture_models.back()->EulerRot = vmath::vec3(angle, angle, angle);
-			// 	texture_models.back()->UVOffset = vmath::vec2(currentTime, 1.0f);
+				texture_models.back()->EulerRot = vmath::vec3(0, angle, 0);
+				texture_models.back()->UVOffset = vmath::vec2(currentTime, 1.0f);
 
-			// 	for (auto &model : texture_models)
-			// 		model->Draw(texture_program->GetProgramAddr());
-			// }
+				for (auto &model : texture_models)
+					model->Draw(texture_program->GetProgramAddr());
+			}
 		}
 
 		virtual void shutdown() override
