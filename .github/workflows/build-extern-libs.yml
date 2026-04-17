@@ -47,12 +47,14 @@ jobs:
           cmake --build "%SB7_BUILD%\build" --config Release
           if errorlevel 1 exit /b 1
 
-          for /R "%SB7_BUILD%\build" %%f in (sb7.lib) do (
-            echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\sb7.lib"
-          )
-          for /R "%SB7_BUILD%\build" %%f in (sb7.pdb) do (
-            echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\sb7.pdb"
-          )
+          if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
+
+          copy /Y "%SB7_BUILD%\build\Release\sb7.lib" "%OUTPUT_DIR%\sb7.lib"
+          if errorlevel 1 exit /b 1
+
+          if exist "%SB7_BUILD%\build\Release\sb7.pdb" copy /Y "%SB7_BUILD%\build\Release\sb7.pdb" "%OUTPUT_DIR%\sb7.pdb"
+
+          exit /b 0
 
       - name: List output
         shell: cmd
