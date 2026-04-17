@@ -12,7 +12,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#define RELEASE
+#define MAC_WINE_TEST
 namespace exercise6
 {
 
@@ -612,7 +612,7 @@ namespace exercise6
 
 		void init() override
 		{
-			#ifdef RELEASE
+			#ifdef MAC_WINE_TEST
 			sb7::application::init();
 			info.majorVersion = 4;
 			info.minorVersion = 1;
