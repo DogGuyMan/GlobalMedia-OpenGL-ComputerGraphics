@@ -11,6 +11,8 @@
 #include <vector>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+#define RELEASE
 namespace exercise6
 {
 
@@ -50,9 +52,9 @@ namespace exercise6
 	};
 
 	static const std::vector<vmath::vec2> BASE_TRIANGLE_INV_MESH_UVS{
-		{0.0, 1.0},
-		{0.5, 0.0},
-		{1.0, 1.0},
+	    {0.0, 1.0},
+	    {0.5, 0.0},
+	    {1.0, 1.0},
 	};
 
 	static const std::vector<vmath::vec2> BASE_QUAD_MESH_UVS{
@@ -607,6 +609,15 @@ namespace exercise6
 		float aspect = 0;
 		float nearplane = 0.1;
 		float farplane = 1000.0;
+
+		void init() override
+		{
+			#ifdef RELEASE
+			sb7::application::init();
+			info.majorVersion = 4;
+			info.minorVersion = 1;
+			#endif
+		}
 
 		virtual void startup() override
 		{
