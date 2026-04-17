@@ -551,6 +551,198 @@ glDrawElements(GL_TRIANGLES, mIndexCount, GL_UNSIGNED_INT, 0);
 
 ---
 
+## 📚 보충 개념 3 — `glUniform1i` ≠ `glBindTexture`, 그리고 암묵적 순서 계약
+
+> Step 3 의 Material 추상화가 왜 **정말** 필요한지 두 가지 구체적 이유를 더 본다.
+> 실제 exercise6 에서 마주친 버그 두 가지가 모두 이 개념의 부재로 발생했어.
+
+### (1) 텍스처 연결은 **3-step**, sampler uniform 만으로는 부족
+
+```cpp
+// ❌ 이것만 하면 sampler 가 "어느 unit 을 볼지" 매핑만 설정됨
+glUniform1i(glGetUniformLocation(prog, "tex1"), 0);
+
+// 위 한 줄로는 **실제 텍스처가 연결되지 않는다**.
+// unit 0 에 뭐가 꽂혀있는지는 완전히 별개의 state.
+```
+
+올바른 3-step:
+
+```cpp
+// Step 1: 어느 unit 을 활성화할지 선택
+glActiveTexture(GL_TEXTURE0);
+
+// Step 2: 그 unit 에 실제 텍스처 바인딩
+glBindTexture(GL_TEXTURE_2D, textureHandle);
+
+// Step 3: 셰이더에게 "tex1 sampler 는 unit 0 을 읽어라" 알림
+glUniform1i(glGetUniformLocation(prog, "tex1"), 0);
+```
+
+#### 왜 두 state 가 별개인가
+
+OpenGL 의 state 는 이렇게 나뉨:
+
+```
+┌──────────────────────────────────────────┐
+│ Program state (glUseProgram 활성)         │
+│ ├── uniform "tex1" = 0   ← glUniform1i   │  매핑: "어디서 읽을지"
+│ └── uniform "tex2" = 1                   │
+└──────────────────────────────────────────┘
+┌──────────────────────────────────────────┐
+│ Context state (global, persistent)       │
+│ ├── Unit 0 → [ which texture? ]          │  연결: "그 unit 에 뭐가"
+│ ├── Unit 1 → [ which texture? ]          │
+│ └── ...                                  │
+└──────────────────────────────────────────┘
+```
+
+**매핑과 연결을 둘 다 설정해야** 실제로 셰이더가 텍스처를 읽음. 한쪽만 있으면:
+
+- `glUniform1i` 만: "unit 0 에서 읽어라" 라고 했지만 unit 0 엔 아무것도 없음 → 드라이버 기본값 (검정/흰색)
+- `glBindTexture` 만: unit 0 에 텍스처는 꽂혔지만 sampler 가 어디 읽어야 할지 모름 → 기본값 unit 0 에서 읽긴 읽음 (우연히 동작)
+
+#### 이번 함정 (Cube::Draw)
+
+```cpp
+glUniform1i(..., SAMPLER_TEX1, 0);   // "tex1 은 unit 0 에서 읽어라"
+glUniform1i(..., SAMPLER_TEX2, 1);
+
+// ⚠️ 여기서 unit 0 에 container 를 bind 하는 3-step 이 빠짐
+for (int f = 0; f < 6; f++) {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);   // unit 1 만 bind
+    glDrawElements(...);
+}
+```
+
+결과: `container.jpg` 가 `mTextureAddrs[0]` 에 **로드는 됐지만** unit 0 에 **bind 는 안 됨**. 셰이더의 `tex1` sampler 는 unit 0 을 읽지만 그 unit 에 container 가 없어서 엉뚱한 값을 읽음.
+
+#### Material 이 이를 어떻게 해결하나
+
+Step 3 의 `Material::Apply()` 는 **3-step 을 한 곳에 묶어** 서 어느 하나도 빠지지 않게 만든다:
+
+```cpp
+void Material::Apply(GLuint progAddr) const
+{
+    // ... other uniforms ...
+    for (const auto& slot : mSlots)
+    {
+        if (!slot.texture || !slot.texture->IsValid()) continue;
+
+        glActiveTexture(GL_TEXTURE0 + slot.unit);                   // ① activate
+        glBindTexture(GL_TEXTURE_2D, slot.texture->GetAddr());      // ② bind
+        glUniform1i(glGetUniformLocation(progAddr, slot.samplerName.c_str()),
+                    slot.unit);                                     // ③ uniform
+    }
+}
+```
+
+**이 세 줄이 항상 짝으로** 실행됨. Material 에 slot 을 추가하기만 하면 자동으로 완전한 연결이 보장됨. 호출자가 "glBindTexture 빠뜨림" 실수를 할 수 없음.
+
+### (2) 암묵적 순서 계약 — 여러 곳이 같은 순서로 유지돼야 성립
+
+현재 Cube::Draw 의 텍스처-면 매핑은 **3곳이 동시에 같은 순서** 여야만 성립:
+
+```
+① CUBE_FACE_INDICES 배열 순서       ┐
+   (-Z, +X, +Z, -X, -Y, +Y)         │
+                                    ├── 모두 같은 방향으로
+② TEXTURE_SIDES 배열 순서           │   전진해야 의도대로
+   (side1, side2, ..., side6)       │   매핑됨
+                                    │
+③ Draw 루프 인덱스 산술             │
+   (void*)(f*6*sizeof(GLuint))      │
+   mTextureAddrs[1 + f]             ┘
+```
+
+세 개가 **우연히** 같은 방향으로 전진해서:
+- -Z → side1
+- +X → side2
+- +Z → side3
+- -X → side4
+- -Y → side5
+- +Y → side6
+
+이 매핑이 성립. **그런데 한 곳만 바뀌어도** 조용히 깨짐:
+
+| 변경 시나리오 | 결과 |
+|------------|------|
+| `CUBE_FACE_INDICES` 재배열 (예: -Y/+Y 스왑) | side 가 엉뚱한 면에 붙음 |
+| `AddTexture(container)` 전에 다른 텍스처 추가 | `[1+f]` 인덱스가 밀려서 전부 어긋남 |
+| `TEXTURE_SIDES` 의 `side3` 와 `side4` 순서 변경 | 화면만 바뀌고 코드는 정상 작동 |
+| 루프 offset `f*6` 을 `f*4` 로 변경 | 완전히 망가짐 |
+
+컴파일러는 **어느 것도 잡지 못함**. 코드는 그대로 돌아가고 화면만 틀림.
+
+#### 왜 위험한가
+
+1. **디버깅 역추적 비용이 큼**: "side3 이 +Z 가 아니라 -X 에 나오네?" → 3곳 중 어디가 문제인지 모름
+2. **코드 복제/이전 시 취약**: 파일 복사할 때 한 곳만 옮기면 깨짐
+3. **미래의 나**: 6개월 후 `CUBE_FACE_INDICES` 를 예쁘게 재배열하면 즉시 깨짐
+4. **협업 취약**: 다른 사람이 `TEXTURE_SIDES` 에 `side7` 추가하면서 오타로 중간 삽입 → 전체 뒤틀림
+
+#### Material 이 이를 어떻게 해결하나
+
+Material 의 `TextureSlot` 은 **인덱스가 아닌 이름 기반**:
+
+```cpp
+struct TextureSlot {
+    std::string samplerName;           // "tex1", "normalMap" — 이름
+    std::shared_ptr<Texture> texture;
+    int unit;
+};
+```
+
+Cube 면별 텍스처도 이 패러다임을 확장하면:
+
+```cpp
+enum class CubeFace { NegZ, PosX, PosZ, NegX, NegY, PosY };
+
+struct CubeFaceSlot {
+    CubeFace face;                      // enum — 오타 불가능
+    std::shared_ptr<Texture> texture;
+};
+
+model->GetMaterial()
+    .SetFaceTexture(CubeFace::NegZ, TextureCache::Load("side1.jpg"))
+    .SetFaceTexture(CubeFace::PosX, TextureCache::Load("side2.jpg"))
+    .SetFaceTexture(CubeFace::PosZ, TextureCache::Load("side3.jpg"))
+    .SetFaceTexture(CubeFace::NegX, TextureCache::Load("side4.jpg"))
+    .SetFaceTexture(CubeFace::NegY, TextureCache::Load("side5.jpg"))
+    .SetFaceTexture(CubeFace::PosY, TextureCache::Load("side6.jpg"));
+```
+
+**장점**:
+- 매핑이 **데이터로 명시** 됨 ("side3 가 +Z 에 붙는다" 가 한 줄에 적힘)
+- enum 덕분에 **오타가 컴파일 에러**가 됨
+- **순서에 무관** — 코드 재배열로 깨지지 않음
+- 한 면에 두 번 설정하면 덮어쓰기 (또는 warning)
+
+### 원칙 2가지
+
+**원칙 A — 텍스처 연결은 3-step 이 항상 짝**:
+> `glActiveTexture` + `glBindTexture` + `glUniform1i` 는 세 개가 **하나의 원자적 동작**. 이 세 개를 별도 코드 블록에 흩어놓으면 언젠가 한 개가 빠져서 화면이 검정. **Material::Apply 같은 곳에 묶어서 규율 강제**.
+
+**원칙 B — 암묵 순서 계약은 구조체로 박제**:
+> "세 개 이상의 배열이 같은 순서로 전진해야 성립" 하는 코드가 보이면 **그 시점에 리팩토링 신호**. 관계를 데이터 구조 (struct / map / enum) 로 묶어서 **이름 기반 명시 계약**으로 이전.
+
+### Material 설계에 주는 시사점 (종합)
+
+Step 3 의 `Material` 추상화가 해결하는 문제들을 정리하면:
+
+| 문제 | Material 이 제공하는 해결 |
+|------|-----------------------|
+| glUniform/glBindTexture 짝 누락 | `Apply()` 가 3-step 을 항상 함께 실행 |
+| mTextureAddrs[1+f] 식 인덱스 오류 | sampler 이름으로 접근 (`"tex1"`) |
+| 배열 순서 동기화 깨짐 | 이름/enum 기반 매핑 |
+| 공유 텍스처 중복 로드 | `shared_ptr<Texture>` + TextureCache |
+| 복사 시 핸들 dangling | move-only Texture 클래스 |
+
+이 다섯 가지가 한 번에 해결되는 게 Step 1~3 의 궁극적 가치야.
+
+---
+
 ## 🪜 Step 4 — `ModelBase::Draw` 범용화
 
 ### 목표

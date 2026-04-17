@@ -5,10 +5,20 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - configuration: Debug
+            build_preset: msvc-2022
+          - configuration: Release
+            build_preset: msvc-2022-release
 
     steps:
       - name: Checkout
@@ -19,11 +29,11 @@ jobs:
       - name: Configure
         run: cmake --preset msvc-2022
 
-      - name: Build
-        run: cmake --build --preset msvc-2022
+      - name: Build ${{ matrix.configuration }}
+        run: cmake --build --preset ${{ matrix.build_preset }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-msvc
-          path: build_msvc/
+          name: build-msvc-${{ matrix.configuration }}
+          path: build_msvc/apps/**/${{ matrix.configuration }}/

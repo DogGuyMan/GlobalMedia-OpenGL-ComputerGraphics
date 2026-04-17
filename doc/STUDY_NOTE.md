@@ -1967,6 +1967,198 @@ for (const auto &pos : positions)
 
 ---
 
+### 3-4. [NEW] `glUniform1i(sampler)` 와 `glBindTexture` 는 **독립된 두 단계** 🔴
+
+**오해**: "sampler uniform 값을 설정하면 텍스처가 연결되는 거 아닌가?"
+
+**현실**: 쉐이더에 `uniform sampler2D tex1;` 이 있을 때, **"어느 unit 의 텍스처를 읽을지"** 와 **"그 unit 에 어떤 텍스처가 있는지"** 는 **서로 독립된 두 상태**. 둘 다 설정해야 실제 연결이 됨.
+
+### 두 단계의 역할 분리
+
+```cpp
+// ❌ 이것만 하면 "sampler 가 unit 0 을 읽도록" 설정만 함
+glUniform1i(glGetUniformLocation(prog_addr, "tex1"), 0);
+//          ^^^^^^^^ tex1 이라는 이름의 sampler uniform 에
+//                   "0" 이라는 int 값 (unit 번호) 저장
+// → 셰이더: "tex1 은 unit 0 에서 읽어라" 라는 매핑 설정
+// → 하지만 unit 0 에 실제로 뭐가 꽂혀있는지는 **별개의 state**
+
+// ✅ 실제 연결: unit 0 에 텍스처를 꽂아야 함
+glActiveTexture(GL_TEXTURE0);                       // 이후 bind 가 어느 unit 으로
+glBindTexture(GL_TEXTURE_2D, textureHandle);        // 그 unit 에 텍스처 꽂기
+```
+
+### 두 state 가 별개라는 증거
+
+OpenGL 의 state 는 대략 이렇게 나뉨:
+
+```
+┌─────────────────────────────────────────────────┐
+│  Program state (glUseProgram 활성)               │
+│  ├── uniform "tex1" = 0       ← glUniform1i     │
+│  ├── uniform "tex2" = 1                         │
+│  └── ...                                        │
+└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Context state (global)                         │
+│  ├── Unit 0 → [ texture name ]  ← glBindTexture │
+│  ├── Unit 1 → [ texture name ]                  │
+│  ├── Unit 2 → [ texture name ]                  │
+│  └── ...                                        │
+└─────────────────────────────────────────────────┘
+```
+
+Sampler uniform 은 **"어느 unit 을 볼지"** 를 program 내부에 기록하고, `glBindTexture` 는 **"그 unit 에 뭐가 꽂혀있는지"** 를 context 에 기록. **어느 한쪽이라도 없으면 연결이 깨짐**.
+
+### `glUniform1i` 만 한 상태에서의 실제 동작
+
+Unit 0 에 아무것도 bind 되지 않은 상태로 `glUniform1i(tex1, 0)` 만 호출하면:
+- **첫 프레임**: 드라이버 기본값 (보통 검정 또는 흰색 "zero texture")
+- **그 이후**: 이전에 누가 unit 0 에 bind 했던 것 (운 좋으면 엉뚱한 텍스처, 운 나쁘면 삭제된 dangling handle)
+
+### 이번 함정 (Cube::Draw)
+
+```cpp
+// ❌ Cube::Draw 현재 상태
+glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);   // "tex1 은 unit 0" 매핑만
+glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX2), 1);
+
+// ← 여기서 glActiveTexture(GL_TEXTURE0) + glBindTexture 가 빠짐!
+//    → unit 0 에 container 가 실제로 연결되지 않음
+//    → tex1 sampler 는 엉뚱한 것을 샘플링
+
+for (int f = 0; f < 6; f++) {
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);   // tex2 만 제대로 bind
+    glDrawElements(...);
+}
+```
+
+**증상**: "container 텍스처를 `AddTexture` 로 분명히 넣었는데 면에 나타나지 않음". `mTextureAddrs[0]` 는 존재하지만 unit 0 에 연결되지 않아서 tex1 sampler 가 읽지 못함.
+
+**고치려면** 루프 앞에 추가:
+```cpp
+glActiveTexture(GL_TEXTURE0);
+glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);   // ← container 를 unit 0 에 bind
+```
+
+### 원칙
+
+**텍스처 연결은 3-step 이다**:
+
+1. **Unit 활성화** — `glActiveTexture(GL_TEXTUREN)` ← 이후 bind 대상 unit 지정
+2. **텍스처 bind** — `glBindTexture(target, handle)` ← 그 unit 에 실제 꽂기
+3. **Sampler 매핑** — `glUniform1i(location, N)` ← 셰이더에게 "읽어라" 알림
+
+1, 2 를 **묶어서 생각** 하되 3 은 **별개**. "왜 안 나오지?" 질문이 들면 세 단계 모두 호출됐는지 체크.
+
+**판별법**: "분명 `AddTexture` 했고 sampler uniform 도 세팅했는데 검정/흰색 화면" → **`glBindTexture` 가 실제 호출되었는지** 가장 먼저 의심.
+
+---
+
+### 3-5. [NEW] 암묵적 순서 계약 (Implicit Ordering Contract) — Fragile Pattern 🔴
+
+**오해**: "인덱스로 매핑하는 게 제일 단순하지."
+
+**현실**: 인덱스 기반 매핑은 **"여러 곳이 같은 순서로 유지되어야" 한다는 암묵 계약**을 만든다. 컴파일러가 강제하지 않는 이 계약은 **아무도 안 볼 때 조용히 깨지는** 리팩토링 폭탄.
+
+### 이번 케이스 — 3-way 순서 동기화
+
+exercise6 의 Cube 텍스처-면 매핑은 **3곳이 동시에 같은 순서**여야 성립:
+
+```
+┌─────────────────────────────────┐
+│ ① CUBE_FACE_INDICES 배열 순서   │
+│    -Z(0) → +X(1) → +Z(2) → ...  │──┐
+└─────────────────────────────────┘  │
+                                     ▼
+┌─────────────────────────────────┐  │
+│ BuildCube 가 VBO 에 이 순서로   │  │
+│ 정점 push → VBO 레이아웃        │  │
+│    -Z[0..5] → +X[6..11] → ...   │  │
+└─────────────────────────────────┘  │
+                                     │
+┌─────────────────────────────────┐  │
+│ ② TEXTURE_SIDES 배열 순서       │  │
+│    side1 → side2 → side3 → ... │──┤
+└─────────────────────────────────┘  │
+                                     │
+┌─────────────────────────────────┐  │
+│ AddCubeTexture 가 순서대로 push │  │
+│    mTextureAddrs[1] = side1     │  │
+│    mTextureAddrs[2] = side2     │  │
+│    ...                          │  │
+└─────────────────────────────────┘  │
+                                     │
+┌─────────────────────────────────┐  │
+│ ③ Draw 루프 인덱스 산술         │  │
+│    (void*)(f*6*sizeof(GLuint))  │──┘
+│    mTextureAddrs[1 + f]         │
+└─────────────────────────────────┘
+```
+
+세 개가 **우연히** 같은 방향으로 전진해서 "-Z=side1, +X=side2, +Z=side3, -X=side4, -Y=side5, +Y=side6" 이 성립.
+
+### 무엇이 계약을 깨는가
+
+| 변경 | 영향 |
+|------|------|
+| `CUBE_FACE_INDICES` 에 새 면 삽입 / 순서 변경 | VBO 레이아웃 어긋남 → 엉뚱한 면에 side 텍스처 |
+| `AddTexture(container)` 전에 다른 `AddTexture` 추가 | `mTextureAddrs[1]` 이 side1 이 아님 |
+| `TEXTURE_SIDES` 배열 재정렬 | 그대로 반영됨 |
+| Draw 루프 오프셋 공식 수정 | 완전히 어긋남 |
+| `AddCubeTexture` 가 역순으로 push 하도록 수정 | 조용히 뒤집힘 |
+
+컴파일러는 이 중 어느 것도 **에러로 잡지 않음**. 코드는 정상적으로 돌아가고, 화면에만 잘못된 결과가 나타남.
+
+### 왜 이게 위험한가
+
+1. **디버깅 역추적 비용**: "side3 이 +Z 가 아닌 -X 에 나오네?" → 원인이 3곳 중 어디인지 모름
+2. **코드 이전 시 취약**: 파일 복제할 때 한 곳만 복사하면 깨짐 ([STUDY_NOTE Exercise6 3-5](#3-5) 와 연결)
+3. **협업 함정**: 다른 사람이 `TEXTURE_SIDES` 에 side7 추가하면서 오타로 중간에 삽입 → 매핑 전체 뒤틀림
+4. **미래의 나**: 6개월 후 내가 "왜 이렇게 복잡하게 했지?" 하고 `CUBE_FACE_INDICES` 재배열하면 즉시 깨짐
+
+### 구조적 해결 — 순서를 데이터 구조로 박제
+
+**Option A — 명시적 매핑 테이블** (최소 수정):
+```cpp
+// 면 이름과 텍스처를 페어로 묶어서 의도 명시
+struct CubeFaceTexture {
+    const char* faceName;  // "-Z", "+X", ...
+    const char* imagePath;
+};
+static const CubeFaceTexture CUBE_FACE_TEXTURES[6] = {
+    {"-Z", "./textures/side1.jpg"},
+    {"+X", "./textures/side2.jpg"},
+    {"+Z", "./textures/side3.jpg"},
+    {"-X", "./textures/side4.jpg"},
+    {"-Y", "./textures/side5.jpg"},
+    {"+Y", "./textures/side6.jpg"},
+};
+```
+→ "side3 는 +Z 면에 붙는다" 가 데이터로 명시됨. 순서가 헷갈릴 때 이 테이블만 보면 됨.
+
+**Option B — Material 추상화** (근본 해결, Material_Texture.md Step 3 참조):
+```cpp
+model->GetMaterial()
+    .SetFaceTexture(Face::NegZ, Texture::Load("side1.jpg"))
+    .SetFaceTexture(Face::PosX, Texture::Load("side2.jpg"))
+    // ... 이름 기반이라 순서 무관, 실수 불가능
+    ;
+```
+→ enum/string 기반이라 **컴파일러가 일부 실수 (오타, 중복) 를 잡아줌**.
+
+### 원칙
+
+**암묵적 순서 계약 = 리팩토링 폭탄**. 셋 이상이 동시에 맞춰져야 하는 순서는 **데이터 구조로 묶어서 강제**해야 안전.
+
+**판별법**: 코드에서 `[N+f]`, `f*K` 같은 인덱스 산술이 **여러 배열에 걸쳐** 있고, 각각이 서로 다른 데이터를 가리키면 → **암묵 계약 냄새**. 한 곳에 `struct` 또는 `map` 으로 모아야 함.
+
+**한 줄 멘토링**:
+> **"세 개 이상의 배열이 같은 순서로 진행돼야 한다면, 그 시점에 구조체로 묶어야 할 때이다."**
+
+---
+
 ## 체크리스트 (Exercise6 확장)
 
 | # | 항목 | 확인 |
@@ -1984,6 +2176,9 @@ for (const auto &pos : positions)
 | 28 | 🔴 vmath 에서 `mat * vec` 는 **컴파일 에러** 임을 알고 있는가? | |
 | 29 | 🔴 vmath 의 `vec * mat` 는 **`M^T · v`** 임을 알고 있는가? (대각 행렬 외에는 결과가 다름) | |
 | 30 | CPU 에서 vec 변환은 **대각 행렬에만** 직접 적용하는가? (회전/이동은 transpose 나 GLSL 위임) | |
+| 31 | 🔴 Sampler uniform 설정 외에 **`glBindTexture` 도 반드시** 호출하는가? | |
+| 32 | 텍스처 연결 3-step (activate → bind → uniform) 을 모두 거쳤는가? | |
+| 33 | 🔴 여러 배열이 **같은 순서로 전진** 해야 하는 암묵 계약이 있다면, 데이터 구조로 묶었는가? | |
 
 ---
 
@@ -1998,3 +2193,5 @@ for (const auto &pos : positions)
 7. **GL 은 기본적으로 조용함** — 어떤 문제든 "eh? 코드 맞는데 안 되네" 가 들면 `glGetError()` 부터 찔러본다. 특히 uniform 업로드/sampler 바인딩 이후는 함정 천국.
 8. **Texture unit = global persistent slot** — "draw 1회 = 텍스처 1개" 라는 오해를 버릴 것. 한 draw 가 여러 unit 을 동시에 읽고, 공유 텍스처는 한 번만 bind 하면 모든 후속 draw 가 자동으로 사용함. Draw call 수와 텍스처 수는 독립 변수. 다만 **FS 가 해당 sampler 를 실제로 읽어야** 화면에 반영됨 (bind ≠ render).
 9. **라이브러리 컨벤션은 "표준" 을 가정하지 말고 검증할 것** — vmath 의 `mat * mat` 은 표준 column convention 인데 `vec * mat` 만 row convention 이라 비대칭. "GLSL 처럼 `M * v` 로 쓰면 되겠지" 가 컴파일 에러 + 회전 부호 반전을 동시에 부른다. **CPU 에서 정점 변환은 가능한 한 피하고, 꼭 필요하면 대각 행렬에만 적용 또는 `M.transpose()` 사용**. 더 일반적으로: "내가 쓰는 라이브러리의 operator 정의를 직접 본 적이 없으면 가정하지 말 것".
+10. **텍스처 연결은 3-step** — `glActiveTexture(unit)` → `glBindTexture(handle)` → `glUniform1i(sampler, unit)`. 세 단계가 **각각 독립된 GL state** 를 바꾸며, 하나라도 빠지면 조용히 실패. 특히 `glUniform1i` 만으로는 "매핑" 만 설정할 뿐 실제 텍스처가 연결되지 않음. "AddTexture 도 했고 uniform 도 세팅했는데 화면이 검정" 이면 `glBindTexture` 호출 여부부터 의심.
+11. **암묵적 순서 계약은 리팩토링 폭탄** — 두 개 이상의 배열/인덱스가 "같은 순서로 전진해야 성립" 하는 코드는 컴파일러가 강제하지 않아 조용히 깨진다. 순서 의존 코드가 발견되면 **`struct` / `map` / enum 으로 관계를 박제** 하는 것이 안전. 인덱스 기반 암묵 계약 → 이름 기반 명시 계약으로 이전.
