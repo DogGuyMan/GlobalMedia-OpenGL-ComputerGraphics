@@ -29,6 +29,7 @@ endif()
 add_library(sb7 STATIC IMPORTED)
 if(WIN32)
     set_target_properties(sb7 PROPERTIES
+        IMPORTED_LOCATION         ${LIB_DIR}/sb7.lib
         IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/sb7_d.lib)
 else()
     set_target_properties(sb7 PROPERTIES

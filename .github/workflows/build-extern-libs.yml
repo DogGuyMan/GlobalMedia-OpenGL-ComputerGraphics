@@ -1,0 +1,71 @@
+name: Build Extern Libs (Windows)
+
+# 수동 실행 전용 - lib/windows/ 에 넣을 정적 라이브러리를 아티팩트로 생성
+# 기존 BuildExternLibs.bat 는 sb7 Debug 만 빌드하므로, sb7 Release 를 추가로 만든다
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-extern-libs:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Run BuildExternLibs.bat (glfw3 Release+Debug, sb7 Debug)
+        shell: cmd
+        run: shell\BuildExternLibs.bat
+
+      - name: Build sb7 Release
+        shell: cmd
+        run: |
+          set SB7CODE_DIR=%GITHUB_WORKSPACE%\extern\sb7code
+          set GLFW_DIR=%SB7CODE_DIR%\extern\glfw-3.0.4
+          set SB7_BUILD=%GITHUB_WORKSPACE%\build_extern\sb7_release
+          set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
+
+          if not exist "%SB7_BUILD%" mkdir "%SB7_BUILD%"
+
+          > "%SB7_BUILD%\CMakeLists.txt" (
+            echo cmake_minimum_required(VERSION 3.14^)
+            echo project(sb7_build LANGUAGES C CXX^)
+            echo set(SB7CODE_DIR "" CACHE PATH "sb7code"^)
+            echo set(GLFW_DIR "" CACHE PATH "GLFW"^)
+            echo file(GLOB SB7_SOURCES ${SB7CODE_DIR}/src/sb7/*.cpp ${SB7CODE_DIR}/src/sb7/*.c^)
+            echo add_library(sb7 STATIC ${SB7_SOURCES}^)
+            echo target_include_directories(sb7 PRIVATE ${SB7CODE_DIR}/include ${GLFW_DIR}/include^)
+            echo target_compile_options(sb7 PRIVATE /w^)
+          )
+
+          cmake -S "%SB7_BUILD%" -B "%SB7_BUILD%\build" -G "Visual Studio 17 2022" -DSB7CODE_DIR="%SB7CODE_DIR%" -DGLFW_DIR="%GLFW_DIR%"
+          if errorlevel 1 exit /b 1
+
+          cmake --build "%SB7_BUILD%\build" --config Release
+          if errorlevel 1 exit /b 1
+
+          for /R "%SB7_BUILD%\build" %%f in (sb7.lib) do (
+            echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\sb7.lib"
+          )
+          for /R "%SB7_BUILD%\build" %%f in (sb7.pdb) do (
+            echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\sb7.pdb"
+          )
+
+      - name: List output
+        shell: cmd
+        run: dir build_extern\output\windows
+
+      - name: Upload lib artifact (for lib/windows/)
+        uses: actions/upload-artifact@v4
+        with:
+          name: extern-libs-windows
+          path: build_extern/output/windows/
+
+      - name: Upload headers artifact (for include/)
+        uses: actions/upload-artifact@v4
+        with:
+          name: extern-headers
+          path: build_extern/output/include/
