@@ -7,7 +7,7 @@ project(OpenGL-ComputerGraphics VERSION 0.1.0 LANGUAGES C CXX)
 # ______ CMake 헬퍼 모듈 ______
 include(cmake/CXXStandard.cmake)
 
-# ______ 의존성 수집 → project_deps INTERFACE 타겟 ______
+# ______ 의존성 수집 -> project_deps INTERFACE 타겟 ______
 # lib/, include/ 는 build_extern.sh (또는 .bat) 로 사전 빌드
 include(cmake/Dependency.cmake)
 

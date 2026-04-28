@@ -23,9 +23,9 @@ find "$APPS_DIR" -maxdepth 2 -type d -name "shaders" | while read SHADER_DIR; do
         rm -rf "$TARGET_DIR"
     fi
 
-    # shaders/ → resources/shaders/ 이동
+    # shaders/ -> resources/shaders/ 이동
     mv "$SHADER_DIR" "$TARGET_DIR"
-    echo "[$APP_NAME] shaders/ → resources/shaders/ 이동 완료"
+    echo "[$APP_NAME] shaders/ -> resources/shaders/ 이동 완료"
 done
 
 echo "완료: 모든 셰이더가 resources/shaders/로 이동되었습니다."

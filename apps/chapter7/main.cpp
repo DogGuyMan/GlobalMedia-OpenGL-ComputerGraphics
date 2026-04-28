@@ -1,498 +1,778 @@
-#include <GL/gl3w.h>
-#include <GL/glcorearb.h>
-#include <ostream>
+#include "GL/gl3w.h"
+#include "GL/glcorearb.h"
+#include "vmath.h"
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
+#include <iostream>
+#include <memory>
 #include <sb7.h>
 #include <shader.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include <vmath.h>
-
-#include <cmath>
-#include <functional>
-#include <iostream>
-#include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
-#define PI 3.14159
+using namespace std;
+using namespace vmath;
 
-// uniform location 캐시를 위해 Model::ModelBase가 Program::ProgramBase&를 받아야 함
-// Model 네임스페이스가 Program보다 먼저 정의되므로 전방선언 필요
-namespace Chapter7::Program
-{
-	class ProgramBase;
-}
-
-/*********************************************************************************
- *
- * SURFACES — Data Oriented 접근
- *
- * 형태를 클래스 상속(PlaneModel, SphereModel 등)이 아닌 *전역 함수 포인터*로 결정
- * ModelBase가 std::function<vmath::vec4(double u, double v)>을 받아 격자 샘플링
- *
- * === Normal 방향 규약 (오른손 좌표계) ===
- *   각 parametric surface의 normal = ∂f/∂u × ∂f/∂v  (CCW winding 기준)
- *
- *   규칙 : 수평/평평한 surface는 **default로 +Y를 향함** (-Y 금지)
- *     - Plane (XY-plane) : normal = +Z  (수직면, +Y/-Y 무관)
- *     - Sphere           : normal = position radial outward (위치 의존)
- *     - Disk             : normal = +Y  ← 수평이므로 +Y up이 default
- *     - Cylinder 옆면    : normal = radial outward (XZ 방향, +Y 성분 0)
- *     - Cone 옆면        : normal = radial outward + 기울임 (+Y 성분 있음)
- *
- *   아래 방향(-Y)이 필요한 경우 (ClosedCylinder 아래 뚜껑 등)는
- *   SurfacePart.winding = Winding::CW 로 반전 처리
- *
- *********************************************************************************/
-namespace Chapter7::Surfaces
-{
-	using SurfaceFunction = std::function<vmath::vec4(double u, double v)>;
-
-	// 평면 (XY-plane) : (u, v, 0)
-	//   u ∈ [0, 1] 가로, v ∈ [0, 1] 세로
-	//   N = ∂f/∂u × ∂f/∂v = (1,0,0) × (0,1,0) = (0, 0, +1) -> +Z (화면 바깥)
-	inline vmath::vec4 Plane(double u, double v)
-	{
-		return vmath::vec4((float)u, (float)v, 0.0f, 1.0f);
-	}
-
-	// 구 : outward radial normal
-	//   u ∈ [0, 2π] 경도, v ∈ [0, π] 위도
-	//   v=0이 북극(+Y), v=π가 남극(-Y), 각 정점 normal은 radial
-	inline vmath::vec4 Sphere(double u, double v)
-	{
-		float r = 1.0f;
-		return vmath::vec4(
-		    r * sinf((float)v) * cosf((float)u),
-		    r * cosf((float)v),
-		    r * sinf((float)v) * sinf((float)u),
-		    1.0f);
-	}
-
-	// 원판 (Disk) : 평면 원, y=0 고정, **+Y normal (default 위쪽 향함)**
-	//   u : 각도 [0, 2π]
-	//   v : 반경 비율 [0, 1]  (0 = 중심, 1 = 가장자리)
-	//   normal 계산 :
-	//     ∂f/∂u = (-v·sin(u), 0, +v·cos(u))
-	//     ∂f/∂v = ( cos(u),   0,  sin(u) )
-	//     ∂f/∂u × ∂f/∂v = (0, +v, 0) -> +Y ✓
-	//   특이점 : v=0에서 모든 정점이 원점으로 붕괴 -> degenerate triangles (렌더 문제 없음)
-	//   주의 : +sin 사용으로 u-회전 방향이 Cylinder(-sin)와 반대 ->
-	//          ClosedCylinder 합성 시 rim 원은 동일하나 u-파라미터가 reverse됨 (시각적으로 무관)
-	inline vmath::vec4 Disk(double u, double v)
-	{
-		float r_max = 1.0f;
-		float r = r_max * (float)v;
-		return vmath::vec4(
-		    r * cosf((float)u),
-		    0.0f,
-		    r * sinf((float)u), // +sin (이전 -sin에서 수정 — normal이 +Y가 되도록)
-		    1.0f);
-	}
-
-	// 원기둥 옆면 : u ∈ [0, 2π] 경도, v ∈ [0, 1] 높이
-	inline vmath::vec4 Cylinder(double u, double v)
-	{
-		float r = 1.0f;
-		float h = 2.0f;
-		return vmath::vec4(
-		    r * cosf((float)u),
-		    h * (float)v - h / 2.0f,
-		    -r * sinf((float)u),
-		    1.0f);
-	}
-
-	// 원뿔 옆면 (Cone side) : 바닥 원 -> 꼭짓점으로 수렴
-	//   u : 각도 [0, 2π]
-	//   v : 높이 [0, 1]  (0 = 바닥, 1 = 꼭짓점)
-	//   반경은 v에 따라 선형 감소 : r = r_max * (1 - v)
-	inline vmath::vec4 Cone(double u, double v)
-	{
-		float r_max = 1.0f;
-		float h = 2.0f;
-		float r = r_max * (1.0f - (float)v);
-		return vmath::vec4(
-		    r * cosf((float)u),
-		    h * (float)v - h / 2.0f, // 바닥(-h/2) -> 꼭짓점(+h/2)
-		    -r * sinf((float)u),
-		    1.0f);
-	}
-
-	// =============================================================================
-	// Compound Surface — 여러 SurfaceFunction 조각을 "배열"로 합성하여 복합 모델 제작
-	// =============================================================================
-	// 핵심 아이디어 :
-	//   - 객체 상속 없이, SurfaceFunction들을 리스트로 관리 (Data Oriented)
-	//   - 각 part는 자기만의 (u, v) 격자 범위/해상도와 winding 방향을 가짐
-	//   - ModelBase::initModelData가 리스트를 순차 실행하며 메쉬를 누적 (인덱스 offset 자동 처리)
-	//
-	// 2가지 방식으로 닫힌 mesh 제작 :
-	//   (방식 1) CompoundSurface에 여러 part 합성
-	//     예) Closed Cylinder = {Cylinder + Disk 위 + Disk 아래}
-	//         -> 40 vertex, 120 index
-	//
-	//   (방식 2) 단일 SurfacePart + capStart/capEnd 플래그 (정점 추가 0개)
-	//     예) Cylinder with capStart=true, capEnd=true
-	//         -> v=v_start rim과 v=v_end rim을 fan triangulation으로 닫음
-	//         -> 10 vertex, 36 index (75% / 70% 절감)
-	//     제약 :
-	//       - u-domain이 wrap해야 함 (Cylinder, Cone ✓)
-	//       - Cap은 평면만 (곡면 cap 불가)
-	//       - Cap 내부 UV 부정확 (cube map OK, 2D texture는 왜곡)
-
-	// 삼각형 winding 방향 — 각 part가 CCW/CW 선택
-	enum class Winding
-	{
-		CCW, // 기본 : 바깥쪽 normal (위쪽 cap, Cylinder/Cone 옆면, Sphere 등)
-		CW   // 반대 : 아래쪽 cap처럼 winding을 뒤집어야 하는 경우
-	};
-
-	// 하나의 parametric 조각 — fn + (u, v) 범위/해상도 + winding + cap 플래그
-	//   fn에 transform이 필요하면 lambda로 감싸서 넣기 (예: 위 뚜껑은 y + h/2)
-	//
-	//   capStart/capEnd : v=v_start / v=v_end boundary rim을 fan으로 자동 닫음
-	//     - 추가 정점 없음 (기존 rim 정점만 사용)
-	//     - Fan center = rim의 첫 정점 (i=0)
-	//     - capStart는 reverse winding (-Y normal 가정, Cylinder/Cone 바닥용)
-	//     - capEnd는 forward winding (+Y normal 가정, Cylinder 위뚜껑용)
-	//     - u_res ≥ 3이어야 valid triangles 생성됨 (2면 이하는 fan 불가능)
-	struct SurfacePart
-	{
-		SurfaceFunction fn;
-		double u_start;
-		double u_end;
-		size_t u_res;
-		double v_start;
-		double v_end;
-		size_t v_res;
-		Winding winding = Winding::CCW;
-	};
-
-	// 여러 SurfacePart의 순차 실행 컨테이너
-	using CompoundSurface = std::vector<SurfacePart>;
-
-} // namespace Chapter7::Surfaces
-
-/*********************************************************************************
- *
- * MESHES — 비-parametric 하드코딩 메쉬 데이터용 구조체
- *
- * parametric Surface로 표현하기 어려운 도형(또는 parametric 결과를 수작업 편집한 것)을
- * vertex/index 배열로 담아 ModelBase의 direct-mesh 생성자에 전달
- *
- * 구조체 정의는 유지하되 "완제품 Cube 함수"는 제공하지 않음 —
- * 사용자가 ModelBase::PrintMeshData() 출력을 복사/편집하여 직접 구성
- *
- *********************************************************************************/
-
-namespace Chapter7::Meshes
-{
-	// Cube 하나의 텍스쳐, 서로 다른면 텍스쳐링
-
-	static const std::vector<vmath::vec2> BASE_MESH_UVS{
-	    {0.0, 0.0},
-	    {1.0, 0.0},
-	    {1.0, 1.0},
-	    {0.0, 1.0}};
-
-	static const vmath::vec4 BASE_COLORS[6]{
-	    vmath::vec4(1.0, 0.0, 0.0, 0.0),
-	    vmath::vec4(0.0, 1.0, 0.0, 0.0),
-	    vmath::vec4(0.0, 0.0, 1.0, 0.0),
-	    vmath::vec4(0.0, 1.0, 1.0, 0.0),
-	    vmath::vec4(1.0, 0.0, 1.0, 0.0),
-	    vmath::vec4(1.0, 1.0, 0.0, 0.0)};
-
-	namespace Triangle
-	{
-		// ! 폐기 : 이전 버전은 w=0 (direction vector)였음
-		//          → homogeneous perspective divide에서 ±∞/NaN, 렌더링 안 됨
-		//          OpenGL point는 반드시 w=1 (point)이어야 함
-		static const std::vector<std::vector<vmath::vec4>> TRIANGLE_BASE_POSITIONS = {
-		    std::vector<vmath::vec4>{
-		        {0.0, 0.0, 0.0, 1.0},
-		        {1.0, 0.0, 0.0, 1.0},
-		        {1.0, 1.0, 0.0, 1.0},
-		    },
-		    std::vector<vmath::vec4>{
-		        {0.0, 0.0, 0.0, 1.0},
-		        {1.0, 0.0, 0.0, 1.0},
-		        {0.5, 0.866, 0.0, 1.0},
-		    }};
-
-		static const std::vector<GLuint> TRIANGLE_BASE_INDICES = {
-		    0, 1, 2};
-	} // namespace Triangle
-
-	namespace Plane
-	{
-		static const std::vector<std::vector<vmath::vec4>> QUAD_BASE_POSITIONS = {
-		    std::vector<vmath::vec4>{
-		        {0.0, 0.0, 0.0, 1.0},
-		        {1.0, 0.0, 0.0, 1.0},
-		        {1.0, 1.0, 0.0, 1.0},
-		        {0.0, 1.0, 0.0, 1.0},
-		    }};
-		static const std::vector<GLuint> QUAD_BASE_INDICES = {
-		    0, 1, 2, 0, 2, 3};
-
-	} // namespace Plane
-
-	namespace Cube
-	{
-		static const vmath::vec4 CUBE_BASE_POSITIONS[2][4] = {
-		    {
-		        {0.0, 0.0, 0.0, 1.0},
-		        {1.0, 0.0, 0.0, 1.0},
-		        {1.0, 0.0, 1.0, 1.0},
-		        {0.0, 0.0, 1.0, 1.0},
-		    },
-		    {
-		        {0.0, 1.0, 0.0, 1.0},
-		        {1.0, 1.0, 0.0, 1.0},
-		        {1.0, 1.0, 1.0, 1.0},
-		        {0.0, 1.0, 1.0, 1.0},
-		    }};
-
-		static const std::vector<GLuint> QUAD_BASE_INDICES[6] = {
-		    {0, 1, 5, 0, 5, 4}, // -Z
-		    {1, 2, 6, 1, 6, 5}, // +X
-		    {2, 3, 7, 2, 7, 6}, // +Z
-		    {3, 0, 4, 3, 4, 7}, // -X
-		    {0, 1, 2, 0, 2, 3}, // -Y
-		    {4, 5, 6, 4, 6, 7}, // +Y
-		};
-
-		// ! 폐기 : inline MeshData Cube() { ... }
-		// 이유 : Surfaces::Cylinder + u_res=4 로 비슷한 4면 프리즘을 만들 수 있고,
-		//        cube map 전용 정점 배치는 사용자가 콘솔 출력을 기반으로 직접 편집하는 워크플로우
-	} // namespace Cube
-
-	namespace Cone
-	{
-		// static const vmath::vec4 CONE_BASE_POSITIONS[5] = {
-		//         {0.0, 0.0, 0.0, 1.0},
-		//         {1.0, 0.0, 0.0, 1.0},
-		//         {1.0, 0.0, 1.0, 1.0},
-		//         {0.0, 0.0, 1.0, 1.0},
-		//         {0.5, 1.0, 0.5, 1.0},
-		// };
-
-		// static const std::vector<GLuint> TRI_BASE_INDICES[6] = {
-		//     {0, 1, 4}, // A
-		//     {1, 2, 4}, // B
-		//     {2, 3, 4}, // C
-		//     {3, 0, 4}, // D
-		//     {0, 1,}, // B
-		// };
-	}
-
-	// =============================================================================
-	// Build* — 각 mesh 유형을 (vertices, elements) pair 로 반환하는 전역 헬퍼
-	// =============================================================================
-	// 정점 레이아웃 : pos(vec4) + color(vec4) + uv(vec2) = 10 float / vertex
-	//   (ModelBase::Build() 의 VAO stride 와 일치)
-	// startup() 안의 mesh 생성 보일러플레이트를 모아둔 것. ModelBase 생성 직전까지만 책임.
-
-	struct MeshData
-	{
-		std::vector<float> vertices;
-		std::vector<GLuint> elements;
-	};
-
-	// Triangle — TRIANGLE_BASE_POSITIONS[variant] 3정점 + 기본 색/UV
-	//   variant : 0 = 직각삼각형, 1 = 정삼각형 (TRIANGLE_BASE_POSITIONS 의 두 variant)
-	inline MeshData BuildTriangle(int variant = 1)
-	{
-		MeshData md;
-		for (int i = 0; i < 3; i++)
-		{
-			for (int j = 0; j < 4; j++)
-				md.vertices.push_back(Triangle::TRIANGLE_BASE_POSITIONS[variant][i][j]);
-			for (int c = 0; c < 4; c++)
-				md.vertices.push_back(BASE_COLORS[i][c]);
-			for (int a = 0; a < 2; a++)
-				md.vertices.push_back(BASE_MESH_UVS[i][a]);
-		}
-		md.elements = Triangle::TRIANGLE_BASE_INDICES;
-		return md;
-	}
-
-	// Plane — QUAD_BASE_POSITIONS 4정점 + 기본 색/UV, QUAD_BASE_INDICES 재사용
-	inline MeshData BuildPlane()
-	{
-		MeshData md;
-		for (int i = 0; i < 4; i++)
-		{
-			for (int j = 0; j < 4; j++)
-				md.vertices.push_back(Plane::QUAD_BASE_POSITIONS[0][i][j]);
-			for (int c = 0; c < 4; c++)
-				md.vertices.push_back(BASE_COLORS[i][c]);
-			for (int a = 0; a < 2; a++)
-				md.vertices.push_back(BASE_MESH_UVS[i][a]);
-		}
-		md.elements = Plane::QUAD_BASE_INDICES;
-		return md;
-	}
-
-	// Cube 한 면 — QUAD_BASE_INDICES[f] 를 6정점으로 펼침
-	//   offset : xyz 에 더할 값 (원점 중심화 용도, 기본 (-0.5,-0.5,-0.5))
-	//   elements 는 {0..5} local — 단독 Model 로 사용 가능 (면별 텍스처 등)
-	inline MeshData BuildCubeFace(int f, const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
-	{
-		MeshData md;
-		const int uvIdx[6] = {0, 1, 2, 0, 2, 3};
-		const vmath::vec4 *cubeVertices = &Cube::CUBE_BASE_POSITIONS[0][0];
-
-		const auto &faceIdx = Cube::QUAD_BASE_INDICES[f];
-		const auto &color = BASE_COLORS[f];
-		for (int i = 0; i < 6; i++)
-		{
-			const auto &pos = cubeVertices[faceIdx[i]];
-			const auto &uv = BASE_MESH_UVS[uvIdx[i]];
-			md.vertices.push_back(pos[0] + offset[0]);
-			md.vertices.push_back(pos[1] + offset[1]);
-			md.vertices.push_back(pos[2] + offset[2]);
-			md.vertices.push_back(pos[3]); // w 유지
-			for (int c = 0; c < 4; c++)
-				md.vertices.push_back(color[c]);
-			for (int a = 0; a < 2; a++)
-				md.vertices.push_back(uv[a]);
-		}
-		md.elements = {0, 1, 2, 3, 4, 5};
-		return md;
-	}
-
-	// Cube 전체 — 6면을 하나의 mesh 로 합침, elements 는 0..35 순차
-	inline MeshData BuildCube(const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
-	{
-		MeshData md;
-		for (int f = 0; f < 6; f++)
-		{
-			MeshData face = BuildCubeFace(f, offset);
-			const GLuint base = static_cast<GLuint>(md.vertices.size() / 10); // 10 float/vertex
-			for (float v : face.vertices)
-				md.vertices.push_back(v);
-			for (GLuint idx : face.elements)
-				md.elements.push_back(base + idx);
-		}
-		return md;
-	}
-
-	inline MeshData BuildDisk(const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
-	{
-		MeshData md;
-		return md;
-	}
-} // namespace Chapter7::Meshes
-
-/*********************************************************************************
- *
- * HEADER
- *
- *********************************************************************************/
-
-namespace Chapter7::Model
+namespace Engine
 {
 
-	// =============================================================================
-	// Transform — 공간 변환 상태 (ModelBase에 포함)
-	// =============================================================================
-	//   - pivot : local 회전/스케일 중심 (Unity의 transform pivot)
-	//   - translate / eulerRotate / scale : 표준 TRS
-	//   - GetModelMatrix() : T * R * S * T(-pivot) 조합
+	static const char *UNIFORM_MODEL_MAT = "inModelMat";
+	static const char *UNIFORM_VIEW_MAT = "inViewMat";
+	static const char *UNIFORM_PROJ_MAT = "inProjMat";
+	static const char *UNIFORM_CURRENT_TIME = "inCurrentTime";
+	static const char *UNIFORM_BASE_COLOR = "inBaseColor";
+
+	static constexpr int TEXTURE_SLOT_COUNT = 4;
+
+	static const char *SAMPLER_TEX[TEXTURE_SLOT_COUNT] = {
+	    "tex1", "tex2", "tex3", "tex4"};
+	static const char *UNIFORM_TEX_USED[TEXTURE_SLOT_COUNT] = {
+	    "uTex1Used", "uTex2Used", "uTex3Used", "uTex4Used"};
+	static const char *UNIFORM_UV_OFFSET[TEXTURE_SLOT_COUNT] = {
+	    "inUVOffset1", "inUVOffset2", "inUVOffset3", "inUVOffset4"};
+	static const char *UNIFORM_UV_RATIO[TEXTURE_SLOT_COUNT] = {
+	    "inUVRatio1", "inUVRatio2", "inUVRatio3", "inUVRatio4"};
+
+	// Phong 라이팅 uniform 이름
+	static const char *UNIFORM_LIGHT_POS = "inLightPos";
+	static const char *UNIFORM_LIGHT_COLOR = "inLightColor";
+	static const char *UNIFORM_VIEW_POS = "inViewPos";
+	static const char *UNIFORM_AMBIENT_STRENGTH = "inAmbientStrength";
+	static const char *UNIFORM_SPECULAR_STRENGTH = "inSpecularStrength";
+	static const char *UNIFORM_SHININESS = "inShininess";
+	static const char *UNIFORM_LIGHTING_ENABLED = "inLightingEnabled";
+
+	inline double ToRadian(double degree)
+	{
+		return degree * M_PI / 180.0;
+	}
+} // namespace Engine
+
+namespace Engine::Transform
+{
 	class Transform
 	{
-	  private:
-		vmath::vec4 mPivot;
-		vmath::vec4 mTranslateVec;
-		vmath::vec4 mEulerRotateVec;
-		vmath::vec4 mScaleVec;
-
 	  public:
-		Transform(vmath::vec3 pivot = vmath::vec3(0.0f, 0.0f, 0.0f));
+		std::string Name;
 
-		vmath::vec3 GetTranslate() const;
-		Transform &SetTranslate(vmath::vec3 vec);
-		vmath::vec3 GetEulerRotate() const;
-		Transform &SetEulerRotate(vmath::vec3 vec);
-		vmath::vec3 GetScale() const;
-		Transform &SetScale(vmath::vec3 vec);
-		vmath::vec3 GetPivot() const;
-		Transform &SetPivot(vmath::vec3 vec);
+		vmath::vec3 Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
+		vmath::vec3 EulerRot = vmath::vec3(0.0f, 0.0f, 0.0f);
+		vmath::vec3 Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
 
-		vmath::mat4 GetModelMatrix() const;
+		Transform *Parent = nullptr;
+		std::unordered_map<std::string, Transform *> Children;
+
+		vmath::mat4 GetModelMatrix() const
+		{
+			vmath::mat4 local =
+			    vmath::translate<float>(Translate) *
+			    vmath::rotate<float>(EulerRot[2], 0.0f, 0.0f, 1.0f) *
+			    vmath::rotate<float>(EulerRot[1], 0.0f, 1.0f, 0.0f) *
+			    vmath::rotate<float>(EulerRot[0], 1.0f, 0.0f, 0.0f) *
+			    vmath::scale<float>(Scale);
+			if (Parent == nullptr)
+				return local;
+			return Parent->GetModelMatrix() * local;
+		}
+	};
+} // namespace Engine::Transform
+
+namespace Engine::Camera
+{
+	class Camera
+	{
+	  public:
+		Transform::Transform Transform;
+
+		vmath::vec3 Target = vmath::vec3(0.0f, 0.0f, 0.0f);
+		vmath::vec3 WorldUp = vmath::vec3(0.0f, 1.0f, 0.0f);
+
+		float Fov = 60.0f;
+		float Aspect = 1.0f;
+		float NearPlane = 0.1f;
+		float FarPlane = 1000.0f;
+
+		vmath::mat4 GetViewMatrix() const
+		{
+			return vmath::lookat(Transform.Translate, Target, WorldUp);
+		}
+
+		vmath::mat4 GetProjMatrix() const
+		{
+			return vmath::perspective(Fov, Aspect, NearPlane, FarPlane);
+		}
+	};
+} // namespace Engine::Camera
+
+namespace Engine::Material
+{
+	struct TextureSlot
+	{
+		GLuint TexAddr;
+		vmath::vec2 UVOffset;
+		vmath::vec2 UVRatio;
+
+		TextureSlot()
+		    : TexAddr(0),
+		      UVOffset(vmath::vec2(0.0f, 0.0f)),
+		      UVRatio(vmath::vec2(1.0f, 1.0f))
+		{
+		}
 	};
 
-	// =============================================================================
-	// Material — 시각 상태 (ModelBase에 포함)
-	// =============================================================================
-	//   - baseColor : vertex color 대체 (fragment 전용, Material이 주입)
-	//   - uvOffset / uvRatio : UV 변환 파라미터
-	//   - TextureSlot 리스트 : 여러 샘플러(2D / CubeMap 등) 지원
-	//
-	// Data Oriented 설계 :
-	//   - 상속 없음, 다양한 재질은 파라미터(색/UV/텍스처 슬롯)로 결정
-	//   - 다중 텍스처 확장 : mTextures에 target=GL_TEXTURE_CUBE_MAP 슬롯을 추가하면 됨
-	//   - 새 Material 종류를 만들 때 subclass가 아닌 "어떤 텍스처/색을 주입할지"만 다름
+	struct TextureParams
+	{
+		GLint WrapS = GL_REPEAT;
+		GLint WrapT = GL_REPEAT;
+		GLint MinFilter = GL_LINEAR_MIPMAP_LINEAR;
+		GLint MagFilter = GL_LINEAR;
+	};
+
 	class Material
 	{
 	  public:
-		struct TextureSlot
+		vmath::vec4 BaseColor = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		std::vector<TextureSlot> Slots;
+
+		Material()
 		{
-			GLuint addr;             // GL texture object handle
-			GLenum target;           // GL_TEXTURE_2D, GL_TEXTURE_CUBE_MAP, ...
-			std::string samplerName; // 셰이더 uniform 이름 (예: "tex1", "envMap")
-			int unit;                // texture unit (GL_TEXTURE0 + unit)
-		};
+		}
 
-	  private:
-		vmath::vec4 mBaseColor;
-		vmath::vec2 mUVOffset;
-		vmath::vec2 mUVRatio;
-		std::vector<TextureSlot> mTextures;
+		~Material()
+		{
+			for (auto &slot : Slots)
+				if (slot.TexAddr != 0)
+					glDeleteTextures(1, &slot.TexAddr);
+		}
 
-		// 기본 fallback 1x1 white 2D 텍스처 (모든 Material이 공유)
-		//   사용자가 AddTexture2D("tex1", 0, ...)를 호출하지 않아도 sampler2D tex1이
-		//   유효한 텍스처를 읽도록 보장. baseColor * white = baseColor 렌더링 가능.
-		//   사용자 텍스처가 추가되면 Apply()에서 그것이 뒤에 바인딩되어 덮어씀.
-		static GLuint sDefaultWhiteTex2D;
-		static void EnsureDefaultTextures();
-
-	  public:
-		Material(vmath::vec4 baseColor = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-		~Material();
-
-		// GL 리소스 소유 -> 복사 금지, 이동만 허용
+		// Model 에 결합된 값 타입. 복사 금지 — 같은 GPU 텍스처 핸들이 여러 Material 에
+		// 공유되면 소멸 시 double-free 가 발생하기 때문.
 		Material(const Material &) = delete;
 		Material &operator=(const Material &) = delete;
-		Material(Material &&) = default;
-		Material &operator=(Material &&) = default;
 
-		vmath::vec4 GetBaseColor() const;
-		Material &SetBaseColor(vmath::vec4 color);
-		vmath::vec2 GetUVOffset() const;
-		Material &SetUVOffset(vmath::vec2 vec);
-		vmath::vec2 GetUVRatio() const;
-		Material &SetUVRatio(vmath::vec2 vec);
+		/*
+		nrChannel
+		    1 : 흑백
+		    2 : 흑백 + 투명도
+		    3 : RGB
+		    4 : RGBA
+		format
+		    format 은 실제 텍스처와 동일한 형식으로 반드시 지정해야 한다!
+		internal_format
+		    OpenGL 에게 텍스처를 어떤 형식으로 저장할 것인지 결정.
 
-		// 2D 텍스처 추가
-		//   samplerName : 셰이더의 uniform sampler 이름
-		//   unit        : texture unit 번호 (0, 1, 2 ...)
-		Material &AddTexture2D(const std::string &samplerName, const char *image_path, int unit = 0, int texNum = GL_TEXTURE0);
+		예를들어
+		    JPG : 투명도 지원 X  -> format = GL_RGB
+		    PNG : 투명도 지원     -> format = GL_RGBA
+		*/
+		void LoadTexture(const char *image_path,
+		                 GLuint format = GL_RGB,
+		                 GLint internal_format = GL_RGB,
+		                 const TextureParams &params = TextureParams{})
+		{
+			TextureSlot slot;
 
-		// 모든 Material 상태를 program에 적용 (glDrawElements 직전에 호출)
-		void Apply(Program::ProgramBase &prog);
+			glGenTextures(1, &slot.TexAddr);
+			glBindTexture(GL_TEXTURE_2D, slot.TexAddr);
+
+			int width, height, nrChannels;
+			unsigned char *data = stbi_load(image_path, &width, &height, &nrChannels, 0);
+			if (data == 0)
+			{
+				std::cerr << "텍스쳐 로드 실패 : " << image_path << std::endl;
+			}
+			if (data)
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0,
+				             format, GL_UNSIGNED_BYTE, data);
+				glGenerateMipmap(GL_TEXTURE_2D);
+			}
+			stbi_image_free(data);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, params.WrapS);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, params.WrapT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, params.MinFilter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, params.MagFilter);
+
+			Slots.push_back(slot);
+		}
+
+		int GetSlotCount() const
+		{
+			return (int)Slots.size();
+		}
+	};
+} // namespace Engine::Material
+
+namespace Engine::Lighting
+{
+	/* Phong 라이팅 파라미터 묶음.
+	   Position    : 월드 공간 광원 위치 (point light)
+	   Color       : 광원 색 / 강도 (RGB, 보통 0~1, HDR 시 그 이상)
+	   AmbientStrength  : 주변광 비율 (0~1, 보통 0.1)
+	   SpecularStrength : 반사광 비율 (0~1, 보통 0.5)
+	   Shininess        : 반사 광택 지수 (작을수록 흐리고 넓게, 클수록 날카롭게) */
+	class Light
+	{
+	  public:
+		vmath::vec3 Position = vmath::vec3(2.0f, 2.0f, 2.0f);
+		vmath::vec3 Color = vmath::vec3(1.0f, 1.0f, 1.0f);
+		float AmbientStrength = 0.1f;
+		float SpecularStrength = 0.5f;
+		float Shininess = 32.0f;
+
+		// Light 파라미터 + 카메라 위치를 쉐이더 uniform 으로 푸시.
+		// glUseProgram 이 끝난 다음에 호출해야 함.
+		void Apply(GLuint progAddr, const vmath::vec3 &viewPos) const
+		{
+			glUniform3fv(glGetUniformLocation(progAddr, UNIFORM_LIGHT_POS),
+			             1, Position);
+			glUniform3fv(glGetUniformLocation(progAddr, UNIFORM_LIGHT_COLOR),
+			             1, Color);
+			glUniform3fv(glGetUniformLocation(progAddr, UNIFORM_VIEW_POS),
+			             1, viewPos);
+			glUniform1f(glGetUniformLocation(progAddr, UNIFORM_AMBIENT_STRENGTH),
+			            AmbientStrength);
+			glUniform1f(glGetUniformLocation(progAddr, UNIFORM_SPECULAR_STRENGTH),
+			            SpecularStrength);
+			glUniform1f(glGetUniformLocation(progAddr, UNIFORM_SHININESS),
+			            Shininess);
+			glUniform1f(glGetUniformLocation(progAddr, UNIFORM_LIGHTING_ENABLED),
+			            1.0f);
+		}
+
+		// 라이팅을 끄는 경로 — 다른 모든 uniform 은 쉐이더에서 무시됨.
+		static void ApplyDisabled(GLuint progAddr)
+		{
+			glUniform1f(glGetUniformLocation(progAddr, UNIFORM_LIGHTING_ENABLED),
+			            0.0f);
+		}
+	};
+} // namespace Engine::Lighting
+
+namespace Engine::Model
+{
+	/* 정점 레이아웃
+	   GPU 에 올리는 정점 하나 = Position(vec4) + Color(vec4) + UV(vec2) + Normal(vec3) interleaved.
+	   VBO 안에서 [px py pz pw  r g b a  s t  nx ny nz] 형태 — 13 float / vertex.
+	   stride = VERTEX_LEN * sizeof(float).
+	   glVertexAttribPointer 로 location 0/1/2/3 에 각각 position/color/uv/normal 을 연결. */
+	static const int VERTEX_POSITION_SIZE = 4; // (x, y, z, w) : w=1 이면 점, w = 0 이면 방향 벡터
+	static const int VERTEX_COLOR_SIZE = 4;    // (r, g, b, a) : vertex color. FS 에서 texture 와 곱해짐
+	static const int VERTEX_NORMAL_SIZE = 3;   // (nx, ny, nz) : 정점 노멀, 라이팅 계산용
+	static const int VERTEX_UV_SIZE = 2;       // (s, t) : 텍스처 좌표 (보통 0 ~ 1)
+	static constexpr int VERTEX_LEN =
+	    VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE + VERTEX_NORMAL_SIZE + VERTEX_UV_SIZE; // = 13
+
+	/* CCW 정렬된 3정점에서 face normal 계산 (외적 + 정규화)
+	   p0, p1, p2 가 CCW 순서일 때 e1 × e2 가 바깥쪽 법선.
+	   Lambert / Phong 라이팅의 N 벡터로 그대로 사용. */
+	inline vmath::vec3 ComputeFaceNormal(const vmath::vec4 &p0,
+	                                     const vmath::vec4 &p1,
+	                                     const vmath::vec4 &p2)
+	{
+		vmath::vec3 e1 = vmath::vec3(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
+		vmath::vec3 e2 = vmath::vec3(p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]);
+		return vmath::normalize(vmath::cross(e1, e2));
+	}
+
+	/* 공용 색/UV 상수 */
+	static const vmath::vec4 BG_COLOR = vmath::vec4(0.0f, 0.0f, 0.0f, 1.0f); // glClearBufferfv 로 화면 지울 때의 배경색
+	static const std::vector<vmath::vec4> ALL_WHITE_4(4, vmath::vec4(1.0f)); // 3정점 메쉬(Triangle 등) 용 흰색 팔레트
+	static const std::vector<vmath::vec4> ALL_WHITE_6(6, vmath::vec4(1.0f)); // 6정점(=Quad=2tri) 메쉬 용 흰색 팔레트
+
+	/* 삼각형 3정점용 UV : 밑변 (0,0)(1,0), 꼭대기 (0.5, 1) */
+	static const std::vector<vmath::vec2> BASE_TRIANGLE_MESH_UVS{
+	    {0.0, 0.0}, {1.0, 0.0}, {0.5, 1.0}};
+
+	/* 위를 v 축으로 뒤집은 버전 : 거울/뒤집힌 면(Octahedron 아래절반)에 사용 */
+	static const std::vector<vmath::vec2> BASE_TRIANGLE_INV_MESH_UVS{
+	    {0.0, 1.0}, {1.0, 1.0}, {0.5, 0.0}};
+
+	/* 쿼드 4코너 UV : 텍스처 전체를 사각면에 한 번 매핑. 6정점으로 풀 때 QUAD_MESH_UVS_FAN 사용 */
+	static const std::vector<vmath::vec2> BASE_QUAD_MESH_UVS{
+	    {0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
+
+	/* Face 인덱스 템플릿
+	   OpenGL 기본 front face 규약 = CCW(반시계). glCullFace 와 glFrontFace 설정에 따라
+	   앞/뒷면 판정이 달라짐. 같은 정점 집합에서 winding 만 뒤집으면 법선이 반대가 됨
+	   (예: skybox 처럼 "cube 안쪽" 만 보이도록 할 때 _BACK 사용). */
+	const std::vector<GLuint> TRIANGLE_FACE_INDICES = {0, 1, 2};           // CCW : 바깥 면
+	const std::vector<GLuint> TRIANGLE_FACE_INDICES_BACK = {0, 2, 1};      // CW  : 안쪽 면
+	const std::vector<GLuint> QUAD_FACE_INDICES = {0, 1, 2, 3, 4, 5};      // 2 tri (CCW)
+	const std::vector<GLuint> QUAD_FACE_INDICES_BACK = {0, 2, 1, 3, 5, 4}; // 2 tri (CW)
+
+	/* 쿼드 4코너 UV 를 6정점(2 tri) 슬롯에 펼치는 매핑 : (0,1,2)+(0,2,3) 팬 패턴 */
+	const std::vector<GLuint> QUAD_MESH_UVS_FAN = {0, 1, 2, 0, 2, 3};
+
+	/* 정삼각형 3정점 : XY 평면 (z=0). 밑변 길이 1, 높이 sqrt(3)/2 = 0.866 */
+	static const std::vector<vmath::vec4> TRIANGLE_BASE_POSITION = {
+	    {0.0, 0.0, 0.0, 1.0},
+	    {1.0, 0.0, 0.0, 1.0},
+	    {0.5, 0.866, 0.0, 1.0},
 	};
 
-	// =============================================================================
-	// ModelBase — 기하(VAO/VBO/EBO) + Transform + Material의 컴포지션
-	// =============================================================================
-	// ! 폐기 : class PlaneModel : public ModelBase { ... };  — 하드코딩된 정점
-	// ! 폐기 : class CubeModel : public ModelBase { ... };
-	// ! 폐기 : 멤버로 pivot/translate/euler/scale/uvOffset/uvRatio/texAddr 직접 보유
-	//          -> Transform / Material 객체로 분리하여 SRP 적용
+	/* Tetrahedron : 정사면체 (4 정점 / 4개 옆면)
+	   0~2: 밑면 정삼각형 (y=0, xz 평면), 3: 꼭대기 (무게중심 위 y = 0.816) */
+	static const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
+	    {0.0, 0.0, 0.0, 1.0},
+	    {1.0, 0.0, 0.0, 1.0},
+	    {0.5, 0.0, 0.866, 1.0},
+	    {0.5, 0.816, 0.2886, 1.0},
+	};
+
+	/* 4개 옆면 : 각 {i0, i1, i2} 가 CCW 순서라 법선이 바깥쪽 */
+	static const std::vector<std::vector<GLuint>> TETRA_FACE_INDICES = {
+	    {1, 0, 3}, {2, 1, 3}, {0, 2, 3}, {1, 0, 2}};
+
+	/* Cone : 사각뿔 (실제로는 4 옆면 + 바닥 쿼드 조합으로 그림)
+	   0~3: 바닥 정사각형 4코너 (y=0), 4(y=1, 중심 위) */
+	static const std::vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
+	    {0.0, 0.0, 0.0, 1.0},
+	    {1.0, 0.0, 0.0, 1.0},
+	    {1.0, 0.0, 1.0, 1.0},
+	    {0.0, 0.0, 1.0, 1.0},
+	    {0.5, 1.0, 0.5, 1.0}};
+
+	/* 바닥 쿼드 전용 : SIDE 의 0~3 을 재사용 (Quad 빌더에 넘기기 위해 분리) */
+	static const std::vector<vmath::vec4> CONE_BOTTOM_BASE_POSITION = {
+	    CONE_SIDE_BASE_POSITION[0],
+	    CONE_SIDE_BASE_POSITION[1],
+	    CONE_SIDE_BASE_POSITION[2],
+	    CONE_SIDE_BASE_POSITION[3]};
+
+	/* 4 옆면 삼각형 : 각 면의 세 번째 인덱스 = 4. CCW 로 바깥 법선 */
+	static const std::vector<std::vector<GLuint>> CONE_SIDE_FACE_INDICES = {
+	    {1, 0, 4}, {2, 1, 4}, {3, 2, 4}, {0, 3, 4}};
+
+	/* XY 평면 정사각형 4코너 (z=0) : 평면 메쉬 (스프라이트 등) 용 */
+	static const std::vector<vmath::vec4> QUAD_BASE_POSITION = {
+	    {0.0, 0.0, 0.0, 1.0},
+	    {1.0, 0.0, 0.0, 1.0},
+	    {1.0, 1.0, 0.0, 1.0},
+	    {0.0, 1.0, 0.0, 1.0},
+	};
+
+	/* QUAD_BASE_POSITION 4 코너를 2 tri 팬 패턴(0,1,2,0,2,3)으로 미리 펼친 6 정점 배열.
+	   BuildQuad 의 positions 인자에 바로 넘기고 position_idxs 는 identity(QUAD_FACE_INDICES)
+	   모두 XY 평면 (z=0), CCW +Z 뷰.
+	   주의할 점: 혼자서는 "하나의 평면 쿼드" 일 뿐 : cube 6 면은 FACED_CUBE_QUAD_BASE_POSITION[f] 사용. */
+	static const std::vector<vmath::vec4> FACED_QUAD_BASE_POSITION = {
+	    {QUAD_BASE_POSITION[0],
+	     QUAD_BASE_POSITION[1],
+	     QUAD_BASE_POSITION[2],
+	     QUAD_BASE_POSITION[0],
+	     QUAD_BASE_POSITION[2],
+	     QUAD_BASE_POSITION[3]}};
+
+	/* Cube : 정육면체 8 코너 BuildCube 의 offset=-0.5 로 원점 중심화. */
+	static const std::vector<vmath::vec4> CUBE_BASE_POSITIONS = {
+	    {0.0, 0.0, 0.0, 1.0},
+	    {1.0, 0.0, 0.0, 1.0},
+	    {1.0, 0.0, 1.0, 1.0},
+	    {0.0, 0.0, 1.0, 1.0},
+	    {0.0, 1.0, 0.0, 1.0},
+	    {1.0, 1.0, 0.0, 1.0},
+	    {1.0, 1.0, 1.0, 1.0},
+	    {0.0, 1.0, 1.0, 1.0}};
+
+	/* Cube 6 면별로 CUBE_FACE_INDICES 를 미리 펼쳐둔 "6정점 완성형" 쿼드 배열. */
+	static const std::vector<vmath::vec4> FACED_CUBE_QUAD_BASE_POSITION[6] = {
+	    {CUBE_BASE_POSITIONS[1], CUBE_BASE_POSITIONS[0], CUBE_BASE_POSITIONS[4], CUBE_BASE_POSITIONS[1], CUBE_BASE_POSITIONS[4], CUBE_BASE_POSITIONS[5]},
+	    {CUBE_BASE_POSITIONS[2], CUBE_BASE_POSITIONS[1], CUBE_BASE_POSITIONS[5], CUBE_BASE_POSITIONS[2], CUBE_BASE_POSITIONS[5], CUBE_BASE_POSITIONS[6]},
+	    {CUBE_BASE_POSITIONS[3], CUBE_BASE_POSITIONS[2], CUBE_BASE_POSITIONS[6], CUBE_BASE_POSITIONS[3], CUBE_BASE_POSITIONS[6], CUBE_BASE_POSITIONS[7]},
+	    {CUBE_BASE_POSITIONS[0], CUBE_BASE_POSITIONS[3], CUBE_BASE_POSITIONS[7], CUBE_BASE_POSITIONS[0], CUBE_BASE_POSITIONS[7], CUBE_BASE_POSITIONS[4]},
+	    {CUBE_BASE_POSITIONS[0], CUBE_BASE_POSITIONS[1], CUBE_BASE_POSITIONS[2], CUBE_BASE_POSITIONS[0], CUBE_BASE_POSITIONS[2], CUBE_BASE_POSITIONS[3]},
+	    {CUBE_BASE_POSITIONS[7], CUBE_BASE_POSITIONS[6], CUBE_BASE_POSITIONS[5], CUBE_BASE_POSITIONS[7], CUBE_BASE_POSITIONS[5], CUBE_BASE_POSITIONS[4]}};
+
+	/* Cube 6 면 인덱스 : 각 면은 6정점 CCW(바깥 법선) 순서.
+	   face index 0~5 의 법선 방향: -Z, +X, +Z, -X, -Y, +Y
+	   반대 winding(내부에서 보이는 면, 예: skybox) 은 QUAD_FACE_INDICES_BACK 조합. */
+	static const std::vector<std::vector<GLuint>> CUBE_FACE_INDICES = {
+	    {1, 0, 4, 1, 4, 5}, // -Z
+	    {2, 1, 5, 2, 5, 6}, // +X
+	    {3, 2, 6, 3, 6, 7}, // +Z
+	    {0, 3, 7, 0, 7, 4}, // -X
+	    {0, 1, 2, 0, 2, 3}, // -Y
+	    {7, 6, 5, 7, 5, 4}  // +Y
+	};
+
+	/* 정점 빌더 */
+
+	/* 정점 1개 추가 : VBO 에 올릴 interleaved 요소 넣기
+	   vertices: 출력 버퍼 (13 float 씩 늘어남)
+	   pos:      모델 로컬 좌표 (vec4, w 유지)
+	   color:    vertex RGBA
+	   uv:       텍스처 좌표 (s, t)
+	   normal:   라이팅용 법선 (정규화된 모델 로컬 좌표)
+	   offset:   pos.xyz 에 더할 평행이동 (예: -0.5 -> 원점 중심화) */
+	void PushVertex(std::vector<GLfloat> &vertices,
+	                const vmath::vec4 pos,
+	                const vmath::vec4 color,
+	                const vmath::vec3 normal,
+	                const vmath::vec2 uv,
+	                const vmath::vec3 &offset)
+	{
+		vertices.push_back(pos[0] + offset[0]);
+		vertices.push_back(pos[1] + offset[1]);
+		vertices.push_back(pos[2] + offset[2]);
+		vertices.push_back(pos[3]);
+		vertices.push_back(color[0]);
+		vertices.push_back(color[1]);
+		vertices.push_back(color[2]);
+		vertices.push_back(color[3]);
+		vertices.push_back(normal[0]);
+		vertices.push_back(normal[1]);
+		vertices.push_back(normal[2]);
+		vertices.push_back(uv[0]);
+		vertices.push_back(uv[1]);
+	}
+
+	/* 삼각형 1 개(3 정점) 를 buffer_data 에 추가.
+	   buffer_data:   출력 VBO 용 float 배열
+	   positions:     정점 좌표 테이블 (예: TETRA_BASE_POSITION)
+	   colors:        vertex RGBA 3 개
+	   uvs:           vertex UV 3 개
+	   position_idxs: positions[] 에서 이 면이 참조할 3 개 정점의 인덱스
+	   offset:        평행이동 (원점 중심화 등)
+	   face_idxs:     winding. 기본 TRIANGLE_FACE_INDICES(CCW), _BACK 이면 CW 로 뒤집음 */
+	void BuildTriangle(
+	    std::vector<GLfloat> &buffer_data,
+	    const std::vector<vmath::vec4> &positions,
+	    const std::vector<vmath::vec4> &colors,
+	    const std::vector<vmath::vec2> &uvs,
+	    const std::vector<GLuint> &position_idxs,
+	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+	    const std::vector<GLuint> &face_idxs = TRIANGLE_FACE_INDICES)
+	{
+		// face_idxs winding 순서대로 3정점 -> CCW edge 외적으로 face normal 계산.
+		// flat-shading : 같은 면의 3정점 모두 동일한 normal 공유.
+		const vmath::vec4 &fp0 = positions[position_idxs[face_idxs[0]]];
+		const vmath::vec4 &fp1 = positions[position_idxs[face_idxs[1]]];
+		const vmath::vec4 &fp2 = positions[position_idxs[face_idxs[2]]];
+		const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
+
+		for (int i = 0; i < 3; i++)
+		{
+			GLuint k = face_idxs[i];
+			PushVertex(buffer_data,
+			           positions[position_idxs[k]],
+			           colors[k],
+			           faceNormal,
+			           uvs[k],
+			           offset);
+		}
+	}
+
+	/* 쿼드 1 개(6 정점) 를 buffer_data 에 추가.
+	   positions:     정점 좌표 테이블 (예: CUBE_BASE_POSITIONS)
+	   colors:        vertex RGBA 6 개
+	   uvs:           4 코너 UV (내부에서 QUAD_MESH_UVS_FAN 로 6 슬롯에 펼침)
+	   position_idxs: positions[] 에서 이 쿼드가 참조할 6 개 인덱스 (예: CUBE_FACE_INDICES[f])
+	   offset:        평행이동
+	   face_idxs:     winding. QUAD_FACE_INDICES(CCW) or _BACK(CW) */
+	void BuildQuad(
+	    std::vector<GLfloat> &buffer_data,
+	    const std::vector<vmath::vec4> &positions,
+	    const std::vector<vmath::vec4> &colors,
+	    const std::vector<vmath::vec2> &uvs,
+	    const std::vector<GLuint> &position_idxs,
+	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+	    const std::vector<GLuint> &face_idxs = QUAD_FACE_INDICES)
+	{
+		// 평면 quad 가정 — 첫 3정점만으로 면 법선 계산해서 6정점에 동일 적용 (flat shading).
+		const vmath::vec4 &fp0 = positions[position_idxs[face_idxs[0]]];
+		const vmath::vec4 &fp1 = positions[position_idxs[face_idxs[1]]];
+		const vmath::vec4 &fp2 = positions[position_idxs[face_idxs[2]]];
+		const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
+
+		for (int i = 0; i < 6; i++)
+		{
+			GLuint k = face_idxs[i];
+			PushVertex(buffer_data,
+			           positions[position_idxs[k]],
+			           colors[k],
+			           faceNormal,
+			           uvs[QUAD_MESH_UVS_FAN[k]],
+			           offset);
+		}
+	}
+
+	/* 정육면체 6 면 모두 buffer_data 에 추가.
+	   offset:    기본 -0.5 -> 로컬 0 ~ 1  큐브를 원점 중심 0,0,0 로 정렬
+	   back_face: true 면 모든 면 winding 반전 (skybox 처럼 안쪽에서 보이게) */
+	void BuildCube(
+	    std::vector<GLfloat> &buffer_data,
+	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+	    bool back_face = false)
+	{
+		const auto &face_idxs = back_face ? QUAD_FACE_INDICES_BACK : QUAD_FACE_INDICES;
+		for (int f = 0; f < 6; f++)
+			BuildQuad(buffer_data, CUBE_BASE_POSITIONS, ALL_WHITE_6,
+			          BASE_QUAD_MESH_UVS, CUBE_FACE_INDICES[f], offset, face_idxs);
+	}
+
+	/* 사각뿔 : 4 옆면(삼각형) + 바닥 쿼드.
+	   offset:    평행이동
+	   back_face: winding 반전 (안쪽에서 보이게) */
+	void BuildCone(
+	    std::vector<GLfloat> &buffer_data,
+	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+	    bool back_face = false)
+	{
+		const auto &tri_idxs = back_face ? TRIANGLE_FACE_INDICES_BACK : TRIANGLE_FACE_INDICES;
+		const auto &quad_idxs = back_face ? QUAD_FACE_INDICES_BACK : QUAD_FACE_INDICES;
+		for (int f = 0; f < 4; f++)
+			BuildTriangle(buffer_data, CONE_SIDE_BASE_POSITION, ALL_WHITE_4,
+			              BASE_TRIANGLE_MESH_UVS, CONE_SIDE_FACE_INDICES[f], offset, tri_idxs);
+		BuildQuad(buffer_data, CONE_BOTTOM_BASE_POSITION, ALL_WHITE_6,
+		          BASE_QUAD_MESH_UVS, QUAD_MESH_UVS_FAN, offset, quad_idxs);
+	}
+
+	/* 정사면체 */
+	void BuildTetrahedron(
+	    std::vector<GLfloat> &buffer_data,
+	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+	    bool back_face = false)
+	{
+		const auto &tri_idxs = back_face ? TRIANGLE_FACE_INDICES_BACK : TRIANGLE_FACE_INDICES;
+		for (int f = 0; f < 4; f++)
+			BuildTriangle(buffer_data, TETRA_BASE_POSITION, ALL_WHITE_4,
+			              BASE_TRIANGLE_MESH_UVS, TETRA_FACE_INDICES[f], offset, tri_idxs);
+	}
+
+	/* 정팔면체 : 위·아래 사각뿔을 붙인 모양 (CONE_SIDE 를 y 축 거울상으로 복제).
+	   offset:    평행이동
+	   back_face: winding 반전 */
+	void BuildOctahedron(
+	    std::vector<GLfloat> &buffer_data,
+	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+	    bool back_face = false)
+	{
+		// 기본은 윗절반=FRONT, 아랫절반=BACK (xz 거울상이라 서로 반대 방향).
+		// back_face=true 면 둘 다 반대로 뒤집음.
+		const auto &top_idxs = back_face ? TRIANGLE_FACE_INDICES_BACK : TRIANGLE_FACE_INDICES;
+		const auto &bottom_idxs = back_face ? TRIANGLE_FACE_INDICES : TRIANGLE_FACE_INDICES_BACK;
+
+		for (int f = 0; f < 4; f++)
+			BuildTriangle(buffer_data, CONE_SIDE_BASE_POSITION, ALL_WHITE_4,
+			              BASE_TRIANGLE_MESH_UVS, CONE_SIDE_FACE_INDICES[f], offset, top_idxs);
+
+		std::vector<vmath::vec4> coneDownSideBasePosition;
+		vmath::mat4 xzMirrorMat = vmath::mat4::identity();
+		xzMirrorMat[1][1] = -1;
+		for (const auto &pos : CONE_SIDE_BASE_POSITION)
+			coneDownSideBasePosition.push_back(pos * xzMirrorMat);
+
+		for (int f = 0; f < 4; f++)
+			BuildTriangle(buffer_data, coneDownSideBasePosition, ALL_WHITE_4,
+			              BASE_TRIANGLE_INV_MESH_UVS, CONE_SIDE_FACE_INDICES[f],
+			              offset, bottom_idxs);
+	}
+
+	/* 파라메트릭 서피스 */
+
+	/* 원판/고리(ring) 파라메트릭 서피스 : XZ 평면, y = 0.
+	   us, ue:  시작/끝 각도 [rad]. (0, 2 * M_PI) 면 완전한 원
+	   uRes:    각도 분할 수 : 정점은 uRes+1 개 (끝이 시작과 겹침)
+	   vs, ve:  반지름 비율 0 ~ 1. vs=0 -> 꽉 찬 디스크, vs>0 -> 고리(ring)
+	   vRes:    반지름 분할 수 (쿼드 스트립 row 개수 = vRes)
+	   radius:  최대 반지름 (ve 지점의 실제 크기)
+	   offset:  평행이동
+	   back_face: winding 반전 */
+	void BuildDisk(std::vector<GLfloat> &buffer_data,
+	               double us, double ue, int uRes, // 각도 (0 ~ 2*M_PI)
+	               double vs, double ve, int vRes, // 반지름 비율 (0 ~ 1)
+	               float radius = 1.0f,
+	               const vmath::vec3 &offset = vmath::vec3(0.0f, 0.0f, 0.0f),
+	               bool back_face = false)
+	{
+		int numCols = uRes + 1;
+		int numRows = vRes + 1;
+
+		std::vector<vmath::vec4> positions;
+		std::vector<vmath::vec4> colors;
+		std::vector<vmath::vec2> uvs;
+
+		double deltaRad = (ve - vs) / vRes;
+		double deltaAngle = (ue - us) / uRes;
+
+		for (int row = 0; row < numRows; row++)
+		{
+			for (int col = 0; col < numCols; col++)
+			{
+				double currentRad = (vs + row * deltaRad) * radius;
+				double currentAngle = (us + col * deltaAngle);
+
+				positions.push_back(vmath::vec4(
+				    currentRad * cos(currentAngle),
+				    0.0,
+				    -currentRad * sin(currentAngle),
+				    1.0f));
+				uvs.push_back(vmath::vec2((float)col / uRes, (float)row / vRes));
+				colors.push_back(vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+			}
+		}
+
+		// XZ 평면 디스크의 법선 = +Y (CCW front) / -Y (back_face)
+		const vmath::vec3 diskNormal = back_face ? vmath::vec3(0.0f, -1.0f, 0.0f)
+		                                         : vmath::vec3(0.0f, 1.0f, 0.0f);
+
+		for (int row = 0; row < vRes; row++)
+		{
+			for (int col = 0; col < uRes; col++)
+			{
+				int p0 = row * numCols + col;
+				int p1 = row * numCols + (col + 1);
+				int p2 = (row + 1) * numCols + (col + 1);
+				int p3 = (row + 1) * numCols + col;
+				int indices_front[] = {p0, p1, p2, p0, p2, p3}; // CCW
+				int indices_back[] = {p0, p2, p1, p0, p3, p2};  // CW
+				const int *indices = back_face ? indices_back : indices_front;
+				for (int i = 0; i < 6; i++)
+					PushVertex(buffer_data, positions[indices[i]], colors[indices[i]], diskNormal,uvs[indices[i]], offset);
+			}
+		}
+	}
+
+	/* 원기둥 옆면 — XZ 평면에 base, +Y 방향으로 높이 height.
+	   us, ue, uRes: 원주 각도 범위 [rad] 와 분할 수 (uRes+1 정점)
+	   vs, ve, vRes: 높이 비율 (0 ~ 1) 와 분할 수. 실제 y = vs..ve 가 * height
+	   radius:  기둥 반지름
+	   height:  기둥 높이
+	   offset:  평행이동
+	   back_face: winding 반전 (기본 = 바깥에서 보이게) */
+	void BuildCylinder(std::vector<GLfloat> &buffer_data,
+	                   double us, double ue, int uRes, // 각도 (0 ~ 2*M_PI)
+	                   double vs, double ve, int vRes, // 높이 비율 (0 ~ 1)
+	                   float radius = 1.0f,
+	                   float height = 1.0f,
+	                   const vmath::vec3 &offset = vmath::vec3(0.0f, 0.0f, 0.0f),
+	                   bool back_face = false)
+	{
+		int numCols = uRes + 1;
+		int numRows = vRes + 1;
+
+		std::vector<vmath::vec4> positions;
+		std::vector<vmath::vec4> colors;
+		std::vector<vmath::vec2> uvs;
+		std::vector<vmath::vec3> normals;
+
+		double deltaV = (ve - vs) / vRes;
+		double deltaAngle = (ue - us) / uRes;
+
+		for (int row = 0; row < numRows; row++)
+		{
+			for (int col = 0; col < numCols; col++)
+			{
+				double currentV = (vs + row * deltaV) * height;
+				double currentAngle = (us + col * deltaAngle);
+
+				positions.push_back(vmath::vec4(
+				    radius * cos(currentAngle),
+				    currentV,
+				    -radius * sin(currentAngle),
+				    1.0f));
+				uvs.push_back(vmath::vec2((float)col / uRes, (float)row / vRes));
+				colors.push_back(vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+				// 옆면 법선은 축에서 바깥으로 — y 성분 0, xz 만 라디알.
+				// back_face 면 안쪽으로 뒤집힌 법선 사용.
+				vmath::vec3 outN(cos(currentAngle), 0.0f, -sin(currentAngle));
+				normals.push_back(back_face ? -outN : outN);
+			}
+		}
+
+		for (int row = 0; row < vRes; row++)
+		{
+			for (int col = 0; col < uRes; col++)
+			{
+				int p0 = row * numCols + col;
+				int p1 = row * numCols + (col + 1);
+				int p2 = (row + 1) * numCols + (col + 1);
+				int p3 = (row + 1) * numCols + col;
+				int indices_front[] = {p0, p1, p2, p0, p2, p3};
+				int indices_back[] = {p0, p2, p1, p0, p3, p2};
+				const int *indices = back_face ? indices_back : indices_front;
+				for (int i = 0; i < 6; i++)
+					PushVertex(buffer_data, positions[indices[i]], colors[indices[i]], normals[indices[i]], uvs[indices[i]], offset);
+			}
+		}
+	}
+
+	/* 반구 (북반구, +Y 방향) — 중심 원점의 구 절반.
+	   us, ue, uRes: 경도 [rad] 범위와 분할 (uRes+1 정점)
+	   vs, ve, vRes: 위도 비율 0 ~ 1 — 내부에서 ( * M_PI/2), 0 = 적도(y=0), 1 = 북극(y=radius)
+	   radius:  구 반지름
+	   offset:  평행이동
+	   back_face: winding 반전 */
+	void BuildHemiSphere(std::vector<GLfloat> &buffer_data,
+	                     double us, double ue, int uRes, // 경도 (0 ~ 2*M_PI)
+	                     double vs, double ve, int vRes, // 위도 비율 (0 ~ 1 -> PI/2)
+	                     float radius = 1.0f,
+	                     const vmath::vec3 &offset = vmath::vec3(0.0f, 0.0f, 0.0f),
+	                     bool back_face = false)
+	{
+		int numCols = uRes + 1;
+		int numRows = vRes + 1;
+
+		std::vector<vmath::vec4> positions;
+		std::vector<vmath::vec4> colors;
+		std::vector<vmath::vec2> uvs;
+		std::vector<vmath::vec3> normals;
+
+		double deltaV = (ve - vs) / vRes;
+		double deltaAngle = (ue - us) / uRes;
+
+		for (int row = 0; row < numRows; row++)
+		{
+			for (int col = 0; col < numCols; col++)
+			{
+				double currentV = vs + row * deltaV;
+				double latitude = currentV * (M_PI / 2.0);
+				double currentAngle = (us + col * deltaAngle);
+
+				double r = radius * cos(latitude);
+				double y = radius * sin(latitude);
+
+				float px = (float)(r * cos(currentAngle));
+				float py = (float)y;
+				float pz = (float)(-r * sin(currentAngle));
+
+				positions.push_back(vmath::vec4(px, py, pz, 1.0f));
+				uvs.push_back(vmath::vec2((float)col / uRes, (float)row / vRes));
+				colors.push_back(vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+				// 중심이 원점인 구면 — 법선은 위치 벡터를 정규화한 값.
+				vmath::vec3 outN = vmath::normalize(vmath::vec3(px, py, pz));
+				normals.push_back(back_face ? -outN : outN);
+			}
+		}
+
+		for (int row = 0; row < vRes; row++)
+		{
+			for (int col = 0; col < uRes; col++)
+			{
+				int p0 = row * numCols + col;
+				int p1 = row * numCols + (col + 1);
+				int p2 = (row + 1) * numCols + (col + 1);
+				int p3 = (row + 1) * numCols + col;
+				int indices_front[] = {p0, p1, p2, p0, p2, p3};
+				int indices_back[] = {p0, p2, p1, p0, p3, p2};
+				const int *indices = back_face ? indices_back : indices_front;
+				for (int i = 0; i < 6; i++)
+					PushVertex(buffer_data, positions[indices[i]], colors[indices[i]], normals[indices[i]], uvs[indices[i]], offset);
+			}
+		}
+	}
+
+	/* ModelBase */
+
 	class ModelBase
 	{
 	  protected:
@@ -500,863 +780,294 @@ namespace Chapter7::Model
 		GLuint mVBOAddr;
 		GLuint mEBOAddr;
 
-		// 컴포지션 : Model은 공간 상태(Transform) + 시각 상태(Material)를 "가짐"
-		Transform mTransform;
-		Material mMaterial;
+		std::vector<GLfloat> mBufferData;
+		std::vector<GLuint> mElementData;
+		GLuint mIndexCount;
 
-		std::vector<GLfloat> mBufferObject;
-		std::vector<GLuint> mElementBuffer;
+		bool isBuilted = false;
 
-		bool mIsBuilted = false;
-
-		// Data Oriented : 형태를 외부에서 주입 (클래스 상속이 아닌 파라미터로)
-		// 세 가지 초기화 경로 :
-		//   (A) Single parametric    : SurfaceFunction 1개 + (u, v) 범위/해상도 (단일 도형)
-		//   (B) Compound parametric  : 여러 SurfacePart의 리스트 (닫힌 실린더 등 합성)
-		//   (C) Direct Mesh          : 미리 빌드된 raw vertex/index 데이터 (하드코딩)
-		//
-		// (A)는 내부적으로 1-element CompoundSurface로 변환되므로, 실제 저장되는 필드는
-		//     mSurfaceParts와 mDirect* 뿐 — mUseDirectMesh로 분기
-		bool mUseDirectMesh = false;
-		Surfaces::CompoundSurface mSurfaceParts;
-		GLsizei mIndexCount = 0;
-
-		void initModelData();
+		Transform::Transform mTransform;
+		Material::Material mMaterial;
 
 	  public:
-		// (A) Single parametric 생성자 — surface function 1개로 격자 생성 (편의 생성자)
-		//     내부적으로 1-element CompoundSurface로 변환하여 (B) 경로 재사용
-		ModelBase(Surfaces::SurfaceFunction surfaceFn,
-		          double u_start, double u_end, size_t u_res,
-		          double v_start, double v_end, size_t v_res,
-		          vmath::vec3 _pivot = vmath::vec3(0.0, 0.0, 0.0));
-
-		// (C) Direct mesh 생성자 — raw vertex/index 데이터 주입
-		//     정점 레이아웃은 parametric과 동일 : pos4 + uv2 = 6 float/정점
-		ModelBase(std::vector<GLfloat> vertices, std::vector<GLuint> indices,
-		          vmath::vec3 _pivot = vmath::vec3(0.0, 0.0, 0.0));
-		virtual ~ModelBase();
-
-		// 컴포지션 접근자 — 공간 상태는 GetTransform(), 시각 상태는 GetMaterial()로
-		Transform &GetTransform();
-		const Transform &GetTransform() const;
-		Material &GetMaterial();
-		const Material &GetMaterial() const;
-
-		GLuint GetVertexArrayObject() const;
-
-		ModelBase &Build();
-		void Deconstruct();
-		void Draw(Program::ProgramBase &prog);
-
-		// 개발용 : Build() 이후 mBufferObject / mElementBuffer를 콘솔에 덤프
-		//   - 사용자가 콘솔 출력을 복사하여 direct-mesh 생성자 하드코딩 스크립팅에 사용
-		//   - 출력 형식 :
-		//       vertices : 1 vertex/line (pos4 + uv2 = 6 float)
-		//       indices  : 1 quad/line (6 index = 2 triangle)
-		void PrintMeshData(std::ostream &os = std::cout) const;
-	};
-
-} // namespace Chapter7::Model
-namespace Chapter7::Program
-{
-
-	class ProgramBase
-	{
-	  private:
-		const char *VS_PATH;
-		const char *FS_PATH;
-
-	  protected:
-		GLuint mProgramAddr;
-		std::vector<std::unique_ptr<Model::ModelBase>> mModels;
-
-		GLuint createShader(GLenum shader_type, const char *shader_path);
-
-	  public:
-		// default : 2D texture 셰이더
-		ProgramBase();
-		// shader 경로를 받는 오버로드 — cube map 등 다른 셰이더로 program 생성 시
-		ProgramBase(const char *vs_path, const char *fs_path);
-		~ProgramBase();
-		void PushModel(std::unique_ptr<Model::ModelBase> model);
-		const std::vector<std::unique_ptr<Model::ModelBase>> &GetModels() const;
-		void UseProgram();
-		GLuint GetProgramAddress() const;
-	};
-}; // namespace Chapter7::Program
-
-namespace Chapter7::Camera
-{
-	class Camera
-	{
-	  private:
-		vmath::vec3 mEye;
-		vmath::vec3 mTarget;
-		vmath::vec3 mWorldUp;
-
-		float mFov;
-		float mNearPlane;
-		float mFarPlane;
-
-	  public:
-		Camera(
-		    vmath::vec3 eye = vmath::vec3(0.0, 0.0, -1.0),
-		    vmath::vec3 target = vmath::vec3(0.0, 0.0, 0.0),
-		    vmath::vec3 world_up = vmath::vec3(0.0, 1.0, 0.0),
-		    float fov = 60, float near_plane = 0.1, float far_plane = 1000.0);
-		~Camera();
-		vmath::vec3 GetPosition() const;
-		void SetPosition(vmath::vec3 t);
-		vmath::vec3 GetTowardVector() const;
-		void SetTowardVector(vmath::vec3 forward);
-		vmath::mat4 GetModelMatrix() const;
-		vmath::mat4 GetViewMatrix() const;
-		vmath::mat4 GetProjectionMatrix(int window_width, int window_height) const;
-	};
-}; // namespace Chapter7::Camera
-
-/*********************************************************************************
- *
- * SOURCE
- *
- *********************************************************************************/
-namespace Chapter7::Model
-{
-
-	// =============================================================================
-	// Transform 구현
-	// =============================================================================
-	Transform::Transform(vmath::vec3 pivot)
-	    : mPivot(vmath::vec4(pivot[0], pivot[1], pivot[2], 0.0f)),
-	      mTranslateVec(vmath::vec4(0.0f, 0.0f, 0.0f, 0.0f)),
-	      mEulerRotateVec(vmath::vec4(0.0f, 0.0f, 0.0f, 0.0f)),
-	      mScaleVec(vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f))
-	{
-	}
-
-	vmath::vec3 Transform::GetTranslate() const
-	{
-		return {mTranslateVec[0], mTranslateVec[1], mTranslateVec[2]};
-	}
-	Transform &Transform::SetTranslate(vmath::vec3 vec)
-	{
-		mTranslateVec = {vec[0], vec[1], vec[2], 0.0f};
-		return *this;
-	}
-	vmath::vec3 Transform::GetEulerRotate() const
-	{
-		return {mEulerRotateVec[0], mEulerRotateVec[1], mEulerRotateVec[2]};
-	}
-	Transform &Transform::SetEulerRotate(vmath::vec3 vec)
-	{
-		mEulerRotateVec = {vec[0], vec[1], vec[2], 0.0f};
-		return *this;
-	}
-	vmath::vec3 Transform::GetScale() const
-	{
-		return {mScaleVec[0], mScaleVec[1], mScaleVec[2]};
-	}
-	Transform &Transform::SetScale(vmath::vec3 vec)
-	{
-		mScaleVec = {vec[0], vec[1], vec[2], 0.0f};
-		return *this;
-	}
-	vmath::vec3 Transform::GetPivot() const
-	{
-		return {mPivot[0], mPivot[1], mPivot[2]};
-	}
-	Transform &Transform::SetPivot(vmath::vec3 vec)
-	{
-		mPivot = {vec[0], vec[1], vec[2], 0.0f};
-		return *this;
-	}
-
-	// 공식 :  M = T(translate) * R * S * T(-pivot)
-	//   1) T(-pivot) * v  : pivot이 원점에 오도록 (local center -> origin)
-	//   2) S * v          : local center 기준 스케일
-	//   3) R * v          : local center 기준 회전
-	//   4) T(translate)   : 월드 위치로
-	vmath::mat4 Transform::GetModelMatrix() const
-	{
-		vmath::mat4 transMat = vmath::translate<float>(
-		    mTranslateVec[0], mTranslateVec[1], mTranslateVec[2]);
-
-		vmath::mat4 xRotMat = vmath::rotate<float>(mEulerRotateVec[0], 1.0f, 0.0f, 0.0f);
-		vmath::mat4 yRotMat = vmath::rotate<float>(mEulerRotateVec[1], 0.0f, 1.0f, 0.0f);
-		vmath::mat4 zRotMat = vmath::rotate<float>(mEulerRotateVec[2], 0.0f, 0.0f, 1.0f);
-
-		vmath::mat4 scaleMat = vmath::scale<float>(
-		    mScaleVec[0], mScaleVec[1], mScaleVec[2]);
-
-		vmath::mat4 pivotMat = vmath::translate<float>(
-		    -mPivot[0], -mPivot[1], -mPivot[2]);
-
-		return transMat * zRotMat * yRotMat * xRotMat * scaleMat * pivotMat;
-	}
-
-	// =============================================================================
-	// Material 구현
-	// =============================================================================
-	Material::Material(vmath::vec4 baseColor)
-	    : mBaseColor(baseColor),
-	      mUVOffset(vmath::vec2(0.0f, 0.0f)),
-	      mUVRatio(vmath::vec2(1.0f, 1.0f))
-	{
-	}
-
-	Material::~Material()
-	{
-		// 소유한 GL 텍스처 객체 해제
-		for (const auto &slot : mTextures)
+		Transform::Transform &GetTransform()
 		{
-			if (slot.addr != 0)
-				glDeleteTextures(1, &const_cast<TextureSlot &>(slot).addr);
+			return mTransform;
 		}
-	}
-
-	vmath::vec4 Material::GetBaseColor() const
-	{
-		return mBaseColor;
-	}
-	Material &Material::SetBaseColor(vmath::vec4 color)
-	{
-		mBaseColor = color;
-		return *this;
-	}
-	vmath::vec2 Material::GetUVOffset() const
-	{
-		return mUVOffset;
-	}
-	Material &Material::SetUVOffset(vmath::vec2 vec)
-	{
-		mUVOffset = vec;
-		return *this;
-	}
-	vmath::vec2 Material::GetUVRatio() const
-	{
-		return mUVRatio;
-	}
-	Material &Material::SetUVRatio(vmath::vec2 vec)
-	{
-		mUVRatio = vec;
-		return *this;
-	}
-
-	// 2D 텍스처 추가 — 여러 번 호출하여 복수 텍스처 슬롯 구성 가능
-	Material &Material::AddTexture2D(const std::string &samplerName, const char *image_path, int unit, int texNum)
-	{
-		TextureSlot slot;
-		slot.target = GL_TEXTURE_2D;
-		slot.samplerName = samplerName;
-		slot.unit = unit;
-
-		glGenTextures(1, &slot.addr);
-		glActiveTexture(GL_TEXTURE0 + unit);
-		glBindTexture(GL_TEXTURE_2D, slot.addr);
-
-		int width, height, channels;
-		auto *tex_ptr = stbi_load(image_path, &width, &height, &channels, 0);
-		if (tex_ptr != nullptr)
+		Material::Material &GetMaterial()
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-			             width, height, 0, GL_RGB,
-			             GL_UNSIGNED_BYTE, tex_ptr);
-			glGenerateMipmap(GL_TEXTURE_2D);
+			return mMaterial;
 		}
-		stbi_image_free(tex_ptr);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		mTextures.push_back(slot);
-		return *this;
-	}
-
-	// 정적 멤버 정의
-	GLuint Material::sDefaultWhiteTex2D = 0;
-
-	// 1x1 white 2D 텍스처 lazy 생성 — 모든 Material이 공유
-	//   첫 Apply() 호출 시 한 번만 생성, 이후 재사용
-	//   GL 컨텍스트가 있어야 하므로 정적 초기화가 아닌 lazy init
-	void Material::EnsureDefaultTextures()
-	{
-		if (sDefaultWhiteTex2D != 0)
-			return;
-
-		glGenTextures(1, &sDefaultWhiteTex2D);
-		glBindTexture(GL_TEXTURE_2D, sDefaultWhiteTex2D);
-
-		const unsigned char white[4] = {255, 255, 255, 255};
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	}
-
-	// glDrawElements 직전에 호출 — 이 Material의 모든 상태를 program에 반영
-	void Material::Apply(Program::ProgramBase &prog)
-	{
-		GLuint progAddr = prog.GetProgramAddress();
-
-		// baseColor : vertex color 대체
-		glUniform4fv(glGetUniformLocation(progAddr, "baseColor"), 1, mBaseColor);
-		// UV 변환
-		glUniform2fv(glGetUniformLocation(progAddr, "uvOffset"), 1, mUVOffset);
-		glUniform2fv(glGetUniformLocation(progAddr, "uvRatio"), 1, mUVRatio);
-
-		// 기본 fallback : 1x1 white 2D 텍스처를 unit 0에 바인딩 + sampler "tex1" 매핑
-		//   사용자가 AddTexture2D를 호출하지 않아도 sampler2D tex1이 유효한 텍스처를 읽음
-		//   -> "unit 0 GLD_TEXTURE_INDEX_2D is unloadable" 에러 방지
-		//   -> baseColor * white(1,1,1,1) = baseColor 렌더링 가능
-		//   사용자 텍스처는 아래 루프에서 바인딩되어 이 default를 덮어씀
-		// EnsureDefaultTextures();
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, sDefaultWhiteTex2D);
-		GLint tex1Loc = glGetUniformLocation(progAddr, "tex1");
-		if (tex1Loc >= 0)
-			glUniform1i(tex1Loc, 0);
-
-		// 사용자 텍스처 슬롯 바인딩 + sampler uniform 매핑 — default를 override
-		//   (sampler->unit 매핑은 Material이 여러 program과 호환되도록 매 Apply 시 설정)
-		for (const auto &slot : mTextures)
+		GLuint GetVAOAddr() const
 		{
-			glActiveTexture(GL_TEXTURE0 + slot.unit);
-			glBindTexture(slot.target, slot.addr);
-			glUniform1i(glGetUniformLocation(progAddr, slot.samplerName.c_str()), slot.unit);
+			return mVAOAddr;
 		}
-	}
-
-	// =============================================================================
-	// ModelBase 구현
-	// =============================================================================
-	// (A) Single parametric 생성자 — 편의용
-	//   내부적으로 1-element CompoundSurface로 변환하여 (B) 경로 재사용
-	ModelBase::ModelBase(
-	    Surfaces::SurfaceFunction surfaceFn,
-	    double u_start, double u_end, size_t u_res,
-	    double v_start, double v_end, size_t v_res,
-	    vmath::vec3 _pivot)
-	    : mTransform(_pivot),
-	      mMaterial(), // default : baseColor = (1,1,1,1)
-	      mUseDirectMesh(false),
-	      mSurfaceParts{Surfaces::SurfacePart{
-	          std::move(surfaceFn),
-	          u_start, u_end, u_res,
-	          v_start, v_end, v_res,
-	          Surfaces::Winding::CCW}}
-	{
-	}
-
-	// (C) Direct-mesh 생성자 : 하드코딩된 raw vertex/index 주입
-	ModelBase::ModelBase(std::vector<GLfloat> vertices, std::vector<GLuint> indices, vmath::vec3 _pivot)
-	    : mTransform(_pivot),
-	      mMaterial(),
-	      mBufferObject(vertices),
-	      mElementBuffer(indices),
-	      mUseDirectMesh(true)
-	{
-	}
-
-	ModelBase::~ModelBase()
-	{
-		Deconstruct();
-	}
-
-	Transform &ModelBase::GetTransform()
-	{
-		return mTransform;
-	}
-	const Transform &ModelBase::GetTransform() const
-	{
-		return mTransform;
-	}
-	Material &ModelBase::GetMaterial()
-	{
-		return mMaterial;
-	}
-	const Material &ModelBase::GetMaterial() const
-	{
-		return mMaterial;
-	}
-
-	GLuint ModelBase::GetVertexArrayObject() const
-	{
-		return mVAOAddr;
-	}
-
-	/*********************************************************************************
-	 *
-	 * Data Oriented ModelBase — 형태는 mSurfaceFn으로 결정, 상속 없음
-	 *
-	 *********************************************************************************/
-
-	// initModelData() : CPU only — GL 호출 0개
-	//   Direct-mesh는 Build()에서 이 함수를 호출하지 않음 (생성자가 이미 mBufferObject에 복사)
-	//   Compound parametric : mSurfaceParts를 순차 실행하며 인덱스 offset 누적 + winding 적용
-	//     각 part의 정점/인덱스는 이전 part의 결과 뒤에 이어붙임
-	void ModelBase::initModelData()
-	{
-		// Compound parametric 경로 : mSurfaceParts 순차 실행
-		// 정점 레이아웃 : pos4 + uv2 = 6 float/정점
-		mBufferObject.clear();
-		mElementBuffer.clear();
-
-		for (const auto &part : mSurfaceParts)
+		GLuint GetIndexCount() const
 		{
-			// 현재까지 누적된 정점 개수 — 이번 part의 인덱스 offset
-			const GLuint baseIndex = (GLuint)(mBufferObject.size() / 6);
+			return mIndexCount;
+		}
 
-			const size_t rowCount = part.u_res + 1; // 4 + 1 = 5
-			const size_t colCount = part.v_res + 1; // 4 + 1 = 5
-			const double deltaU = (part.u_end - part.u_start) / (double)part.u_res;
-			const double deltaV = (part.v_end - part.v_start) / (double)part.v_res;
+		ModelBase()
+		{
+		}
 
-			//
-			// 정점 생성 : part.fn(u, v) -> 위치, UV는 격자 정규화
-			for (size_t i = 0; i < rowCount; i++)
+		virtual ~ModelBase()
+		{
+			Deconstruct();
+		}
+
+		void Deconstruct()
+		{
+			if (!isBuilted)
+				return;
+			glDeleteBuffers(1, &mEBOAddr);
+			glDeleteBuffers(1, &mVBOAddr);
+			glDeleteVertexArrays(1, &mVAOAddr);
+			isBuilted = false;
+		}
+
+		void Build(const std::vector<GLfloat> &buffer_data)
+		{
+			if (isBuilted)
+				return;
+			if (buffer_data.empty())
 			{
-				for (size_t j = 0; j < colCount; j++)
+				std::cerr << "buffer_data 가 비어있음" << std::endl;
+			}
+			if (buffer_data.size() % VERTEX_LEN != 0)
+			{
+				std::cerr << "buffer_data 크기가 VERTEX_LEN("
+				          << VERTEX_LEN << ") 배수가 아님 : " << buffer_data.size() << std::endl;
+			}
+			mBufferData = std::vector<GLfloat>(buffer_data);
+
+			mIndexCount = mBufferData.size() / VERTEX_LEN;
+			for (GLuint i = 0; i < mIndexCount; i++)
+				mElementData.push_back(i);
+
+			glGenVertexArrays(1, &mVAOAddr);
+			glBindVertexArray(mVAOAddr);
+
+			glGenBuffers(1, &mVBOAddr);
+			glBindBuffer(GL_ARRAY_BUFFER, mVBOAddr);
+			glBufferData(GL_ARRAY_BUFFER,
+			             mBufferData.size() * sizeof(GLfloat),
+			             mBufferData.data(), GL_STATIC_DRAW);
+
+			glGenBuffers(1, &mEBOAddr);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEBOAddr);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+			             mElementData.size() * sizeof(GLuint),
+			             mElementData.data(), GL_STATIC_DRAW);
+
+			GLuint stride = VERTEX_LEN * sizeof(GLfloat);
+			void *poffset = (void *)0;
+			void *coffset = (void *)(VERTEX_POSITION_SIZE * sizeof(GLfloat));
+			void *noffset = (void *)((VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE) * sizeof(GLfloat));
+			void *uvoffset = (void *)((VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE + VERTEX_NORMAL_SIZE) * sizeof(GLfloat));
+
+			glVertexAttribPointer(0, VERTEX_POSITION_SIZE, GL_FLOAT, false, stride, poffset);
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(1, VERTEX_COLOR_SIZE, GL_FLOAT, false, stride, coffset);
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(2, VERTEX_NORMAL_SIZE, GL_FLOAT, false, stride, noffset);
+			glEnableVertexAttribArray(2);
+			glVertexAttribPointer(3, VERTEX_UV_SIZE, GL_FLOAT, false, stride, uvoffset);
+			glEnableVertexAttribArray(3);
+			isBuilted = true;
+		}
+
+		void Draw(GLuint progAddr) const
+		{
+			glUniformMatrix4fv(glGetUniformLocation(progAddr, UNIFORM_MODEL_MAT),
+			                   1, false, mTransform.GetModelMatrix());
+			glUniform4fv(glGetUniformLocation(progAddr, UNIFORM_BASE_COLOR),
+			             1, mMaterial.BaseColor);
+			glBindVertexArray(mVAOAddr);
+
+			// 슬롯 i -> 텍스처 유닛 i. 쉐이더의 tex(i+1) 샘플러가 해당 유닛을 읽도록
+			// glUniform1i 로 연결. 슬롯 수를 넘는 자리는 플래그 0 으로 꺼둠.
+			const GLuint texture_enums[] = {
+			    GL_TEXTURE0, GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3};
+			for (int i = 0; i < TEXTURE_SLOT_COUNT; i++)
+			{
+				if (i < mMaterial.GetSlotCount())
 				{
-					double u = part.u_start + (double)i * deltaU;
-					double v = part.v_start + (double)j * deltaV;
-
-					vmath::vec4 pos = part.fn(u, v);
-					mBufferObject.push_back(pos[0]);
-					mBufferObject.push_back(pos[1]);
-					mBufferObject.push_back(pos[2]);
-					mBufferObject.push_back(pos[3]);
-
-					mBufferObject.push_back(Meshes::BASE_COLORS[0][0]);
-					mBufferObject.push_back(Meshes::BASE_COLORS[0][1]);
-					mBufferObject.push_back(Meshes::BASE_COLORS[0][2]);
-					mBufferObject.push_back(Meshes::BASE_COLORS[0][3]);
-					// UV : 정규화된 격자 좌표
-					mBufferObject.push_back((float)i / (float)part.u_res);
-					mBufferObject.push_back((float)j / (float)part.v_res);
+					const auto &slot = mMaterial.Slots[i];
+					glActiveTexture(texture_enums[i]);
+					glBindTexture(GL_TEXTURE_2D, slot.TexAddr);
+					glUniform1i(glGetUniformLocation(progAddr, SAMPLER_TEX[i]), i);
+					glUniform1f(glGetUniformLocation(progAddr, UNIFORM_TEX_USED[i]), 1.0f);
+					glUniform2fv(glGetUniformLocation(progAddr, UNIFORM_UV_OFFSET[i]),
+					             1, slot.UVOffset);
+					glUniform2fv(glGetUniformLocation(progAddr, UNIFORM_UV_RATIO[i]),
+					             1, slot.UVRatio);
+				}
+				else
+				{
+					glActiveTexture(texture_enums[i]);
+					glBindTexture(GL_TEXTURE_2D, 0);
+					glUniform1i(glGetUniformLocation(progAddr, SAMPLER_TEX[i]), i);
+					glUniform1f(glGetUniformLocation(progAddr, UNIFORM_TEX_USED[i]), 0.0f);
 				}
 			}
 
-			// EBO : 각 cell을 2개 삼각형으로 + winding 적용 + baseIndex offset
-			for (size_t i = 0; i < part.u_res; i++)
+			glDrawElements(GL_TRIANGLES, mIndexCount, GL_UNSIGNED_INT, 0);
+		}
+	};
+} // namespace Engine::Model
+
+namespace Engine::Program
+{
+	using namespace Model;
+
+	class ShaderProgram
+	{
+	  public:
+		GLuint ProgAddr;
+		std::unordered_map<std::string, std::unique_ptr<ModelBase>> Models;
+
+		// 라이팅이 필요한 쉐이더만 셋팅하면 됨. nullptr 이면 쉐이더에서
+		// inLightingEnabled=0 으로 라이팅 끄도록 ApplyDisabled() 가 동작.
+		Lighting::Light *AttachedLight = nullptr;
+
+		ShaderProgram(const char *vs_path, const char *fs_path)
+		{
+			ProgAddr = glCreateProgram();
+			GLuint vsAddr = sb7::shader::load(vs_path, GL_VERTEX_SHADER, true);
+			if (vsAddr == 0)
 			{
-				for (size_t j = 0; j < part.v_res; j++)
-				{
-					GLuint idx00 = baseIndex + (GLuint)(i * colCount + j);
-					GLuint idx10 = baseIndex + (GLuint)((i + 1) * colCount + j);
-					GLuint idx11 = baseIndex + (GLuint)((i + 1) * colCount + (j + 1));
-					GLuint idx01 = baseIndex + (GLuint)(i * colCount + (j + 1));
-
-					if (part.winding == Surfaces::Winding::CCW)
-					{
-						// CCW : (i,j), (i+1,j), (i+1,j+1)  +  (i,j), (i+1,j+1), (i,j+1)
-						mElementBuffer.push_back(idx00); // A
-						mElementBuffer.push_back(idx10); // B
-						mElementBuffer.push_back(idx11); // C
-						mElementBuffer.push_back(idx00); // A
-						mElementBuffer.push_back(idx11); // C
-						mElementBuffer.push_back(idx01); // D
-					}
-					else
-					{
-						// CW : winding 반전 (아래쪽 cap처럼 -Y normal 원할 때)
-						//      각 삼각형의 2번째/3번째 정점 순서 swap
-						mElementBuffer.push_back(idx00); // A
-						mElementBuffer.push_back(idx11); // C
-						mElementBuffer.push_back(idx10); // B
-						mElementBuffer.push_back(idx00); // A
-						mElementBuffer.push_back(idx01); // D
-						mElementBuffer.push_back(idx11); // C
-					}
-				}
+				std::cerr << "버텍스 쉐이더 로드 실패 : " << vs_path << std::endl;
+				exit(1);
 			}
+			GLuint fsAddr = sb7::shader::load(fs_path, GL_FRAGMENT_SHADER, true);
+			if (fsAddr == 0)
+			{
+				std::cerr << "프래그먼트 쉐이더 로드 실패 : " << fs_path << std::endl;
+				exit(1);
+			}
+			glAttachShader(ProgAddr, vsAddr);
+			glAttachShader(ProgAddr, fsAddr);
+			glLinkProgram(ProgAddr);
+			glDeleteShader(vsAddr);
+			glDeleteShader(fsAddr);
+
 		}
-	}
 
-	// Build() : GPU 업로드 boilerplate
-	// !!! 절대 어기면 안 되는 순서 !!!
-	//	glBindVertexArray(VAO)
-	//		glBindBuffer(GL_ARRAY_BUFFER, VBO)
-	//			glBufferData(...)               ← VBO 바인딩 후 + CPU 데이터 준비 후
-	//			glVertexAttribPointer(...)      ← VBO 바인딩 후 + VAO 바인딩 중
-	//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)  ← VAO 바인딩 중이어야 VAO에 기록
-	//		glBufferData(GL_ELEMENT_ARRAY_BUFFER, ...)
-	ModelBase &ModelBase::Build()
-	{
-		if (mIsBuilted)
-			return *this;
-
-		// 1) CPU 데이터 준비 (GL 호출 0개)
-		if (!mUseDirectMesh)
-			initModelData();
-		mIndexCount = (GLsizei)mElementBuffer.size();
-
-		std::cout << "mBufferObject : ";
-		for (auto &e : mBufferObject)
+		virtual ~ShaderProgram()
 		{
-			std::cout << e << " ";
+			glDeleteProgram(ProgAddr);
 		}
-		std::cout << std::endl;
 
-		std::cout << "mElementBuffer : ";
-		for (auto &e : mElementBuffer)
+		// 모델을 프로그램에 등록하고 Transform 계층을 parent 에 연결한다.
+		// - name 을 모델의 Transform.Name 으로도 셋팅
+		// - parent 가 nullptr 이 아니면 parent->Children[name]
+		void AddModel(const std::string &name,
+		              std::unique_ptr<ModelBase> model,
+		              Transform::Transform *parent = nullptr)
 		{
-			std::cout << e << " ";
+			if (Models.count(name) > 0)
+			{
+				std::cerr << "AddModel 중복 키 무시됨 : " << name << std::endl;
+				exit(1);
+			}
+
+			Transform::Transform &transform = model->GetTransform();
+			transform.Name = name;
+			transform.Parent = parent;
+			if (parent != nullptr)
+				parent->Children[name] = &transform;
+			Models.insert(std::make_pair(name, std::move(model)));
 		}
-		std::cout << std::endl;
 
-		std::cout << "mIndexCount : " << mIndexCount << std::endl;
-
-		// 2) VAO 생성/바인딩 — 이후 attribute pointer / EBO 바인딩이 VAO에 기록됨
-		glGenVertexArrays(1, &mVAOAddr);
-		glBindVertexArray(mVAOAddr);
-
-		// 3) VBO 생성 -> 바인딩 -> 업로드
-		glGenBuffers(1, &mVBOAddr);
-		glBindBuffer(GL_ARRAY_BUFFER, mVBOAddr);
-		glBufferData(GL_ARRAY_BUFFER, mBufferObject.size() * sizeof(GLfloat), mBufferObject.data(), GL_STATIC_DRAW);
-
-		// 4) EBO 생성 -> 바인딩 -> 업로드 (VAO에 기록)
-		glGenBuffers(1, &mEBOAddr);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEBOAddr);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementBuffer.size() * sizeof(GLuint), mElementBuffer.data(), GL_STATIC_DRAW);
-
-		// 5) attribute layout (VAO에 기록)
-
-		GLuint stride = 10 * sizeof(GLfloat);
-		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, (void *)(0)); // position  // ! 함수 이름 외우기
-		glEnableVertexAttribArray(0);
-
-		glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (void *)(4 * sizeof(float))); // color        // ! 함수 이름 외우기
-		glEnableVertexAttribArray(1);
-
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void *)(8 * sizeof(float))); // uv        // ! 함수 이름 외우기
-		glEnableVertexAttribArray(2);
-
-		mIsBuilted = true;
-		return *this;
-	}
-
-	void ModelBase::Deconstruct()
-	{
-		if (!mIsBuilted)
-			return;
-		glDeleteVertexArrays(1, &mVAOAddr);
-		glDeleteBuffers(1, &mVBOAddr);
-		glDeleteBuffers(1, &mEBOAddr);
-
-		mIsBuilted = false;
-	}
-
-	void ModelBase::Draw(Program::ProgramBase &prog)
-	{
-		// 1) VAO 바인딩 (기하)
-		glBindVertexArray(mVAOAddr);
-
-		// 2) Transform uniform : modelMat
-		glUniformMatrix4fv(glGetUniformLocation(prog.GetProgramAddress(), "modelMat"),
-		                   1, false, mTransform.GetModelMatrix());
-
-		// 3) Material 적용 : baseColor, uvOffset, uvRatio, 모든 텍스처 바인딩
-		//    (모델별 uniform은 glDrawElements 직전에 "한 묶음"으로 set해야 다른 모델과 섞이지 않음)
-
-		mMaterial.Apply(prog);
-
-		// 4) Draw
-		glDrawElements(GL_TRIANGLES, mIndexCount, GL_UNSIGNED_INT, 0);
-	}
-
-	// 개발용 덤프 — Build() 이후 호출
-	//   format (사용자가 콘솔 출력을 복사하여 direct-mesh 생성자 하드코딩 스크립팅에 사용) :
-	//     vertices : 1 vertex/line (pos4 + uv2 = 6 float)
-	//     indices  : 1 quad/line (6 index = 2 triangle)
-	//   snprintf 사용 — std::cout 포맷 flag에 부작용 주지 않음
-	void ModelBase::PrintMeshData(std::ostream &os) const
-	{
-		const size_t floatsPerVertex = 10; // pos4 + uv2
-		const size_t indicesPerQuad = 10;  // 2 triangle × 3 vertex
-
-		const size_t vertexCount = mBufferObject.size() / floatsPerVertex;
-		const size_t quadCount = mElementBuffer.size() / indicesPerQuad;
-
-		os << "// ===== ModelBase::PrintMeshData =====\n";
-		os << "// layout  : vertex = pos(x,y,z,w) + color(x,y,z,w) + uv(u,v)  [10 float/vertex]\n";
-		os << "// vertex  : " << vertexCount << "\n";
-		os << "// index   : " << mElementBuffer.size() << "  (quad = " << quadCount << ")\n";
-		os << "\n";
-
-		char buf[64];
-
-		// vertices : 1 vertex/line
-		os << "std::vector<GLfloat> vertices = {\n";
-		for (size_t i = 0; i < mBufferObject.size(); i++)
+		ModelBase *GetModel(const std::string &name)
 		{
-			snprintf(buf, sizeof(buf), "%.6ff,", mBufferObject[i]);
-			os << buf;
-			if ((i + 1) % floatsPerVertex == 0)
-				os << "\n";
+			auto it = Models.find(name);
+			return (it == Models.end()) ? nullptr : it->second.get();
+		}
+
+		bool HasModel(const std::string &name) const
+		{
+			return Models.count(name) > 0;
+		}
+
+		// 제거 대상 모델이 다른 모델의 Parent 라면 자식의 Parent 는 dangling 이 된다.
+		// 계층이 여러 단계면 자식부터 RemoveModel 하거나 cascade 로 확장할 것.
+		void RemoveModel(const std::string &name)
+		{
+			auto it = Models.find(name);
+			if (it == Models.end())
+				return;
+
+			Transform::Transform &transform = it->second->GetTransform();
+			if (transform.Parent != nullptr)
+				transform.Parent->Children.erase(name);
+
+			Models.erase(it);
+		}
+
+		virtual void Render(double currentTime,
+		                    const vmath::mat4 &view,
+		                    const vmath::mat4 &proj,
+		                    const vmath::vec3 &viewPos) = 0;
+	};
+
+	class DefaultShaderProgram : public ShaderProgram
+	{
+	  public:
+		using ShaderProgram::ShaderProgram;
+
+		void Render(double currentTime,
+		            const vmath::mat4 &view,
+		            const vmath::mat4 &proj,
+		            const vmath::vec3 &viewPos) override
+		{
+			if (Models.empty())
+				return;
+
+			glUseProgram(ProgAddr);
+			glUniformMatrix4fv(glGetUniformLocation(ProgAddr, UNIFORM_VIEW_MAT),
+			                   1, false, view);
+			glUniformMatrix4fv(glGetUniformLocation(ProgAddr, UNIFORM_PROJ_MAT),
+			                   1, false, proj);
+
+			for (auto &entry : Models)
+				entry.second->Draw(ProgAddr);
+		}
+	};
+
+	class TextureShaderProgram : public ShaderProgram
+	{
+	  public:
+		using ShaderProgram::ShaderProgram;
+
+		void Render(double currentTime,
+		            const vmath::mat4 &view,
+		            const vmath::mat4 &proj,
+		            const vmath::vec3 &viewPos) override
+		{
+			if (Models.empty())
+			{
+				std::cout << "텍스쳐 프로그램의 모델이 텅 비어있음" << std::endl;
+				return;
+			}
+
+			glUseProgram(ProgAddr);
+			glUniformMatrix4fv(glGetUniformLocation(ProgAddr, UNIFORM_VIEW_MAT),
+			                   1, false, view);
+			glUniformMatrix4fv(glGetUniformLocation(ProgAddr, UNIFORM_PROJ_MAT),
+			                   1, false, proj);
+
+			// 라이팅 uniform 푸시 — Light 가 attach 되어 있으면 활성, 아니면 OFF.
+			if (AttachedLight != nullptr)
+				AttachedLight->Apply(ProgAddr, viewPos);
 			else
-				os << " ";
-		}
-		os << "};\n\n";
+				Lighting::Light::ApplyDisabled(ProgAddr);
 
-		// indices : 1 quad/line (6 indices)
-		os << "std::vector<GLuint> indices = {\n";
-		for (size_t i = 0; i < mElementBuffer.size(); i++)
-		{
-			snprintf(buf, sizeof(buf), "%u,", mElementBuffer[i]);
-			os << buf;
-			if ((i + 1) % indicesPerQuad == 0)
-				os << "\n";
-			else
-				os << " ";
-		}
-		os << "};\n";
-
-		os << "// ===== End Dump =====\n";
-		os << std::flush; // stdout이 파이프/파일로 리다이렉트될 때 버퍼 flush 강제
-	}
-
-}; // namespace Chapter7::Model
-
-namespace Chapter7::Program
-{
-
-	GLuint ProgramBase::createShader(GLenum shader_type, const char *shader_path)
-	{
-		GLuint shaderAddr = sb7::shader::load(shader_path, shader_type, true);
-		if (shaderAddr == 0)
-		{
-			std::cerr << "shader load fail : " << shader_type << ":" << shader_path << std::endl;
-			exit(1);
-		}
-		return shaderAddr;
-	}
-
-	ProgramBase::ProgramBase()
-	    : ProgramBase("./shaders/default_vs.glsl", "./shaders/default_fs.glsl")
-	{
-		// delegating constructor : 기본 셰이더 경로 위임
-	}
-
-	// 임의 shader 경로를 받는 생성자 — cube map 등 다른 셰이더로 program 생성 시
-	ProgramBase::ProgramBase(const char *vs_path, const char *fs_path)
-	    : VS_PATH(vs_path), FS_PATH(fs_path)
-	{
-		mProgramAddr = glCreateProgram();
-		std::vector<GLuint> shaderAddrs;
-
-		auto vsAddr = createShader(GL_VERTEX_SHADER, VS_PATH);
-		auto fsAddr = createShader(GL_FRAGMENT_SHADER, FS_PATH);
-		glAttachShader(mProgramAddr, vsAddr);
-		glAttachShader(mProgramAddr, fsAddr);
-
-		glLinkProgram(mProgramAddr);
-
-		glDeleteShader(vsAddr);
-		glDeleteShader(fsAddr);
-	}
-
-	ProgramBase::~ProgramBase()
-	{
-	}
-
-	// ! 폐기 : void ProgramBase::PushModel(std::unique_ptr<Model::ModelBase>&& model)
-	void ProgramBase::PushModel(std::unique_ptr<Model::ModelBase> model)
-	{
-		mModels.push_back(std::move(model));
-	}
-
-	const std::vector<std::unique_ptr<Model::ModelBase>> &ProgramBase::GetModels() const
-	{
-		return mModels;
-	}
-
-	void ProgramBase::UseProgram()
-	{
-		glUseProgram(mProgramAddr);
-	}
-
-	GLuint ProgramBase::GetProgramAddress() const
-	{
-		return mProgramAddr;
-	}
-
-}; // namespace Chapter7::Program
-
-namespace Chapter7::Camera
-{
-
-	Camera::Camera(vmath::vec3 eye, vmath::vec3 target, vmath::vec3 world_up, float fov, float near_plane, float far_plane)
-	    : mEye(eye), mTarget(target), mWorldUp(world_up),
-	      mFov(fov), mNearPlane(near_plane), mFarPlane(far_plane)
-	{
-	}
-
-	Camera::~Camera()
-	{
-	}
-
-	vmath::vec3 Camera::GetPosition() const
-	{
-		return mEye;
-	}
-
-	void Camera::SetPosition(vmath::vec3 t)
-	{
-		mEye = t;
-	}
-
-	vmath::vec3 Camera::GetTowardVector() const
-	{
-		return mTarget;
-	}
-
-	void Camera::SetTowardVector(vmath::vec3 forward)
-	{
-		mTarget = forward;
-	}
-
-	vmath::mat4 Camera::GetModelMatrix() const
-	{
-		vmath::mat4 translateMat = vmath::translate(mEye);
-		// ! C4 : return vmath::mat4::identity() * translateMat; 행렬 순서가 거꾸로 됨
-		// TODO 표준 T * R * S (translate * rot * scale)
-		return translateMat * vmath::mat4::identity();
-	}
-
-	vmath::mat4 Camera::GetViewMatrix() const
-	{
-		// ! C1 : return GetModelMatrix() * vmath::lookat(mEye, mTarget, mWorldUp); lookat이 이미 view 행렬임. 이중 변환
-		// TODO vmath::lookat 만 반환하기
-		return vmath::lookat(mEye, mTarget, mWorldUp);
-	}
-
-	vmath::mat4 Camera::GetProjectionMatrix(int window_width, int window_height) const
-	{
-		// ! C2 : return Camera::GetViewMatrix() * vmath::perspective(mFov, (float)window_height / window_height, mNearPlane, mFarPlane);
-		// TODO vmath::perspective 만 반환하기
-		return vmath::perspective(mFov, ((float)window_width / window_height), mNearPlane, mFarPlane);
-	}
-}; // namespace Chapter7::Camera
-
-namespace Chapter7
-{
-
-	class MyApplicaion : public sb7::application
-	{
-	  private:
-		std::vector<std::unique_ptr<Program::ProgramBase>> programs;
-		Camera::Camera camera;
-		const GLfloat backgroundColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-
-	  public:
-		double deltaTime = 1.0 / 60;
-		virtual void startup() override
-		{
-
-			programs.push_back(std::make_unique<Program::ProgramBase>());
-			camera = Camera::Camera(
-			    {0.0, 0.0, 2.0}, {0.0, 0.0, 0.0}, {0.0, 1.0, 0.0},
-			    60, 0.1, 1000.0);
-
-			// // Parametric Cube — 단일 Model (6면 합침, elements 0..35)
-			// {
-			// 	auto md = Meshes::BuildCube();
-			// 	auto model = std::make_unique<Model::ModelBase>(
-			// 	    std::move(md.vertices), std::move(md.elements));
-			// 	model->Build();
-			// 	model->GetTransform().SetScale(vmath::vec3{0.5, 0.5, 0.5});
-			// 	model->GetTransform().SetTranslate(vmath::vec3{-1.0, 0.0, 0.0});
-			// 	programs.back()->PushModel(std::move(model));
-			// }
-
-			programs.push_back(std::make_unique<Program::ProgramBase>(
-			    "./shaders/default_vs.glsl", "./shaders/texture_fs.glsl"));
-
-			// Textured Cube — 면마다 독립 ModelBase + GetMaterial().AddTexture2D()
-			//   texture_fs.glsl 은 sampler2D tex1 하나만 쓰므로 1 Material = 1 texture.
-			//   면 6개를 서로 다른 텍스처로 그리려면 6개의 Model 로 분리하는 게 최소 변경.
-			{
-				const char *texPaths1[6] = {
-				    "./textures/side1.jpg",
-				    "./textures/side2.jpg",
-				    "./textures/side3.jpg",
-				    "./textures/side4.jpg",
-				    "./textures/side5.jpg",
-				    "./textures/side6.jpg",
-				};
-				const char *texPaths2[1] = {
-				    "./textures/container.jpg",
-				};
-
-				for (int f = 0; f < 6; f++)
-				{
-					auto md = Meshes::BuildCubeFace(f);
-					auto model = std::make_unique<Model::ModelBase>(
-					    std::move(md.vertices), std::move(md.elements));
-					model->Build();
-					model->GetTransform().SetScale(vmath::vec3{0.5, 0.5, 0.5});
-					model->GetTransform().SetTranslate(vmath::vec3{1.0, 0.0, 0.0});
-					model->GetMaterial().AddTexture2D("tex1", texPaths1[f], 0, GL_TEXTURE0);
-					model->GetMaterial().AddTexture2D("tex2", texPaths2[0], 0, GL_TEXTURE1);
-					programs.back()->PushModel(std::move(model));
-				}
-			}
-		}
-
-		virtual void render(double currentTime) override
-		{
-
-			glClearBufferfv(GL_COLOR, 0, backgroundColor);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			glEnable(GL_DEPTH_TEST);
-
-			float angle = vmath::radians((currentTime * 180) / 3.14) * 10;
-
-			for (const auto &prog : programs)
-			{
-				prog->UseProgram();
-				// ! D4 : for(const auto& model : prog->GetModels()) // 3번 별개로 순회하면 안된다 view/proj은 model 별개임
-				// ! D4 : 	glUniformMatrix4fv(glGetUniformLocation(progAddr, "modelMat"), 1, false, model->GetModelMatrix()); // 3번 별개로 순회하면 안된다 view/proj은 model 별개임
-				// ! D4 : for(const auto& model : prog->GetModels()) // 3번 별개로 순회하면 안된다 view/proj은 model 별개임
-				// ! D4 : 	glUniformMatrix4fv(glGetUniformLocation(progAddr, "viewMat"), 1, false, camera.GetViewMatrix()); // 3번 별개로 순회하면 안된다 view/proj은 model 별개임
-				// ! D4 : for(const auto& model : prog->GetModels()) // 3번 별개로 순회하면 안된다 view/proj은 model 별개임
-				// ! D4 : 	glUniformMatrix4fv(glGetUniformLocation(progAddr, "projMat"), 1, false, camera.GetProjectionMatrix(info.windowWidth, info.windowHeight)); // 3번 별개로 순회하면 안된다 view/proj은 model 별개임
-				// TODO 모델은 단일 루프로 통합, view/proj는 Draw 호출 *전*에 set해야 첫 프레임부터 정상
-				// uniform location은 prog의 lazy 캐시에서 조회 (첫 프레임만 driver, 이후는 hash map hit)
-				glUniformMatrix4fv(glGetUniformLocation(prog->GetProgramAddress(), "viewMat"), 1, false, camera.GetViewMatrix());
-				glUniformMatrix4fv(glGetUniformLocation(prog->GetProgramAddress(), "projMat"), 1, false, camera.GetProjectionMatrix(info.windowWidth, info.windowHeight));
-
-				auto &models = prog->GetModels();
-
-				// cube program : 큐브에 자동 회전 적용 (6면을 볼 수 있도록)
-				//   program 2 는 면마다 별도 Model 이라 전체에 동일 회전 적용 → 하나의 큐브처럼 회전
-				if (!models.empty())
-				{
-					float degY = (float)currentTime * 30.0f;
-					float degX = (float)currentTime * 15.0f;
-					for (auto &m : models)
-						m->GetTransform().SetEulerRotate({degX, degY, 0.0f});
-				}
-
-				// ! 폐기 : 메인 루프 뒤에 추가 draw call로 uniform을 별도로 설정하려 했던 코드
-				//          - depth test로 인해 두 번째 draw가 화면에 안 나옴
-				//          - modelMat이 직전 모델 값으로 남아있어 엉뚱한 위치에 그려짐
-				//          - uniform이 program 소속이라 메인 루프의 다른 모델에 영향
-				// TODO 모델별 uniform은 PlaneModel::Draw() 안에서 mUVOffset/mUVRatio 멤버로 set
-				for (const auto &model : prog->GetModels())
-					model->Draw(*prog);
-			}
-		}
-
-		virtual void shutdown() override
-		{
+			// 샘플러 바인딩과 슬롯별 UV/플래그는 각 모델의 Draw() 내부에서 수행.
+			for (auto &entry : Models)
+				entry.second->Draw(ProgAddr);
 		}
 	};
-}; // namespace Chapter7
-
-DECLARE_MAIN(Chapter7::MyApplicaion);
+} // namespace Engine::Program

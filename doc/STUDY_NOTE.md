@@ -54,13 +54,13 @@ glBindVertexArray(models.back()->GetVaoAddr());
 ### 2-1. 인터리브 데이터 레이아웃 불일치
 
 ```cpp
-// ❌ 컴포넌트 단위 교차 → [vx, cx, vy, cy, vz, cz, vw, cw]
+// ❌ 컴포넌트 단위 교차 -> [vx, cx, vy, cy, vz, cz, vw, cw]
 for(int i = 0; i < 4; i++) {
     data.push_back(vertex[i]);
     data.push_back(color[i]);
 }
 
-// ✅ vec4 단위 연속 → [vx, vy, vz, vw, cx, cy, cz, cw]
+// ✅ vec4 단위 연속 -> [vx, vy, vz, vw, cx, cy, cz, cw]
 for(int i = 0; i < 4; i++) data.push_back(vertex[i]);
 for(int i = 0; i < 4; i++) data.push_back(color[i]);
 ```
@@ -94,12 +94,12 @@ glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (void*)(4 * sizeof(float
 vmath::vec4(0.0, 0.0, 1.0, 1.0),  // [1][1][0] — y가 0 (1이어야 함)
 vmath::vec4(0.0, 1.0, 1.0, 1.0),  // [1][1][1] — x가 0 (1이어야 함)
 
-// ✅ 인덱스 [z][y][x] → 좌표 (x, y, z) 규칙 준수
+// ✅ 인덱스 [z][y][x] -> 좌표 (x, y, z) 규칙 준수
 vmath::vec4(0.0, 1.0, 1.0, 1.0),  // [1][1][0] = (0, 1, 1)
 vmath::vec4(1.0, 1.0, 1.0, 1.0),  // [1][1][1] = (1, 1, 1)
 ```
 
-**핵심**: 3차원 배열 인덱싱은 실수하기 매우 쉽다. 모든 정점에 주석으로 좌표를 명시하고, `인덱스 → 좌표` 매핑 규칙을 먼저 정의할 것.
+**핵심**: 3차원 배열 인덱싱은 실수하기 매우 쉽다. 모든 정점에 주석으로 좌표를 명시하고, `인덱스 -> 좌표` 매핑 규칙을 먼저 정의할 것.
 
 ---
 
@@ -159,7 +159,7 @@ void SetRotation(vec3 euler) override { }  // 아무것도 안 함
 void Rotate(float, vec3) override { }      // 아무것도 안 함
 
 // ✅ Model과 동일하게 Transformer에 위임
-//    position = eye, rotation → forward 방향 계산 → target 자동 도출
+//    position = eye, rotation -> forward 방향 계산 -> target 자동 도출
 vmath::mat4 GetViewMatrix() const {
     vec3 forward = Ry * Rx * (0, 0, -1);  // 회전에서 전방 벡터 계산
     vec3 target = position + forward;
@@ -168,7 +168,7 @@ vmath::mat4 GetViewMatrix() const {
 ```
 
 **핵심**: ITransformable을 구현하는 모든 객체는 동일한 변환 체계를 가져야 한다.
-Camera도 `SetPosition` → eye, `SetRotation` → 시선 방향으로 일관되게 매핑.
+Camera도 `SetPosition` -> eye, `SetRotation` -> 시선 방향으로 일관되게 매핑.
 
 ---
 
@@ -177,7 +177,7 @@ Camera도 `SetPosition` → eye, `SetRotation` → 시선 방향으로 일관되
 ### 4-1. 누적(`Translate`) vs 절대값(`SetPosition`) 혼동
 
 ```cpp
-// ❌ Translate는 매 프레임 누적 → 위치가 폭주
+// ❌ Translate는 매 프레임 누적 -> 위치가 폭주
 void testCameraRotate(double t) {
     camera.Translate(vec3(angle, 0, sin(t)));  // 매 프레임 += 
 }
@@ -190,15 +190,15 @@ void testCameraRotate(double t) {
 ```
 
 **판별 기준**:
-- 원운동, 왕복운동 → `SetPosition` (매 프레임 절대 좌표 계산)
-- 키보드 이동, 물리 시뮬레이션 → `Translate` (delta 누적)
+- 원운동, 왕복운동 -> `SetPosition` (매 프레임 절대 좌표 계산)
+- 키보드 이동, 물리 시뮬레이션 -> `Translate` (delta 누적)
 
 ---
 
 ### 4-2. LookAt 1회성 호출
 
 ```cpp
-// ❌ startup에서만 호출 → 카메라가 이동해도 시선 고정
+// ❌ startup에서만 호출 -> 카메라가 이동해도 시선 고정
 void startup() {
     camera.LookAt(vec3(0, 0, 0));
 }
@@ -271,10 +271,10 @@ camera.SetPosition(vec3(cos(t) * radius, height, sin(t) * radius));
 ### 생성 시점 (startup / 생성자)
 
 ```
-1. glGenVertexArrays → VAO 생성
+1. glGenVertexArrays -> VAO 생성
 2. glBindVertexArray(vao) ← 이후 설정이 이 VAO에 기록됨
 │
-├─ 3. glGenBuffers → VBO 생성
+├─ 3. glGenBuffers -> VBO 생성
 ├─ 4. glBindBuffer(GL_ARRAY_BUFFER, vbo)
 ├─ 5. glBufferData(GL_ARRAY_BUFFER, ...) ← 정점 데이터 업로드
 │
@@ -283,7 +283,7 @@ camera.SetPosition(vec3(cos(t) * radius, height, sin(t) * radius));
 ├─ 8. glVertexAttribPointer(1, ...) ← "attribute 1은 이 VBO에서 이렇게 읽어라"
 ├─ 9. glEnableVertexAttribArray(1)
 │
-├─ (선택) 10. glGenBuffers → EBO 생성
+├─ (선택) 10. glGenBuffers -> EBO 생성
 ├─ (선택) 11. glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
 ├─ (선택) 12. glBufferData(GL_ELEMENT_ARRAY_BUFFER, ...) ← 인덱스 업로드
 │
@@ -313,7 +313,7 @@ VBO 데이터: [v0, v1, v2, v3, v4, v5, v0, v2, v3, ...]  ← 정점 중복 발�
                  △1         △2         △3
 
 glDrawArrays(GL_TRIANGLES, 0, 36);
-→ VBO 인덱스 0부터 순서대로 3개씩 묶어서 삼각형
+-> VBO 인덱스 0부터 순서대로 3개씩 묶어서 삼각형
 ```
 
 | 장점 | 단점 |
@@ -328,13 +328,13 @@ VBO 데이터: [v0, v1, v2, v3, v4, v5, v6, v7]  ← 고유 정점만
 EBO 데이터: [0,3,2, 0,2,1, 5,6,7, 5,7,4, ...]  ← 삼각형 조합
 
 glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-→ EBO에서 인덱스 읽기 → 해당 VBO 정점으로 삼각형 구성
+-> EBO에서 인덱스 읽기 -> 해당 VBO 정점으로 삼각형 구성
 ```
 
 | 장점 | 단점 |
 |------|------|
 | 정점 재사용으로 메모리 절약 | EBO 추가 관리 필요 |
-| GPU 캐시 효율 (동일 정점 재계산 안 함) | 면별 색상/법선 시 정점 분리 필요 (8→24개) |
+| GPU 캐시 효율 (동일 정점 재계산 안 함) | 면별 색상/법선 시 정점 분리 필요 (8->24개) |
 
 ### 큐브 기준 메모리 비교
 
@@ -363,7 +363,7 @@ glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
 ## Priority 1: 실행 자체가 안 되는 치명적 실수
 
-### 1-1. 베이스 클래스 생성자에서 가상함수 호출 → `Pure virtual function called!`
+### 1-1. 베이스 클래스 생성자에서 가상함수 호출 -> `Pure virtual function called!`
 
 ```cpp
 // ❌ 베이스 생성자가 build()를 호출, build()가 순수가상 initModelData()를 호출
@@ -372,7 +372,7 @@ class ModelBase {
     virtual void build() {
         glGenVertexArrays(1, &mVAOAddr);
         glBindVertexArray(mVAOAddr);
-        initModelData();   // ← 베이스 생성자 시점에는 베이스 vtable이 디스패치됨 → abort
+        initModelData();   // ← 베이스 생성자 시점에는 베이스 vtable이 디스패치됨 -> abort
     }
 public:
     ModelBase() { build(); }   // ← 여기가 문제
@@ -405,10 +405,10 @@ static std::unique_ptr<PlaneModel> Create() {
 
 ---
 
-### 1-2. 멤버 변수 미초기화 → 가비지 행렬
+### 1-2. 멤버 변수 미초기화 -> 가비지 행렬
 
 ```cpp
-// ❌ TRS 벡터를 초기화하지 않음 → GetModelMatrix()가 가비지 값으로 곱셈
+// ❌ TRS 벡터를 초기화하지 않음 -> GetModelMatrix()가 가비지 값으로 곱셈
 class ModelBase {
     vmath::vec4 mTranslateVec;     // ← 미초기화
     vmath::vec4 mEulerRotateVec;   // ← 미초기화
@@ -497,7 +497,7 @@ void render(double currentTime) {
         prog->UseProgram();
         for (const auto& model : prog->GetModels())
             glUniformMatrix4fv(modelLoc, 1, false, model->GetModelMatrix());
-        // ← glDrawElements / glDrawArrays 없음 → 아무것도 안 그려짐
+        // ← glDrawElements / glDrawArrays 없음 -> 아무것도 안 그려짐
     }
 }
 
@@ -516,7 +516,7 @@ void render(double currentTime) {
 }
 ```
 
-**핵심**: 렌더 한 프레임의 최소 단위는 **(program 사용) → (uniform set) → (VAO 바인딩) → (draw call)**. 어느 하나라도 빠지면 화면에 안 나온다.
+**핵심**: 렌더 한 프레임의 최소 단위는 **(program 사용) -> (uniform set) -> (VAO 바인딩) -> (draw call)**. 어느 하나라도 빠지면 화면에 안 나온다.
 
 **체크리스트**:
 - [ ] `glUseProgram` 호출했나?
@@ -528,7 +528,7 @@ void render(double currentTime) {
 ### 2-2. depth buffer clear 누락
 
 ```cpp
-// ❌ color만 clear → depth는 이전 프레임 값이 남아 새 도형이 가려짐
+// ❌ color만 clear -> depth는 이전 프레임 값이 남아 새 도형이 가려짐
 const GLfloat backgroundColor[4] = {0, 0, 0, 1};
 glClearBufferfv(GL_COLOR, 0, backgroundColor);
 
@@ -545,7 +545,7 @@ glClearBufferfv(GL_DEPTH, 0, &one);
 ### 2-3. `glEnable(GL_DEPTH_TEST)` 누락
 
 ```cpp
-// ❌ depth test 활성화 안 함 → 뒤에 있는 도형이 앞 도형을 덮어씀
+// ❌ depth test 활성화 안 함 -> 뒤에 있는 도형이 앞 도형을 덮어씀
 void startup() override {
     programs.push_back(std::make_unique<Program::ProgramBase>());
     /* ... */
@@ -604,7 +604,7 @@ vmath::mat4 GetViewMatrix() const {
 }
 ```
 
-**핵심**: `lookat(eye, target, up)`은 이미 **월드 → 카메라 좌표계 변환 행렬(view matrix)**을 반환한다. 추가로 카메라의 위치/회전을 곱하면 변환이 두 번 적용된다.
+**핵심**: `lookat(eye, target, up)`은 이미 **월드 -> 카메라 좌표계 변환 행렬(view matrix)**을 반환한다. 추가로 카메라의 위치/회전을 곱하면 변환이 두 번 적용된다.
 
 **원칙**: View 행렬은 "카메라가 월드 원점에 있는 것처럼" 만드는 역변환이다. 카메라 위치는 `lookat`의 첫 인자(`eye`)에 이미 들어 있다.
 
@@ -654,13 +654,13 @@ vmath::mat4 GetModelMatrix() {
     return identity * scaleMat * xRot * yRot * zRot * translateMat;
 }
 
-// ✅ 표준: T × R × S (정점 v 입장에서 S → R → T 순으로 적용됨)
+// ✅ 표준: T × R × S (정점 v 입장에서 S -> R -> T 순으로 적용됨)
 vmath::mat4 GetModelMatrix() {
     return translateMat * (xRot * yRot * zRot) * scaleMat;
 }
 ```
 
-**핵심**: column-major(OpenGL 기본)에서는 `M × v`로 곱하므로, 행렬은 **오른쪽이 먼저** 적용된다. `T × R × S × v`는 v를 먼저 scale → rotate → translate한다.
+**핵심**: column-major(OpenGL 기본)에서는 `M × v`로 곱하므로, 행렬은 **오른쪽이 먼저** 적용된다. `T × R × S × v`는 v를 먼저 scale -> rotate -> translate한다.
 
 **잘못된 순서의 결과**: translate가 먼저 적용된 후 회전이 오면, 회전의 중심이 원점이 아니라 변환된 위치 기준이 되어 모델이 큰 원을 그리며 움직인다.
 
@@ -670,7 +670,7 @@ vmath::mat4 GetModelMatrix() {
 
 ## Priority 4: 도형 / 코드 정합성 실수
 
-### 4-1. 정점 D가 C와 동일 → 사각형이 삼각형 둘로 겹침
+### 4-1. 정점 D가 C와 동일 -> 사각형이 삼각형 둘로 겹침
 
 ```cpp
 // ❌ C와 D가 동일 정점 [1][1]
@@ -702,7 +702,7 @@ for (const auto& model : prog->GetModels())
 for (const auto& model : prog->GetModels())
     glUniformMatrix4fv(projLoc, 1, false, camera.GetProjectionMatrix(w, h));
 
-// ✅ view/proj는 모델 무관 → 루프 밖, model만 루프 안
+// ✅ view/proj는 모델 무관 -> 루프 밖, model만 루프 안
 glUniformMatrix4fv(viewLoc, 1, false, camera.GetViewMatrix());
 glUniformMatrix4fv(projLoc, 1, false, camera.GetProjectionMatrix(w, h));
 for (const auto& model : prog->GetModels()) {
@@ -922,7 +922,7 @@ public:
 
 ---
 
-### 🔴 R-1. [REPEATED] `mScale` 초기화 누락 → 모델이 한 점으로 찌부러짐
+### 🔴 R-1. [REPEATED] `mScale` 초기화 누락 -> 모델이 한 점으로 찌부러짐
 
 **이전 경고**: Chapter7 Priority 1-2 — "scale=0이면 모델이 한 점으로 찌부러진다"
 **이번 재현**: [apps/exercise6/main.cpp](apps/exercise6/main.cpp) 의 `ModelBase` 에 `vec3 mScale;` 로만 선언, 초기화 없음.
@@ -938,7 +938,7 @@ public:
 
 // GetModelMatrix() 안에서:
 vmath::scale<float>(mScale);   // scale(0,0,0) = 0 행렬
-// → 모든 정점이 원점으로 찌그러짐 → 1픽셀 도트 → 시각적으로 "안 보임"
+// -> 모든 정점이 원점으로 찌그러짐 -> 1픽셀 도트 -> 시각적으로 "안 보임"
 
 // ✅ 기본값 명시
 class ModelBase {
@@ -976,7 +976,7 @@ glBufferData(GL_ELEMENT_ARRAY_BUFFER,
              GL_STATIC_DRAW);
 ```
 
-**증상**: `glDrawElements` 가 float bit pattern 을 GLuint 인덱스로 해석 → 엄청나게 큰 값 → VBO 범위 밖 접근 → **화면에 아무것도 안 나옴**. GL 에러도 조용함.
+**증상**: `glDrawElements` 가 float bit pattern 을 GLuint 인덱스로 해석 -> 엄청나게 큰 값 -> VBO 범위 밖 접근 -> **화면에 아무것도 안 나옴**. GL 에러도 조용함.
 
 **왜 반복했나**: Chapter7 노트는 `sizeof(GLfloat)` vs `sizeof(GLuint)` 에 초점이 있었는데, 이번엔 **완전히 다른 vector (mBufferData)** 를 넘긴 수준이라 "같은 실수" 라고 인지하지 못했다. 본질은 같다: **EBO 에는 인덱스를, VBO 에는 vertex 를** 넣어야 한다.
 
@@ -1019,7 +1019,7 @@ constexpr int POS_OFFSET   = 0;
 constexpr int COLOR_OFFSET = POS_OFFSET + VERTEX_POSITION_SIZE;   // 4
 constexpr int UV_OFFSET    = COLOR_OFFSET + VERTEX_COLOR_SIZE;    // 8
 constexpr int VERTEX_LEN   = UV_OFFSET + VERTEX_UV_SIZE;          // 10
-// → glVertexAttribPointer(..., (void*)(UV_OFFSET * sizeof(GLfloat)));
+// -> glVertexAttribPointer(..., (void*)(UV_OFFSET * sizeof(GLfloat)));
 ```
 
 ---
@@ -1048,24 +1048,24 @@ in VS_OUT {
 
 **핵심**: interface block 키워드는 stage 방향을 나타낸다. VS 에서 `out VS_OUT`, FS 에서 `in VS_OUT` — 블록 이름(`VS_OUT`)은 같아야 link 되지만, 인스턴스명(`vs_out` / `fs_in`)은 달라도 된다.
 
-**증상**: FS 가 "출력 블록" 을 선언한 꼴이 돼서 `fs_in.vsColor` 를 읽으면 초기화 안 된 output 을 읽는 셈. 대부분 드라이버는 0 을 반환 → 모든 픽셀 검정. BG 도 검정이면 "아무것도 안 보임".
+**증상**: FS 가 "출력 블록" 을 선언한 꼴이 돼서 `fs_in.vsColor` 를 읽으면 초기화 안 된 output 을 읽는 셈. 대부분 드라이버는 0 을 반환 -> 모든 픽셀 검정. BG 도 검정이면 "아무것도 안 보임".
 
 **판별법**: FS 에서 블록을 읽고 있는데 결과가 검정이라면 `in`/`out` 키워드부터 확인.
 
 ---
 
-### 1-2. GL 객체를 "값 멤버" 로 보유 → 생성자 순서 함정
+### 1-2. GL 객체를 "값 멤버" 로 보유 -> 생성자 순서 함정
 
 ```cpp
 // ❌ ProgramBase 가 glCreateProgram 을 호출하는데, 이게 MyApplication 의 값 멤버
 class MyApplication : public sb7::application {
     ProgramBase program;   // ← MyApplication 생성 시 default-construct
     // ↓
-    // 1. new MyApplication() 실행 → member "program" default construct
-    // 2. ProgramBase() → glCreateProgram() 호출
-    // 3. 하지만 이 시점엔 아직 GLFW 초기화 전 → GL 컨텍스트 없음
+    // 1. new MyApplication() 실행 -> member "program" default construct
+    // 2. ProgramBase() -> glCreateProgram() 호출
+    // 3. 하지만 이 시점엔 아직 GLFW 초기화 전 -> GL 컨텍스트 없음
     // 4. glCreateProgram 은 함수 포인터 변수 (gl3w 로더) 인데 아직 load 안 됨
-    // 5. null pointer dereference → SEGV
+    // 5. null pointer dereference -> SEGV
 };
 
 // ✅ unique_ptr 로 지연 생성
@@ -1079,13 +1079,13 @@ class MyApplication : public sb7::application {
 };
 ```
 
-**핵심**: sb7 의 실행 흐름은 `main() → new MyApplication → run() → startup() → render()` 순. **멤버 객체의 생성자는 `new MyApplication` 시점** 에 실행되므로 `startup()` 이전이다. GL 호출이 있는 생성자는 이 시점에 부를 수 없다.
+**핵심**: sb7 의 실행 흐름은 `main() -> new MyApplication -> run() -> startup() -> render()` 순. **멤버 객체의 생성자는 `new MyApplication` 시점** 에 실행되므로 `startup()` 이전이다. GL 호출이 있는 생성자는 이 시점에 부를 수 없다.
 
 **원칙**: GL 리소스를 다루는 객체는 **`unique_ptr` 로 감싸서 `startup()` 안에서 생성**. Chapter7 / exercise6 에서 쓰는 표준 패턴.
 
 ---
 
-### 1-3. `vector<ModelBase>` 에 값 타입 push → GL 핸들 dangling
+### 1-3. `vector<ModelBase>` 에 값 타입 push -> GL 핸들 dangling
 
 ```cpp
 // ❌ ModelBase 가 소멸자에서 glDelete* 를 호출하는데 복사 금지 선언이 없음
@@ -1102,8 +1102,8 @@ vector<ModelBase> models;
 auto model = ModelBase();
 model.Build(vertices);       // VAO=7, VBO=3, EBO=4 할당
 models.push_back(model);     // 암묵적 복사 — models[0]: VAO=7, VBO=3, EBO=4
-// startup() 끝 → 지역 model 소멸 → VAO 7 파괴
-// render() 에서 models[0].Draw() → glBindVertexArray(7) = 이미 파괴된 핸들 → 드로우 실패
+// startup() 끝 -> 지역 model 소멸 -> VAO 7 파괴
+// render() 에서 models[0].Draw() -> glBindVertexArray(7) = 이미 파괴된 핸들 -> 드로우 실패
 
 // ✅ unique_ptr 로 감싸기 (가장 깨끗)
 vector<unique_ptr<ModelBase>> models;
@@ -1123,7 +1123,7 @@ models.push_back(std::move(model));   // unique_ptr 이동, ModelBase 자체는 
 
 ---
 
-### 1-4. 빈 `std::vector` 에 `operator[]` 접근 → UB → SEGV
+### 1-4. 빈 `std::vector` 에 `operator[]` 접근 -> UB -> SEGV
 
 ```cpp
 // ❌ AddTexture 를 호출하지 않은 상태에서 Draw 진입
@@ -1150,13 +1150,13 @@ void Draw() {
 
 **핵심**: `std::vector::operator[]` 는 **bounds check 가 없다**. 빈 vector 를 `[0]` 으로 접근하면 정의되지 않은 메모리를 읽는 것. macOS debug 빌드에선 즉시 SEGV.
 
-**이번 경로**: `exercise_6` (underscore) 에서 `exercise6` 으로 파일을 분기할 때 `startup()` 의 `AddTexture` 호출 7개가 따라오지 않음 → `mTextureAddrs` 비어있음 → Draw 에서 SEGV.
+**이번 경로**: `exercise_6` (underscore) 에서 `exercise6` 으로 파일을 분기할 때 `startup()` 의 `AddTexture` 호출 7개가 따라오지 않음 -> `mTextureAddrs` 비어있음 -> Draw 에서 SEGV.
 
 **원칙**: `Draw` 와 `AddTexture` 사이의 "이만큼 호출해야 한다" 라는 암묵적 계약은 **호출자 한 곳만 실수해도 크래시**로 이어진다. 방어 코드를 넣거나 `Build()` 안에서 텍스처 슬롯을 강제 할당하도록 API 를 바꾼다.
 
 ---
 
-### 1-5. GLSL 에서 bool 에 bitwise OR (`|`) 사용 → 셰이더 컴파일 실패
+### 1-5. GLSL 에서 bool 에 bitwise OR (`|`) 사용 -> 셰이더 컴파일 실패
 
 ```glsl
 // ❌ GLSL 에서 | 는 정수 비트연산자 — bool 에 쓸 수 없음
@@ -1169,11 +1169,11 @@ if (tex1.x < 0.9 || tex1.y < 0.9 || tex1.z < 0.9) { /* ... */ }
 **핵심**: C/C++ 과 달리 GLSL 은 엄격하다. `|` 는 **정수 비트연산 전용**, bool 에는 `||` 만 허용.
 
 **발생 체인**:
-1. FS 컴파일 실패 → `sb7::shader::load` 가 0 반환
+1. FS 컴파일 실패 -> `sb7::shader::load` 가 0 반환
 2. `createShader` 가 `check_errors=false` 라 **조용히** 0 핸들 반환
-3. `glAttachShader(prog, 0)` → 링크 실패 (역시 조용히)
-4. `glUseProgram(prog)` → invalid program 활성화
-5. 모든 draw call drop → 화면에 아무것도 없음
+3. `glAttachShader(prog, 0)` -> 링크 실패 (역시 조용히)
+4. `glUseProgram(prog)` -> invalid program 활성화
+5. 모든 draw call drop -> 화면에 아무것도 없음
 
 **이번 함정**: 같은 FS 파일에서 텍스처 샘플링 블록을 주석 처리했다가 **나중에 다시 주석 해제** 하면서 `|` 버그가 부활. 해당 블록이 주석 처리됐을 때는 컴파일러가 그 줄을 보지 않아 정상 동작하던 것. "이전에 되던 코드를 되살렸는데 안 됨" 상황 = 주석 영역 안의 구문 오류를 의심.
 
@@ -1197,13 +1197,13 @@ GLuint createShader(GLenum shader_type, const char *shader_path) {
 ### 2-1. Texture 교체 루프 바깥에 draw call
 
 ```cpp
-// ❌ 루프 안에서 6번 텍스처 교체 → 루프 밖에서 1번 draw
+// ❌ 루프 안에서 6번 텍스처 교체 -> 루프 밖에서 1번 draw
 for (int f = 0; f < 6; f++) {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, faceTextures[f]);
 }
 glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-// → 마지막에 바인딩된 6번째 텍스처로 36정점 전부 그려짐
+// -> 마지막에 바인딩된 6번째 텍스처로 36정점 전부 그려짐
 
 // ✅ 각 면을 자기 텍스처와 묶어서 draw 를 루프 안으로
 for (int f = 0; f < 6; f++) {
@@ -1220,10 +1220,10 @@ for (int f = 0; f < 6; f++) {
 
 ---
 
-### 2-2. Face index 의 winding 일관성 결여 → 텍스처 X축 mirror
+### 2-2. Face index 의 winding 일관성 결여 -> 텍스처 X축 mirror
 
 ```cpp
-// ❌ 각 면이 제각각의 "시작 코너" 에서 시작 → UV 가 어떤 면은 정상, 어떤 면은 mirror
+// ❌ 각 면이 제각각의 "시작 코너" 에서 시작 -> UV 가 어떤 면은 정상, 어떤 면은 mirror
 static const std::vector<GLuint> CUBE_FACE_INDICES[6] = {
     {0, 1, 5, 0, 5, 4},  // -Z (BR 시작)
     {1, 2, 6, 1, 6, 5},  // +X (BR 시작)
@@ -1274,7 +1274,7 @@ colors = tex1;   // ← 모든 면이 side1.jpg 만 보임
 
 ### 2-4. UV attribute size 4 로 읽기
 
-→ R-3 참조 (재발한 실수).
+-> R-3 참조 (재발한 실수).
 
 ---
 
@@ -1332,19 +1332,19 @@ static const char *TEXTURE_SIDES[6] = {
 
 ### 3-3. Shader 컴파일 에러 무음
 
-→ 1-5 참조. `createShader(..., true)` 로 `check_errors` 활성화.
+-> 1-5 참조. `createShader(..., true)` 로 `check_errors` 활성화.
 
 ---
 
 ### 3-4. Draw 와 AddTexture 간 암묵적 크기 계약
 
-→ 1-4 참조. 빈 vector `[0]` 접근은 UB.
+-> 1-4 참조. 빈 vector `[0]` 접근은 UB.
 
 ---
 
 ### 3-5. "복사-붙여넣기 후 부분 누락" 패턴
 
-`exercise_6` → `exercise6` 로 파일을 복제했을 때 **`startup()` 의 AddTexture 호출 7개가 따라오지 않아** 크래시. 같은 프로젝트의 Chapter6 노트 4-1 ("복사-붙여넣기 후 정점 인덱스 누락"), Chapter7 2-4 ("for-each 안 `programs.back()`") 와 **동일 계열 실수**.
+`exercise_6` -> `exercise6` 로 파일을 복제했을 때 **`startup()` 의 AddTexture 호출 7개가 따라오지 않아** 크래시. 같은 프로젝트의 Chapter6 노트 4-1 ("복사-붙여넣기 후 정점 인덱스 누락"), Chapter7 2-4 ("for-each 안 `programs.back()`") 와 **동일 계열 실수**.
 
 **원칙**: 파일/블록을 복제할 때는 **diff** 를 먼저 떠서 양쪽이 정확히 무엇이 다른지 확인한다. "뭔가 복사했는데 실행이 안 된다" 면 가장 먼저 누락된 호출/선언을 찾는다.
 
@@ -1425,10 +1425,10 @@ float angle = static_cast<float>(currentTime) * 90.0f;   // 초당 90도
 
 ## 🚨 또 재발한 실수 (Exercise6 원본 노트 참조)
 
-### 🔴 R-4. [REPEATED] 빈/부족한 vector 에 `operator[]` 접근 → UB
+### 🔴 R-4. [REPEATED] 빈/부족한 vector 에 `operator[]` 접근 -> UB
 
-**이전 경고**: Exercise6 Priority 1-4 ("빈 vector operator[] → UB → SEGV")
-**이번 재현**: Disk 쪽 작업 중, `Draw()` 가 **큐브 전용 하드코딩** 상태였던 탓에 `mTextureAddrs[1 + f]` (f=0..5) 로 접근. 그런데 Disk 는 `AddTexture(TEXTURE_CONTAINER)` 를 **한 번만** 호출해서 `size()==1` → `[1]`, `[2]`, … 접근이 **out-of-bounds UB**.
+**이전 경고**: Exercise6 Priority 1-4 ("빈 vector operator[] -> UB -> SEGV")
+**이번 재현**: Disk 쪽 작업 중, `Draw()` 가 **큐브 전용 하드코딩** 상태였던 탓에 `mTextureAddrs[1 + f]` (f=0..5) 로 접근. 그런데 Disk 는 `AddTexture(TEXTURE_CONTAINER)` 를 **한 번만** 호출해서 `size()==1` -> `[1]`, `[2]`, … 접근이 **out-of-bounds UB**.
 
 ```cpp
 // ❌ Draw() 안
@@ -1444,7 +1444,7 @@ for (int f = 0; f < 6; f++)
 
 ## Priority 1: 치명적 실수
 
-### 1-6. [NEW] `glUniform*` 함수와 쉐이더 타입 불일치 → 조용히 거절 🔴
+### 1-6. [NEW] `glUniform*` 함수와 쉐이더 타입 불일치 -> 조용히 거절 🔴
 
 ```cpp
 // ❌ vec2 uniform 을 mat4 용 함수로 업로드
@@ -1457,14 +1457,14 @@ glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET), 1, mUVOffset);
 
 **발생 체인**:
 1. `glUniformMatrix4fv` 는 **16 float (64 bytes)** 을 읽으려고 함
-2. `mUVOffset` 은 **vec2, 8 bytes** 뿐 → 나머지 56 bytes 는 스택의 쓰레기 메모리
-3. 드라이버는 "uniform 타입 vec2 인데 mat4 로 업로드? 타입 불일치" → **`GL_INVALID_OPERATION` 조용히 반환**
+2. `mUVOffset` 은 **vec2, 8 bytes** 뿐 -> 나머지 56 bytes 는 스택의 쓰레기 메모리
+3. 드라이버는 "uniform 타입 vec2 인데 mat4 로 업로드? 타입 불일치" -> **`GL_INVALID_OPERATION` 조용히 반환**
 4. 셰이더의 `uniform vec2 uvOffset` / `uvRatio` 가 **영원히 기본값 (0, 0)** 에 머무름
 
 **2차 증상**:
 - VS 에서 `vec2 rUv = vec2(uvCoords.x * uvRatio.x, uvCoords.y * uvRatio.y) = (0, 0)` — 모든 정점 UV 가 (0,0)
-- FS 에서 `texture(tex1, (0, 0))` — 텍스처의 **단 한 픽셀만 샘플링** → 디스크 전체가 **단색**
-- 매 프레임 `mUVOffset = vec2(currentTime, 1.0)` 으로 바꿔도 uniform 업로드 자체가 실패 → **애니메이션 무반응**
+- FS 에서 `texture(tex1, (0, 0))` — 텍스처의 **단 한 픽셀만 샘플링** -> 디스크 전체가 **단색**
+- 매 프레임 `mUVOffset = vec2(currentTime, 1.0)` 으로 바꿔도 uniform 업로드 자체가 실패 -> **애니메이션 무반응**
 
 **이번 함정**: 행렬을 mat4 로 다루는 데 익숙해져서 "uniform 넘길 때는 `glUniformMatrix4fv` 쓰면 된다" 는 잘못된 패턴이 손에 배어버림. 실제로는 **uniform 함수가 쉐이더 타입과 1:1 매칭** 되어야 한다.
 
@@ -1482,16 +1482,16 @@ glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET), 1, mUVOffset);
 
 **특히 주의**: `sampler2D` 는 정수 unit 번호로 지정. `glUniform1f` 로 소수점 넘기면 똑같이 조용히 거절. 반드시 `glUniform1i(loc, texture_unit_index)`.
 
-**판별법**: "CPU 에선 uniform 을 매 프레임 바꾸는데 셰이더에 반영이 안 됨" → 가장 먼저 `glUniform*` 함수 이름부터 확인. `glGetError()` 를 draw 직후에 한 번 호출해보는 것도 빠른 진단.
+**판별법**: "CPU 에선 uniform 을 매 프레임 바꾸는데 셰이더에 반영이 안 됨" -> 가장 먼저 `glUniform*` 함수 이름부터 확인. `glGetError()` 를 draw 직후에 한 번 호출해보는 것도 빠른 진단.
 
 ---
 
 ## Priority 2: 렌더는 되지만 결과가 엉뚱한 실수
 
-### 2-5. [NEW] 파라메트릭 서피스의 누적 변수 스코프 오류 → 아르키메데스 나선 🔴
+### 2-5. [NEW] 파라메트릭 서피스의 누적 변수 스코프 오류 -> 아르키메데스 나선 🔴
 
 ```cpp
-// ❌ currentRad 가 col 루프 안에서 누적 → 정점마다 반지름 증가
+// ❌ currentRad 가 col 루프 안에서 누적 -> 정점마다 반지름 증가
 double currentRad = vs;
 double currentAngle = us;
 for (int row = 0; row < numRows; row++) {
@@ -1512,9 +1512,9 @@ for (int row = 0; row < numRows; row++) {
 | 16  | 17        | 3.14         |
 | 32  | 33        | 6.28         |
 
-→ 반지름이 1 → 33 으로 **선형 증가** 하면서 각도도 한 바퀴 회전 = **아르키메데스 나선**. 육안으로 "점점 커지는 칼날 형태" 로 보임.
+-> 반지름이 1 -> 33 으로 **선형 증가** 하면서 각도도 한 바퀴 회전 = **아르키메데스 나선**. 육안으로 "점점 커지는 칼날 형태" 로 보임.
 
-또한 `currentRad`/`currentAngle` 이 **row 간에도 reset 되지 않음** → row 0 끝 지점 값부터 이어서 계속 증가 → row 0 과 row 1 이 전혀 다른 궤적.
+또한 `currentRad`/`currentAngle` 이 **row 간에도 reset 되지 않음** -> row 0 끝 지점 값부터 이어서 계속 증가 -> row 0 과 row 1 이 전혀 다른 궤적.
 
 ```cpp
 // ✅ 누적 대신 인덱스로 직접 계산
@@ -1529,11 +1529,11 @@ for (int row = 0; row < numRows; row++) {
 
 **원칙**: **중첩 루프에서 누적 증분은 위험**. 각 축이 독립적이어야 하는 파라메트릭 표면에서는 `index × delta + start` **공식으로 직접 계산** 이 훨씬 안전. 누적 방식의 유일한 장점은 연속 증분 시 성능이지만, 정점 생성은 frame 당 한 번이라 성능 이점이 무의미.
 
-**판별법**: "내가 파라메트릭으로 만든 곡면이 나선/칼날 모양이 되면" → 누적 변수의 스코프 먼저 확인. 특히 outer loop 의 누적이 inner loop 에 들어가 있는지.
+**판별법**: "내가 파라메트릭으로 만든 곡면이 나선/칼날 모양이 되면" -> 누적 변수의 스코프 먼저 확인. 특히 outer loop 의 누적이 inner loop 에 들어가 있는지.
 
 ---
 
-### 2-6. [NEW] Per-quad 색 할당 → 부드러운 그라데이션 불가능
+### 2-6. [NEW] Per-quad 색 할당 -> 부드러운 그라데이션 불가능
 
 ```cpp
 // ❌ quad 하나당 색 하나 — 4 정점에 같은 값 주입
@@ -1559,9 +1559,9 @@ for (...) for (int idx : indices)
 
 **핵심**: GPU rasterizer 는 **삼각형의 정점 속성을 자동으로 barycentric 보간** 함. CPU 에서 직접 색을 보간하지 말고 **정점에만 값을 주면 된다**. Per-quad 색 할당은 GPU 의 핵심 기능을 포기하는 꼴.
 
-**증상 예시**: `vRes=1, row` 루프가 `row < vRes=1` 이라 **row=0 만 실행** → `adjV=0` 고정 → `interp = (1-0)*u2Color + 0*u1Color = u2Color` → 모든 quad 가 u2Color 한 색으로만 보임. 안쪽 파랑/바깥쪽 빨강 그라데이션을 의도해도 바깥쪽은 절대 나오지 못함.
+**증상 예시**: `vRes=1, row` 루프가 `row < vRes=1` 이라 **row=0 만 실행** -> `adjV=0` 고정 -> `interp = (1-0)*u2Color + 0*u1Color = u2Color` -> 모든 quad 가 u2Color 한 색으로만 보임. 안쪽 파랑/바깥쪽 빨강 그라데이션을 의도해도 바깥쪽은 절대 나오지 못함.
 
-**판별법**: "bilinear lerp 코드는 있는데 결과가 단색이거나 블로키" → per-quad 계산인지 확인. 색은 **반드시 per-vertex**.
+**판별법**: "bilinear lerp 코드는 있는데 결과가 단색이거나 블로키" -> per-quad 계산인지 확인. 색은 **반드시 per-vertex**.
 
 **보너스**: RGB 공간 4 코너의 bilinear lerp 로는 **무지개 (hue 원)** 를 표현할 수 없다. 무지개가 필요하면:
 - HSV/HSL 의 H 축을 직접 파라미터화 후 RGB 로 변환
@@ -1569,7 +1569,7 @@ for (...) for (int idx : indices)
 
 ---
 
-### 2-7. [NEW] `Draw()` 에 특정 메쉬의 상수 하드코딩 → 범용성 파괴
+### 2-7. [NEW] `Draw()` 에 특정 메쉬의 상수 하드코딩 -> 범용성 파괴
 
 ```cpp
 // ❌ "큐브 = 6면 × 6 인덱스 = 36" 이 Draw 에 하드코딩
@@ -1597,7 +1597,7 @@ void Draw(GLuint prog_addr) {
 
 **단일 책임 원칙**:
 - "큐브 면별 텍스처" 같은 특수 기능은 서브클래스 / sub-mesh 리스트 / 별도 Model 로 분리
-- 범용 `Draw()` 는 "VAO 바인딩 → uniform → `glDrawElements(mIndexCount)`" 만 해야 함
+- 범용 `Draw()` 는 "VAO 바인딩 -> uniform -> `glDrawElements(mIndexCount)`" 만 해야 함
 
 **판별법**: 다른 메쉬를 넣었는데 **부분만 그려짐** = `Draw()` 의 인덱스 카운트가 mesh 에 맞춰 계산되는지 확인.
 
@@ -1614,8 +1614,8 @@ float adjU = (float)col / numCols;
 float adjV = (float)row / numRows;
 
 // ✅ [0, 1] 풀 범위
-float adjU = (float)col / uRes;    // col ∈ [0, uRes] → adjU ∈ [0, 1]
-float adjV = (float)row / vRes;    // row ∈ [0, vRes] → adjV ∈ [0, 1]
+float adjU = (float)col / uRes;    // col ∈ [0, uRes] -> adjU ∈ [0, 1]
+float adjV = (float)row / vRes;    // row ∈ [0, vRes] -> adjV ∈ [0, 1]
 ```
 
 **영향**: `vRes=1` 일 때:
@@ -1641,9 +1641,9 @@ float adjV = (float)row / vRes;    // row ∈ [0, vRes] → adjV ∈ [0, 1]
 
 ```
 OpenGL Context State
-├── Texture Unit 0  →  [ 무엇이 꽂혀있음 ]   ← glBindTexture 전까지 유지
-├── Texture Unit 1  →  [ 무엇이 꽂혀있음 ]
-├── Texture Unit 2  →  [ 무엇이 꽂혀있음 ]
+├── Texture Unit 0  ->  [ 무엇이 꽂혀있음 ]   ← glBindTexture 전까지 유지
+├── Texture Unit 1  ->  [ 무엇이 꽂혀있음 ]
+├── Texture Unit 2  ->  [ 무엇이 꽂혀있음 ]
 ├── ...
 ```
 
@@ -1714,7 +1714,7 @@ void main() {
 
 이 상태에서 CPU 가 아무리 열심히 `glBindTexture(GL_TEXTURE1, ...)` 를 루프에서 돌려도, **FS 는 tex2 를 안 읽으므로 모든 면이 tex1 (container) 만으로 그려짐**. Draw call 수·텍스처 바인딩 수와 실제 화면은 별개.
 
-**판별법**: "루프에서 분명히 텍스처를 바꾸는데 면이 전부 같은 이미지로 보임" → FS 가 해당 sampler 를 실제로 사용하는지 확인.
+**판별법**: "루프에서 분명히 텍스처를 바꾸는데 면이 전부 같은 이미지로 보임" -> FS 가 해당 sampler 를 실제로 사용하는지 확인.
 
 ### 원칙 정리
 
@@ -1753,7 +1753,7 @@ glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxUnits);
 ```
 60 FPS = 16.67 ms / frame
 draw call 1회 ≈ 5~50 μs  (드라이버 호출 + state 검증)
-100,000 draws × 20 μs = 2000 ms = 2 초 → 0.5 FPS ❌
+100,000 draws × 20 μs = 2000 ms = 2 초 -> 0.5 FPS ❌
 ```
 
 **현실 예산** (프레임당 draw call):
@@ -1822,10 +1822,10 @@ draw call 1회 ≈ 5~50 μs  (드라이버 호출 + state 검증)
 ### 원칙 정리 (보강)
 
 6. **"몇 개를 그릴 수 있나" 질문은 세분화 필요**:
-   - 한 shader invocation 당 → 10~192 (하드웨어 상한)
-   - 한 frame 당 고유 텍스처 → 수천~수만 (VRAM + draw call 예산)
-   - 월드 전체 존재량 → 수십만~백만 (디스크 + 스트리밍)
-   - VRAM 상주량 → 수천~수만 (용량 제약)
+   - 한 shader invocation 당 -> 10~192 (하드웨어 상한)
+   - 한 frame 당 고유 텍스처 -> 수천~수만 (VRAM + draw call 예산)
+   - 월드 전체 존재량 -> 수십만~백만 (디스크 + 스트리밍)
+   - VRAM 상주량 -> 수천~수만 (용량 제약)
 7. **규모가 커지면 "bind 를 빠르게 바꾸기" 가 아니라 "bind 횟수 자체를 줄이는 기법"** 으로 전환해야 함. Texture Array, Atlas, Bindless 가 그 관문.
 8. **"시분할" 은 수십~수백 개까지만 실용적**. 수천 개 이상은 집합화, 수만 개 이상은 가상화/스트리밍이 아니면 프레임이 통째로 날아감.
 
@@ -1845,7 +1845,7 @@ draw call 1회 ≈ 5~50 μs  (드라이버 호출 + state 검증)
 | `mat * vec` | ❌ | — | **컴파일 에러** |
 | `vec * mat` | ✅ | **Row vector convention** | 수학적으로 **`M^T · v`** |
 
-→ `mat * mat` 은 GLSL 과 똑같지만, `vec * mat` 만 row 컨벤션이라 결과가 **transpose 된 변환** 이 적용됨.
+-> `mat * mat` 은 GLSL 과 똑같지만, `vec * mat` 만 row 컨벤션이라 결과가 **transpose 된 변환** 이 적용됨.
 
 ### 검증 — 구체 예시
 
@@ -1871,14 +1871,14 @@ R = ┌  0  0  1  0 ┐
 vmath 의 헬퍼 (`vmath::rotate`, `vmath::translate`, `vmath::scale`) 는 **GLSL 호환 column-major 행렬** 을 생성. 그래서 GLSL 에 업로드해서 `mat * vec` 으로 쓰면 정상.
 
 하지만 vmath 의 C++ `operator*` 는 [vmath.h:1235](include/vmath.h#L1235) 에 **`vec * mat` 만** 정의돼 있고, 그 구현이 row vector 컨벤션 (`v^T · M`). 결과적으로:
-- 같은 행렬이 GLSL 에선 `M·v`, vmath C++ 에선 `M^T·v` 로 동작 → **부호/방향이 반대**.
+- 같은 행렬이 GLSL 에선 `M·v`, vmath C++ 에선 `M^T·v` 로 동작 -> **부호/방향이 반대**.
 
 ### 실전 규칙 5가지
 
 #### Rule 1 — `mat * mat` 은 GLSL 과 동일
 ```cpp
 auto model = vmath::translate(...) * vmath::rotate(...) * vmath::scale(...);
-//           T  ·  R  ·  S — 표준 column 순서, 정점 입장에선 S → R → T
+//           T  ·  R  ·  S — 표준 column 순서, 정점 입장에선 S -> R -> T
 ```
 이 매트릭스를 GLSL 에 uniform 으로 올리면 정상 작동.
 
@@ -1886,7 +1886,7 @@ auto model = vmath::translate(...) * vmath::rotate(...) * vmath::scale(...);
 정점 변환은 **GLSL 에서** 일어나는 게 표준. C++ 에서 vec 에 매트릭스를 곱할 일이 거의 없어야 함. CPU 측 vec 변환은 보통:
 - 디버깅용 좌표 출력
 - AABB / culling 계산
-- 픽킹 (마우스 클릭 → world ray)
+- 픽킹 (마우스 클릭 -> world ray)
 
 #### Rule 3 — CPU 에서 vec 에 변환을 꼭 적용해야 한다면
 
@@ -1905,7 +1905,7 @@ vmath::vec4 v_new = pos * M.transpose();   // 표준 M·v 효과
 
 #### Rule 5 — `mat * mat` 합성 순서는 column convention 그대로
 ```cpp
-auto M = T * R * S;     // 정점 입장에서 S → R → T 순으로 적용
+auto M = T * R * S;     // 정점 입장에서 S -> R -> T 순으로 적용
 ```
 이건 직관적 — GLSL 책에 있는 것과 동일.
 
@@ -1932,7 +1932,7 @@ auto M = T * R * S;     // 정점 입장에서 S → R → T 순으로 적용
 | **DirectXMath** | row 표준 | ❌ | ✅ `v*M` | row |
 | **Eigen** | column 표준 | ✅ `M*v` | ❌ | column |
 
-→ **vmath 만 유독 `mat * vec` 이 없어서** "column 인 줄 알았는데 vec 만 row" 라는 함정이 생김.
+-> **vmath 만 유독 `mat * vec` 이 없어서** "column 인 줄 알았는데 vec 만 row" 라는 함정이 생김.
 
 ### 이번 함정 (Octahedron Mirror 변환)
 
@@ -1944,7 +1944,7 @@ xzMirror[1][1] = -1;
 for (const auto &pos : positions)
     result.push_back(pos * xzMirror);
 
-// ❌ "표준대로" 바꿔본 두 번째 시도 (mat * vec 는 vmath 에 없음 → 컴파일 에러)
+// ❌ "표준대로" 바꿔본 두 번째 시도 (mat * vec 는 vmath 에 없음 -> 컴파일 에러)
 for (const auto &pos : positions)
     result.push_back(xzMirror * pos);
 
@@ -1980,8 +1980,8 @@ for (const auto &pos : positions)
 glUniform1i(glGetUniformLocation(prog_addr, "tex1"), 0);
 //          ^^^^^^^^ tex1 이라는 이름의 sampler uniform 에
 //                   "0" 이라는 int 값 (unit 번호) 저장
-// → 셰이더: "tex1 은 unit 0 에서 읽어라" 라는 매핑 설정
-// → 하지만 unit 0 에 실제로 뭐가 꽂혀있는지는 **별개의 state**
+// -> 셰이더: "tex1 은 unit 0 에서 읽어라" 라는 매핑 설정
+// -> 하지만 unit 0 에 실제로 뭐가 꽂혀있는지는 **별개의 state**
 
 // ✅ 실제 연결: unit 0 에 텍스처를 꽂아야 함
 glActiveTexture(GL_TEXTURE0);                       // 이후 bind 가 어느 unit 으로
@@ -2001,9 +2001,9 @@ OpenGL 의 state 는 대략 이렇게 나뉨:
 └─────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────┐
 │  Context state (global)                         │
-│  ├── Unit 0 → [ texture name ]  ← glBindTexture │
-│  ├── Unit 1 → [ texture name ]                  │
-│  ├── Unit 2 → [ texture name ]                  │
+│  ├── Unit 0 -> [ texture name ]  ← glBindTexture │
+│  ├── Unit 1 -> [ texture name ]                  │
+│  ├── Unit 2 -> [ texture name ]                  │
 │  └── ...                                        │
 └─────────────────────────────────────────────────┘
 ```
@@ -2024,8 +2024,8 @@ glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);   // "tex1 은 un
 glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX2), 1);
 
 // ← 여기서 glActiveTexture(GL_TEXTURE0) + glBindTexture 가 빠짐!
-//    → unit 0 에 container 가 실제로 연결되지 않음
-//    → tex1 sampler 는 엉뚱한 것을 샘플링
+//    -> unit 0 에 container 가 실제로 연결되지 않음
+//    -> tex1 sampler 는 엉뚱한 것을 샘플링
 
 for (int f = 0; f < 6; f++) {
     glActiveTexture(GL_TEXTURE1);
@@ -2052,7 +2052,7 @@ glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);   // ← container 를 unit 0 �
 
 1, 2 를 **묶어서 생각** 하되 3 은 **별개**. "왜 안 나오지?" 질문이 들면 세 단계 모두 호출됐는지 체크.
 
-**판별법**: "분명 `AddTexture` 했고 sampler uniform 도 세팅했는데 검정/흰색 화면" → **`glBindTexture` 가 실제 호출되었는지** 가장 먼저 의심.
+**판별법**: "분명 `AddTexture` 했고 sampler uniform 도 세팅했는데 검정/흰색 화면" -> **`glBindTexture` 가 실제 호출되었는지** 가장 먼저 의심.
 
 ---
 
@@ -2069,18 +2069,18 @@ exercise6 의 Cube 텍스처-면 매핑은 **3곳이 동시에 같은 순서**�
 ```
 ┌─────────────────────────────────┐
 │ ① CUBE_FACE_INDICES 배열 순서   │
-│    -Z(0) → +X(1) → +Z(2) → ...  │──┐
+│    -Z(0) -> +X(1) -> +Z(2) -> ...  │──┐
 └─────────────────────────────────┘  │
                                      ▼
 ┌─────────────────────────────────┐  │
 │ BuildCube 가 VBO 에 이 순서로   │  │
-│ 정점 push → VBO 레이아웃        │  │
-│    -Z[0..5] → +X[6..11] → ...   │  │
+│ 정점 push -> VBO 레이아웃        │  │
+│    -Z[0..5] -> +X[6..11] -> ...   │  │
 └─────────────────────────────────┘  │
                                      │
 ┌─────────────────────────────────┐  │
 │ ② TEXTURE_SIDES 배열 순서       │  │
-│    side1 → side2 → side3 → ... │──┤
+│    side1 -> side2 -> side3 -> ... │──┤
 └─────────────────────────────────┘  │
                                      │
 ┌─────────────────────────────────┐  │
@@ -2103,7 +2103,7 @@ exercise6 의 Cube 텍스처-면 매핑은 **3곳이 동시에 같은 순서**�
 
 | 변경 | 영향 |
 |------|------|
-| `CUBE_FACE_INDICES` 에 새 면 삽입 / 순서 변경 | VBO 레이아웃 어긋남 → 엉뚱한 면에 side 텍스처 |
+| `CUBE_FACE_INDICES` 에 새 면 삽입 / 순서 변경 | VBO 레이아웃 어긋남 -> 엉뚱한 면에 side 텍스처 |
 | `AddTexture(container)` 전에 다른 `AddTexture` 추가 | `mTextureAddrs[1]` 이 side1 이 아님 |
 | `TEXTURE_SIDES` 배열 재정렬 | 그대로 반영됨 |
 | Draw 루프 오프셋 공식 수정 | 완전히 어긋남 |
@@ -2113,9 +2113,9 @@ exercise6 의 Cube 텍스처-면 매핑은 **3곳이 동시에 같은 순서**�
 
 ### 왜 이게 위험한가
 
-1. **디버깅 역추적 비용**: "side3 이 +Z 가 아닌 -X 에 나오네?" → 원인이 3곳 중 어디인지 모름
+1. **디버깅 역추적 비용**: "side3 이 +Z 가 아닌 -X 에 나오네?" -> 원인이 3곳 중 어디인지 모름
 2. **코드 이전 시 취약**: 파일 복제할 때 한 곳만 복사하면 깨짐 ([STUDY_NOTE Exercise6 3-5](#3-5) 와 연결)
-3. **협업 함정**: 다른 사람이 `TEXTURE_SIDES` 에 side7 추가하면서 오타로 중간에 삽입 → 매핑 전체 뒤틀림
+3. **협업 함정**: 다른 사람이 `TEXTURE_SIDES` 에 side7 추가하면서 오타로 중간에 삽입 -> 매핑 전체 뒤틀림
 4. **미래의 나**: 6개월 후 내가 "왜 이렇게 복잡하게 했지?" 하고 `CUBE_FACE_INDICES` 재배열하면 즉시 깨짐
 
 ### 구조적 해결 — 순서를 데이터 구조로 박제
@@ -2136,7 +2136,7 @@ static const CubeFaceTexture CUBE_FACE_TEXTURES[6] = {
     {"+Y", "./textures/side6.jpg"},
 };
 ```
-→ "side3 는 +Z 면에 붙는다" 가 데이터로 명시됨. 순서가 헷갈릴 때 이 테이블만 보면 됨.
+-> "side3 는 +Z 면에 붙는다" 가 데이터로 명시됨. 순서가 헷갈릴 때 이 테이블만 보면 됨.
 
 **Option B — Material 추상화** (근본 해결, Material_Texture.md Step 3 참조):
 ```cpp
@@ -2146,13 +2146,13 @@ model->GetMaterial()
     // ... 이름 기반이라 순서 무관, 실수 불가능
     ;
 ```
-→ enum/string 기반이라 **컴파일러가 일부 실수 (오타, 중복) 를 잡아줌**.
+-> enum/string 기반이라 **컴파일러가 일부 실수 (오타, 중복) 를 잡아줌**.
 
 ### 원칙
 
 **암묵적 순서 계약 = 리팩토링 폭탄**. 셋 이상이 동시에 맞춰져야 하는 순서는 **데이터 구조로 묶어서 강제**해야 안전.
 
-**판별법**: 코드에서 `[N+f]`, `f*K` 같은 인덱스 산술이 **여러 배열에 걸쳐** 있고, 각각이 서로 다른 데이터를 가리키면 → **암묵 계약 냄새**. 한 곳에 `struct` 또는 `map` 으로 모아야 함.
+**판별법**: 코드에서 `[N+f]`, `f*K` 같은 인덱스 산술이 **여러 배열에 걸쳐** 있고, 각각이 서로 다른 데이터를 가리키면 -> **암묵 계약 냄새**. 한 곳에 `struct` 또는 `map` 으로 모아야 함.
 
 **한 줄 멘토링**:
 > **"세 개 이상의 배열이 같은 순서로 진행돼야 한다면, 그 시점에 구조체로 묶어야 할 때이다."**
@@ -2163,7 +2163,7 @@ model->GetMaterial()
 
 | # | 항목 | 확인 |
 |---|------|------|
-| 18 | 🔴 **`glUniform*` 함수가 쉐이더 타입과 1:1 매칭**되는가? (vec2→`2fv`, mat4→`Matrix4fv`, sampler→`1i`) | |
+| 18 | 🔴 **`glUniform*` 함수가 쉐이더 타입과 1:1 매칭**되는가? (vec2->`2fv`, mat4->`Matrix4fv`, sampler->`1i`) | |
 | 19 | 🔴 파라메트릭 서피스의 누적 변수가 **올바른 루프 스코프**에 있는가? (가능하면 인덱스 직접 계산) | |
 | 20 | 색 보간이 **per-vertex** 인가? (per-quad 아님 — GPU 에게 맡김) | |
 | 21 | `Draw()` 가 `mIndexCount` 를 쓰는가? (특정 메쉬 상수 하드코딩 금지) | |
@@ -2177,7 +2177,7 @@ model->GetMaterial()
 | 29 | 🔴 vmath 의 `vec * mat` 는 **`M^T · v`** 임을 알고 있는가? (대각 행렬 외에는 결과가 다름) | |
 | 30 | CPU 에서 vec 변환은 **대각 행렬에만** 직접 적용하는가? (회전/이동은 transpose 나 GLSL 위임) | |
 | 31 | 🔴 Sampler uniform 설정 외에 **`glBindTexture` 도 반드시** 호출하는가? | |
-| 32 | 텍스처 연결 3-step (activate → bind → uniform) 을 모두 거쳤는가? | |
+| 32 | 텍스처 연결 3-step (activate -> bind -> uniform) 을 모두 거쳤는가? | |
 | 33 | 🔴 여러 배열이 **같은 순서로 전진** 해야 하는 암묵 계약이 있다면, 데이터 구조로 묶었는가? | |
 
 ---
@@ -2193,5 +2193,5 @@ model->GetMaterial()
 7. **GL 은 기본적으로 조용함** — 어떤 문제든 "eh? 코드 맞는데 안 되네" 가 들면 `glGetError()` 부터 찔러본다. 특히 uniform 업로드/sampler 바인딩 이후는 함정 천국.
 8. **Texture unit = global persistent slot** — "draw 1회 = 텍스처 1개" 라는 오해를 버릴 것. 한 draw 가 여러 unit 을 동시에 읽고, 공유 텍스처는 한 번만 bind 하면 모든 후속 draw 가 자동으로 사용함. Draw call 수와 텍스처 수는 독립 변수. 다만 **FS 가 해당 sampler 를 실제로 읽어야** 화면에 반영됨 (bind ≠ render).
 9. **라이브러리 컨벤션은 "표준" 을 가정하지 말고 검증할 것** — vmath 의 `mat * mat` 은 표준 column convention 인데 `vec * mat` 만 row convention 이라 비대칭. "GLSL 처럼 `M * v` 로 쓰면 되겠지" 가 컴파일 에러 + 회전 부호 반전을 동시에 부른다. **CPU 에서 정점 변환은 가능한 한 피하고, 꼭 필요하면 대각 행렬에만 적용 또는 `M.transpose()` 사용**. 더 일반적으로: "내가 쓰는 라이브러리의 operator 정의를 직접 본 적이 없으면 가정하지 말 것".
-10. **텍스처 연결은 3-step** — `glActiveTexture(unit)` → `glBindTexture(handle)` → `glUniform1i(sampler, unit)`. 세 단계가 **각각 독립된 GL state** 를 바꾸며, 하나라도 빠지면 조용히 실패. 특히 `glUniform1i` 만으로는 "매핑" 만 설정할 뿐 실제 텍스처가 연결되지 않음. "AddTexture 도 했고 uniform 도 세팅했는데 화면이 검정" 이면 `glBindTexture` 호출 여부부터 의심.
-11. **암묵적 순서 계약은 리팩토링 폭탄** — 두 개 이상의 배열/인덱스가 "같은 순서로 전진해야 성립" 하는 코드는 컴파일러가 강제하지 않아 조용히 깨진다. 순서 의존 코드가 발견되면 **`struct` / `map` / enum 으로 관계를 박제** 하는 것이 안전. 인덱스 기반 암묵 계약 → 이름 기반 명시 계약으로 이전.
+10. **텍스처 연결은 3-step** — `glActiveTexture(unit)` -> `glBindTexture(handle)` -> `glUniform1i(sampler, unit)`. 세 단계가 **각각 독립된 GL state** 를 바꾸며, 하나라도 빠지면 조용히 실패. 특히 `glUniform1i` 만으로는 "매핑" 만 설정할 뿐 실제 텍스처가 연결되지 않음. "AddTexture 도 했고 uniform 도 세팅했는데 화면이 검정" 이면 `glBindTexture` 호출 여부부터 의심.
+11. **암묵적 순서 계약은 리팩토링 폭탄** — 두 개 이상의 배열/인덱스가 "같은 순서로 전진해야 성립" 하는 코드는 컴파일러가 강제하지 않아 조용히 깨진다. 순서 의존 코드가 발견되면 **`struct` / `map` / enum 으로 관계를 박제** 하는 것이 안전. 인덱스 기반 암묵 계약 -> 이름 기반 명시 계약으로 이전.

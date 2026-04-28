@@ -270,7 +270,7 @@ namespace exercise::Model
 
 		// samplerName : 셰이더 uniform sampler 이름 ("tex1", "tex2" …)
 		// unit        : 이 텍스처가 바인딩될 texture unit 번호 (0, 1, 2 …)
-		//               → Apply() 에서 glActiveTexture(GL_TEXTURE0 + unit) + glUniform1i(sampler, unit)
+		//               -> Apply() 에서 glActiveTexture(GL_TEXTURE0 + unit) + glUniform1i(sampler, unit)
 		Material &AddTexture2D(const std::string &samplerName, const char *image_path, int unit = 0);
 
 		// glDrawElements 직전 호출 — 모든 슬롯을 각자의 unit 에 바인딩 + sampler uniform 설정
@@ -528,8 +528,8 @@ namespace exercise::Model
 		glUniform2fv(glGetUniformLocation(progAddr, "uvRatio"), 1, mUVRatio);
 
 		// 슬롯마다 (자기 unit 에 바인딩 + 해당 sampler uniform 에 unit 번호 주입)
-		//   AddTexture2D("tex1", ..., 0) → unit 0, sampler "tex1"=0
-		//   AddTexture2D("tex2", ..., 1) → unit 1, sampler "tex2"=1
+		//   AddTexture2D("tex1", ..., 0) -> unit 0, sampler "tex1"=0
+		//   AddTexture2D("tex2", ..., 1) -> unit 1, sampler "tex2"=1
 		for (const auto &slot : mTextures)
 		{
 			glActiveTexture(GL_TEXTURE0 + slot.unit);

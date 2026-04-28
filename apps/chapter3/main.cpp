@@ -375,7 +375,7 @@ void main(void) {
 			GLfloat vertexColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
 			glVertexAttrib4fv(0, vertexPositions);
 			glVertexAttrib4fv(1, vertexColor);
-			// glPointSize(5.0f);                          // 점 크기 (기본 1px → 안보임)
+			// glPointSize(5.0f);                          // 점 크기 (기본 1px -> 안보임)
 			glDrawArrays(GL_TRIANGLES, 0, 3);
 		}
 

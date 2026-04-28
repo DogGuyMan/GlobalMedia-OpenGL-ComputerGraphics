@@ -16,7 +16,7 @@
 | 문제 | 현재 코드 | 증상 |
 |------|----------|------|
 | 중복 로드 | `AddTexture(path)` 호출마다 `stbi_load` + `glGenTextures` | 같은 파일 여러 번 쓰면 GPU 메모리 낭비 |
-| 암묵적 슬롯 계약 | `mTextureAddrs[0]=tex1`, `[1+f]=tex2` 관습 | 호출 누락 시 `operator[]` OOB → UB/SEGV |
+| 암묵적 슬롯 계약 | `mTextureAddrs[0]=tex1`, `[1+f]=tex2` 관습 | 호출 누락 시 `operator[]` OOB -> UB/SEGV |
 | GL handle 노출 | `vector<GLuint>` 직접 저장 | 소유권 불명확, double-delete 위험 |
 | 실패 무음 | `stbi_load(null)` 이어도 `glTexImage2D(null)` 진행 | 로드 실패를 인지할 수 없음 |
 | Draw 하드코딩 | `Draw()` 가 큐브 6면 루프 가정 | 다른 메쉬에서 "부채꼴" 증상 (Disk 사례) |
@@ -63,7 +63,7 @@ GL handle (`GLuint`) 은 구현 세부사항. **진짜 정체성은 "파일 경�
 | **6** | `Texture::Load` 비동기 | 원리 ③ — cancellation token 캡처 | 🔵 어려움 | 선택 |
 | **7** | `GetPixels<T>` | 원리 ⑤ — 제네릭 + 방어 검증 | ⚪ 선택 | 독립 |
 
-**권장 진행**: **Step 1 → 2 → 3 → 4** 까지만 완료해도 현재 `exercise6` 의 텍스처 관련 버그가 **구조적으로 재발 불가능** 한 상태가 된다. 5~7 은 학습 목적의 선택 과제.
+**권장 진행**: **Step 1 -> 2 -> 3 -> 4** 까지만 완료해도 현재 `exercise6` 의 텍스처 관련 버그가 **구조적으로 재발 불가능** 한 상태가 된다. 5~7 은 학습 목적의 선택 과제.
 
 ---
 
@@ -126,7 +126,7 @@ class Texture
 - [ ] **`LoadFromFile`**:
   1. `stbi_load` 로 이미지 로드
   2. **실패 시 `std::cerr` 로 경고** + `false` 반환 (실패 무음 금지)
-  3. 성공 시 `glGenTextures` → `glBindTexture` → `glTexImage2D` → `glGenerateMipmap`
+  3. 성공 시 `glGenTextures` -> `glBindTexture` -> `glTexImage2D` -> `glGenerateMipmap`
   4. `glTexParameteri` 설정
   5. `stbi_image_free`
   6. 멤버 변수 저장 (`mAddr`, `mWidth`, `mHeight`, `mChannels`, `mPath`)
@@ -171,7 +171,7 @@ class Texture
 class TextureCache
 {
   private:
-    // weak_ptr 로 저장 → 아무도 사용 안 하면 자동으로 해제됨
+    // weak_ptr 로 저장 -> 아무도 사용 안 하면 자동으로 해제됨
     static std::unordered_map<std::string, std::weak_ptr<Texture>> sCache;
 
   public:
@@ -266,9 +266,9 @@ assert(t3 == nullptr);                // 실패 시 null (STUDY_NOTE 2-3 교훈)
 
 ```
 OpenGL Context State
-├── Unit 0  →  [ 무엇이 꽂혀있음 ]   ← 새로 bind 하기 전까지 영구 유지
-├── Unit 1  →  [ 무엇이 꽂혀있음 ]
-├── Unit 2  →  [ 무엇이 꽂혀있음 ]
+├── Unit 0  ->  [ 무엇이 꽂혀있음 ]   ← 새로 bind 하기 전까지 영구 유지
+├── Unit 1  ->  [ 무엇이 꽂혀있음 ]
+├── Unit 2  ->  [ 무엇이 꽂혀있음 ]
 ├── ...
 ```
 
@@ -346,7 +346,7 @@ void main() {
 
 이 상태에서 CPU 가 루프 안에서 `glBindTexture(..., side[f])` 를 아무리 호출해도, **FS 가 tex2 를 샘플링하지 않으므로 화면엔 영향 없음**. 모든 면이 container 로만 그려진다.
 
-**판별법**: 루프에서 텍스처를 바꾸는데 면마다 같은 이미지로 보이면 → FS 가 해당 sampler 를 **실제로 사용** 하는지 확인.
+**판별법**: 루프에서 텍스처를 바꾸는데 면마다 같은 이미지로 보이면 -> FS 가 해당 sampler 를 **실제로 사용** 하는지 확인.
 
 ### Material 설계에 주는 시사점
 
@@ -367,7 +367,7 @@ void main() {
 
 ---
 
-## 📚 보충 개념 2 — 규모가 커지면? (10 → 100 → 1,000,000)
+## 📚 보충 개념 2 — 규모가 커지면? (10 -> 100 -> 1,000,000)
 
 > "시분할로 계속 bind 바꿔가면 무한히 그릴 수 있는 거 아냐?" 라는 자연스러운 의문의 답.
 
@@ -390,8 +390,8 @@ glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxUnits);
 ```
 60 FPS = 16.67 ms / frame
 draw 1회 ≈ 5~50 μs
-→ 프레임당 감당 가능한 draw: 수천 ~ 수만 개
-→ 100만 draw 는 프레임이 수십 초 걸려서 애초에 불가
+-> 프레임당 감당 가능한 draw: 수천 ~ 수만 개
+-> 100만 draw 는 프레임이 수십 초 걸려서 애초에 불가
 ```
 
 #### ③ VRAM 용량
@@ -452,7 +452,7 @@ exercise6 같은 학습 프로젝트는 **"~10 개 수준의 시분할 bind"** �
 
 ### 왜 필요한가
 
-현재의 `mTextureAddrs[0] = tex1, [1+f] = tex2` 관습은 **호출자의 약속**에 의존한다. 한 호출이라도 누락되면 `operator[]` OOB → UB. sbox 의 `TextureSlot { samplerName, texture, unit }` 은 이 관습을 **데이터 구조로 이동** 시킨다.
+현재의 `mTextureAddrs[0] = tex1, [1+f] = tex2` 관습은 **호출자의 약속**에 의존한다. 한 호출이라도 누락되면 `operator[]` OOB -> UB. sbox 의 `TextureSlot { samplerName, texture, unit }` 은 이 관습을 **데이터 구조로 이동** 시킨다.
 
 ### 설계 초안
 
@@ -522,9 +522,9 @@ void Material::Apply(GLuint progAddr) const
 
 - [ ] `SetTexture` 가 **같은 이름 있으면 교체, 없으면 추가** 동작하는지 (for 루프로 검색 후 `push_back`)
 - [ ] `Apply()` 안의 모든 `glUniform*` 호출이 쉐이더 타입과 매칭되는지 재검증
-  - `vec4` → `glUniform4fv`
-  - `vec2` → `glUniform2fv`
-  - `sampler2D` → `glUniform1i`
+  - `vec4` -> `glUniform4fv`
+  - `vec2` -> `glUniform2fv`
+  - `sampler2D` -> `glUniform1i`
 - [ ] `slot.texture` 가 `nullptr` 이거나 `!IsValid()` 일 때 **건너뛰기** (throw 하지 말 것 — 부분 실패 허용)
 - [ ] Material 의 복사 의미론: `Texture` 는 `shared_ptr` 이라 복사 가능. Material 은 복사해도 OK (같은 텍스처를 공유).
 - [ ] 체이닝 반환값 `*this` 로 `.SetTexture(...).SetUVRatio(...)` 사용 가능하게
@@ -591,16 +591,16 @@ OpenGL 의 state 는 이렇게 나뉨:
 └──────────────────────────────────────────┘
 ┌──────────────────────────────────────────┐
 │ Context state (global, persistent)       │
-│ ├── Unit 0 → [ which texture? ]          │  연결: "그 unit 에 뭐가"
-│ ├── Unit 1 → [ which texture? ]          │
+│ ├── Unit 0 -> [ which texture? ]          │  연결: "그 unit 에 뭐가"
+│ ├── Unit 1 -> [ which texture? ]          │
 │ └── ...                                  │
 └──────────────────────────────────────────┘
 ```
 
 **매핑과 연결을 둘 다 설정해야** 실제로 셰이더가 텍스처를 읽음. 한쪽만 있으면:
 
-- `glUniform1i` 만: "unit 0 에서 읽어라" 라고 했지만 unit 0 엔 아무것도 없음 → 드라이버 기본값 (검정/흰색)
-- `glBindTexture` 만: unit 0 에 텍스처는 꽂혔지만 sampler 가 어디 읽어야 할지 모름 → 기본값 unit 0 에서 읽긴 읽음 (우연히 동작)
+- `glUniform1i` 만: "unit 0 에서 읽어라" 라고 했지만 unit 0 엔 아무것도 없음 -> 드라이버 기본값 (검정/흰색)
+- `glBindTexture` 만: unit 0 에 텍스처는 꽂혔지만 sampler 가 어디 읽어야 할지 모름 -> 기본값 unit 0 에서 읽긴 읽음 (우연히 동작)
 
 #### 이번 함정 (Cube::Draw)
 
@@ -657,12 +657,12 @@ void Material::Apply(GLuint progAddr) const
 ```
 
 세 개가 **우연히** 같은 방향으로 전진해서:
-- -Z → side1
-- +X → side2
-- +Z → side3
-- -X → side4
-- -Y → side5
-- +Y → side6
+- -Z -> side1
+- +X -> side2
+- +Z -> side3
+- -X -> side4
+- -Y -> side5
+- +Y -> side6
 
 이 매핑이 성립. **그런데 한 곳만 바뀌어도** 조용히 깨짐:
 
@@ -677,10 +677,10 @@ void Material::Apply(GLuint progAddr) const
 
 #### 왜 위험한가
 
-1. **디버깅 역추적 비용이 큼**: "side3 이 +Z 가 아니라 -X 에 나오네?" → 3곳 중 어디가 문제인지 모름
+1. **디버깅 역추적 비용이 큼**: "side3 이 +Z 가 아니라 -X 에 나오네?" -> 3곳 중 어디가 문제인지 모름
 2. **코드 복제/이전 시 취약**: 파일 복사할 때 한 곳만 옮기면 깨짐
 3. **미래의 나**: 6개월 후 `CUBE_FACE_INDICES` 를 예쁘게 재배열하면 즉시 깨짐
-4. **협업 취약**: 다른 사람이 `TEXTURE_SIDES` 에 `side7` 추가하면서 오타로 중간 삽입 → 전체 뒤틀림
+4. **협업 취약**: 다른 사람이 `TEXTURE_SIDES` 에 `side7` 추가하면서 오타로 중간 삽입 -> 전체 뒤틀림
 
 #### Material 이 이를 어떻게 해결하나
 
@@ -958,7 +958,7 @@ void Texture::GetPixels(int srcX, int srcY, int width, int height,
 - [ ] R-2: EBO `glBufferData` 가 `mElementData` 사용
 - [ ] R-3: attribute offset 누적 계산
 - [ ] R-4: vector `operator[]` 가드 (Material slot 루프의 nullptr 체크)
-- [ ] 1-6: `glUniform*` 타입 매칭 (`vec2` → `2fv`, `mat4` → `Matrix4fv`, `sampler` → `1i`)
+- [ ] 1-6: `glUniform*` 타입 매칭 (`vec2` -> `2fv`, `mat4` -> `Matrix4fv`, `sampler` -> `1i`)
 
 ---
 

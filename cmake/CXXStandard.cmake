@@ -26,8 +26,8 @@ else() # MSVC 전용 옵션
         # Debug 전용: narrowing 경고 침묵 (학습용 코드 빠른 빌드)
         # Release에서는 다시 활성화되어 진짜 narrowing 버그를 노출시킴
         $<$<CONFIG:Debug>:/wd4244>  # 'conversion': double/float 좁힘 변환
-        $<$<CONFIG:Debug>:/wd4305>  # 'truncation': double 리터럴 → float
-        $<$<CONFIG:Debug>:/wd4267>  # 'conversion': size_t → 작은 정수
+        $<$<CONFIG:Debug>:/wd4305>  # 'truncation': double 리터럴 -> float
+        $<$<CONFIG:Debug>:/wd4267>  # 'conversion': size_t -> 작은 정수
     )
 endif()
 

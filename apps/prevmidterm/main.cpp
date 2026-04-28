@@ -1418,7 +1418,7 @@ namespace prevmidterm
 			main_camera.Target = vec3(0.0, 0.0, 0.0);
 			auto &waterMaterialRef = program->GetModel("WaterCurve")->GetMaterial();
 			waterMaterialRef.Slots[0].UVOffset = vec2(currentTime, 0.0);
-			// Flower1 루트는 CreateRootTransform 으로 등록 → hierarchies 에만 있음 (program 엔 없음)
+			// Flower1 루트는 CreateRootTransform 으로 등록 -> hierarchies 에만 있음 (program 엔 없음)
 			hierarchies["Flower1"]->Translate = vec3(3 * cos(-currentTime), 0, 3 * sin(-currentTime));
 
 			// 개별 모델은 program->GetModel(name)->GetTransform() 로 접근 (참조 반환이라 직접 수정 가능)
