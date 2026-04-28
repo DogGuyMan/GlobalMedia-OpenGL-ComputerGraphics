@@ -1,0 +1,36 @@
+
+#version 410 core
+
+layout(location = 0) in vec4 inVertexPositions;
+layout(location = 1) in vec4 inVertexColors;
+layout(location = 2) in vec2 inVertexUVs;
+
+uniform mat4 inModelMat;
+uniform mat4 inViewMat;
+uniform mat4 inProjMat;
+
+uniform vec2 inUVOffset;
+uniform vec2 inUVRatio;
+
+out VS_OUT {
+        vec4 color;
+        vec2 uv;
+} vs_out;
+
+void main(void) {
+        // ❌ 절대 하면 안되는 행위
+        // vec4 resPosition = inVertexPositions;
+        // resPosition *= inModelMat;
+        // resPosition *= inViewMat;
+        // resPosition *= inProjMat;
+
+        // ✅ 옳은 방식 ( prevmidterm / default_vs . glsl : 20 - 24 ):
+
+        vec4 mPos = inModelMat * inVertexPositions;
+        vec4 vPos = inViewMat * mPos;
+        vec4 pPos = inProjMat * vPos;
+
+        gl_Position = pPos;
+        vs_out.color = inVertexColors; // inVertexColors;
+        vs_out.uv = inUVOffset + vec2(inUVRatio.x * inVertexUVs.x, inUVRatio.y * inVertexUVs.y);
+}
