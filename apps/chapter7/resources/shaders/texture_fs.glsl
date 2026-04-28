@@ -1,18 +1,113 @@
+// #version 430 core
 #version 410 core
 
-layout(location = 0) out vec4 colors;
+out vec4 outBufferColor;
 
-in VS_OUT {
-        vec2 vsTexCoord;
+uniform vec4 inBaseColor;
+
+uniform sampler2D tex1;
+uniform sampler2D tex2;
+uniform sampler2D tex3;
+uniform sampler2D tex4;
+
+uniform float uTex1Used;
+uniform float uTex2Used;
+uniform float uTex3Used;
+uniform float uTex4Used;
+
+uniform vec2 inUVOffset1;
+uniform vec2 inUVOffset2;
+uniform vec2 inUVOffset3;
+uniform vec2 inUVOffset4;
+
+uniform vec2 inUVRatio1;
+uniform vec2 inUVRatio2;
+uniform vec2 inUVRatio3;
+uniform vec2 inUVRatio4;
+
+// Phong 라이팅 uniforms
+uniform vec3 inLightPos; // 월드 공간 광원 위치
+uniform vec3 inLightColor; // 광원 RGB 색
+uniform vec3 inViewPos; // 카메라 월드 위치 (specular 시점 계산용)
+uniform float inAmbientStrength; // 주변광 비율 (0~1)
+uniform float inSpecularStrength; // 반사광 비율 (0~1)
+uniform float inShininess; // 반사 광택 지수 (보통 32)
+uniform float inLightingEnabled; // 0.0 이면 라이팅 OFF (텍스처 그대로)
+
+in outVertexData {
+        vec4 color;
+        vec2 uvCoord;
+        vec3 worldPos;
+        vec3 worldNormal;
 } fs_in;
 
-// Material uniforms
-//   baseColor : vertex color 대체, Material이 주입하는 상수 색상
-//   tex1      : 2D texture sampler (unit 0) — 추후 multi-texture/cube map 확장 가능
-uniform vec4 baseColor;
-uniform sampler2D tex1;
+void main(void) {
+        vec4 resColor = vec4(1.0);
 
-void main(void)
-{
-        colors = baseColor * texture(tex1, fs_in.vsTexCoord);
+        if (uTex1Used >= 0.99) {
+                vec2 uv = inUVOffset1 + fs_in.uvCoord * inUVRatio1;
+                vec4 layer = texture(tex1, uv);
+                float opacity = layer.a;
+                if (opacity > 0.05)
+                        resColor = layer * opacity + resColor * (1.0 - opacity); // 가중치 블랜딩
+                else // 첫번쨰가 알파면 그냥 투명하게 무조건 그리자.
+                        discard; // 첫번쨰가 알파면 그냥 투명하게 무조건 그리자.
+        }
+        if (uTex2Used >= 0.99) {
+                vec2 uv = inUVOffset2 + fs_in.uvCoord * inUVRatio2;
+                vec4 layer = texture(tex2, uv);
+                float opacity = layer.a;
+                if (opacity > 0.05)
+                        resColor = layer * opacity + resColor * (1.0 - opacity); // 가중치 블랜딩
+                // else
+                //         discard;
+        }
+        if (uTex3Used >= 0.99) {
+                vec2 uv = inUVOffset3 + fs_in.uvCoord * inUVRatio3;
+                vec4 layer = texture(tex3, uv);
+                float opacity = layer.a;
+                if (opacity > 0.05)
+                        resColor = layer * opacity + resColor * (1.0 - opacity); // 가중치 블랜딩
+                // else
+                //         discard;
+        }
+        if (uTex4Used >= 0.99) {
+                vec2 uv = inUVOffset4 + fs_in.uvCoord * inUVRatio4;
+                vec4 layer = texture(tex4, uv);
+                float opacity = layer.a;
+                if (opacity > 0.05)
+                        resColor = layer * opacity + resColor * (1.0 - opacity); // 가중치 블랜딩
+                // else
+                //         discard;
+        }
+
+        vec4 albedo = inBaseColor * fs_in.color * resColor;
+
+        if (inLightingEnabled < 0.5) {
+                // 라이팅 OFF — 텍스처/색만 출력
+                outBufferColor = albedo;
+                return;
+        }
+
+        // === Phong 조명 모델 ===
+        vec3 N = normalize(fs_in.worldNormal);
+        vec3 L = normalize(inLightPos - fs_in.worldPos); // surface -> light
+        vec3 V = normalize(inViewPos - fs_in.worldPos); // surface -> camera
+        vec3 R = reflect(-L, N); // 입사광이 N 기준으로 반사된 방향
+
+        // Ambient — 주변광. N/L 무관.
+        vec3 ambient = inAmbientStrength * inLightColor;
+
+        // Diffuse — Lambert 의 코사인 법칙. N·L 이 0 이하인 면은 빛을 전혀 못 받음.
+        float diff = max(dot(N, L), 0.0);
+        vec3 diffuse = diff * inLightColor;
+
+        // Specular — Phong : (R·V)^shininess. N·L<=0 이면 specular 도 0 (뒷면 highlight 방지).
+        float spec = 0.0;
+        if (diff > 0.0)
+                spec = pow(max(dot(R, V), 0.0), inShininess);
+        vec3 specular = inSpecularStrength * spec * inLightColor;
+
+        vec3 lighting = ambient + diffuse + specular;
+        outBufferColor = vec4(lighting, 1.0) * albedo;
 }

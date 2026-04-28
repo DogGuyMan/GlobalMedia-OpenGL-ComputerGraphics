@@ -1,34 +1,34 @@
+// #version 430 core
 #version 410 core
 
-// vertex color 제거 : 색은 Material에서 uniform으로 내려옴 (fragment 의존)
-layout(location = 0) in vec4 positions;
-layout(location = 1) in vec4 colors;
-layout(location = 2) in vec2 uvCoords;
+layout(location = 0) in vec4 inVertexPositions;
+layout(location = 1) in vec4 inVertexColors;
+layout(location = 2) in vec2 inVertexUVs;
+layout(location = 3) in vec3 inVertexNormals;
 
-uniform mat4 modelMat;
-uniform mat4 viewMat;
-uniform mat4 projMat;
+uniform mat4 inModelMat;
+uniform mat4 inViewMat;
+uniform mat4 inProjMat;
 
-// Material uniforms : UV 변환
-uniform vec2 uvOffset;
-uniform vec2 uvRatio;
-
-out VS_OUT {
-        vec4 vsColor;
-        vec2 vsTexCoord;
+out outVertexData {
+        vec4 color;
+        vec2 uvCoord;
+        vec3 worldPos; // FS 에서 light/view 방향 계산용
+        vec3 worldNormal; // (M^-1)^T 로 변환된 월드 법선
 } vs_out;
 
 void main(void) {
-        vec4 mPos = modelMat * positions;
-        vec4 vPos = viewMat * mPos;
-        vec4 pPos = projMat * vPos;
+        vec4 mPos = inModelMat * inVertexPositions;
+        vec4 vPos = inViewMat * mPos;
+        vec4 pPos = inProjMat * vPos;
 
         gl_Position = pPos;
+        vs_out.color = inVertexColors;
+        vs_out.uvCoord = inVertexUVs;
+        vs_out.worldPos = mPos.xyz;
 
-        vec2 rUv = vec2(
-                        uvCoords.x * uvRatio.x,
-                        uvCoords.y * uvRatio.y
-                );
-        vs_out.vsColor = colors;
-        vs_out.vsTexCoord = rUv + uvOffset;
+        // Normal Matrix = (M^-1)^T : 비균일 스케일에서도 법선을 정확히 변환.
+        // 평행이동은 법선에 영향이 없으므로 mat3 만 추출.
+        mat3 normalMat = mat3(transpose(inverse(inModelMat)));
+        vs_out.worldNormal = normalize(normalMat * inVertexNormals);
 }
