@@ -6,6 +6,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+#define MAC_WINE_TEST
 
 // sb6::application을 상속받는다.
 class my_application : public sb7::application
@@ -54,6 +55,15 @@ class my_application : public sb7::application
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
+	
+	virtual void init()
+	{
+		sb7::application::init();
+#ifdef MAC_WINE_TEST
+		info.majorVersion = 4;
+		info.minorVersion = 1;
+#endif
 	}
 
 	// 애플리케이션 초기화 수행한다.
