@@ -1,5 +1,5 @@
-// #version 430 core
-#version 410 core
+#version 430 core
+// #version 410 core
 
 in vec3 vsNormal;
 in vec3 vsPos;

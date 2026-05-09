@@ -60,9 +60,9 @@ class my_application : public sb7::application
 	virtual void startup()
 	{
 		// 쉐이더 프로그램 컴파일 및 연결
-		shader_programs[0] = compile_shader("./shaders/basic_texturing_vs.glsl", "./shaders/basic_texturing_fs.glsl");
-		shader_programs[1] = compile_shader("./shaders/basic_lighting_vs.glsl", "./shaders/basic_lighting_fs.glsl");
-		shader_programs[2] = compile_shader("./shaders/simple_color_vs.glsl", "./shaders/simple_color_fs.glsl");
+		shader_programs[0] = compile_shader("./resources/shaders/basic_texturing_vs.glsl", "./resources/shaders/basic_texturing_fs.glsl");
+		shader_programs[1] = compile_shader("./resources/shaders/basic_lighting_vs.glsl", "./resources/shaders/basic_lighting_fs.glsl");
+		shader_programs[2] = compile_shader("./resources/shaders/simple_color_vs.glsl", "./resources/shaders/simple_color_fs.glsl");
 
 		// VAO, VBO, EBO, texture 생성
 		glGenVertexArrays(3, VAOs);
@@ -72,7 +72,7 @@ class my_application : public sb7::application
 
 		stbi_set_flip_vertically_on_load(true);
 
-		load_texture(textures[0], "./textures/wall.jpg");
+		load_texture(textures[0], "./resources/textures/wall.jpg");
 
 		// 첫 번째 객체 정의 : 바닥 --------------------------------------------------
 		glBindVertexArray(VAOs[0]);
