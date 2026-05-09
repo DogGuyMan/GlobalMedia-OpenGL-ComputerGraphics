@@ -1,5 +1,4 @@
 # Material & Texture 리팩토링 로드맵
-
 > 상용 게임 엔진 **sbox** (Facepunch, Source 2 기반) 의 `Texture.Load.cs` / `Texture.Read.cs` 를 분석해서
 > 그 디자인 철학을 `exercise6` 에 단계적으로 적용하는 가이드.
 >
