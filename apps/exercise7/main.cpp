@@ -1,746 +1,335 @@
-#include "GL/gl3w.h"
-#include "GL/glcorearb.h"
-#include "vmath.h"
-#include <cmath>
-#include <iostream>
-#include <memory>
-#include <ostream>
+// sb6.h 헤더 파일을 포함시킨다.
 #include <sb7.h>
+#include <vmath.h>
 #include <shader.h>
-#include <utility>
-#include <vector>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#define MAC_WINE_TEST
-namespace exercise6
+// sb6::application을 상속받는다.
+class my_application : public sb7::application
 {
-
-	static const int VERTEX_POSITION_SIZE = 4;
-	static const int VERTEX_COLOR_SIZE = 4;
-	static const int VERTEX_UV_SIZE = 2;
-	static constexpr int VERTEX_LEN = VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE + VERTEX_UV_SIZE;
-
-	static const char *SHADER_VS_PATH = "./shaders/default_vs.glsl";
-	static const char *SHADER_FS_PATH = "./shaders/default_fs.glsl";
-	static const char *TEXTURE_FS_PATH = "./shaders/texture_fs.glsl";
-
-	static const char *UNIFORM_MODEL_MAT = "modelMat";
-	static const char *UNIFORM_VIEW_MAT = "viewMat";
-	static const char *UNIFORM_PROJ_MAT = "projMat";
-	static const char *UNIFORM_UV_OFFSET = "uvOffset";
-	static const char *UNIFORM_UV_RATIO = "uvRatio";
-	static const char *UNIFORM_BASE_COLOR = "baseColor";
-
-	static const char *SAMPLER_TEX1 = "tex1";
-	static const char *SAMPLER_TEX2 = "tex2";
-
-	static const char *TEXTURE_CONTAINER = "./textures/container.jpg";
-	static const char *TEXTURE_SIDES[6] = {
-	    "./textures/side1.jpg",
-	    "./textures/side2.jpg",
-	    "./textures/side3.jpg",
-	    "./textures/side4.jpg",
-	    "./textures/side5.jpg",
-	    "./textures/side6.jpg",
-	};
-
-	static const std::vector<vmath::vec2> BASE_TRIANGLE_MESH_UVS{
-	    {0.0, 0.0},
-	    {1.0, 0.0},
-	    {0.5, 1.0},
-	};
-
-	static const std::vector<vmath::vec2> BASE_TRIANGLE_INV_MESH_UVS{
-	    {0.0, 1.0},
-	    {0.5, 0.0},
-	    {1.0, 1.0},
-	};
-
-	static const std::vector<vmath::vec2> BASE_QUAD_MESH_UVS{
-	    {0.0, 0.0},
-	    {1.0, 0.0},
-	    {1.0, 1.0},
-	    {0.0, 1.0}};
-
-	const std::vector<GLuint> TRIANGLE_FACE_INDICES = {{0, 1, 2}};
-
-	const std::vector<GLuint> QUAD_FACE_INDICES = {{0, 1, 2, 0, 2, 3}};
-
-	static const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
-	    {0.0, 0.0, 0.0, 1.0},
-	    {1.0, 0.0, 0.0, 1.0},
-	    {0.5, 0.0, 0.866, 1.0},
-	    {0.5, 0.816, 0.2886, 1.0},
-	};
-	static const std::vector<std::vector<GLuint>> TETRA_FACE_INDICES = {
-	    {1, 0, 3},
-	    {2, 1, 3},
-	    {0, 2, 3},
-	    {1, 0, 2},
-	};
-
-	static const std::vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
-	    {0.0, 0.0, 0.0, 1.0},
-	    {1.0, 0.0, 0.0, 1.0},
-	    {1.0, 0.0, 1.0, 1.0},
-	    {0.0, 0.0, 1.0, 1.0},
-	    {0.5, 1.0, 0.5, 1.0}};
-
-	static const std::vector<vmath::vec4> CONE_BOTTOM_BASE_POSITION = {
-	    CONE_SIDE_BASE_POSITION[0],
-	    CONE_SIDE_BASE_POSITION[1],
-	    CONE_SIDE_BASE_POSITION[2],
-	    CONE_SIDE_BASE_POSITION[3],
-	};
-
-	static const std::vector<std::vector<GLuint>> CONE_SIDE_FACE_INDICES = {
-	    {1, 0, 4},
-	    {2, 1, 4},
-	    {3, 2, 4},
-	    {0, 3, 4},
-	};
-
-	static const std::vector<std::vector<GLuint>> OCTA_DOWN_SIDE_FACE_INDICES = {
-	    {1, 4, 0},
-	    {2, 4, 1},
-	    {3, 4, 2},
-	    {0, 4, 3},
-	};
-
-	static const std::vector<vmath::vec4> CONE_SIDE_BASE_COLORS{
-	    vmath::vec4(1.0, 0.0, 0.0, 1.0),
-	    vmath::vec4(0.0, 1.0, 1.0, 1.0),
-	    vmath::vec4(0.0, 1.0, 1.0, 1.0),
-	    vmath::vec4(1.0, 0.0, 1.0, 1.0),
-	};
-
-	static const std::vector<vmath::vec4> CUBE_BASE_POSITIONS = {
-	    {0.0, 0.0, 0.0, 1.0},
-	    {1.0, 0.0, 0.0, 1.0},
-	    {1.0, 0.0, 1.0, 1.0},
-	    {0.0, 0.0, 1.0, 1.0},
-	    {0.0, 1.0, 0.0, 1.0},
-	    {1.0, 1.0, 0.0, 1.0},
-	    {1.0, 1.0, 1.0, 1.0},
-	    {0.0, 1.0, 1.0, 1.0},
-	};
-
-	static const std::vector<std::vector<GLuint>> CUBE_FACE_INDICES = {
-	    {1, 0, 4, 1, 4, 5}, // -Z
-	    {2, 1, 5, 2, 5, 6}, // +X
-	    {3, 2, 6, 3, 6, 7}, // +Z
-	    {0, 3, 7, 0, 7, 4}, // -X
-	    {0, 1, 2, 0, 2, 3}, // -Y
-	    {7, 6, 5, 7, 5, 4}, // +Y
-	};
-
-	static const std::vector<vmath::vec4> CUBE_BASE_COLORS{
-	    vmath::vec4(1.0, 0.0, 0.0, 1.0),
-	    vmath::vec4(0.0, 1.0, 0.0, 1.0),
-	    vmath::vec4(0.0, 0.0, 1.0, 1.0),
-	    vmath::vec4(0.0, 1.0, 1.0, 1.0),
-	    vmath::vec4(1.0, 0.0, 1.0, 1.0),
-	    vmath::vec4(1.0, 1.0, 0.0, 1.0)};
-
-	void PushVertex(std::vector<GLfloat> &vertices,
-	                const vmath::vec4 pos,
-	                const vmath::vec4 color,
-	                const vmath::vec2 uv,
-	                const vmath::vec3 &offset)
+public:
+	// 쉐이더 프로그램 컴파일한다.
+	GLuint compile_shader(const char* vs_file, const char* fs_file)
 	{
-		vertices.push_back(pos[0] + offset[0]);
-		vertices.push_back(pos[1] + offset[1]);
-		vertices.push_back(pos[2] + offset[2]);
-		vertices.push_back(pos[3]);
-		vertices.push_back(color[0]);
-		vertices.push_back(color[1]);
-		vertices.push_back(color[2]);
-		vertices.push_back(color[3]);
-		vertices.push_back(uv[0]);
-		vertices.push_back(uv[1]);
+		// 버텍스 쉐이더를 생성하고 컴파일한다.
+		GLuint vertex_shader = sb7::shader::load(vs_file, GL_VERTEX_SHADER);
+
+		// 프래그먼트 쉐이더를 생성하고 컴파일한다.
+		GLuint fragment_shader = sb7::shader::load(fs_file, GL_FRAGMENT_SHADER);
+
+		// 프로그램을 생성하고 쉐이더를 Attach시키고 링크한다.
+		GLuint program = glCreateProgram();
+		glAttachShader(program, vertex_shader);
+		glAttachShader(program, fragment_shader);
+		glLinkProgram(program);
+
+		// 이제 프로그램이 쉐이더를 소유하므로 쉐이더를 삭제한다.
+		glDeleteShader(vertex_shader);
+		glDeleteShader(fragment_shader);
+
+		return program;
 	}
 
-	void BuildTriangle(
-	    std::vector<GLfloat> &buffer_data,
-	    const std::vector<vmath::vec4> &positions,
-	    const std::vector<vmath::vec4> &colors,
-	    const std::vector<vmath::vec2> &uvs,
-	    const std::vector<GLuint> &position_idxs,
-	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
+	void load_texture(GLuint textureID, char const* filename)
 	{
-		for (int i = 0; i < 3; i++)
-			PushVertex(buffer_data,
-			           positions[position_idxs[i]],
-			           colors[i],
-			           uvs[TRIANGLE_FACE_INDICES[i]],
-			           offset);
+		// 텍스처 객체 만들고 바인딩		
+		glBindTexture(GL_TEXTURE_2D, textureID);
+
+		// 텍스처 이미지 로드하기
+		int width, height, nrChannels;
+		unsigned char* data = stbi_load(filename, &width, &height, &nrChannels, 0);
+
+		if (data) {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		stbi_image_free(data);
+
+		// 텍스처 샘플링/필터링 설정
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
-
-	void BuildQuad(
-	    std::vector<GLfloat> &buffer_data,
-	    const std::vector<vmath::vec4> &positions,
-	    const std::vector<vmath::vec4> &colors,
-	    const std::vector<vmath::vec2> &uvs,
-	    const std::vector<GLuint> &position_idxs,
-	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
+	
+	// 애플리케이션 초기화 수행한다.
+	virtual void startup()
 	{
-		for (int i = 0; i < 6; i++)
-			PushVertex(buffer_data,
-			           positions[position_idxs[i]],
-			           colors[i],
-			           uvs[QUAD_FACE_INDICES[i]],
-			           offset);
-	}
+		// 쉐이더 프로그램 컴파일 및 연결
+		shader_programs[0] = compile_shader("./shaders/basic_texturing_vs.glsl", "./shaders/basic_texturing_fs.glsl");
+		shader_programs[1] = compile_shader("./shaders/basic_lighting_vs.glsl", "./shaders/basic_lighting_fs.glsl");
+		shader_programs[2] = compile_shader("./shaders/simple_color_vs.glsl", "./shaders/simple_color_fs.glsl");
 
-	void BuildCube(
-	    std::vector<GLfloat> &buffer_data,
-	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
-	{
-		for (int f = 0; f < 6; f++)
-			BuildQuad(buffer_data,
-			          CUBE_BASE_POSITIONS,
-			          CUBE_BASE_COLORS,
-			          BASE_QUAD_MESH_UVS,
-			          CUBE_FACE_INDICES[f],
-			          offset);
-	}
+		// VAO, VBO, EBO, texture 생성
+		glGenVertexArrays(3, VAOs);
+		glGenBuffers(3, VBOs);
+		glGenBuffers(2, EBOs);
+		glGenTextures(1, textures);
 
-	void BuildCone(
-	    std::vector<GLfloat> &buffer_data,
-	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
-	{
-		for (int f = 0; f < 4; f++)
-			BuildTriangle(buffer_data,
-			              CONE_SIDE_BASE_POSITION,
-			              CONE_SIDE_BASE_COLORS,
-			              BASE_TRIANGLE_MESH_UVS,
-			              CONE_SIDE_FACE_INDICES[f],
-			              offset);
-		BuildQuad(buffer_data,
-		          CONE_BOTTOM_BASE_POSITION,
-		          CONE_SIDE_BASE_COLORS,
-		          BASE_QUAD_MESH_UVS,
-		          QUAD_FACE_INDICES,
-		          offset);
-	}
+		stbi_set_flip_vertically_on_load(true);
 
-	void BuildTetrahedron(
-	    std::vector<GLfloat> &buffer_data,
-	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
-	{
-		for (int f = 0; f < 4; f++)
-			BuildTriangle(buffer_data,
-			              TETRA_BASE_POSITION,
-			              CONE_SIDE_BASE_COLORS,
-			              BASE_TRIANGLE_MESH_UVS,
-			              TETRA_FACE_INDICES[f],
-			              offset);
-	}
+		load_texture(textures[0], "./textures/wall.jpg");
 
-	void BuildOctahedron(std::vector<GLfloat> &buffer_data,
-	                     const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f))
-	{
-
-		for (int f = 0; f < 4; f++)
-			BuildTriangle(buffer_data,
-			              CONE_SIDE_BASE_POSITION,
-			              CONE_SIDE_BASE_COLORS,
-			              BASE_TRIANGLE_MESH_UVS,
-			              CONE_SIDE_FACE_INDICES[f],
-			              offset);
-		std::vector<vmath::vec4> coneDownSideBasePosition;
-		vmath::mat4 xzMirrorMat = vmath::mat4::identity();
-		xzMirrorMat[1][1] = -1;
-		for (const auto &pos : CONE_SIDE_BASE_POSITION)
-			coneDownSideBasePosition.push_back(pos * xzMirrorMat);
-
-		for (int f = 0; f < 4; f++)
-			BuildTriangle(buffer_data,
-			              coneDownSideBasePosition,
-			              CONE_SIDE_BASE_COLORS,
-			              BASE_TRIANGLE_INV_MESH_UVS,
-			              OCTA_DOWN_SIDE_FACE_INDICES[f],
-			              offset);
-	}
-
-	void BuildDisk(std::vector<GLfloat> &buffer_data,
-	               double us, double ue, int uRes, // 각도 (0 ~ 2*PI)
-	               double vs, double ve, int vRes, // 반지름 비율 (0 ~ 1)
-	               float radius = 1.0f,
-	               const vmath::vec3 &offset = vmath::vec3(0.0f, 0.0f, 0.0f))
-	{
-		int numCols = uRes + 1; // 가로 정점 개수
-		int numRows = vRes + 1; // 세로 정점 개수
-
-		std::vector<vmath::vec4> uvColors = {
-		    {1.0, 0.0, 0.0, 1.0},
-		    {1.0, 1.0, 0.0, 1.0},
-		    {0.0, 1.0, 0.0, 1.0},
-		    {0.0, 1.0, 1.0, 1.0},
-		    // {1.0, 1.0, 1.0, 1.0},
-		    // {1.0, 1.0, 1.0, 1.0},
-		    // {1.0, 1.0, 1.0, 1.0},
-		    // {1.0, 1.0, 1.0, 1.0},
-		};
-		std::vector<vmath::vec4> diskPositions;
-		std::vector<vmath::vec4> diskColors;
-		std::vector<vmath::vec2> diskUVs;
-		double deltaRad = (ve - vs) / vRes;
-		double deltaAngle = (ue - us) / uRes;
-		for (int row = 0; row < numRows; row++)
-		{
-			for (int col = 0; col < numCols; col++)
-			{
-				double currentRad = (vs + row * deltaRad) * radius;
-				double currentAngle = (us + col * deltaAngle);
-
-				diskPositions.push_back(vmath::vec4(
-				    currentRad * cos(currentAngle),
-				    0.0,
-				    -currentRad * sin(currentAngle),
-				    1.0f));
-				diskUVs.push_back(vmath::vec2((float)col / uRes, (float)row / vRes));
-
-				// u 축으로 2차 선형보간
-				float adjU = (float)col / uRes; // u축에 더 가까움
-				float adjV = (float)row / vRes; // v축에 더 가까움
-				auto u1Color = (1 - adjU) * uvColors[0] + (adjU)*uvColors[1];
-				auto u2Color = (1 - adjU) * uvColors[3] + (adjU)*uvColors[2];
-				auto interpoatedColor = (1 - adjV) * u2Color + (adjV)*u1Color;
-				diskColors.push_back(interpoatedColor);
-			}
-		}
-
-		for (int row = 0; row < vRes; row++)
-		{
-			for (int col = 0; col < uRes; col++)
-			{
-				int p0 = row * numCols + col;
-				int p1 = row * numCols + (col + 1);
-				int p2 = (row + 1) * numCols + (col + 1);
-				int p3 = (row + 1) * numCols + col;
-
-				// CCW Quad indices
-				int indices[] = {p0, p1, p2, p0, p2, p3};
-
-				for (int idx : indices)
-					PushVertex(buffer_data, diskPositions[idx], diskColors[idx], diskUVs[idx], offset);
-			}
-		}
-	}
-
-	// void BuildCylinder
-
-	// void HemiSphere
-
-	static const vmath::vec4 BG_COLOR = vmath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-
-	class ModelBase
-	{
-	  protected:
-		GLuint mVAOAddr;
-		GLuint mVBOAddr;
-		GLuint mEBOAddr;
-		std::vector<GLuint> mTextureAddrs;
-
-		std::vector<GLfloat> mBufferData;
-		std::vector<GLuint> mElementData;
-		GLuint mIndexCount;
-
-		bool isBuilted = false;
-
-	  public:
-		vmath::vec3 Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-		vmath::vec3 EulerRot = vmath::vec3(0.0f, 0.0f, 0.0f);
-		vmath::vec3 Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
-
-		vmath::vec4 BaseColor = vmath::vec4(1.0, 1.0, 1.0, 1.0);
-		vmath::vec2 UVOffset = vmath::vec2(0.0f, 0.0f);
-		vmath::vec2 UVRatio = vmath::vec2(1.0f, 1.0f);
-
-		ModelBase()
-		{
-		}
-
-		virtual ~ModelBase()
-		{
-			Deconstruct();
-		}
-
-		void Deconstruct()
-		{
-			if (!isBuilted)
-				return;
-
-			glDeleteBuffers(1, &mEBOAddr);
-			glDeleteBuffers(1, &mVBOAddr);
-			glDeleteVertexArrays(1, &mVAOAddr);
-			isBuilted = false;
-		}
-
-		void Build(const std::vector<GLfloat> &buffer_data)
-		{
-			if (isBuilted)
-				return;
-			mBufferData = std::vector<GLfloat>(buffer_data);
-
-			mIndexCount = mBufferData.size() / VERTEX_LEN;
-			for (GLuint i = 0; i < mIndexCount; i++)
-				mElementData.push_back(i);
-
-			// for(int i = 0;i < mIndexCount; i++) {
-			// 	for(int j = 0; j < VERTEX_LEN; j++)
-			// 		cout << buffer_data[i * VERTEX_LEN + j] << " ";
-			// 	cout << endl;
-			// }
-
-			glGenVertexArrays(1, &mVAOAddr);
-			glBindVertexArray(mVAOAddr);
-
-			glGenBuffers(1, &mVBOAddr);
-			glBindBuffer(GL_ARRAY_BUFFER, mVBOAddr);
-			glBufferData(GL_ARRAY_BUFFER, mBufferData.size() * sizeof(GLfloat), mBufferData.data(), GL_STATIC_DRAW);
-
-			glGenBuffers(1, &mEBOAddr);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEBOAddr);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, mElementData.size() * sizeof(GLuint), mElementData.data(), GL_STATIC_DRAW);
-
-			GLuint stride = VERTEX_LEN * sizeof(GLfloat);
-			void *poffset = (void *)0;
-			void *coffset = (void *)(VERTEX_POSITION_SIZE * sizeof(GLfloat));
-			void *uvoffset = (void *)((VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE) * sizeof(GLfloat));
-
-			glVertexAttribPointer(0, VERTEX_POSITION_SIZE, GL_FLOAT, false, stride, poffset);
-			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(1, VERTEX_COLOR_SIZE, GL_FLOAT, false, stride, coffset);
-			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(2, VERTEX_UV_SIZE, GL_FLOAT, false, stride, uvoffset);
-			glEnableVertexAttribArray(2);
-			isBuilted = true;
-		}
-
-		vmath::mat4 GetModelMatrix()
-		{
-			return vmath::translate<float>(Translate) *
-			       vmath::rotate<float>(EulerRot[2], 0.0, 0.0, 1.0) *
-			       vmath::rotate<float>(EulerRot[1], 0.0, 1.0, 0.0) *
-			       vmath::rotate<float>(EulerRot[0], 1.0, 0.0, 0.0) *
-			       vmath::scale<float>(Scale);
-		}
-
-		virtual void Draw(GLuint prog_addr)
-		{
-			glBindVertexArray(mVAOAddr);
-			glUniformMatrix4fv(glGetUniformLocation(prog_addr, UNIFORM_MODEL_MAT),
-			                   1, false, GetModelMatrix());
-			glUniform4fv(glGetUniformLocation(prog_addr, UNIFORM_BASE_COLOR), 1, BaseColor);
-			if (mTextureAddrs.size())
-			{
-				glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET), 1, UVOffset);
-				glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_RATIO), 1, UVRatio);
-
-				glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);
-
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);
-			}
-			glDrawElements(GL_TRIANGLES, mIndexCount, GL_UNSIGNED_INT, 0);
-		}
-
-		void AddTexture(const char *image_path)
-		{
-			GLuint texture;
-			glGenTextures(1, &texture);
-			glBindTexture(GL_TEXTURE_2D, texture);
-
-			int width, height, nrChannels;
-			unsigned char *data = stbi_load(image_path, &width, &height, &nrChannels, 0);
-			if (data)
-			{
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-				glGenerateMipmap(GL_TEXTURE_2D);
-			}
-			stbi_image_free(data);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-			mTextureAddrs.push_back(texture);
-		}
-	};
-
-	class Cube : public ModelBase
-	{
-	  public:
-		Cube()
-		{
-		}
-		virtual ~Cube()
-		{
-		}
-		void Build()
-		{
-			std::vector<GLfloat> cubeVertices;
-			BuildCube(cubeVertices);
-			ModelBase::Build(cubeVertices);
-		}
-
-		virtual void Draw(GLuint prog_addr) override
-		{
-			glBindVertexArray(mVAOAddr);
-			glUniformMatrix4fv(glGetUniformLocation(prog_addr, UNIFORM_MODEL_MAT),
-			                   1, false, GetModelMatrix());
-			glUniform4fv(glGetUniformLocation(prog_addr, UNIFORM_BASE_COLOR), 1, BaseColor);
-			if (mTextureAddrs.size())
-			{
-				glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_OFFSET), 1, UVOffset);
-				glUniform2fv(glGetUniformLocation(prog_addr, UNIFORM_UV_RATIO), 1, UVRatio);
-
-				glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX1), 0);
-				glUniform1i(glGetUniformLocation(prog_addr, SAMPLER_TEX2), 1);
-				if (mTextureAddrs.size() < 7)
-					return;
-				// for (int f = 0; f < 6; f++)
-				// {
-				// 	glActiveTexture(GL_TEXTURE0);
-				// 	if (f % 4 == 0)
-				// 		glBindTexture(GL_TEXTURE_2D, mTextureAddrs[0]);
-				// 	else
-				// 		glBindTexture(GL_TEXTURE_2D, mTextureAddrs[5 - (1 + f)]);
-				// 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)(f * 6 * sizeof(GLuint)));
-				// 	// cout << "glBindTexture(GL_TEXTURE_2D, mTextureAddrs[" << 1 + f << "]" << endl;
-				// }
-				// if (mTextureAddrs.size() < 13)
-				// 	return;
-				for (int f = 0; f < 6; f++)
-				{
-					glActiveTexture(GL_TEXTURE1);
-					glBindTexture(GL_TEXTURE_2D, mTextureAddrs[1 + f]);
-					glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)(f * 6 * sizeof(GLuint)));
-					// cout << "glBindTexture(GL_TEXTURE_2D, mTextureAddrs[" << 1 + f << "]" << endl;
-				}
-			}
-		}
-
-		void AddCubeTexture(unsigned int texCounts, const char **image_paths)
-		{
-			for (int tIdx = 0; tIdx < texCounts; tIdx++)
-			{
-				GLuint texture;
-				glGenTextures(1, &texture);
-				glBindTexture(GL_TEXTURE_2D, texture);
-
-				int width, height, nrChannels;
-				unsigned char *data = stbi_load(image_paths[tIdx], &width, &height, &nrChannels, 0);
-				if (data)
-				{
-					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-					glGenerateMipmap(GL_TEXTURE_2D);
-				}
-				stbi_image_free(data);
-
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-				mTextureAddrs.push_back(texture);
-			}
-		}
-	};
-
-	class ProgramBase
-	{
-	  private:
-		GLuint mProgramAddr;
-
-		GLuint createShader(GLenum shader_type, const char *shader_path)
-		{
-			GLuint shaderAddr = sb7::shader::load(shader_path, shader_type, true);
-			return shaderAddr;
+		// 첫 번째 객체 정의 : 바닥 --------------------------------------------------
+		glBindVertexArray(VAOs[0]);
+		// 바닥 점들의 위치와 컬러, 텍스처 좌표를 정의한다.
+		float floor_s = 3.0f, floor_t = 3.0f;
+		GLfloat floor_vertices[] = {
+			1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, floor_s, floor_t,  // 우측 상단
+			-1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, floor_t,  // 좌측 상단
+			-1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,   // 좌측 하단
+			1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, floor_s, 0.0f   // 우측 하단
 		};
 
-	  public:
-		ProgramBase(const char *VS_PATH, const char *FS_PATH)
-		{
-			mProgramAddr = glCreateProgram();
-			auto vsAddr = createShader(GL_VERTEX_SHADER, VS_PATH);
-			auto fsAddr = createShader(GL_FRAGMENT_SHADER, FS_PATH);
+		// 삼각형으로 그릴 인덱스를 정의한다.
+		GLuint floor_indices[] = {
+			0, 1, 2,	// 첫번째 삼각형
+			0, 2, 3		// 두번째 삼각형
+		};
 
-			glAttachShader(mProgramAddr, vsAddr);
-			glAttachShader(mProgramAddr, fsAddr);
+		// VBO를 생성하여 vertices 값들을 복사
+		glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(floor_vertices), floor_vertices, GL_STATIC_DRAW);
 
-			glLinkProgram(mProgramAddr);
+		// VBO를 나누어서 각 버텍스 속성으로 연결
+		// 위치 속성 (location = 0)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+		// 컬러 속성 (location = 1)
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(1);
+		// 텍스처 좌표 속성 (location = 2)
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(2);
 
-			glDeleteShader(vsAddr);
-			glDeleteShader(fsAddr);
-		}
-		ProgramBase()
-		    : ProgramBase(SHADER_VS_PATH, SHADER_FS_PATH)
-		{
-		}
+		// EBO를 생성하고 indices 값들을 복사
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[0]);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(floor_indices), floor_indices, GL_STATIC_DRAW);
 
-		~ProgramBase()
-		{
-			glDeleteProgram(mProgramAddr);
-		}
+		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-		GLuint GetProgramAddr() const
-		{
-			return mProgramAddr;
-		}
-	};
+		
 
-	class MyApplication : public sb7::application
+		// 두 번째 객체 정의 : 박스 --------------------------------------------------
+		glBindVertexArray(VAOs[1]);
+		// 박스 점들의 위치와 컬러, 텍스처 좌표를 정의한다.
+		float box_s = 1.0f, box_t = 1.0f;
+		GLfloat box_vertices[] = {
+			// 뒷면
+			-0.25f, 0.5f, -0.25f, 1.0f, 0.0f, 0.0f,		box_s, box_t,	0.0f, 0.0f, -1.0f,
+			0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		0.0f, 0.0f, -1.0f,
+			-0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 0.0f,		box_s, 0.0f,	0.0f, 0.0f, -1.0f,
+
+			0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		0.0f, 0.0f, -1.0f,
+			-0.25f, 0.5f, -0.25f, 1.0f, 0.0f, 0.0f,		box_s, box_t,	0.0f, 0.0f, -1.0f,
+			0.25f, 0.5f, -0.25f, 1.0f, 0.0f, 0.0f,		0.0f, box_t,	0.0f, 0.0f, -1.0f,
+			// 우측면
+			0.25f, 0.0f, -0.25f, 0.0f, 1.0f, 0.0f,		box_s, 0.0f,	1.0f, 0.0f, 0.0f,
+			0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 0.0f,		box_s, box_t,	1.0f, 0.0f, 0.0f,
+			0.25f, 0.0f, 0.25f, 0.0f, 1.0f, 0.0f,		0.0f, 0.0f,		1.0f, 0.0f, 0.0f,
+
+			0.25f, 0.0f, 0.25f, 0.0f, 1.0f, 0.0f,		0.0f, 0.0f,		1.0f, 0.0f, 0.0f,
+			0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 0.0f,		box_s, box_t,	1.0f, 0.0f, 0.0f,
+			0.25f, 0.5f, 0.25f, 0.0f, 1.0f, 0.0f,		0.0f, box_t,	1.0f, 0.0f, 0.0f,
+			// 정면
+			0.25f, 0.0f, 0.25f, 0.0f, 0.0f, 1.0f,		box_s, 0.0f,	0.0f, 0.0f, 1.0f,
+			0.25f, 0.5f, 0.25f, 0.0f, 0.0f, 1.0f,		box_s, box_t,	0.0f, 0.0f, 1.0f,
+			-0.25f, 0.0f, 0.25f, 0.0f, 0.0f, 1.0f,		0.0f, 0.0f,		0.0f, 0.0f, 1.0f,
+
+			-0.25f, 0.0f, 0.25f, 0.0f, 0.0f, 1.0f,		0.0f, 0.0f,		0.0f, 0.0f, 1.0f,
+			0.25f, 0.5f, 0.25f, 0.0f, 0.0f, 1.0f,		box_s, box_t,	0.0f, 0.0f, 1.0f,
+			-0.25f, 0.5f, 0.25f, 0.0f, 0.0f, 1.0f,		0.0f, box_t,	0.0f, 0.0f, 1.0f,
+			// 좌측면
+			-0.25f, 0.0f, 0.25f, 1.0f, 0.0f, 1.0f,		box_s, 0.0f,	-1.0f, 0.0f, 0.0f,
+			-0.25f, 0.5f, 0.25f, 1.0f, 0.0f, 1.0f,		box_s, box_t,	-1.0f, 0.0f, 0.0f,
+			-0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 1.0f,		0.0f, 0.0f,		-1.0f, 0.0f, 0.0f,
+
+			-0.25f, 0.0f, -0.25f, 1.0f, 0.0f, 1.0f,		0.0f, 0.0f,		-1.0f, 0.0f, 0.0f,
+			-0.25f, 0.5f, 0.25f, 1.0f, 0.0f, 1.0f,		box_s, box_t,	-1.0f, 0.0f, 0.0f,
+			-0.25f, 0.5f, -0.25f, 1.0f, 0.0f, 1.0f,		0.0f, box_t,	-1.0f, 0.0f, 0.0f,
+			// 바닥면
+			-0.25f, 0.0f, 0.25f, 1.0f, 1.0f, 0.0f,		box_s, 0.0f,	0.0f, -1.0f, 0.0f,
+			0.25f, 0.0f, -0.25f, 1.0f, 1.0f, 0.0f,		0.0f, box_t,	0.0f, -1.0f, 0.0f,
+			0.25f, 0.0f, 0.25f, 1.0f, 1.0f, 0.0f,		0.0f, 0.0f,		0.0f, -1.0f, 0.0f,
+
+			0.25f, 0.0f, -0.25f, 1.0f, 1.0f, 0.0f,		0.0f, box_t,	0.0f, -1.0f, 0.0f,
+			-0.25f, 0.0f, 0.25f, 1.0f, 1.0f, 0.0f,		box_s, 0.0,		0.0f, -1.0f, 0.0f,
+			-0.25f, 0.0f, -0.25f, 1.0f, 1.0f, 0.0f,		box_s, box_t,	0.0f, -1.0f, 0.0f,
+			// 윗면
+			-0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 1.0f,		0.0f, box_t,	0.0f, 1.0f, 0.0f,
+			0.25f, 0.5f, 0.25f, 0.0f, 1.0f, 1.0f,		box_s, 0.0f,	0.0f, 1.0f, 0.0f,
+			0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 1.0f,		box_s, box_t,	0.0f, 1.0f, 0.0f,
+
+			0.25f, 0.5f, 0.25f, 0.0f, 1.0f, 1.0f,		box_s, 0.0f,	0.0f, 1.0f, 0.0f,
+			-0.25f, 0.5f, -0.25f, 0.0f, 1.0f, 1.0f,		0.0f, box_t,	0.0f, 1.0f, 0.0f,
+			-0.25f, 0.5f, 0.25f, 0.0f, 1.0f, 1.0f,		0.0f, 0.0f,		0.0f, 1.0f, 0.0f
+		};
+		
+		// VBO를 생성하여 vertices 값들을 복사
+		glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(box_vertices), box_vertices, GL_STATIC_DRAW);
+
+		// VBO를 나누어서 각 버텍스 속성으로 연결
+		// 위치 속성 (location = 0)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+		// 컬러 속성 (location = 1)
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(1);
+		// 텍스처 좌표 속성 (location = 2)
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		// 노멀 속성 (location = 3)
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8 * sizeof(float)));
+		glEnableVertexAttribArray(3);
+
+		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+		//  세 번째 객체 정의 : 피라미드 --------------------------------------------------
+		glBindVertexArray(VAOs[2]);
+		// 피라미드 점들의 위치와 컬러, 텍스처 좌표를 정의한다.
+		GLfloat pyramid_vertices[] = {
+			1.0f, 0.0f, -1.0f,    // 우측 상단
+			-1.0f, 0.0f, -1.0f,   // 좌측 상단
+			-1.0f, 0.0f, 1.0f,    // 좌측 하단
+			1.0f, 0.0f, 1.0f,     // 우측 하단
+			0.0f, 1.0f, 0.0f,      // 상단 꼭지점
+			0.0f, -1.0f, 0.0f,      // 하단 꼭지점
+		};
+
+		// 삼각형으로 그릴 인덱스를 정의한다.
+		GLuint pyramid_indices[] = {
+			4, 0, 1,
+			4, 1, 2,
+			4, 2, 3,
+			4, 3, 0,
+
+			5, 1, 0,
+			5, 2, 1,
+			5, 3, 2,
+			5, 0, 3,
+		};
+
+		// VBO를 생성하여 vertices 값들을 복사
+		glBindBuffer(GL_ARRAY_BUFFER, VBOs[2]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(pyramid_vertices), pyramid_vertices, GL_STATIC_DRAW);
+
+		// VBO를 나누어서 각 버텍스 속성으로 연결
+		// 위치 속성 (location = 0)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+
+		// EBO를 생성하고 indices 값들을 복사
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[1]);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(pyramid_indices), pyramid_indices, GL_STATIC_DRAW);
+
+		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	}
+
+	// 애플리케이션 끝날 때 호출된다.
+	virtual void shutdown()
 	{
-		std::unique_ptr<ProgramBase> default_program;
-		std::unique_ptr<ProgramBase> texture_program;
-		std::vector<std::unique_ptr<ModelBase>> default_models;
-		std::vector<std::unique_ptr<ModelBase>> texture_models;
+		glDeleteTextures(1, textures);
+		glDeleteBuffers(2, EBOs);
+		glDeleteBuffers(3, VBOs);
+		glDeleteVertexArrays(3, VAOs);
+		glDeleteProgram(shader_programs[0]);
+		glDeleteProgram(shader_programs[1]);
+	}
 
-		vmath::vec3 eye = vmath::vec3(0.0, 1.0, 3.0);
-		vmath::vec3 target = vmath::vec3(0.0, 0.0, 0.0);
-		vmath::vec3 worldup = vmath::vec3(0.0, 1.0, 0.0);
+	// 렌더링 virtual 함수를 작성해서 오버라이딩한다.
+	virtual void render(double currentTime)
+	{
+		//currentTime = 1.46;
+		//const GLfloat color[] = { (float)sin(currentTime) * 0.5f + 0.5f, (float)cos(currentTime) * 0.5f + 0.5f, 0.0f, 1.0f };
+		const GLfloat black[] = { 1.0f, 1.0f, 0.0f, 1.0f };
+		glClearBufferfv(GL_COLOR, 0, black);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
 
-		float fov = 60;
-		float aspect = 0;
-		float nearplane = 0.1;
-		float farplane = 1000.0;
+		GLint uniform_transform1 = glGetUniformLocation(shader_programs[0], "transform");
+		GLint uniform_transform2 = glGetUniformLocation(shader_programs[1], "transform");
 
-		void init() override
-		{
-			#ifdef MAC_WINE_TEST
-			sb7::application::init();
-			info.majorVersion = 4;
-			info.minorVersion = 1;
-			#endif
-		}
+		// 카메라 매트릭스 계산
+		float distance = 2.f;
+		vmath::vec3 eye((float)cos(currentTime*0.1f)*distance, 1.0, (float)sin(currentTime*0.1f)*distance);
+		vmath::vec3 center(0.0, 0.0, 0.0);
+		vmath::vec3 up(0.0, 1.0, 0.0);
+		vmath::mat4 lookAt = vmath::lookat(eye, center, up);
+		float fov = 50.f;// (float)cos(currentTime)*20.f + 50.0f;
+		vmath::mat4 projM = vmath::perspective(fov, info.windowWidth / (float)info.windowHeight, 0.1f, 1000.0f);
 
-		virtual void startup() override
-		{
-			stbi_set_flip_vertically_on_load(true);
-			default_program = std::make_unique<ProgramBase>();
-			texture_program = std::make_unique<ProgramBase>(SHADER_VS_PATH, TEXTURE_FS_PATH);
+		// 바닥 그리기 ---------------------------------------
+		glUseProgram(shader_programs[0]);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[0], "transform"), 1, GL_FALSE, projM*lookAt*vmath::scale(1.5f));
+		glUniform1i(glGetUniformLocation(shader_programs[0], "texture1"), 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textures[0]);
+		glBindVertexArray(VAOs[0]);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		
 
-			// {
-			// 	std::vector<GLfloat> vertices;
-			// 	BuildCone(vertices);
+		// 라이팅 설정 ---------------------------------------
+		vmath::vec3 lightPos = vmath::vec3((float)sin(currentTime*0.5f), 0.25f, (float)cos(currentTime*0.5f) * 0.7f);// (0.0f, 0.5f, 0.0f);
+		vmath::vec3 lightColor(1.0f, 1.0f, 1.0f);
+		vmath::vec3 viewPos = eye;
+		vmath::vec3 boxColor(1.0f, 0.5f, 0.31f);
+		
+		// 박스 그리기 ---------------------------------------
+		vmath::mat4 transM = vmath::translate(vmath::vec3((float)sin(currentTime*0.5f), 0.0f, (float)cos(currentTime*0.5f) * 0.7f));
+		float angle = currentTime * 100;
+		vmath::mat4 rotateM = vmath::rotate(angle, 0.0f, 1.0f, 0.0f);
+		
+		glUseProgram(shader_programs[1]);
+		
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "projection"), 1, GL_FALSE, projM);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "view"), 1, GL_FALSE, lookAt);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "model"), 1, GL_FALSE, rotateM);
+		glUniform3fv(glGetUniformLocation(shader_programs[1], "lightColor"), 1, lightColor);
+		glUniform3fv(glGetUniformLocation(shader_programs[1], "objectColor"), 1, boxColor);
+		
+		glBindVertexArray(VAOs[1]);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		
 
-			// 	auto model = std::make_unique<ModelBase>();
-			// 	model->Build(vertices);
+		// 피라미드 그리기 (광원) ---------------------------------------
+		float move_y = (float)cos(currentTime)*0.2f + 0.5f;
+		float scaleFactor = 0.05f;
+		vmath::mat4 transform = vmath::translate(lightPos)*
+								vmath::rotate(angle*0.5f, 0.0f, 1.0f, 0.0f)*
+								vmath::scale(scaleFactor, scaleFactor, scaleFactor);
 
-			// 	model->Scale = vmath::vec3(0.75, 0.75, 0.75);
-			// 	default_models.push_back(std::move(model));
-			// }
+		
 
-			{
-				std::vector<GLfloat> vertices;
+		glUseProgram(shader_programs[2]);
+		
+		glUniform3fv(glGetUniformLocation(shader_programs[2], "color"), 1, lightColor);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "projection"), 1, GL_FALSE, projM);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "view"), 1, GL_FALSE, lookAt);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "model"), 1, GL_FALSE, transform);
+		
+		glBindVertexArray(VAOs[2]);
+		glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+		
+	}
 
-				BuildTetrahedron(vertices);
-				auto model = std::make_unique<ModelBase>();
-				model->Build(vertices);
-				model->AddTexture(TEXTURE_SIDES[0]);
-				texture_models.push_back(std::move(model));
-			}
+private:
+	GLuint shader_programs[3];
+	GLuint VAOs[3], VBOs[3], EBOs[2];
+	GLuint textures[1];
+};
 
-			{
-				std::vector<GLfloat> vertices;
-
-				BuildOctahedron(vertices);
-				auto model = std::make_unique<ModelBase>();
-				model->Build(vertices);
-				model->AddTexture(TEXTURE_SIDES[0]);
-				model->Scale = vmath::vec3(1.0, sqrt(2) / 2, 1.0);
-				texture_models.push_back(std::move(model));
-			}
-
-			// {
-			// 	auto model = std::make_unique<Cube>();
-			// 	model->Build();
-
-			// 	model->AddTexture(TEXTURE_CONTAINER);
-			// 	model->AddCubeTexture(6, TEXTURE_SIDES);
-
-			// 	model->Scale = vmath::vec3(0.75, 0.75, 0.75);
-			// 	texture_models.push_back(std::move(model));
-			// }
-
-			// {
-			// 	std::vector<GLfloat> vertices;
-			// 	double disRad = 1.0f;
-			// 	BuildDisk(vertices,
-			// 	          0, 2 * M_PI, 32,
-			// 	          0.5, 1.0, 1, disRad);
-
-			// 	auto model = std::make_unique<ModelBase>();
-			// 	model->Build(vertices);
-			// 	model->AddTexture(TEXTURE_CONTAINER);
-			// 	model->Scale = vmath::vec3(1.0, 1.0, 1.0);
-			// 	model->UVRatio = vmath::vec2(4.0, 1.0);
-			// 	texture_models.push_back(std::move(model));
-			// }
-		}
-
-		virtual void render(double currentTime) override
-		{
-			glClearBufferfv(GL_COLOR, 0, BG_COLOR);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			glEnable(GL_DEPTH_TEST);
-			glEnable(GL_CULL_FACE);
-
-			aspect = ((float)info.windowWidth) / info.windowHeight;
-
-			float angle = vmath::radians((currentTime * 180) / M_PI) * 90;
-
-			if (default_models.size())
-			{
-				glUseProgram(default_program->GetProgramAddr());
-				glUniformMatrix4fv(
-				    glGetUniformLocation(default_program->GetProgramAddr(), UNIFORM_VIEW_MAT),
-				    1, false, vmath::lookat(eye, target, worldup));
-				glUniformMatrix4fv(
-				    glGetUniformLocation(default_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
-				    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
-
-				// for (auto &model : default_models)
-				// {
-				// 	model->Translate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
-				// 	model->EulerRot = vmath::vec3(angle, angle, angle);
-				// }
-
-				default_models.back()->Translate = vmath::vec3(cosf(currentTime), 0.0, 0.0);
-				default_models.back()->EulerRot = vmath::vec3(angle, angle, angle);
-
-				for (auto &model : default_models)
-				{
-					model->Draw(default_program->GetProgramAddr());
-				}
-			}
-			if (texture_models.size())
-			{
-				glUseProgram(texture_program->GetProgramAddr());
-				glUniformMatrix4fv(
-				    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_VIEW_MAT),
-				    1, false, vmath::lookat(eye, target, worldup));
-				glUniformMatrix4fv(
-				    glGetUniformLocation(texture_program->GetProgramAddr(), UNIFORM_PROJ_MAT),
-				    1, false, vmath::perspective(fov, aspect, nearplane, farplane));
-
-				texture_models.back()->EulerRot = vmath::vec3(0, angle, 0);
-				texture_models.back()->UVOffset = vmath::vec2(currentTime, 1.0f);
-
-				for (auto &model : texture_models)
-					model->Draw(texture_program->GetProgramAddr());
-			}
-		}
-
-		virtual void shutdown() override
-		{
-		}
-	};
-}; // namespace exercise6
-
-DECLARE_MAIN(exercise6::MyApplication);
+// DECLARE_MAIN의 하나뿐인 인스턴스
+DECLARE_MAIN(my_application)

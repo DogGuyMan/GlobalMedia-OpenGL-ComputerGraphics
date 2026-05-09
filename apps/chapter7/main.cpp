@@ -1071,3 +1071,123 @@ namespace Engine::Program
 		}
 	};
 } // namespace Engine::Program
+
+namespace Engine::Application
+{
+	class ApplicationBase : public sb7::application
+	{
+	  protected:
+		std::unordered_map<std::string, std::unique_ptr<Transform::Transform>> hierarchies;
+		Camera::Camera main_camera;
+
+		// 디버그용
+		std::unique_ptr<Program::ShaderProgram> mDummyProgram;
+		GLuint mDummyVAO = 0;
+
+		void ClearBuffer()
+		{
+			glClearBufferfv(GL_COLOR, 0, Model::BG_COLOR);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glEnable(GL_DEPTH_TEST);
+			// glEnable(GL_CULL_FACE);
+
+			// !!
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			// !!
+		}
+
+		// 루트 Transform 생성 + hierarchies 에 등록.
+		// 모델 그룹핑 시 parent 로 사용할 포인터를 반환.
+		Transform::Transform *CreateRootTransform(const char *root_name)
+		{
+			auto root = std::make_unique<Transform::Transform>();
+			root->Name = root_name;
+			hierarchies.insert(std::make_pair(root_name, std::move(root)));
+			return hierarchies[root_name].get();
+		}
+
+		virtual void UpdateMembers(double currentTime) = 0;
+
+	  public:
+		virtual void init() override
+		{
+			sb7::application::init();
+		}
+
+		virtual void startup() override
+		{
+			stbi_set_flip_vertically_on_load(true);
+			mDummyProgram = make_unique<Program::DefaultShaderProgram>(
+			    "./shaders/dummy_vs.glsl",
+			    "./shaders/dummy_fs.glsl");
+			glGenVertexArrays(1, &mDummyVAO);
+			glBindVertexArray(mDummyVAO);
+		}
+
+		virtual void render(double currentTime) override
+		{
+			ClearBuffer();
+			main_camera.Aspect = ((float)info.windowWidth) / info.windowHeight;
+		}
+
+		virtual void shutdown() override
+		{
+			if (mDummyVAO != 0)
+				glDeleteVertexArrays(1, &mDummyVAO);
+		}
+	};
+} // namespace Engine::Application
+
+
+namespace chapter7
+{
+	using namespace Engine;
+	using namespace Engine::Model;
+	using namespace Engine::Material;
+
+	static const char* wallTexture = "./textures/wall.jpg";
+
+	class MyApplication : public Engine::Application::ApplicationBase
+	{
+	  protected:
+		unique_ptr<Program::TextureShaderProgram> program;
+		const char *name_of_WorldRoot_transform = "WorldRoot";
+		
+		virtual void UpdateMembers(double currentTime) override
+		{
+
+			// 	bmate->BaseColor = vec4(
+			// 		bmate->BaseColor[0],
+			// 		bmate->BaseColor[1],
+			// 		bmate->BaseColor[2],
+			// 		cos(currentTime) * 0.5 + 0.5
+			// 	);
+			// }
+		}
+
+	  public:
+		virtual void startup() override
+		{
+			ApplicationBase::startup();
+		}
+
+		virtual void render(double currentTime) override
+		{
+			ApplicationBase::render(currentTime);
+			UpdateMembers(currentTime);
+
+			// glUseProgram(mDummyProgram->ProgAddr);
+			// glBindVertexArray(mDummyVAO);
+			// glDrawArrays(GL_TRIANGLES, 0, 12);
+			program->Render(currentTime, main_camera.GetViewMatrix(), main_camera.GetProjMatrix());
+		}
+
+		virtual void shutdown() override
+		{
+			ApplicationBase::shutdown();
+		}
+	};
+}; // namespace chapter7
+
+DECLARE_MAIN(chapter7::MyApplication);
