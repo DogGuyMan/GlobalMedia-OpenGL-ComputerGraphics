@@ -440,13 +440,13 @@ class my_application : public sb7::application
 		glActiveTexture(GL_TEXTURE2);
 		glBindTexture(GL_TEXTURE_2D, m_material.specularTexture);
 
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "light.position"), 1, m_light.position);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "light.ambient"), 1, m_light.ambient);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "light.diffuse"), 1, m_light.diffuse);
-		glUniform3fv(glGetUniformLocation(shader_programs[1], "light.specular"), 1, m_light.specular);
+		glUniform3fv(glGetUniformLocation(shader_program, "light.position"), 1, m_light.position);
+		glUniform3fv(glGetUniformLocation(shader_program, "light.ambient"), 1, m_light.ambient);
+		glUniform3fv(glGetUniformLocation(shader_program, "light.diffuse"), 1, m_light.diffuse);
+		glUniform3fv(glGetUniformLocation(shader_program, "light.specular"), 1, m_light.specular);
 
-		glUniform1i(glGetUniformLocation(shader_programs[1], "material.diffuse"), 1);
-		glUniform1i(glGetUniformLocation(shader_programs[1], "material.specular"), 2);
+		glUniform1i(glGetUniformLocation(shader_program, "material.diffuse"), 1);
+		glUniform1i(glGetUniformLocation(shader_program, "material.specular"), 2);
 
 		m_material.diffuseTexture = textures[1];
 		m_material.specularTexture = textures[2];
@@ -480,7 +480,7 @@ class my_application : public sb7::application
 		glUniform3fv(glGetUniformLocation(shader_program, "objectColor"), 1, lightColor);
 		glUniform1f(glGetUniformLocation(shader_program, "useTexture"), 0.0f);
 
-		glUniform3fv(glGetUniformLocation(shader_programs[2], "color"), 1, lightColor);
+		glUniform3fv(glGetUniformLocation(shader_program, "color"), 1, lightColor);
 
 		glBindVertexArray(VAOs[2]);
 		glDrawElements(GL_TRIANGLES,
@@ -491,9 +491,6 @@ class my_application : public sb7::application
 	void onResize(int w, int h)
 	{
 		sb7::application::onResize(w, h);
-		std::cout << "width : " << w
-		          << "height : " << h
-		          << std::endl;
 	}
 
   private:
