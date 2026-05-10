@@ -1,7 +1,6 @@
 #include "GL/gl3w.h"
 #include "GL/glcorearb.h"
 #include "vmath.h"
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -13,7 +12,6 @@
 #include <stb_image.h>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1180,7 +1178,7 @@ namespace chapter7
 			// glUseProgram(mDummyProgram->ProgAddr);
 			// glBindVertexArray(mDummyVAO);
 			// glDrawArrays(GL_TRIANGLES, 0, 12);
-			program->Render(currentTime, main_camera.GetViewMatrix(), main_camera.GetProjMatrix());
+			program->Render(currentTime, main_camera.GetViewMatrix(), main_camera.GetProjMatrix(), main_camera.Transform.Translate);
 		}
 
 		virtual void shutdown() override
