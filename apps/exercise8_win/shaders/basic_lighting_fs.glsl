@@ -1,10 +1,10 @@
-// #version 430 core
-#version 410 core
+#version 430 core
+// #version 410 core
 
 in vec3 vsPosition;
 in vec3 vsColor;
-in vec3 vsNormal;
 in vec2 vsTexCoord;
+in vec3 vsNormal;
 
 struct Light {
         vec3 position;
@@ -23,17 +23,10 @@ uniform Material material;
 uniform vec3 viewPos;
 uniform vec3 objectColor;
 
-uniform float useTexture;
-
 out vec4 fragColor;
 
 void main()
 {
-        if (useTexture < 0.5) {
-                fragColor = vec4(objectColor, 1.0);
-                return;
-        }
-
         // ambient
         vec3 diffuseTextureColor = texture(material.diffuse, vsTexCoord).rgb;
         vec3 ambient = diffuseTextureColor * light.ambient;

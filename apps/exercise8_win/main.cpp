@@ -1,179 +1,16 @@
 // sb6.h 헤더 파일을 포함시킨다.
 #include "GL/gl3w.h"
+#include <ostream>
 #include <sb7.h>
 #include <shader.h>
-#include <type_traits>
 #include <vector>
 #include <vmath.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#define MAC_WINE_TEST
+// #define MAC_WINE_TEST
 
-namespace Engine::Model
-{
-
-	inline vmath::vec3 ComputeFaceNormal(const vmath::vec3 &p0,
-	                                     const vmath::vec3 &p1,
-	                                     const vmath::vec3 &p2)
-	{
-		vmath::vec3 e1 = p1 - p0;
-		vmath::vec3 e2 = p2 - p0;
-		return vmath::normalize(vmath::cross(e1, e2));
-	}
-
-	static const std::vector<vmath::vec3> CUBE_BASE_POSITIONS = {
-	    {-0.25f, 0.0f, -0.25f}, // 0
-	    {0.25f, 0.0f, -0.25f},  // 1
-	    {0.25f, 0.0f, 0.25f},   // 2
-	    {-0.25f, 0.0f, 0.25f},  // 3
-	    {-0.25f, 0.5f, -0.25f}, // 4
-	    {0.25f, 0.5f, -0.25f},  // 5
-	    {0.25f, 0.5f, 0.25f},   // 6
-	    {-0.25f, 0.5f, 0.25f}   // 7
-	};
-
-	static const std::vector<std::vector<GLuint>> CUBE_FACE_INDICES = {
-	    {1, 0, 4, 1, 4, 5}, // -Z
-	    {2, 1, 5, 2, 5, 6}, // +X
-	    {3, 2, 6, 3, 6, 7}, // +Z
-	    {0, 3, 7, 0, 7, 4}, // -X
-	    {0, 1, 2, 0, 2, 3}, // -Y
-	    {7, 6, 5, 7, 5, 4}  // +Y
-	};
-
-	static const std::vector<vmath::vec2> BASE_QUAD_MESH_UVS = {
-	    {0.0f, 0.0f},
-	    {1.0f, 0.0f},
-	    {1.0f, 1.0f},
-	    {0.0f, 1.0f}};
-
-	static const std::vector<GLuint> QUAD_MESH_UVS_FAN = {0, 1, 2, 0, 2, 3};
-
-	inline void PushVertex(std::vector<GLfloat> &vertices,
-	                       const GLuint posSz, const GLfloat pos[],
-	                       const GLuint colorSz = 0, const GLfloat color[] = nullptr,
-	                       const GLuint uvSz = 0, const GLfloat uv[] = nullptr,
-	                       const GLuint normalSz = 0, const GLfloat normal[] = nullptr)
-	{
-		for (int i = 0; i < posSz; i++)
-			vertices.push_back(pos[i]);
-		for (int i = 0; i < colorSz; i++)
-			vertices.push_back(color[i]);
-		for (int i = 0; i < uvSz; i++)
-			vertices.push_back(uv[i]);
-		for (int i = 0; i < normalSz; i++)
-			vertices.push_back(normal[i]);
-	}
-
-	inline void BuildCube(std::vector<GLfloat> &buffer_data,
-	                      const std::vector<std::vector<GLuint>> &cube_face_indices,
-	                      const std::vector<vmath::vec2> &base_quad_mesh_uvs = BASE_QUAD_MESH_UVS)
-	{
-
-		for (int f = 0; f < 6; f++)
-		{
-			const auto &face_idxs = cube_face_indices[f];
-			const vmath::vec3 &fp0 = CUBE_BASE_POSITIONS[face_idxs[0]];
-			const vmath::vec3 &fp1 = CUBE_BASE_POSITIONS[face_idxs[1]];
-			const vmath::vec3 &fp2 = CUBE_BASE_POSITIONS[face_idxs[2]];
-			const vmath::vec3 white = vmath::vec3(1.0f, 1.0f, 1.0f);
-			const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
-
-			for (int i = 0; i < 6; i++)
-			{
-				const vmath::vec3 &pos = CUBE_BASE_POSITIONS[face_idxs[i]];
-				const vmath::vec2 &uv = base_quad_mesh_uvs[QUAD_MESH_UVS_FAN[i]];
-
-				PushVertex(buffer_data,
-				           3, &pos[0],
-				           3, white,
-				           2, &uv[0],
-				           3, &faceNormal[0]);
-			}
-		}
-	}
-
-	static const std::vector<vmath::vec3> QUAD_BASE_POSITIONS = {
-	    {1.0f, 0.0f, -1.0f},
-	    {-1.0f, 0.0f, -1.0f},
-	    {-1.0f, 0.0f, 1.0f},
-	    {1.0f, 0.0f, 1.0f}};
-
-	static const std::vector<GLuint> QUAD_FACE_INDICES = {
-	    0, 1, 2,
-	    0, 2, 3};
-
-	static const std::vector<vmath::vec3> QUAD_RGBY_COLORS = {
-	    {1.0f, 0.0f, 0.0f},
-	    {0.0f, 1.0f, 0.0f},
-	    {0.0f, 0.0f, 1.0f},
-	    {1.0f, 1.0f, 0.0f}};
-
-	static const std::vector<vmath::vec2> QUAD_FLOOR_UVS = {
-	    {3.0f, 3.0f},
-	    {0.0f, 3.0f},
-	    {0.0f, 0.0f},
-	    {3.0f, 0.0f}};
-
-	inline void BuildQuad(std::vector<GLfloat> &buffer_data,
-	                      const std::vector<vmath::vec3> &corner_colors = QUAD_RGBY_COLORS,
-	                      const std::vector<vmath::vec2> &corner_uvs = QUAD_FLOOR_UVS)
-	{
-		const vmath::vec3 normal = ComputeFaceNormal(QUAD_BASE_POSITIONS[0],
-		                                             QUAD_BASE_POSITIONS[1],
-		                                             QUAD_BASE_POSITIONS[2]);
-
-		for (int i = 0; i < 4; i++)
-		{
-			const vmath::vec3 &pos = QUAD_BASE_POSITIONS[i];
-			const vmath::vec3 &color = corner_colors[i];
-			const vmath::vec2 &uv = corner_uvs[i];
-
-			PushVertex(buffer_data,
-			           3, &pos[0],
-			           3, &color[0],
-			           2, &uv[0],
-			           3, &normal[0]);
-		}
-	}
-
-	static const std::vector<vmath::vec3> PYRAMID_BASE_POSITIONS = {
-	    {1.0f, 0.0f, -1.0f},
-	    {-1.0f, 0.0f, -1.0f},
-	    {-1.0f, 0.0f, 1.0f},
-	    {1.0f, 0.0f, 1.0f},
-	    {0.0f, 1.0f, 0.0f},
-	    {0.0f, -1.0f, 0.0f}};
-
-	static const std::vector<GLuint> PYRAMID_FACE_INDICES = {
-
-	    4, 0, 1,
-	    4, 1, 2,
-	    4, 2, 3,
-	    4, 3, 0,
-
-	    5, 1, 0,
-	    5, 2, 1,
-	    5, 3, 2,
-	    5, 0, 3};
-
-	inline void BuildPyramid(std::vector<GLfloat> &buffer_data)
-	{
-		const vmath::vec3 white(1.0f, 1.0f, 1.0f);
-		const vmath::vec2 zeroUV(0.0f, 0.0f);
-
-		for (const vmath::vec3 &pos : PYRAMID_BASE_POSITIONS)
-		{
-			const vmath::vec3 normal = vmath::normalize(pos);
-			PushVertex(buffer_data,
-			           3, &pos[0],
-			           3, &white[0],
-			           2, &zeroUV[0],
-			           3, &normal[0]);
-		}
-	}
-} // namespace Engine::Model
+#include <iostream>
 
 // sb6::application을 상속받는다.
 class my_application : public sb7::application
@@ -237,7 +74,9 @@ class my_application : public sb7::application
 	virtual void startup()
 	{
 		// 쉐이더 프로그램 컴파일 및 연결
-		shader_program = compile_shader("./shaders/basic_lighting_vs.glsl", "./shaders/basic_lighting_fs.glsl");
+		shader_programs[0] = compile_shader("./shaders/basic_texturing_vs.glsl", "./shaders/basic_texturing_fs.glsl");
+		shader_programs[1] = compile_shader("./shaders/basic_lighting_vs.glsl", "./shaders/basic_lighting_fs.glsl");
+		shader_programs[2] = compile_shader("./shaders/simple_color_vs.glsl", "./shaders/simple_color_fs.glsl");
 
 		// VAO, VBO, EBO, texture 생성
 		glGenVertexArrays(3, VAOs);
@@ -249,30 +88,26 @@ class my_application : public sb7::application
 
 		// 첫 번째 객체 정의 : 바닥 --------------------------------------------------
 		glBindVertexArray(VAOs[0]);
+		// 바닥 점들의 위치와 컬러, 텍스처 좌표를 정의한다.
 
-		// 바닥 vertex data — Engine::Model::BuildQuad 로 런타임 생성. 11-float layout (basic_lighting 호환).
-		std::vector<GLfloat> floor_vertices_data;
-		Engine::Model::BuildQuad(floor_vertices_data);
+		// VBO를 생성하여 vertices 값들을 복사
 		glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-		glBufferData(GL_ARRAY_BUFFER,
-		             floor_vertices_data.size() * sizeof(GLfloat),
-		             floor_vertices_data.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(floor_vertices), floor_vertices, GL_STATIC_DRAW);
 
-		// 4 attributes (location 0/1/2/3 = pos/color/uv/normal), stride 11 float.
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)0);
+		// VBO를 나누어서 각 버텍스 속성으로 연결
+		// 위치 속성 (location = 0)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(3 * sizeof(float)));
+		// 컬러 속성 (location = 1)
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(6 * sizeof(float)));
+		// 텍스처 좌표 속성 (location = 2)
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
 		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(8 * sizeof(float)));
-		glEnableVertexAttribArray(3);
 
-		// EBO — namespace 의 QUAD_FACE_INDICES 직접 업로드.
+		// EBO를 생성하고 indices 값들을 복사
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[0]);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-		             Engine::Model::QUAD_FACE_INDICES.size() * sizeof(GLuint),
-		             Engine::Model::QUAD_FACE_INDICES.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(floor_indices), floor_indices, GL_STATIC_DRAW);
 
 		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
 		glBindVertexArray(0);
@@ -301,12 +136,9 @@ class my_application : public sb7::application
 		boxPositions.push_back(vmath::vec3(1.5f, 0.2f, -1.5f));
 		boxPositions.push_back(vmath::vec3(-1.3f, 1.0f, -1.5f));
 
-		std::vector<GLfloat> box_vertices_data;
-		Engine::Model::BuildCube(box_vertices_data, Engine::Model::CUBE_FACE_INDICES);
+		// VBO를 생성하여 vertices 값들을 복사
 		glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-		glBufferData(GL_ARRAY_BUFFER,
-		             box_vertices_data.size() * sizeof(GLfloat),
-		             box_vertices_data.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(box_vertices), box_vertices, GL_STATIC_DRAW);
 
 		// VBO를 나누어서 각 버텍스 속성으로 연결
 		// 위치 속성 (location = 0)
@@ -333,30 +165,20 @@ class my_application : public sb7::application
 
 		//  세 번째 객체 정의 : 피라미드 --------------------------------------------------
 		glBindVertexArray(VAOs[2]);
+		// 피라미드 점들의 위치와 컬러, 텍스처 좌표를 정의한다.
 
-		// 피라미드 vertex data — Engine::Model::BuildPyramid 로 런타임 생성. 11-float layout (basic_lighting 호환).
-		std::vector<GLfloat> pyramid_vertices_data;
-		Engine::Model::BuildPyramid(pyramid_vertices_data);
+		// VBO를 생성하여 vertices 값들을 복사
 		glBindBuffer(GL_ARRAY_BUFFER, VBOs[2]);
-		glBufferData(GL_ARRAY_BUFFER,
-		             pyramid_vertices_data.size() * sizeof(GLfloat),
-		             pyramid_vertices_data.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(pyramid_vertices), pyramid_vertices, GL_STATIC_DRAW);
 
-		// 4 attributes (location 0/1/2/3 = pos/color/uv/normal), stride 11 float.
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)0);
+		// VBO를 나누어서 각 버텍스 속성으로 연결
+		// 위치 속성 (location = 0)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(3 * sizeof(float)));
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(6 * sizeof(float)));
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void *)(8 * sizeof(float)));
-		glEnableVertexAttribArray(3);
 
-		// EBO — namespace 의 PYRAMID_FACE_INDICES 직접 업로드.
+		// EBO를 생성하고 indices 값들을 복사
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[1]);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-		             Engine::Model::PYRAMID_FACE_INDICES.size() * sizeof(GLuint),
-		             Engine::Model::PYRAMID_FACE_INDICES.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(pyramid_indices), pyramid_indices, GL_STATIC_DRAW);
 
 		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
 		glBindVertexArray(0);
@@ -371,7 +193,8 @@ class my_application : public sb7::application
 		glDeleteBuffers(2, EBOs);
 		glDeleteBuffers(3, VBOs);
 		glDeleteVertexArrays(3, VAOs);
-		glDeleteProgram(shader_program);
+		glDeleteProgram(shader_programs[0]);
+		glDeleteProgram(shader_programs[1]);
 	}
 
 	// 렌더링 virtual 함수를 작성해서 오버라이딩한다.
@@ -385,8 +208,8 @@ class my_application : public sb7::application
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);
 
-		GLint uniform_transform1 = glGetUniformLocation(shader_program, "transform");
-		GLint uniform_transform2 = glGetUniformLocation(shader_program, "transform");
+		GLint uniform_transform1 = glGetUniformLocation(shader_programs[0], "transform");
+		GLint uniform_transform2 = glGetUniformLocation(shader_programs[1], "transform");
 
 		// 카메라 매트릭스 계산
 		float distance = 2.f;
@@ -396,6 +219,17 @@ class my_application : public sb7::application
 		vmath::mat4 lookAt = vmath::lookat(eye, center, up);
 		float fov = 50.f;
 		vmath::mat4 projM = vmath::perspective(fov, (float)info.windowWidth / info.windowHeight, 0.1f, 1000.0f);
+
+		// 바닥 그리기 ---------------------------------------
+		/*
+		glUseProgram(shader_programs[0]);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[0], "transform"), 1, GL_FALSE, projM*lookAt*vmath::scale(1.5f));
+		glUniform1i(glGetUniformLocation(shader_programs[0], "texture1"), 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textures[0]);
+		glBindVertexArray(VAOs[0]);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		*/
 
 		// 라이팅 설정 ---------------------------------------
 		m_light.position = vmath::vec3((float)sin(currentTime * 0.5f), 0.25f, (float)cos(currentTime * 0.5f) * 0.7f); // (0.0f, 0.5f, 0.0f);
@@ -411,34 +245,14 @@ class my_application : public sb7::application
 		float angle = currentTime * 100;
 		vmath::mat4 rotateM = vmath::rotate(angle, 0.0f, 1.0f, 0.0f);
 
-		glUseProgram(shader_program);
+		glUseProgram(shader_programs[1]);
 
-		glUniformMatrix4fv(glGetUniformLocation(shader_program, "projection"), 1, GL_FALSE, projM);
-		glUniformMatrix4fv(glGetUniformLocation(shader_program, "view"), 1, GL_FALSE, lookAt);
-		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, rotateM);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "projection"), 1, GL_FALSE, projM);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "view"), 1, GL_FALSE, lookAt);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "model"), 1, GL_FALSE, rotateM);
 
-		glUniform3fv(glGetUniformLocation(shader_program, "viewPos"), 1, viewPos);
-		glUniform3fv(glGetUniformLocation(shader_program, "objectColor"), 1, boxColor);
-
-		glUniform3fv(glGetUniformLocation(shader_program, "light.position"), 1, m_light.position);
-		glUniform3fv(glGetUniformLocation(shader_program, "light.ambient"), 1, m_light.ambient);
-		glUniform3fv(glGetUniformLocation(shader_program, "light.diffuse"), 1, m_light.diffuse);
-		glUniform3fv(glGetUniformLocation(shader_program, "light.specular"), 1, m_light.specular);
-
-		glUniform1i(glGetUniformLocation(shader_program, "material.diffuse"), 1);
-		glUniform1i(glGetUniformLocation(shader_program, "material.specular"), 2);
-
-		// 텍스처 있는 메쉬 — useTexture = 1.0 → fs 가 라이팅 계산 경로 진입.
-		glUniform1f(glGetUniformLocation(shader_program, "useTexture"), 1.0f);
-
-		m_material.diffuseTexture = textures[1];
-		m_material.specularTexture = textures[2];
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_material.diffuseTexture);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, m_material.specularTexture);
+		glUniform3fv(glGetUniformLocation(shader_programs[1], "viewPos"), 1, viewPos);
+		glUniform3fv(glGetUniformLocation(shader_programs[1], "objectColor"), 1, boxColor);
 
 		glUniform3fv(glGetUniformLocation(shader_programs[1], "light.position"), 1, m_light.position);
 		glUniform3fv(glGetUniformLocation(shader_programs[1], "light.ambient"), 1, m_light.ambient);
@@ -465,27 +279,27 @@ class my_application : public sb7::application
 			vmath::mat4 model = vmath::translate(boxPositions[i]) *
 			                    vmath::rotate(angle, 1.0f, 0.3f, 0.5f) *
 			                    vmath::scale(1.0f);
-			glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, model);
+			glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "model"), 1, GL_FALSE, model);
 			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 
 		// 피라미드 (광원) 그리기 ---------------------------------------
-		// 텍스처 없는 unlit 메쉬 — useTexture = 0.0 → fs 가 objectColor (=lightColor) 만 출력.
-		float scaleFactor = 0.05f;
+		float move_y = (float)cos(currentTime) * 0.2f + 0.5f;
+		float scaleFactor = 0.05f; // (float)cos(currentTime)*0.05f + 0.2f;
 		vmath::mat4 transform = vmath::translate(m_light.position) *
 		                        vmath::rotate(angle * 0.5f, 0.0f, 1.0f, 0.0f) *
 		                        vmath::scale(scaleFactor, scaleFactor, scaleFactor);
 
-		glUniformMatrix4fv(glGetUniformLocation(shader_program, "model"), 1, GL_FALSE, transform);
-		glUniform3fv(glGetUniformLocation(shader_program, "objectColor"), 1, lightColor);
-		glUniform1f(glGetUniformLocation(shader_program, "useTexture"), 0.0f);
+		glUseProgram(shader_programs[2]);
+
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "projection"), 1, GL_FALSE, projM);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "view"), 1, GL_FALSE, lookAt);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "model"), 1, GL_FALSE, transform);
 
 		glUniform3fv(glGetUniformLocation(shader_programs[2], "color"), 1, lightColor);
 
 		glBindVertexArray(VAOs[2]);
-		glDrawElements(GL_TRIANGLES,
-		               Engine::Model::PYRAMID_FACE_INDICES.size(),
-		               GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
 	}
 
 	void onResize(int w, int h)
@@ -497,7 +311,7 @@ class my_application : public sb7::application
 	}
 
   private:
-	GLuint shader_program;
+	GLuint shader_programs[3];
 	GLuint VAOs[3], VBOs[3], EBOs[2];
 	GLuint textures[3];
 

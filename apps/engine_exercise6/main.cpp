@@ -419,9 +419,6 @@ namespace Engine::Model
 		}
 	}
 
-	/* 정육면체 6 면 모두 buffer_data 에 추가.
-	   offset:    기본 -0.5 -> 로컬 0 ~ 1  큐브를 원점 중심 0,0,0 로 정렬
-	   back_face: true 면 모든 면 winding 반전 (skybox 처럼 안쪽에서 보이게) */
 	void BuildCube(
 	    std::vector<GLfloat> &buffer_data,
 	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),

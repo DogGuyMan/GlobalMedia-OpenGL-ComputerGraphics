@@ -16,6 +16,9 @@
 # add_subdirectory(exercise5)
 # add_subdirectory(exercise6)
 add_subdirectory(exercise7)
+add_subdirectory(exercise7_win)
+add_subdirectory(exercise8)
+add_subdirectory(exercise8_win)
 
 # add_subdirectory(extra1)
 # add_subdirectory(prevmidterm)
