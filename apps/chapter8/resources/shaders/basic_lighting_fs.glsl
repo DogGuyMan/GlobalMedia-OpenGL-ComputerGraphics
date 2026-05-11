@@ -47,7 +47,7 @@ uniform Material material;
 uniform DirLight dirLight;
 uniform PointLight pointLights[NUM_POINT_LIGHTS]; // GLSL은 동적 배열 불가
 uniform SpotLight spotLight;
-uniform Light light;
+// uniform Light light;
 
 uniform vec3 viewPos;
 uniform vec3 objectColor;

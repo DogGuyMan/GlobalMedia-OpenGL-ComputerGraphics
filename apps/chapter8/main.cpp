@@ -8,18 +8,97 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#define MAC_WINE_TEST
 
 #include <iostream>
+#include <string>
 
-#include "diagnostics/gl_log.h"
-#include "diagnostics/gl_state_log.h"
-namespace diag = SJH::Diagnostics;
+#define MAC_WINE_TEST
+#include "diagnostics/gl_log.h"       // diag::
+#include "diagnostics/gl_state_log.h" // diag::
+namespace diag = SJH::Diagnostics;    // diag::
+
+#define NUM_POINT_LIGHTS 2
 
 // sb6::application을 상속받는다.
 class my_application : public sb7::application
 {
   public:
+	// ───────── 라이트 / 머티리얼 데이터 구조 ─────────
+	struct Light
+	{
+		vmath::vec3 position;
+		vmath::vec3 ambient;
+		vmath::vec3 diffuse;
+		vmath::vec3 specular;
+	};
+
+	struct DirLight
+	{
+		vmath::vec3 direction;
+		vmath::vec3 ambient, diffuse, specular;
+	};
+
+	struct PointLight
+	{
+		vmath::vec3 position;
+		float c1, c2;
+		vmath::vec3 ambient, diffuse, specular;
+	};
+
+	struct SpotLight
+	{
+		vmath::vec3 position;
+		vmath::vec3 direction;
+		float cutOff, outerCutOff;
+		float c1, c2;
+		vmath::vec3 ambient, diffuse, specular;
+	};
+
+	struct Material
+	{
+		GLuint diffuseTexture;
+		GLuint specularTexture;
+		float shininess;
+	};
+
+	static void UniformsSetDirLight(GLuint program, const std::string &prefix, const DirLight &light)
+	{
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".direction").c_str()), 1, light.direction);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".ambient").c_str()), 1, light.ambient);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".diffuse").c_str()), 1, light.diffuse);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".specular").c_str()), 1, light.specular);
+	}
+
+	static void UniformsSetPointLight(GLuint program, const std::string &prefix, const PointLight &light)
+	{
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".position").c_str()), 1, light.position);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".ambient").c_str()), 1, light.ambient);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".diffuse").c_str()), 1, light.diffuse);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".specular").c_str()), 1, light.specular);
+		glUniform1f(glGetUniformLocation(program, (prefix + ".c1").c_str()), light.c1);
+		glUniform1f(glGetUniformLocation(program, (prefix + ".c2").c_str()), light.c2);
+	}
+
+	static void UniformsSetStopLight(GLuint program, const std::string &prefix, const SpotLight &light)
+	{
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".position").c_str()), 1, light.position);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".direction").c_str()), 1, light.direction);
+		glUniform1f(glGetUniformLocation(program, (prefix + ".cutOff").c_str()), light.cutOff);
+		glUniform1f(glGetUniformLocation(program, (prefix + ".outerCutOff").c_str()), light.outerCutOff);
+		glUniform1f(glGetUniformLocation(program, (prefix + ".c1").c_str()), light.c1);
+		glUniform1f(glGetUniformLocation(program, (prefix + ".c2").c_str()), light.c2);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".ambient").c_str()), 1, light.ambient);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".diffuse").c_str()), 1, light.diffuse);
+		glUniform3fv(glGetUniformLocation(program, (prefix + ".specular").c_str()), 1, light.specular);
+	}
+
+	static void UniformsSeMaterial(GLuint program, const std::string &prefix, const Material &material, int diffuseUnit, int specularUnit)
+	{
+		glUniform1i(glGetUniformLocation(program, (prefix + ".diffuse").c_str()), diffuseUnit);
+		glUniform1i(glGetUniformLocation(program, (prefix + ".specular").c_str()), specularUnit);
+		glUniform1f(glGetUniformLocation(program, (prefix + ".shininess").c_str()), material.shininess);
+	}
+
 	// 쉐이더 프로그램 컴파일한다.
 	GLuint compile_shader(const char *vs_file, const char *fs_file)
 	{
@@ -289,10 +368,30 @@ class my_application : public sb7::application
 		*/
 
 		// 라이팅 설정
-		m_light.position = vmath::vec3((float)sin(currentTime * 0.5f), 0.25f, (float)cos(currentTime * 0.5f) * 0.7f); // (0.0f, 0.5f, 0.0f);
-		m_light.ambient = vmath::vec3(0.3f, 0.3f, 0.3f);
-		m_light.diffuse = vmath::vec3(1.0f, 1.0f, 1.0f);
-		m_light.specular = vmath::vec3(1.0f, 1.0f, 1.0f);
+		m_dirLight.direction = vmath::vec3(-0.2f, -1.0f, -0.3f);
+		m_dirLight.ambient = vmath::vec3(0.05f, 0.05f, 0.05f);
+		m_dirLight.diffuse = vmath::vec3(0.4f, 0.4f, 0.4f);
+		m_dirLight.specular = vmath::vec3(0.5f, 0.5f, 0.5f);
+
+		for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
+			m_pointLights[i].position = vmath::vec3((float)sin(currentTime * 0.5f), 0.25f, (float)cos(currentTime * 0.5f) * 0.7f); // (0.0f, 0.5f, 0.0f);;
+			m_pointLights[i].ambient = vmath::vec3(0.05f, 0.05f, 0.05f);
+			m_pointLights[i].diffuse = vmath::vec3(0.8f, 0.8f, 0.8f);
+			m_pointLights[i].specular = vmath::vec3(1.0f, 1.0f, 1.0f);
+			m_pointLights[i].c1 = 0.09f;
+			m_pointLights[i].c2 = 0.032f;
+		}
+
+		m_spotLight.position = eye;
+		m_spotLight.direction = center - eye;
+		m_spotLight.cutOff = (float)cos(vmath::radians(12.5));
+		m_spotLight.outerCutOff = (float)cos(vmath::radians(15.5));
+		m_spotLight.c1 = 0.09f;
+		m_spotLight.c2 = 0.032f;
+		m_spotLight.ambient = vmath::vec3(0.0f, 0.0f, 0.0f);
+		m_spotLight.diffuse = vmath::vec3(1.0f, 1.0f, 1.0f);
+		m_spotLight.specular = vmath::vec3(1.0f, 1.0f, 1.0f);
+
 		vmath::vec3 viewPos = eye;
 		vmath::vec3 lightColor(1.0f, 1.0f, 1.0f);
 		vmath::vec3 boxColor(1.0f, 1.0f, 1.0f);
@@ -314,17 +413,17 @@ class my_application : public sb7::application
 			glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "projection"), 1, GL_FALSE, projM);
 			glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "view"), 1, GL_FALSE, lookAt);
 			glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "model"), 1, GL_FALSE, rotateM);
-
-			glUniform3fv(glGetUniformLocation(shader_programs[1], "viewPos"), 1, viewPos);
 			glUniform3fv(glGetUniformLocation(shader_programs[1], "objectColor"), 1, boxColor);
+			glUniform3fv(glGetUniformLocation(shader_programs[1], "viewPos"), 1, viewPos);
 
-			glUniform3fv(glGetUniformLocation(shader_programs[1], "light.position"), 1, m_light.position);
-			glUniform3fv(glGetUniformLocation(shader_programs[1], "light.ambient"), 1, m_light.ambient);
-			glUniform3fv(glGetUniformLocation(shader_programs[1], "light.diffuse"), 1, m_light.diffuse);
-			glUniform3fv(glGetUniformLocation(shader_programs[1], "light.specular"), 1, m_light.specular);
+			// 라이트/머티리얼 uniform 은 구조체 단위 헬퍼로 일괄 설정한다.
+			UniformsSetDirLight(shader_programs[1], "dirLight", m_dirLight);
+			for (int i = 0; i < NUM_POINT_LIGHTS; i++)
+				UniformsSetPointLight(shader_programs[1], "pointLights[" + std::to_string(i) + "]", m_pointLights[i]);
+			UniformsSetStopLight(shader_programs[1], "spotLight", m_spotLight);
 
-			glUniform1i(glGetUniformLocation(shader_programs[1], "material.diffuse"), 1);
-			glUniform1i(glGetUniformLocation(shader_programs[1], "material.specular"), 2);
+			m_material.shininess = 32.0f;
+			UniformsSeMaterial(shader_programs[1], "material", m_material, /*diffuseUnit=*/1, /*specularUnit=*/2);
 
 			m_material.diffuseTexture = textures[1];
 			m_material.specularTexture = textures[2];
@@ -348,24 +447,28 @@ class my_application : public sb7::application
 			}
 		}
 
-		// 피라미드 (광원) 그리기
+		// 포인트 라이트 개수(NUM_POINT_LIGHTS)만큼 광원 위치에 피라미드 그리기
 		{
-			float move_y = (float)cos(currentTime) * 0.2f + 0.5f;
-			float scaleFactor = 0.05f; // (float)cos(currentTime)*0.05f + 0.2f;
-			vmath::mat4 transform = vmath::translate(m_light.position) *
-			                        vmath::rotate(angle * 0.5f, 0.0f, 1.0f, 0.0f) *
-			                        vmath::scale(scaleFactor, scaleFactor, scaleFactor);
+			const float scaleFactor = 0.05f; // (float)cos(currentTime)*0.05f + 0.2f;
 
 			glUseProgram(shader_programs[2]);
 
+			// projection/view/color 는 광원 간에 동일하므로 루프 밖에서 한 번만 설정한다.
 			glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "projection"), 1, GL_FALSE, projM);
 			glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "view"), 1, GL_FALSE, lookAt);
-			glUniformMatrix4fv(glGetUniformLocation(shader_programs[2], "model"), 1, GL_FALSE, transform);
-
 			glUniform3fv(glGetUniformLocation(shader_programs[2], "color"), 1, lightColor);
 
+			const GLint modelLoc = glGetUniformLocation(shader_programs[2], "model");
+
 			glBindVertexArray(VAOs[2]);
-			glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+			for (int i = 0; i < NUM_POINT_LIGHTS; i++)
+			{
+				vmath::mat4 model = vmath::translate(m_pointLights[i].position) *
+				                    vmath::rotate(angle * 0.5f, 0.0f, 1.0f, 0.0f) *
+				                    vmath::scale(scaleFactor, scaleFactor, scaleFactor);
+				glUniformMatrix4fv(modelLoc, 1, GL_FALSE, model);
+				glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+			}
 		}
 	}
 
@@ -382,43 +485,8 @@ class my_application : public sb7::application
 	GLuint VAOs[3], VBOs[3], EBOs[2];
 	GLuint textures[3];
 
-	struct Light
-	{
-		vmath::vec3 position;
-		vmath::vec3 ambient;
-		vmath::vec3 diffuse;
-		vmath::vec3 specular;
-	};
-
-	struct DirLight
-	{
-		vmath::vec3 direction;
-		vmath::vec3 ambient, diffuse, specular;
-	};
-
-	struct PointLight
-	{
-		vmath::vec3 position;
-		float c1, c2;
-		vmath::vec3 ambient, diffuse, specular;
-	};
-
-	struct SpotLight
-	{
-		vmath::vec3 position;
-		vmath::vec3 direction;
-		float cutOff, outerCutOff;
-		float c1, c2;
-		vmath::vec3 ambient, diffuse, specular;
-	};
-
-	struct Material
-	{
-		GLuint diffuseTexture;
-		GLuint specularTexture;
-		float shininess;
-	};
-	Light m_light;
+	// 라이트/머티리얼 구조체 정의는 클래스 상단(public)으로 이동했다.
+	// Light m_light; // (현재 미사용)
 	Material m_material;
 
 	DirLight m_dirLight;
