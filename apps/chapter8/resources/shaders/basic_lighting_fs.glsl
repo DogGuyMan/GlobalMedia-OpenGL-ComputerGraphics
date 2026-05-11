@@ -1,7 +1,7 @@
 #version 410 core
+// #version 430 core
 
 in vec3 vsPosition;
-in vec3 vsColor;
 in vec2 vsTexCoord;
 in vec3 vsNormal;
 

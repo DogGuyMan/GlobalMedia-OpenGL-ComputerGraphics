@@ -1,5 +1,7 @@
 // sb6.h 헤더 파일을 포함시킨다.
 #include "GL/gl3w.h"
+#include <cmath>
+#include <cstdio>
 #include <ostream>
 #include <sb7.h>
 #include <shader.h>
@@ -10,12 +12,14 @@
 #include "stb_image.h"
 
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #define MAC_WINE_TEST
-#include "diagnostics/gl_log.h"       // diag::
-#include "diagnostics/gl_state_log.h" // diag::
-namespace diag = SJH::Diagnostics;    // diag::
+#include "diagnostics/gl_log.h"              // diag::
+#include "diagnostics/gl_state_log.h"        // diag::
+#include "diagnostics/uniform_diagnostics.h" // diag::
+namespace diag = SJH::Diagnostics;           // diag::
 
 #define NUM_POINT_LIGHTS 2
 
@@ -56,47 +60,114 @@ class my_application : public sb7::application
 
 	struct Material
 	{
-		GLuint diffuseTexture;
-		GLuint specularTexture;
+		GLuint diffuseTexture;  // diffuse map 텍스처 객체 핸들
+		GLuint specularTexture; // specular map 텍스처 객체 핸들
+		GLint diffuseUnit;      // diffuseTexture 를 바인딩할 텍스처 이미지 유닛 번호 (sampler2D 에 넣는 값)
+		GLint specularUnit;     // specularTexture 를 바인딩할 텍스처 이미지 유닛 번호
 		float shininess;
 	};
 
+	static GLint UniformLoc(GLuint program, const char *name, const GLint loc)       // diag::
+	{                                                               // diag::
+		if (loc < 0)                                                // diag::
+			diag::UniformDiagnostics::NotifyMissing(program, name); // diag::
+		return loc;                                                 // diag::
+	} // diag::
+
 	static void UniformsSetDirLight(GLuint program, const std::string &prefix, const DirLight &light)
 	{
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".direction").c_str()), 1, light.direction);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".ambient").c_str()), 1, light.ambient);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".diffuse").c_str()), 1, light.diffuse);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".specular").c_str()), 1, light.specular);
+		const GLint locDirection = glGetUniformLocation(program, (prefix + ".direction").c_str());
+		UniformLoc(program, (prefix + ".direction").c_str(), locDirection); // diag::
+		const GLint locAmbient = glGetUniformLocation(program, (prefix + ".ambient").c_str());
+		UniformLoc(program, (prefix + ".ambient").c_str(), locAmbient); // diag::
+		const GLint locDiffuse = glGetUniformLocation(program, (prefix + ".diffuse").c_str());
+		UniformLoc(program, (prefix + ".diffuse").c_str(), locDiffuse); // diag::
+		const GLint locSpecular = glGetUniformLocation(program, (prefix + ".specular").c_str());
+		UniformLoc(program, (prefix + ".specular").c_str(), locSpecular); // diag::
+
+		glUniform3fv(locDirection, 1, light.direction);
+		glUniform3fv(locAmbient, 1, light.ambient);
+		glUniform3fv(locDiffuse, 1, light.diffuse);
+		glUniform3fv(locSpecular, 1, light.specular);
 	}
 
 	static void UniformsSetPointLight(GLuint program, const std::string &prefix, const PointLight &light)
 	{
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".position").c_str()), 1, light.position);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".ambient").c_str()), 1, light.ambient);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".diffuse").c_str()), 1, light.diffuse);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".specular").c_str()), 1, light.specular);
-		glUniform1f(glGetUniformLocation(program, (prefix + ".c1").c_str()), light.c1);
-		glUniform1f(glGetUniformLocation(program, (prefix + ".c2").c_str()), light.c2);
+		const GLint locPosition = glGetUniformLocation(program, (prefix + ".position").c_str());
+		UniformLoc(program, (prefix + ".position").c_str(), locPosition); // diag::
+		const GLint locAmbient = glGetUniformLocation(program, (prefix + ".ambient").c_str());
+		UniformLoc(program, (prefix + ".ambient").c_str(), locAmbient); // diag::
+		const GLint locDiffuse = glGetUniformLocation(program, (prefix + ".diffuse").c_str());
+		UniformLoc(program, (prefix + ".diffuse").c_str(), locDiffuse); // diag::
+		const GLint locSpecular = glGetUniformLocation(program, (prefix + ".specular").c_str());
+		UniformLoc(program, (prefix + ".specular").c_str(), locSpecular); // diag::
+		const GLint locC1 = glGetUniformLocation(program, (prefix + ".c1").c_str());
+		UniformLoc(program, (prefix + ".c1").c_str(), locC1); // diag::
+		const GLint locC2 = glGetUniformLocation(program, (prefix + ".c2").c_str());
+		UniformLoc(program, (prefix + ".c2").c_str(), locC2); // diag::
+
+		glUniform3fv(locPosition, 1, light.position);
+		glUniform3fv(locAmbient, 1, light.ambient);
+		glUniform3fv(locDiffuse, 1, light.diffuse);
+		glUniform3fv(locSpecular, 1, light.specular);
+		glUniform1f(locC1, light.c1);
+		glUniform1f(locC2, light.c2);
 	}
 
 	static void UniformsSetStopLight(GLuint program, const std::string &prefix, const SpotLight &light)
 	{
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".position").c_str()), 1, light.position);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".direction").c_str()), 1, light.direction);
-		glUniform1f(glGetUniformLocation(program, (prefix + ".cutOff").c_str()), light.cutOff);
-		glUniform1f(glGetUniformLocation(program, (prefix + ".outerCutOff").c_str()), light.outerCutOff);
-		glUniform1f(glGetUniformLocation(program, (prefix + ".c1").c_str()), light.c1);
-		glUniform1f(glGetUniformLocation(program, (prefix + ".c2").c_str()), light.c2);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".ambient").c_str()), 1, light.ambient);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".diffuse").c_str()), 1, light.diffuse);
-		glUniform3fv(glGetUniformLocation(program, (prefix + ".specular").c_str()), 1, light.specular);
+		const GLint locPosition = glGetUniformLocation(program, (prefix + ".position").c_str());
+		UniformLoc(program, (prefix + ".position").c_str(), locPosition); // diag::
+		const GLint locDirection = glGetUniformLocation(program, (prefix + ".direction").c_str());
+		UniformLoc(program, (prefix + ".direction").c_str(), locDirection); // diag::
+		const GLint locCutOff = glGetUniformLocation(program, (prefix + ".cutOff").c_str());
+		UniformLoc(program, (prefix + ".cutOff").c_str(), locCutOff); // diag::
+		const GLint locOuterCutOff = glGetUniformLocation(program, (prefix + ".outerCutOff").c_str());
+		UniformLoc(program, (prefix + ".outerCutOff").c_str(), locOuterCutOff); // diag::
+		const GLint locC1 = glGetUniformLocation(program, (prefix + ".c1").c_str());
+		UniformLoc(program, (prefix + ".c1").c_str(), locC1); // diag::
+		const GLint locC2 = glGetUniformLocation(program, (prefix + ".c2").c_str());
+		UniformLoc(program, (prefix + ".c2").c_str(), locC2); // diag::
+		const GLint locAmbient = glGetUniformLocation(program, (prefix + ".ambient").c_str());
+		UniformLoc(program, (prefix + ".ambient").c_str(), locAmbient); // diag::
+		const GLint locDiffuse = glGetUniformLocation(program, (prefix + ".diffuse").c_str());
+		UniformLoc(program, (prefix + ".diffuse").c_str(), locDiffuse); // diag::
+		const GLint locSpecular = glGetUniformLocation(program, (prefix + ".specular").c_str());
+		UniformLoc(program, (prefix + ".specular").c_str(), locSpecular); // diag::
+
+		glUniform3fv(locPosition, 1, light.position);
+		glUniform3fv(locDirection, 1, light.direction);
+		glUniform1f(locCutOff, light.cutOff);
+		glUniform1f(locOuterCutOff, light.outerCutOff);
+		glUniform1f(locC1, light.c1);
+		glUniform1f(locC2, light.c2);
+		glUniform3fv(locAmbient, 1, light.ambient);
+		glUniform3fv(locDiffuse, 1, light.diffuse);
+		glUniform3fv(locSpecular, 1, light.specular);
 	}
 
-	static void UniformsSeMaterial(GLuint program, const std::string &prefix, const Material &material, int diffuseUnit, int specularUnit)
+	// sampler2D 유니폼에는 텍스처 "이미지 유닛 번호"를 넣는다 (텍스처 객체 핸들이 아님).
+	static void UniformsSetMaterial(GLuint program, const std::string &prefix, const Material &material)
 	{
-		glUniform1i(glGetUniformLocation(program, (prefix + ".diffuse").c_str()), diffuseUnit);
-		glUniform1i(glGetUniformLocation(program, (prefix + ".specular").c_str()), specularUnit);
-		glUniform1f(glGetUniformLocation(program, (prefix + ".shininess").c_str()), material.shininess);
+		const GLint locDiffuse = glGetUniformLocation(program, (prefix + ".diffuse").c_str());
+		UniformLoc(program, (prefix + ".diffuse").c_str(), locDiffuse); // diag::
+		const GLint locSpecular = glGetUniformLocation(program, (prefix + ".specular").c_str());
+		UniformLoc(program, (prefix + ".specular").c_str(), locSpecular); // diag::
+		const GLint locShininess = glGetUniformLocation(program, (prefix + ".shininess").c_str());
+		UniformLoc(program, (prefix + ".shininess").c_str(), locShininess); // diag::
+
+		glUniform1i(locDiffuse, material.diffuseUnit);
+		glUniform1i(locSpecular, material.specularUnit);
+		glUniform1f(locShininess, material.shininess);
+	}
+
+	// UniformsSetMaterial 이 셰이더에 알려준 것과 동일한 유닛에 텍스처를 바인딩한다.
+	static void BindMaterialTextures(const Material &material)
+	{
+		glActiveTexture(GL_TEXTURE0 + material.diffuseUnit);
+		glBindTexture(GL_TEXTURE_2D, material.diffuseTexture);
+		glActiveTexture(GL_TEXTURE0 + material.specularUnit);
+		glBindTexture(GL_TEXTURE_2D, material.specularTexture);
 	}
 
 	// 쉐이더 프로그램 컴파일한다.
@@ -116,7 +187,7 @@ class my_application : public sb7::application
 		glAttachShader(program, vertex_shader);
 		glAttachShader(program, fragment_shader);
 		glLinkProgram(program);
-		// 링크 실패 시 uniform/attribute location 이 전부 무효해지므로 필수 검사.
+
 		diag::GLObjectLog::CheckProgramLink(program, fs_file); // diag::
 
 		// 이제 프로그램이 쉐이더를 소유하므로 쉐이더를 삭제한다.
@@ -162,9 +233,9 @@ class my_application : public sb7::application
 	virtual void startup()
 	{
 		// 쉐이더 프로그램 컴파일 및 연결
-		shader_programs[0] = compile_shader("./resources/shaders/basic_texturing_vs.glsl", "./resources/shaders/basic_texturing_fs.glsl");
-		shader_programs[1] = compile_shader("./resources/shaders/basic_lighting_vs.glsl", "./resources/shaders/basic_lighting_fs.glsl");
-		shader_programs[2] = compile_shader("./resources/shaders/simple_color_vs.glsl", "./resources/shaders/simple_color_fs.glsl");
+		shader_programs[0] = compile_shader("./shaders/basic_texturing_vs.glsl", "./shaders/basic_texturing_fs.glsl");
+		shader_programs[1] = compile_shader("./shaders/basic_lighting_vs.glsl", "./shaders/basic_lighting_fs.glsl");
+		shader_programs[2] = compile_shader("./shaders/simple_color_vs.glsl", "./shaders/simple_color_fs.glsl");
 
 		// VAO, VBO, EBO, texture 생성
 		glGenVertexArrays(3, VAOs);
@@ -218,7 +289,7 @@ class my_application : public sb7::application
 		glBindTexture(GL_TEXTURE_2D, textures[0]);
 
 		// 텍스처 이미지 로드하기
-		load_texture(textures[0], "./resources/textures/wall.jpg", GL_RGB, GL_RGB);
+		load_texture(textures[0], "./textures/wall.jpg", GL_RGB, GL_RGB);
 
 		glBindVertexArray(VAOs[1]);
 		diag::GLDebug::CheckGLBindVertexArray(VAOs[1]); // diag::
@@ -264,9 +335,9 @@ class my_application : public sb7::application
 		diag::GLDebug::CheckGLEnableVertexAttribArray(3); // diag::
 
 		// Diffuse Map 이미지 로드 및 적용
-		load_texture(textures[1], "./resources/textures/container2.png", GL_RGB, GL_RGBA);
+		load_texture(textures[1], "./textures/container2.png", GL_RGB, GL_RGBA);
 		// Specular Map 이미지 로드 및 적용
-		load_texture(textures[2], "./resources/textures/container2_specular.png", GL_RGB, GL_RGBA);
+		load_texture(textures[2], "./textures/container2_specular.png", GL_RGB, GL_RGBA);
 
 		// VBO 및 버텍스 속성을 다 했으니 VBO와 VAO를 unbind한다.
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -301,14 +372,13 @@ class my_application : public sb7::application
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-		diag::GLObjectLog::CheckExpectedAttributes(shader_programs[1], {"pos", "color", "texCoord", "normal"}, "basic_lighting"); // diag::
-		diag::GLObjectLog::CheckExpectedUniforms(shader_programs[1],                                                              // diag::
-		                                         {"model", "view", "projection", "viewPos", "objectColor",                        // diag::
-		                                          "light.position", "light.ambient", "light.diffuse", "light.specular",           // diag::
-		                                          "material.diffuse", "material.specular"},                                       // diag::
-		                                         "basic_lighting");                                                               // diag::
-		diag::GLObjectLog::CheckExpectedAttributes(shader_programs[2], {"pos"}, "simple_color");                                  // diag::
-		diag::GLObjectLog::CheckExpectedUniforms(shader_programs[2], {"model", "view", "projection", "color"}, "simple_color");   // diag::
+		diag::GLObjectLog::CheckExpectedAttributes(shader_programs[1], {"pos", "texCoord", "normal"}, "basic_lighting");        // diag:: (color attribute 는 basic_lighting 에서 미사용)
+		diag::GLObjectLog::CheckExpectedUniforms(shader_programs[1],                                                            // diag::
+		                                         {"model", "view", "projection", "viewPos", "objectColor",                      // diag::
+		                                          "material.diffuse", "material.specular", "material.shininess"},               // diag::
+		                                         "basic_lighting");                                                             // diag::
+		diag::GLObjectLog::CheckExpectedAttributes(shader_programs[2], {"pos"}, "simple_color");                                // diag::
+		diag::GLObjectLog::CheckExpectedUniforms(shader_programs[2], {"model", "view", "projection", "color"}, "simple_color"); // diag::
 
 		diag::GLStateLog::Dump("after startup()"); // diag::
 	}
@@ -325,10 +395,12 @@ class my_application : public sb7::application
 		glDeleteProgram(shader_programs[2]);
 
 		// 같은 GLuint 핸들이 재발급될 때 stale 캐시 결과를 막기 위해 진단 캐시 무효화.
-		// (CheckExpectedUniforms / CheckExpectedAttributes 가 program 핸들을 키로 1회 캐시함)
-		diag::GLObjectLog::InvalidateProgramCache(shader_programs[0]); // diag::
-		diag::GLObjectLog::InvalidateProgramCache(shader_programs[1]); // diag::
-		diag::GLObjectLog::InvalidateProgramCache(shader_programs[2]); // diag::
+		// (CheckExpectedUniforms/CheckExpectedAttributes 와 UniformDiagnostics 가 program 핸들을 키로 캐시함)
+		for (GLuint program : shader_programs)                  // diag::
+		{                                                       // diag::
+			diag::GLObjectLog::InvalidateProgramCache(program); // diag::
+			diag::UniformDiagnostics::Invalidate(program);      // diag::
+		} // diag::
 	}
 
 	// 렌더링 virtual 함수를 작성해서 오버라이딩한다.
@@ -373,8 +445,14 @@ class my_application : public sb7::application
 		m_dirLight.diffuse = vmath::vec3(0.4f, 0.4f, 0.4f);
 		m_dirLight.specular = vmath::vec3(0.5f, 0.5f, 0.5f);
 
-		for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
-			m_pointLights[i].position = vmath::vec3((float)sin(currentTime * 0.5f), 0.25f, (float)cos(currentTime * 0.5f) * 0.7f); // (0.0f, 0.5f, 0.0f);;
+		// M_PI 는 <math.h>(vmath.h 가 _USE_MATH_DEFINES 와 함께 include)에서 제공된다.
+		constexpr double kOrbitPhaseStep = 2.0 * M_PI / NUM_POINT_LIGHTS;
+		for (int i = 0; i < NUM_POINT_LIGHTS; i++)
+		{
+			double phase = currentTime * 0.5 + i * kOrbitPhaseStep;
+			m_pointLights[i].position = vmath::vec3((float)sin(phase),         // x: 원궤도
+			                                        0.25f + 0.4f * i,          // y: 광원마다 높이도 조금씩 다르게
+			                                        (float)cos(phase) * 0.7f); // z: 원궤도(살짝 납작한 타원)
 			m_pointLights[i].ambient = vmath::vec3(0.05f, 0.05f, 0.05f);
 			m_pointLights[i].diffuse = vmath::vec3(0.8f, 0.8f, 0.8f);
 			m_pointLights[i].specular = vmath::vec3(1.0f, 1.0f, 1.0f);
@@ -392,6 +470,12 @@ class my_application : public sb7::application
 		m_spotLight.diffuse = vmath::vec3(1.0f, 1.0f, 1.0f);
 		m_spotLight.specular = vmath::vec3(1.0f, 1.0f, 1.0f);
 
+		m_material.diffuseTexture = textures[1];
+		m_material.specularTexture = textures[2];
+		m_material.diffuseUnit = 1;  // GL_TEXTURE1
+		m_material.specularUnit = 2; // GL_TEXTURE2
+		m_material.shininess = 32.0f;
+
 		vmath::vec3 viewPos = eye;
 		vmath::vec3 lightColor(1.0f, 1.0f, 1.0f);
 		vmath::vec3 boxColor(1.0f, 1.0f, 1.0f);
@@ -403,11 +487,12 @@ class my_application : public sb7::application
 
 			glUseProgram(shader_programs[1]);
 
-			static bool s_dumpedRenderState = false;                 // diag::
-			if (!s_dumpedRenderState)                                // diag::
-			{                                                        // diag::
-				diag::GLStateLog::Dump("render(): before box draw"); // diag::
-				s_dumpedRenderState = true;                          // diag::
+			static bool s_dumpedRenderState = false;                                                  // diag::
+			if (!s_dumpedRenderState)                                                                 // diag::
+			{                                                                                         // diag::
+				diag::GLObjectLog::CheckProgramValidate(shader_programs[1], "basic_lighting@frame0"); // diag::
+				diag::GLStateLog::Dump("render(): before box draw");                                  // diag::
+				s_dumpedRenderState = true;                                                           // diag::
 			} // diag::
 
 			glUniformMatrix4fv(glGetUniformLocation(shader_programs[1], "projection"), 1, GL_FALSE, projM);
@@ -419,20 +504,16 @@ class my_application : public sb7::application
 			// 라이트/머티리얼 uniform 은 구조체 단위 헬퍼로 일괄 설정한다.
 			UniformsSetDirLight(shader_programs[1], "dirLight", m_dirLight);
 			for (int i = 0; i < NUM_POINT_LIGHTS; i++)
-				UniformsSetPointLight(shader_programs[1], "pointLights[" + std::to_string(i) + "]", m_pointLights[i]);
+			{
+				// "pointLights[" + std::to_string(i) + "]" 와 동치인 문자열을 stringstream 으로 포매팅한다.
+				std::stringstream ssPrefix;
+				ssPrefix << "pointLights[" << i << "]";
+				UniformsSetPointLight(shader_programs[1], ssPrefix.str(), m_pointLights[i]);
+			}
 			UniformsSetStopLight(shader_programs[1], "spotLight", m_spotLight);
 
-			m_material.shininess = 32.0f;
-			UniformsSeMaterial(shader_programs[1], "material", m_material, /*diffuseUnit=*/1, /*specularUnit=*/2);
-
-			m_material.diffuseTexture = textures[1];
-			m_material.specularTexture = textures[2];
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, m_material.diffuseTexture);
-
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, m_material.specularTexture);
+			UniformsSetMaterial(shader_programs[1], "material", m_material);
+			BindMaterialTextures(m_material);
 
 			glBindVertexArray(VAOs[1]);
 
@@ -449,7 +530,6 @@ class my_application : public sb7::application
 
 		// 포인트 라이트 개수(NUM_POINT_LIGHTS)만큼 광원 위치에 피라미드 그리기
 		{
-			const float scaleFactor = 0.05f; // (float)cos(currentTime)*0.05f + 0.2f;
 
 			glUseProgram(shader_programs[2]);
 
@@ -465,7 +545,7 @@ class my_application : public sb7::application
 			{
 				vmath::mat4 model = vmath::translate(m_pointLights[i].position) *
 				                    vmath::rotate(angle * 0.5f, 0.0f, 1.0f, 0.0f) *
-				                    vmath::scale(scaleFactor, scaleFactor, scaleFactor);
+				                    vmath::scale(0.05f, 0.05f, 0.05f);
 				glUniformMatrix4fv(modelLoc, 1, GL_FALSE, model);
 				glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
 			}
