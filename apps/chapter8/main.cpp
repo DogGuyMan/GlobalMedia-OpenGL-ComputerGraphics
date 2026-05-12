@@ -114,7 +114,7 @@ class my_application : public sb7::application
 		glUniform1f(locC2, light.c2);
 	}
 
-	static void UniformsSetStopLight(GLuint program, const std::string &prefix, const SpotLight &light)
+	static void UniformsSetSpotLight(GLuint program, const std::string &prefix, const SpotLight &light)
 	{
 		const GLint locPosition = glGetUniformLocation(program, (prefix + ".position").c_str());
 		UniformLoc(program, (prefix + ".position").c_str(), locPosition); // diag::
@@ -305,6 +305,11 @@ class my_application : public sb7::application
 		boxPositions.push_back(vmath::vec3(1.5f, 2.0f, -2.5f));
 		boxPositions.push_back(vmath::vec3(1.5f, 0.2f, -1.5f));
 		boxPositions.push_back(vmath::vec3(-1.3f, 1.0f, -1.5f));
+		
+		// 포인트 라이트 "기준(초기) 궤도 위치" 정의 — render() 가 이 데이터를 source-of-truth 로 삼아
+		// 매 프레임 Y축 회전을 적용해 공전시킨다. (i 번째 = 원래 phase = i·2π/N, 높이 = 0.25 + 0.4·i 를 t=0 에 평가한 값)
+		lightPositions.push_back(vmath::vec3(0.0f, 0.25f, 0.7f));  // 광원 0: phase 0,  높이 0.25
+		lightPositions.push_back(vmath::vec3(0.0f, 0.65f, -0.7f)); // 광원 1: phase π,  높이 0.65
 
 		// VBO를 생성하여 vertices 값들을 복사
 		glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
@@ -445,14 +450,17 @@ class my_application : public sb7::application
 		m_dirLight.diffuse = vmath::vec3(0.4f, 0.4f, 0.4f);
 		m_dirLight.specular = vmath::vec3(0.5f, 0.5f, 0.5f);
 
-		// M_PI 는 <math.h>(vmath.h 가 _USE_MATH_DEFINES 와 함께 include)에서 제공된다.
-		constexpr double kOrbitPhaseStep = 2.0 * M_PI / NUM_POINT_LIGHTS;
-		for (int i = 0; i < NUM_POINT_LIGHTS; i++)
+		// 포인트 라이트 궤도: lightPositions(startup 에서 정의한 기준 위치)가 source-of-truth.
+		// 매 프레임 기준 위치를 Y축 기준으로 currentTime*0.5(rad) 만큼 회전시켜 공전시킨다.
+		const double orbit = currentTime * 0.5;
+		const float orbitCos = (float)cos(orbit);
+		const float orbitSin = (float)sin(orbit);
+		for (int i = 0; i < lightPositions.size(); i++)
 		{
-			double phase = currentTime * 0.5 + i * kOrbitPhaseStep;
-			m_pointLights[i].position = vmath::vec3((float)sin(phase),         // x: 원궤도
-			                                        0.25f + 0.4f * i,          // y: 광원마다 높이도 조금씩 다르게
-			                                        (float)cos(phase) * 0.7f); // z: 원궤도(살짝 납작한 타원)
+			const vmath::vec3 base = lightPositions[i];
+			m_pointLights[i].position = vmath::vec3(base[0] * orbitCos + base[2] * orbitSin,   // x: Y축 회전
+			                                        base[1],                                   // y: 기준 높이 유지
+			                                        -base[0] * orbitSin + base[2] * orbitCos); // z: Y축 회전
 			m_pointLights[i].ambient = vmath::vec3(0.05f, 0.05f, 0.05f);
 			m_pointLights[i].diffuse = vmath::vec3(0.8f, 0.8f, 0.8f);
 			m_pointLights[i].specular = vmath::vec3(1.0f, 1.0f, 1.0f);
@@ -503,14 +511,14 @@ class my_application : public sb7::application
 
 			// 라이트/머티리얼 uniform 은 구조체 단위 헬퍼로 일괄 설정한다.
 			UniformsSetDirLight(shader_programs[1], "dirLight", m_dirLight);
-			for (int i = 0; i < NUM_POINT_LIGHTS; i++)
+			for (int i = 0; i < lightPositions.size(); i++)
 			{
 				// "pointLights[" + std::to_string(i) + "]" 와 동치인 문자열을 stringstream 으로 포매팅한다.
 				std::stringstream ssPrefix;
 				ssPrefix << "pointLights[" << i << "]";
 				UniformsSetPointLight(shader_programs[1], ssPrefix.str(), m_pointLights[i]);
 			}
-			UniformsSetStopLight(shader_programs[1], "spotLight", m_spotLight);
+			UniformsSetSpotLight(shader_programs[1], "spotLight", m_spotLight);
 
 			UniformsSetMaterial(shader_programs[1], "material", m_material);
 			BindMaterialTextures(m_material);
@@ -528,7 +536,7 @@ class my_application : public sb7::application
 			}
 		}
 
-		// 포인트 라이트 개수(NUM_POINT_LIGHTS)만큼 광원 위치에 피라미드 그리기
+		// lightPositions 개수만큼 각 포인트 라이트 위치에 피라미드(광원 표시용) 그리기
 		{
 
 			glUseProgram(shader_programs[2]);
@@ -541,7 +549,7 @@ class my_application : public sb7::application
 			const GLint modelLoc = glGetUniformLocation(shader_programs[2], "model");
 
 			glBindVertexArray(VAOs[2]);
-			for (int i = 0; i < NUM_POINT_LIGHTS; i++)
+			for (int i = 0; i < lightPositions.size(); i++)
 			{
 				vmath::mat4 model = vmath::translate(m_pointLights[i].position) *
 				                    vmath::rotate(angle * 0.5f, 0.0f, 1.0f, 0.0f) *
@@ -574,6 +582,7 @@ class my_application : public sb7::application
 	SpotLight m_spotLight;
 
 	std::vector<vmath::vec3> boxPositions;
+	std::vector<vmath::vec3> lightPositions;
 
 	static constexpr float box_s = 1.0f, box_t = 1.0f;
 	static constexpr float floor_s = 3.0f, floor_t = 3.0f;
