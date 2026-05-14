@@ -84,39 +84,8 @@ vec4 LightResult() {
         return vec4(result, 1.0);
 }
 
-vec4 DepthResult()
-{
-        float nearPlane = 0.1;
-        float farPlane = 1000.0;
-        float zDepth = gl_FragCoord.z;
-        float z = zDepth * 2.0 - 1.0;
-        float linearDepth = (2.0 * nearPlane * farPlane) / (farPlane + nearPlane - z * (farPlane - nearPlane));
-
-        // 보고 싶은 거리 범위를 [0,1] 로 늘려 saturate — 평활화 흉내
-        float minDist = 1.0; // 이보다 가까운 픽셀 → 1.0 (흰색)
-        float maxDist = 5.0; // 이보다 먼 픽셀     → 0.0 (검정)
-        float t = clamp((linearDepth - minDist) / (maxDist - minDist), 0.0, 1.0); // saturate
-        float res = 1.0 - t; // 가까울수록 밝게
-        return vec4(res, res, res, 1.0);
-}
-
-// VAO 별 고유 색상 — uObjectID 를 stencil-ref 처럼 사용해 팔레트에서 색을 뽑는다.
-// C++ 쪽에서 진짜 stencil 도 같이 채우면 외곽선/마스킹용으로 재활용 가능.
-vec4 StencilResult()
-{
-        const vec3 palette[8] = vec3[8](
-                        vec3(1.0, 0.25, 0.25), // 0 : 빨강
-                        vec3(0.25, 1.0, 0.35), // 1 : 초록
-                        vec3(0.30, 0.45, 1.0), // 2 : 파랑
-                        vec3(1.0, 0.95, 0.30), // 3 : 노랑
-                        vec3(1.0, 0.40, 1.0), // 4 : 마젠타
-                        vec3(0.25, 1.0, 1.0), // 5 : 시안
-                        vec3(1.0, 0.55, 0.20), // 6 : 주황
-                        vec3(0.65, 0.40, 1.0) // 7 : 보라
-                );
-        int idx = (uObjectID % 8 + 8) % 8; // 음수 ID 안전 처리
-        return vec4(palette[idx], 1.0);
-}
+vec4 DepthResult();
+vec4 StencilResult();
 
 void main()
 {
@@ -227,4 +196,38 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
         diffuse *= attenuation * intensity;
         specular *= attenuation * intensity;
         return (ambient + diffuse + specular);
+}
+
+vec4 DepthResult()
+{
+        float nearPlane = 0.1;
+        float farPlane = 1000.0;
+        float zDepth = gl_FragCoord.z;
+        float z = zDepth * 2.0 - 1.0;
+        float linearDepth = (2.0 * nearPlane * farPlane) / (farPlane + nearPlane - z * (farPlane - nearPlane));
+
+        // 보고 싶은 거리 범위를 [0,1] 로 늘려 saturate — 평활화 흉내
+        float minDist = 1.0; // 이보다 가까운 픽셀 → 1.0 (흰색)
+        float maxDist = 5.0; // 이보다 먼 픽셀     → 0.0 (검정)
+        float t = clamp((linearDepth - minDist) / (maxDist - minDist), 0.0, 1.0); // saturate
+        float res = 1.0 - t; // 가까울수록 밝게
+        return vec4(res, res, res, 1.0);
+}
+
+// VAO 별 고유 색상 — uObjectID 를 stencil-ref 처럼 사용해 팔레트에서 색을 뽑는다.
+// C++ 쪽에서 진짜 stencil 도 같이 채우면 외곽선/마스킹용으로 재활용 가능.
+vec4 StencilResult()
+{
+        const vec3 palette[8] = vec3[8](
+                        vec3(1.0, 0.25, 0.25), // 0 : 빨강
+                        vec3(0.25, 1.0, 0.35), // 1 : 초록
+                        vec3(0.30, 0.45, 1.0), // 2 : 파랑
+                        vec3(1.0, 0.95, 0.30), // 3 : 노랑
+                        vec3(1.0, 0.40, 1.0), // 4 : 마젠타
+                        vec3(0.25, 1.0, 1.0), // 5 : 시안
+                        vec3(1.0, 0.55, 0.20), // 6 : 주황
+                        vec3(0.65, 0.40, 1.0) // 7 : 보라
+                );
+        int idx = (uObjectID % 8 + 8) % 8; // 음수 ID 안전 처리
+        return vec4(palette[idx], 1.0);
 }

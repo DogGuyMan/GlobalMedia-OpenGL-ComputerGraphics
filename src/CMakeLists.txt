@@ -1,1 +1,2 @@
 add_subdirectory(diagnostics)
+add_subdirectory(engine)

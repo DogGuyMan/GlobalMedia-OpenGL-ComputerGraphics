@@ -13,6 +13,7 @@ target_link_libraries(${CHAPTER_NAME}
     PRIVATE
         project_deps
         SJH::diagnostics
+        SJH::engine
 )
 
 # 인클루드 디렉토리 추가
