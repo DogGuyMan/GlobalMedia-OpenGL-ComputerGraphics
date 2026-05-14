@@ -16,7 +16,7 @@
 #include <string>
 
 #define MAC_WINE_TEST
-#include "diagnostics/engine_diagnostics.h"   // diag::
+#include "diagnostics/engine_diagnostics.h"  // diag::
 #include "diagnostics/gl_log.h"              // diag::
 #include "diagnostics/gl_state_log.h"        // diag::
 #include "diagnostics/uniform_diagnostics.h" // diag::
@@ -24,7 +24,225 @@ namespace diag = SJH::Diagnostics;           // diag::
 
 #define NUM_POINT_LIGHTS 2
 
-namespace Engine::Model
+namespace Engine::Model::VAO
+{
+
+    inline vmath::vec3 ComputeFaceNormal(const vmath::vec3 &p0,
+                                         const vmath::vec3 &p1,
+                                         const vmath::vec3 &p2)
+    {
+        vmath::vec3 e1 = p1 - p0;
+        vmath::vec3 e2 = p2 - p0;
+        return vmath::normalize(vmath::cross(e1, e2));
+    }
+
+    static const std::vector<vmath::vec3> QUAD_BASE_POSITIONS = {
+        {1.0f, 0.0f, -1.0f},
+        {-1.0f, 0.0f, -1.0f},
+        {-1.0f, 0.0f, 1.0f},
+        {1.0f, 0.0f, 1.0f}};
+
+    static const std::vector<GLuint> QUAD_FACE_INDICES = {
+        0, 1, 2,
+        0, 2, 3};
+
+    static const std::vector<vmath::vec3> QUAD_RGBY_COLORS = {
+        {1.0f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f},
+        {0.0f, 0.0f, 1.0f},
+        {1.0f, 1.0f, 0.0f}};
+
+    static const std::vector<vmath::vec2> QUAD_FLOOR_UVS = {
+        {3.0f, 3.0f},
+        {0.0f, 3.0f},
+        {0.0f, 0.0f},
+        {3.0f, 0.0f}};
+
+    static const std::vector<vmath::vec2> BASE_QUAD_MESH_UVS = {
+        {0.0f, 0.0f},
+        {1.0f, 0.0f},
+        {1.0f, 1.0f},
+        {0.0f, 1.0f}};
+
+    static const std::vector<vmath::vec3> CUBE_BASE_POSITIONS = {
+        {-0.25f, 0.0f, -0.25f}, // 0
+        {0.25f, 0.0f, -0.25f},  // 1
+        {0.25f, 0.0f, 0.25f},   // 2
+        {-0.25f, 0.0f, 0.25f},  // 3
+        {-0.25f, 0.5f, -0.25f}, // 4
+        {0.25f, 0.5f, -0.25f},  // 5
+        {0.25f, 0.5f, 0.25f},   // 6
+        {-0.25f, 0.5f, 0.25f}   // 7
+    };
+
+    static const std::vector<std::vector<GLuint>> CUBE_FACE_INDICES = {
+        {1, 0, 4, 1, 4, 5}, // -Z
+        {2, 1, 5, 2, 5, 6}, // +X
+        {3, 2, 6, 3, 6, 7}, // +Z
+        {0, 3, 7, 0, 7, 4}, // -X
+        {0, 1, 2, 0, 2, 3}, // -Y
+        {7, 6, 5, 7, 5, 4}  // +Y
+    };
+
+    static const std::vector<GLuint> QUAD_MESH_UVS_FAN = {0, 1, 2, 0, 2, 3};
+
+
+    // 주의: vmath::radians 는 template<T> T radians(T) — 정수 리터럴 전달 시 T=int 로
+    // 추론되어 M_PI/180 이 0 으로 잘림. 반드시 float 리터럴(0.0f, 120.0f, ...) 사용.
+    static const std::vector<vmath::vec3> TETRAHEDRON_BASE_POSITIONS{
+        {cosf(vmath::radians(0.0f)), 0.0f, sinf(vmath::radians(0.0f))},
+        {cosf(vmath::radians(120.0f)), 0.0f, sinf(vmath::radians(120.0f))},
+        {cosf(vmath::radians(240.0f)), 0.0f, sinf(vmath::radians(240.0f))},
+        {0.0f, (float)sqrt(2.0), 0.0f}}; // 정 4면체: 모든 모서리 길이 = √3 이 되도록 apex 높이 = √2
+
+
+    static const std::vector<std::vector<GLuint>> TETRAHEDRON_FACE_INDICES = {
+        {0, 3, 1}, // 외부에서 CCW 가 되도록 와인딩 정렬 (GL_CULL_FACE 활성 상태에서 측면 컬링 방지)
+        {1, 3, 2},
+        {2, 3, 0},
+        {0, 1, 2},
+    };
+
+    static const std::vector<vmath::vec3> PYRAMID_BASE_POSITIONS = {
+        {1.0f, 0.0f, -1.0f},
+        {-1.0f, 0.0f, -1.0f},
+        {-1.0f, 0.0f, 1.0f},
+        {1.0f, 0.0f, 1.0f},
+        {0.0f, 1.0f, 0.0f},
+        {0.0f, -1.0f, 0.0f}};
+
+    static const std::vector<GLuint> PYRAMID_FACE_INDICES = {
+
+        4, 0, 1,
+        4, 1, 2,
+        4, 2, 3,
+        4, 3, 0,
+
+        5, 1, 0,
+        5, 2, 1,
+        5, 3, 2,
+        5, 0, 3};
+
+    inline void PushVertex(std::vector<GLfloat> &vertices,
+                           const GLuint posSz, const GLfloat pos[],
+                           const GLuint colorSz = 0, const GLfloat color[] = nullptr,
+                           const GLuint uvSz = 0, const GLfloat uv[] = nullptr,
+                           const GLuint normalSz = 0, const GLfloat normal[] = nullptr)
+    {
+        for (int i = 0; i < posSz; i++)
+            vertices.push_back(pos[i]);
+        for (int i = 0; i < colorSz; i++)
+            vertices.push_back(color[i]);
+        for (int i = 0; i < uvSz; i++)
+            vertices.push_back(uv[i]);
+        for (int i = 0; i < normalSz; i++)
+            vertices.push_back(normal[i]);
+    }
+
+    inline void BuildCube(std::vector<GLfloat> &buffer_data,
+                          const std::vector<std::vector<GLuint>> &cube_face_indices,
+                          const std::vector<vmath::vec2> &base_quad_mesh_uvs = BASE_QUAD_MESH_UVS)
+    {
+
+        for (int f = 0; f < 6; f++)
+        {
+            const auto &face_idxs = cube_face_indices[f];
+            const vmath::vec3 &fp0 = CUBE_BASE_POSITIONS[face_idxs[0]];
+            const vmath::vec3 &fp1 = CUBE_BASE_POSITIONS[face_idxs[1]];
+            const vmath::vec3 &fp2 = CUBE_BASE_POSITIONS[face_idxs[2]];
+            const vmath::vec3 white = vmath::vec3(1.0f, 1.0f, 1.0f);
+            const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
+
+            for (int i = 0; i < 6; i++)
+            {
+                const vmath::vec3 &pos = CUBE_BASE_POSITIONS[face_idxs[i]];
+                const vmath::vec2 &uv = base_quad_mesh_uvs[QUAD_MESH_UVS_FAN[i]];
+
+                PushVertex(buffer_data,
+                           3, &pos[0],
+                           3, white,
+                           2, &uv[0],
+                           3, &faceNormal[0]);
+            }
+        }
+    }
+
+    inline void BuildTetrahedron(std::vector<GLfloat> &buffer_data,
+                                 const std::vector<std::vector<GLuint>> &tetra_face_indices)
+    {
+        const vmath::vec3 vsColor[4] = {
+            vmath::vec3(1.0f, 0.0f, 0.0f),
+            vmath::vec3(0.0f, 1.0f, 0.0f),
+            vmath::vec3(0.0f, 0.0f, 1.0f),
+            vmath::vec3(1.0f, 1.0f, 0.0f),
+        };
+
+        const vmath::vec2 tetraUV[3] = {
+            vmath::vec2(0.0f, 0.0f),
+            vmath::vec2(0.5f, 1.0f),
+            vmath::vec2(1.0f, 0.0f),
+        };
+
+        for (int f = 0; f < 4; f++)
+        {
+            const auto &face_idxs = tetra_face_indices[f];
+            const vmath::vec3 &fp0 = TETRAHEDRON_BASE_POSITIONS[face_idxs[0]];
+            const vmath::vec3 &fp1 = TETRAHEDRON_BASE_POSITIONS[face_idxs[1]];
+            const vmath::vec3 &fp2 = TETRAHEDRON_BASE_POSITIONS[face_idxs[2]];
+            const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
+
+            for (int i = 0; i < 3; i++)
+            {
+                const vmath::vec3 &pos = TETRAHEDRON_BASE_POSITIONS[face_idxs[i]];
+                PushVertex(buffer_data,
+                           3, &pos[0],
+                           3, vsColor[f],
+                           2, tetraUV[i],
+                           3, &faceNormal[0]);
+            }
+        }
+    }
+
+    inline void BuildQuad(std::vector<GLfloat> &buffer_data,
+                          const std::vector<vmath::vec3> &corner_colors = QUAD_RGBY_COLORS,
+                          const std::vector<vmath::vec2> &corner_uvs = QUAD_FLOOR_UVS)
+    {
+        const vmath::vec3 normal = ComputeFaceNormal(QUAD_BASE_POSITIONS[0],
+                                                     QUAD_BASE_POSITIONS[1],
+                                                     QUAD_BASE_POSITIONS[2]);
+
+        for (int i = 0; i < 4; i++)
+        {
+            const vmath::vec3 &pos = QUAD_BASE_POSITIONS[i];
+            const vmath::vec3 &color = corner_colors[i];
+            const vmath::vec2 &uv = corner_uvs[i];
+
+            PushVertex(buffer_data,
+                       3, &pos[0],
+                       3, &color[0],
+                       2, &uv[0],
+                       3, &normal[0]);
+        }
+    }
+
+    inline void BuildPyramid(std::vector<GLfloat> &buffer_data)
+    {
+        const vmath::vec3 white(1.0f, 1.0f, 1.0f);
+        const vmath::vec2 zeroUV(0.0f, 0.0f);
+
+        for (const vmath::vec3 &pos : PYRAMID_BASE_POSITIONS)
+        {
+            const vmath::vec3 normal = vmath::normalize(pos);
+            PushVertex(buffer_data,
+                       3, &pos[0],
+                       3, &white[0],
+                       2, &zeroUV[0],
+                       3, &normal[0]);
+        }
+    }
+} // namespace Engine::Model
+
+namespace Engine::Model::EBO
 {
 
 	inline vmath::vec3 ComputeFaceNormal(const vmath::vec3 &p0,
@@ -103,10 +321,18 @@ namespace Engine::Model
 
 	// EBO 용 평면 인덱스. 외부에서 CCW (3개 측면 + 1개 밑면).
 	static const std::vector<GLuint> TETRAHEDRON_FACE_INDICES = {
-	    0, 3, 1,
-	    1, 3, 2,
-	    2, 3, 0,
-	    0, 1, 2, // 밑면
+	    0,
+	    3,
+	    1,
+	    1,
+	    3,
+	    2,
+	    2,
+	    3,
+	    0,
+	    0,
+	    1,
+	    2, // 밑면
 	};
 
 	// Pyramid (이중 피라미드): 6정점 (베이스 4 + apex 위/아래 2), 8삼각형 (= 24 인덱스).
@@ -164,17 +390,26 @@ namespace Engine::Model
 
 	inline void BuildTetrahedron(std::vector<GLfloat> &vertex_data)
 	{
-		// centroid: base 3개 평균 (0,0,0) + apex (0,√2,0) → (0, √2/4, 0)
-		const vmath::vec3 center(0.0f, (float)(sqrt(2.0) / 4.0), 0.0f);
+		static const std::vector<vmath::vec3> QUAD_RGBY_COLORS = {
+		    {1.0f, 0.0f, 0.0f},
+		    {0.0f, 1.0f, 0.0f},
+		    {0.0f, 0.0f, 1.0f},
+		    {1.0f, 1.0f, 0.0f}};
+
+		vmath::vec3 center = vmath::vec3(0.0f);
+		for (const auto &pos : TETRAHEDRON_BASE_POSITIONS)
+			center += pos;
+		center *= (1.0f / TETRAHEDRON_BASE_POSITIONS.size());
 		const vmath::vec3 white(1.0f, 1.0f, 1.0f);
 		const vmath::vec2 zeroUV(0.0f, 0.0f);
+		int idx = 0;
 
 		for (const vmath::vec3 &pos : TETRAHEDRON_BASE_POSITIONS)
 		{
 			const vmath::vec3 normal = vmath::normalize(pos - center);
 			PushVertex(vertex_data,
 			           3, &pos[0],
-			           3, &white[0],
+			           3, QUAD_RGBY_COLORS[idx++],
 			           2, &zeroUV[0],
 			           3, &normal[0]);
 		}
@@ -444,8 +679,8 @@ class my_application : public sb7::application
 		// Engine::Model 로 바닥 Quad 정점 데이터 생성 (pos3 + color3 + uv2 + normal3 = 11 float/vertex)
 		{
 			std::vector<GLfloat> quad_vertices;
-			Engine::Model::BuildQuad(quad_vertices);
-			const std::vector<GLuint> &quad_indices = Engine::Model::QUAD_FACE_INDICES;
+			Engine::Model::VAO::BuildQuad(quad_vertices);
+			const std::vector<GLuint> &quad_indices = Engine::Model::VAO::QUAD_FACE_INDICES;
 			const GLsizei stride = 11 * static_cast<GLsizei>(sizeof(float));
 
 			glBindVertexArray(VAO[0]);
@@ -491,7 +726,7 @@ class my_application : public sb7::application
 		{
 			// BuildCube 는 인덱스 메시가 아니라 면당 6정점을 펼쳐 36정점 배열을 만든다 → glDrawArrays 로 그린다 (EBO 불필요).
 			std::vector<GLfloat> cube_vertices;
-			Engine::Model::BuildCube(cube_vertices, Engine::Model::CUBE_FACE_INDICES);
+			Engine::Model::VAO::BuildCube(cube_vertices, Engine::Model::VAO::CUBE_FACE_INDICES);
 			cube_vertex_count = static_cast<GLsizei>(cube_vertices.size() / 11);
 			const GLsizei stride = 11 * static_cast<GLsizei>(sizeof(float));
 
@@ -530,9 +765,8 @@ class my_application : public sb7::application
 		}
 		{
 			std::vector<GLfloat> tetrahedron_vertices;
-			Engine::Model::BuildTetrahedron(
-			    tetrahedron_vertices,
-			    Engine::Model::TETRAHEDRON_FACE_INDICES);
+			Engine::Model::EBO::BuildTetrahedron(
+			    tetrahedron_vertices);
 			// diag:: VBO 업로드 직전 — stride(11), pos(off=0,sz=3), normal(off=8,sz=3) 검증
 			// stride 불일치 / NaN normal / 퇴화 면(normal 길이 0) / 빈 배열을 감지한다.
 			diag::EngineDiagnostics::CheckInterleavedVertexBuffer(
@@ -669,7 +903,7 @@ class my_application : public sb7::application
 			BindMaterialTextures(m_material[0]);
 
 			glBindVertexArray(VAO[0]);
-			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(Engine::Model::QUAD_FACE_INDICES.size()), GL_UNSIGNED_INT, 0);
+			glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(Engine::Model::VAO::QUAD_FACE_INDICES.size()), GL_UNSIGNED_INT, 0);
 		}
 		glUseProgram(shader_program);
 		{
@@ -698,10 +932,10 @@ class my_application : public sb7::application
 			float orbitRadius = 1.0f;
 			vmath::mat4 model = vmath::translate(
 			    cosf(vmath::radians(120)) * orbitRadius,
-			    1.0f,
+			    0.0f,
 			    sinf(vmath::radians(120)) * orbitRadius);
 			model *= vmath::rotate(30.0f, vmath::vec3(0.0, 1.0, 0.0));
-			model *= vmath::scale(0.3f,0.3f,0.3f);
+			model *= vmath::scale(1.0f, 1.0f, 1.0f);
 
 			glUniformMatrix4fv(UniformLoc(shader_program, "model", glGetUniformLocation(shader_program, "model")), 1, GL_FALSE, model);
 			glUniformMatrix4fv(UniformLoc(shader_program, "view", glGetUniformLocation(shader_program, "view")), 1, GL_FALSE, lookAt);
