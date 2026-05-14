@@ -4,6 +4,7 @@
 in vec3 vsPosition;
 in vec2 vsTexCoord;
 in vec3 vsNormal;
+in vec3 vsColor;
 
 out vec4 fragColor;
 
@@ -57,28 +58,31 @@ float CalcSoftEdge(float theta, float phi, float gamma);
 vec3 CalcAmbient(vec3 lightAmbient);
 vec3 CalcDiffuse(vec3 lightDiffuse, vec3 normal, vec3 lightDir);
 vec3 CalcSpecular(vec3 lightSpecular, vec3 normal, vec3 lightDir, vec3 viewDir);
-vec3 CalcPhongLight(Light light, vec3 normal, vec3 viewDir, vec3 objectColor);
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 objectColor);
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 objectColor);
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 objectColor);
+vec3 CalcPhongLight(Light light, vec3 normal, vec3 viewDir);
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
+vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main()
 {
         vec3 norm = normalize(vsNormal); // 보간된 노말은 한 번만 정규화해서 각 Calc* 에 전달
         vec3 viewDir = normalize(viewPos - vsPosition);
         vec3 fragPos = vsPosition;
+        fragColor = vec4(vsColor, 1.0f);
+        fragColor *= vec4(objectColor, 1.0f);
 
         // 1) 방향광 — 전역 평행광
-        vec3 result = CalcDirLight(dirLight, norm, viewDir, objectColor);
+        vec3
+        result = CalcDirLight(dirLight, norm, viewDir);
 
         // 2) 점광원들
         for (int i = 0; i < NUM_POINT_LIGHTS; ++i)
-                result += CalcPointLight(pointLights[i], norm, fragPos, viewDir, objectColor);
+                result += CalcPointLight(pointLights[i], norm, fragPos, viewDir);
 
         // 3) 스포트라이트
-        result += CalcSpotLight(spotLight, norm, fragPos, viewDir, objectColor);
+        result += CalcSpotLight(spotLight, norm, fragPos, viewDir);
 
-        fragColor = vec4(result, 1.0);
+        fragColor *= vec4(result, 1.0);
 }
 
 /*
@@ -131,23 +135,23 @@ vec3 CalcSpecular(vec3 lightSpecular, vec3 normal, vec3 lightDir, vec3 viewDir) 
         return specular;
 }
 
-vec3 CalcPhongLight(Light light, vec3 normal, vec3 viewDir, vec3 objectColor) {
+vec3 CalcPhongLight(Light light, vec3 normal, vec3 viewDir) {
         vec3 lightDir = normalize(light.position - vsPosition); // !
         vec3 ambient = CalcAmbient(light.ambient);
         vec3 diffuse = CalcDiffuse(light.diffuse, normal, lightDir);
         vec3 specular = CalcSpecular(light.specular, normal, lightDir, viewDir);
-        return (ambient + diffuse + specular) * objectColor;
+        return (ambient + diffuse + specular);
 }
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 objectColor) {
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
         vec3 lightDir = normalize(-light.direction); // !
         vec3 ambient = CalcAmbient(light.ambient);
         vec3 diffuse = CalcDiffuse(light.diffuse, normal, lightDir);
         vec3 specular = CalcSpecular(light.specular, normal, lightDir, viewDir);
-        return (ambient + diffuse + specular) * objectColor; // attenuation 없음
+        return (ambient + diffuse + specular); // attenuation 없음
 }
 
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 objectColor) {
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
         vec3 lightDir = normalize(light.position - fragPos); // !
         vec3 ambient = CalcAmbient(light.ambient);
         vec3 diffuse = CalcDiffuse(light.diffuse, normal, lightDir);
@@ -157,10 +161,10 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, v
         float dist = length(light.position - fragPos);
         float attenuation = CalcAttenuation(vec2(light.c1, light.c2), dist);
 
-        return (ambient + diffuse + specular) * attenuation * objectColor;
+        return (ambient + diffuse + specular) * attenuation;
 }
 
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 objectColor) {
+vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
         vec3 lightDir = normalize(light.position - fragPos); // !
         vec3 ambient = CalcAmbient(light.ambient);
         vec3 diffuse = CalcDiffuse(light.diffuse, normal, lightDir);
@@ -180,5 +184,5 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec
         ambient *= attenuation * intensity;
         diffuse *= attenuation * intensity;
         specular *= attenuation * intensity;
-        return (ambient + diffuse + specular) * objectColor;
+        return (ambient + diffuse + specular);
 }

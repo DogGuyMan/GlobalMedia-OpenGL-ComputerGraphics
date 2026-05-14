@@ -9,7 +9,11 @@ else()
 endif()
 
 # 라이브러리 추가
-target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps)
+target_link_libraries(${CHAPTER_NAME}
+    PRIVATE
+        project_deps
+        SJH::diagnostics
+)
 
 # 인클루드 디렉토리 추가
 target_include_directories(${CHAPTER_NAME} PRIVATE ${CMAKE_CURRENT_DIR})

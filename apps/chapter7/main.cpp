@@ -15,8 +15,13 @@
 #include <utility>
 #include <vector>
 
+#include "diagnostics/engine_diagnostics.h" // diag::
+#include "diagnostics/gl_log.h"              // diag::
+#include "diagnostics/uniform_diagnostics.h" // diag::
+
 using namespace std;
 using namespace vmath;
+namespace diag = SJH::Diagnostics; // diag::
 
 namespace Engine
 {
@@ -186,6 +191,9 @@ namespace Engine::Material
 			{
 				std::cerr << "텍스쳐 로드 실패 : " << image_path << std::endl;
 			}
+			// stbi 채널 수 ↔ GL format 정합성 (JPG 를 GL_RGBA 로 로드 등 흔한 버그) // diag::
+			diag::EngineDiagnostics::CheckTextureFormat(image_path, nrChannels, width, height, // diag::
+			                                            format, internal_format, image_path); // diag::
 			if (data)
 			{
 				glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0,
@@ -829,15 +837,12 @@ namespace Engine::Model
 		{
 			if (isBuilted)
 				return;
-			if (buffer_data.empty())
-			{
-				std::cerr << "buffer_data 가 비어있음" << std::endl;
-			}
-			if (buffer_data.size() % VERTEX_LEN != 0)
-			{
-				std::cerr << "buffer_data 크기가 VERTEX_LEN("
-				          << VERTEX_LEN << ") 배수가 아님 : " << buffer_data.size() << std::endl;
-			}
+			// 정점 버퍼 구조(빈 배열 / stride 배수) + position.w(점/방향) + normal(NaN·퇴화 면·비단위) 검증. // diag::
+			// 레이아웃: Position[0..4) Color[4..8) Normal[8..11) UV[11..13).                                  // diag::
+			diag::EngineDiagnostics::CheckInterleavedVertexBuffer(                                              // diag::
+			    buffer_data, VERTEX_LEN,                                                                        // diag::
+			    0, VERTEX_POSITION_SIZE,                                                                        // diag::
+			    VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE, VERTEX_NORMAL_SIZE);                                  // diag::
 			mBufferData = std::vector<GLfloat>(buffer_data);
 
 			mIndexCount = mBufferData.size() / VERTEX_LEN;
@@ -948,6 +953,7 @@ namespace Engine::Program
 			glAttachShader(ProgAddr, vsAddr);
 			glAttachShader(ProgAddr, fsAddr);
 			glLinkProgram(ProgAddr);
+			diag::GLObjectLog::CheckProgramLink(ProgAddr, fs_path); // diag:: 링크 실패 시 uniform/attr location 무효
 			glDeleteShader(vsAddr);
 			glDeleteShader(fsAddr);
 
@@ -955,6 +961,9 @@ namespace Engine::Program
 
 		virtual ~ShaderProgram()
 		{
+			// program 핸들을 키로 캐시하는 진단들 정리 — 안 부르면 같은 GLuint 재발급 시 stale. // diag::
+			diag::GLObjectLog::InvalidateProgramCache(ProgAddr); // diag::
+			diag::UniformDiagnostics::Invalidate(ProgAddr);      // diag::
 			glDeleteProgram(ProgAddr);
 		}
 
@@ -975,7 +984,14 @@ namespace Engine::Program
 			transform.Name = name;
 			transform.Parent = parent;
 			if (parent != nullptr)
+			{
 				parent->Children[name] = &transform;
+				// 부모 체인 사이클 → GetModelMatrix 무한재귀(스택오버플로) 가드. // diag::
+				diag::EngineDiagnostics::CheckNoParentCycle(                       // diag::
+				    &transform,                                                   // diag::
+				    [](const Transform::Transform *t) { return t->Parent; },       // diag::
+				    name.c_str());                                                // diag::
+			}
 			Models.insert(std::make_pair(name, std::move(model)));
 		}
 
@@ -1052,6 +1068,8 @@ namespace Engine::Program
 			}
 
 			glUseProgram(ProgAddr);
+			// 라이팅/MVP 셰이더 계약 검증 (program 별 1회만 실검사 후 캐시 — 매 프레임 호출 OK). // diag::
+			diag::EngineDiagnostics::CheckExpectedLightingUniforms(ProgAddr, "texture_program");   // diag::
 			glUniformMatrix4fv(glGetUniformLocation(ProgAddr, UNIFORM_VIEW_MAT),
 			                   1, false, view);
 			glUniformMatrix4fv(glGetUniformLocation(ProgAddr, UNIFORM_PROJ_MAT),

@@ -3,6 +3,7 @@ add_library(sjhopengl_diagnostics STATIC
     uniform_diagnostics.cpp
     gl_state_fields.cpp
     gl_state_log.cpp
+    engine_diagnostics.cpp
 )
 add_library(SJH::diagnostics ALIAS sjhopengl_diagnostics)
 

@@ -7,7 +7,8 @@
 # add_subdirectory(chapter5)
 # add_subdirectory(chapter6)
 # add_subdirectory(chapter7)
-add_subdirectory(chapter8)
+# add_subdirectory(chapter8)
+add_subdirectory(chapter9)
 
 # add_subdirectory(exercise7)
 # add_subdirectory(exercise1)
@@ -20,7 +21,6 @@ add_subdirectory(chapter8)
 # add_subdirectory(exercise7_win)
 # add_subdirectory(exercise8)
 # add_subdirectory(exercise8_win)
-add_subdirectory(exercise9)
 
 # add_subdirectory(extra1)
 # add_subdirectory(prevmidterm)
