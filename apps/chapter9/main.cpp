@@ -391,10 +391,10 @@ namespace Engine::Model::EBO
 	inline void BuildTetrahedron(std::vector<GLfloat> &vertex_data)
 	{
 		static const std::vector<vmath::vec3> QUAD_RGBY_COLORS = {
-		    {1.0f, 0.0f, 0.0f},
-		    {0.0f, 1.0f, 0.0f},
-		    {0.0f, 0.0f, 1.0f},
-		    {1.0f, 1.0f, 0.0f}};
+		    {3.0f, 0.0f, 0.0f},
+		    {0.0f, 3.0f, 0.0f},
+		    {0.0f, 0.0f, 3.0f},
+		    {3.0f, 3.0f, 0.0f}};
 
 		vmath::vec3 center = vmath::vec3(0.0f);
 		for (const auto &pos : TETRAHEDRON_BASE_POSITIONS)
@@ -764,14 +764,13 @@ class my_application : public sb7::application
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 		}
 		{
+			// Tetrahedron: EBO 공유정점 4개 + 인덱스 12개 → glDrawElements
 			std::vector<GLfloat> tetrahedron_vertices;
-			Engine::Model::EBO::BuildTetrahedron(
-			    tetrahedron_vertices);
+			Engine::Model::EBO::BuildTetrahedron(tetrahedron_vertices);
 			// diag:: VBO 업로드 직전 — stride(11), pos(off=0,sz=3), normal(off=8,sz=3) 검증
-			// stride 불일치 / NaN normal / 퇴화 면(normal 길이 0) / 빈 배열을 감지한다.
 			diag::EngineDiagnostics::CheckInterleavedVertexBuffer(
 			    tetrahedron_vertices, 11, 0, 3, 8, 3, "tetrahedron"); // diag::
-			tetrahedron_vertex_count = static_cast<GLsizei>(tetrahedron_vertices.size() / 11);
+			const std::vector<GLuint> &tetra_indices = Engine::Model::EBO::TETRAHEDRON_FACE_INDICES;
 			const GLsizei stride = 11 * static_cast<GLsizei>(sizeof(float));
 
 			glBindVertexArray(VAO[2]);
@@ -804,8 +803,15 @@ class my_application : public sb7::application
 			glEnableVertexAttribArray(3);
 			diag::GLDebug::CheckGLEnableVertexAttribArray(3); // diag::
 
+			// EBO 에 Tetrahedron 인덱스 복사
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO[2]);
+			diag::GLDebug::CheckGLBindBuffer(EBO[2]); // diag::
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, tetra_indices.size() * sizeof(GLuint), tetra_indices.data(), GL_STATIC_DRAW);
+			diag::GLDebug::CheckGLBufferData(static_cast<GLint>(tetra_indices.size() * sizeof(GLuint))); // diag::
+
 			glBindVertexArray(0);
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
 
 		m_material[0].diffuseTexture = textures[0];
@@ -876,7 +882,7 @@ class my_application : public sb7::application
 
 		// 카메라 매트릭스 계산 (eye 가 viewPos)
 		float camdistance = 3.0f;
-		vmath::vec3 eye((float)cos(currentTime * 0.1f) * camdistance, 1.5f, (float)sin(currentTime * 0.1f) * camdistance);
+		vmath::vec3 eye((float)cos(currentTime * 0.5f) * camdistance, 1.5f, (float)sin(currentTime * 0.5f) * camdistance);
 		vmath::vec3 center(0.0f, 0.0f, 0.0f);
 		vmath::vec3 up(0.0f, 1.0f, 0.0f);
 		vmath::mat4 lookAt = vmath::lookat(eye, center, up);
@@ -929,13 +935,13 @@ class my_application : public sb7::application
 		}
 		glUseProgram(shader_program);
 		{
-			float orbitRadius = 1.0f;
+			float orbitRadius = -1.0f;
 			vmath::mat4 model = vmath::translate(
-			    cosf(vmath::radians(120)) * orbitRadius,
-			    0.0f,
-			    sinf(vmath::radians(120)) * orbitRadius);
+			    cosf(vmath::radians(360)) * orbitRadius,
+			    0.5f,
+			    sinf(vmath::radians(360)) * orbitRadius);
 			model *= vmath::rotate(30.0f, vmath::vec3(0.0, 1.0, 0.0));
-			model *= vmath::scale(1.0f, 1.0f, 1.0f);
+			model *= vmath::scale(0.3f, 0.3f, 0.3f);
 
 			glUniformMatrix4fv(UniformLoc(shader_program, "model", glGetUniformLocation(shader_program, "model")), 1, GL_FALSE, model);
 			glUniformMatrix4fv(UniformLoc(shader_program, "view", glGetUniformLocation(shader_program, "view")), 1, GL_FALSE, lookAt);
@@ -962,14 +968,16 @@ class my_application : public sb7::application
 					s_dumped = true;
 				}
 			}
-			glDrawArrays(GL_TRIANGLES, 0, tetrahedron_vertex_count); // BuildTetrahedron 은 비인덱스 메시 (12정점)
+			// EBO 인덱스 메시: 공유정점 4 + 인덱스 12 (4면 × 3정점)
+			const GLsizei tetra_index_count = static_cast<GLsizei>(Engine::Model::EBO::TETRAHEDRON_FACE_INDICES.size());
+			glDrawElements(GL_TRIANGLES, tetra_index_count, GL_UNSIGNED_INT, 0);
 			// diag:: draw 후 1회 — GL error 확인 (GL_INVALID_OPERATION 등)
 			{
 				static bool s_checked = false; // diag::
 				if (!s_checked)
 				{
 					const GLenum err = glGetError();
-					std::cerr << "[diag] tetra glDrawArrays count=" << tetrahedron_vertex_count
+					std::cerr << "[diag] tetra glDrawElements count=" << tetra_index_count
 					          << " GLerr=0x" << std::hex << err << std::dec
 					          << (err == GL_NO_ERROR ? " (NO_ERROR)" : " (ERROR)")
 					          << std::endl;
@@ -988,11 +996,11 @@ class my_application : public sb7::application
 	}
 
   private:
-	GLuint shader_program;                // basic_lighting 단일 프로그램
-	GLuint VAO[3], VBO[3], EBO[3];        // [0]=바닥 Quad(인덱스), [1]=Cube(비인덱스)
-	GLuint textures[3];                   // [0]=wall.jpg, [1]=container2(diffuse), [2]=container2_specular
-	GLsizei cube_vertex_count = 0;        // BuildCube 가 만든 펼친 정점 수 (36)
-	GLsizei tetrahedron_vertex_count = 0; // BuildTetrahedron 이 만든 펼친 정점 수 (4면 × 3정점 = 12)
+	GLuint shader_program;         // basic_lighting 단일 프로그램
+	GLuint VAO[3], VBO[3], EBO[3]; // [0]=Quad(EBO), [1]=Cube(VAO 펼침), [2]=Tetrahedron(EBO)
+	GLuint textures[3];            // [0]=wall.jpg, [1]=container2(diffuse), [2]=container2_specular
+	GLuint 
+	GLsizei cube_vertex_count = 0; // BuildCube 가 만든 펼친 정점 수 (36) — glDrawArrays 용
 
 	Material m_material[3];
 	DirLight m_dirLight;

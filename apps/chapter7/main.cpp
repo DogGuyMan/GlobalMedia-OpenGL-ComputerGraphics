@@ -1088,6 +1088,14 @@ namespace Engine::Program
 	};
 } // namespace Engine::Program
 
+namespace Engine::Context 
+{
+	std::unordered_map<std::string, std::unique_ptr<Transform::Transform>> hierarchies;
+	Camera::Camera main_camera;
+	unique_ptr<Program::TextureShaderProgram> program;
+		const char *name_of_WorldRoot_transform = "WorldRoot";
+}
+
 namespace Engine::Application
 {
 	class ApplicationBase : public sb7::application
