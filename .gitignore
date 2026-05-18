@@ -10,6 +10,7 @@ doc/latex/
 
 ###########  FILES  ############
 *.pptx
+*.zip
 
 ########### FOLDERS ############
 build_project/
