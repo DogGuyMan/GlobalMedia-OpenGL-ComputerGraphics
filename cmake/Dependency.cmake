@@ -93,6 +93,8 @@ target_link_libraries(EffekseerRendererGL INTERFACE Effekseer)
 # include/Effekseer 디렉토리 자체를 인클루드 경로에 추가.
 set_target_properties(Effekseer PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/include/Effekseer)
+set_target_properties(EffekseerRendererGL PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/include/Effekseer)
 
 # assimp v5.4.3 — 3D 모델 임포트 라이브러리. 번들 zlib(zlibstatic) 정적 링크.
 add_library(assimp STATIC IMPORTED)
