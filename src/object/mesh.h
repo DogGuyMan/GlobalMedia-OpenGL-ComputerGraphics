@@ -7,6 +7,7 @@
  *  - Vertex 배열(VBO) + 인덱스 배열(EBO) 를 GL 에 업로드하고 VAO(@c VertexLayout) 로 묶음.
  *  - `primitiveType` (@c GL_TRIANGLES 등) 에 따라 @c Draw 가 `glDrawElements` 를 호출.
  *  - @c CreateBox 팩토리로 기본 박스(큐브) 메시 생성.
+ *  - @c CreatePlane 팩토리로 평면(quad) 메시 생성.
  *
  *  ### 비-책임
  *  - ❌ 텍스처 바인딩 — Material / Context 가 담당.
@@ -32,7 +33,7 @@ namespace SJH
      * @details
      *  정점 데이터를 GPU 에 업로드하고 @ref Draw 한 번으로 @c glDrawElements 를 호출.
      *  소유 관계: @c Mesh -> @c VertexLayout (VAO) + @c Buffer ×2 (VBO/EBO).
-     *  박스 메시는 @ref CreateBox 팩토리가 제공.
+     *  박스 메시는 @ref CreateBox 팩토리, 평면 메시는 @ref CreatePlane 팩토리가 제공.
      */
     class Mesh
     {
