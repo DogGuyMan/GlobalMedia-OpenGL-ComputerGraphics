@@ -1,4 +1,5 @@
 #include "mesh.h"
+#include "object/geometry.h"
 #include "diagnostics/gl_validate.h" // Cat A — CheckIndices
 
 namespace SJH
@@ -33,70 +34,16 @@ namespace SJH
 
     MeshUPtr Mesh::CreateBox()
     {
-        // clang-format off
-        std::vector<Vertex> vertices = {
-            Vertex{vmath::vec3(-0.5f, -0.5f, -0.5f), vmath::vec3(0.0f, 0.0f, -1.0f), vmath::vec2(0.0f, 0.0f)},
-            Vertex{vmath::vec3(0.5f, -0.5f, -0.5f), vmath::vec3(0.0f, 0.0f, -1.0f), vmath::vec2(1.0f, 0.0f)},
-            Vertex{vmath::vec3(0.5f, 0.5f, -0.5f), vmath::vec3(0.0f, 0.0f, -1.0f), vmath::vec2(1.0f, 1.0f)},
-            Vertex{vmath::vec3(-0.5f, 0.5f, -0.5f), vmath::vec3(0.0f, 0.0f, -1.0f), vmath::vec2(0.0f, 1.0f)},
-
-            Vertex{vmath::vec3(-0.5f, -0.5f, 0.5f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(0.0f, 0.0f)},
-            Vertex{vmath::vec3(0.5f, -0.5f, 0.5f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(1.0f, 0.0f)},
-            Vertex{vmath::vec3(0.5f, 0.5f, 0.5f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(1.0f, 1.0f)},
-            Vertex{vmath::vec3(-0.5f, 0.5f, 0.5f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(0.0f, 1.0f)},
-
-            Vertex{vmath::vec3(-0.5f, 0.5f, 0.5f), vmath::vec3(-1.0f, 0.0f, 0.0f), vmath::vec2(1.0f, 0.0f)},
-            Vertex{vmath::vec3(-0.5f, 0.5f, -0.5f), vmath::vec3(-1.0f, 0.0f, 0.0f), vmath::vec2(1.0f, 1.0f)},
-            Vertex{vmath::vec3(-0.5f, -0.5f, -0.5f), vmath::vec3(-1.0f, 0.0f, 0.0f), vmath::vec2(0.0f, 1.0f)},
-            Vertex{vmath::vec3(-0.5f, -0.5f, 0.5f), vmath::vec3(-1.0f, 0.0f, 0.0f), vmath::vec2(0.0f, 0.0f)},
-
-            Vertex{vmath::vec3(0.5f, 0.5f, 0.5f), vmath::vec3(1.0f, 0.0f, 0.0f), vmath::vec2(1.0f, 0.0f)},
-            Vertex{vmath::vec3(0.5f, 0.5f, -0.5f), vmath::vec3(1.0f, 0.0f, 0.0f), vmath::vec2(1.0f, 1.0f)},
-            Vertex{vmath::vec3(0.5f, -0.5f, -0.5f), vmath::vec3(1.0f, 0.0f, 0.0f), vmath::vec2(0.0f, 1.0f)},
-            Vertex{vmath::vec3(0.5f, -0.5f, 0.5f), vmath::vec3(1.0f, 0.0f, 0.0f), vmath::vec2(0.0f, 0.0f)},
-
-            Vertex{vmath::vec3(-0.5f, -0.5f, -0.5f), vmath::vec3(0.0f, -1.0f, 0.0f), vmath::vec2(0.0f, 1.0f)},
-            Vertex{vmath::vec3(0.5f, -0.5f, -0.5f), vmath::vec3(0.0f, -1.0f, 0.0f), vmath::vec2(1.0f, 1.0f)},
-            Vertex{vmath::vec3(0.5f, -0.5f, 0.5f), vmath::vec3(0.0f, -1.0f, 0.0f), vmath::vec2(1.0f, 0.0f)},
-            Vertex{vmath::vec3(-0.5f, -0.5f, 0.5f), vmath::vec3(0.0f, -1.0f, 0.0f), vmath::vec2(0.0f, 0.0f)},
-
-            Vertex{vmath::vec3(-0.5f, 0.5f, -0.5f), vmath::vec3(0.0f, 1.0f, 0.0f), vmath::vec2(0.0f, 1.0f)},
-            Vertex{vmath::vec3(0.5f, 0.5f, -0.5f), vmath::vec3(0.0f, 1.0f, 0.0f), vmath::vec2(1.0f, 1.0f)},
-            Vertex{vmath::vec3(0.5f, 0.5f, 0.5f), vmath::vec3(0.0f, 1.0f, 0.0f), vmath::vec2(1.0f, 0.0f)},
-            Vertex{vmath::vec3(-0.5f, 0.5f, 0.5f), vmath::vec3(0.0f, 1.0f, 0.0f), vmath::vec2(0.0f, 0.0f)},
-        };
-
-        // 6면 × 12 인덱스 = 36. 각 면이 자기 4개 정점만 참조 (i4~i6 가 오작성되어 있던 것을 정정).
-        std::vector<uint32_t> indices = {
-             0,  2,  1,    2,  0,  3,   // back   (정점 0~3, normal -Z)
-             4,  5,  6,    6,  7,  4,   // front  (정점 4~7, normal +Z)
-             8,  9, 10,   10, 11,  8,   // left   (정점 8~11, normal -X)
-            12, 14, 13,   14, 12, 15,   // right  (정점 12~15, normal +X)
-            16, 17, 18,   18, 19, 16,   // bottom (정점 16~19, normal -Y)
-            20, 22, 21,   22, 20, 23,   // top    (정점 20~23, normal +Y)
-        };
-        // clang-format on
-
-        return Create(vertices, indices, GL_TRIANGLES);
+        // 도형 데이터 생성은 SJH::Geometry 책임 — engine 빌더에 위임.
+        MeshData data = Geometry::Box();
+        return Create(data.vertices, data.indices, GL_TRIANGLES);
     }
 
     MeshUPtr Mesh::CreatePlane()
     {
-        // clang-format off
-        std::vector<Vertex> vertices = {
-            Vertex{vmath::vec3(-0.5f, -0.5f, 0.0f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(0.0f, 0.0f)},
-            Vertex{vmath::vec3(0.5f, -0.5f, 0.0f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(1.0f, 0.0f)},
-            Vertex{vmath::vec3(0.5f, 0.5f, 0.0f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(1.0f, 1.0f)},
-            Vertex{vmath::vec3(-0.5f, 0.5f, 0.0f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(0.0f, 1.0f)},
-        };
-
-        std::vector<uint32_t> indices = {
-            0,1,2,
-            2,3,0,
-        };
-        // clang-format on
-
-        return Create(vertices, indices, GL_TRIANGLES);
+        // 도형 데이터 생성은 SJH::Geometry 책임 — engine 빌더에 위임.
+        MeshData data = Geometry::Plane();
+        return Create(data.vertices, data.indices, GL_TRIANGLES);
     }
 
     void Mesh::Draw() const
