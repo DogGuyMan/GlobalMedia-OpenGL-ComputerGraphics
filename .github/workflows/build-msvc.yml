@@ -26,6 +26,214 @@ jobs:
         with:
           submodules: true
 
+      - name: Build Box2D (Release + Debug)
+        if: matrix.configuration == 'Release'
+        shell: cmd
+        run: |
+          set BOX2D_DIR=%GITHUB_WORKSPACE%\extern\box2d
+          set BOX2D_BUILD=%GITHUB_WORKSPACE%\build_extern\box2d
+          set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
+
+          if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
+
+          cmake -S "%BOX2D_DIR%" -B "%BOX2D_BUILD%" ^
+              -G "Visual Studio 17 2022" ^
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+              -DBOX2D_BUILD_TESTBED=OFF ^
+              -DBOX2D_BUILD_UNIT_TESTS=OFF ^
+              -DBOX2D_BUILD_DOCS=OFF
+          if errorlevel 1 exit /b 1
+
+          cmake --build "%BOX2D_BUILD%" --config Release
+          if errorlevel 1 exit /b 1
+          for /R "%BOX2D_BUILD%" %%f in (box2d.lib) do (
+              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\box2d.lib" >nul
+          )
+
+          cmake --build "%BOX2D_BUILD%" --config Debug
+          if errorlevel 1 exit /b 1
+          for /R "%BOX2D_BUILD%" %%f in (box2d.lib) do (
+              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\box2d_d.lib" >nul
+          )
+
+          exit /b 0
+
+      - name: Build Effekseer (Release + Debug)
+        if: matrix.configuration == 'Release'
+        shell: cmd
+        run: |
+          set EFK_DIR=%GITHUB_WORKSPACE%\extern\Effekseer
+          set EFK_BUILD=%GITHUB_WORKSPACE%\build_extern\effekseer
+          set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
+          set INCLUDE_DIR=%GITHUB_WORKSPACE%\build_extern\output\include
+
+          if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
+          if not exist "%INCLUDE_DIR%\Effekseer" mkdir "%INCLUDE_DIR%\Effekseer"
+
+          cmake -S "%EFK_DIR%" -B "%EFK_BUILD%" ^
+              -G "Visual Studio 17 2022" ^
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+              -DBUILD_GL=ON ^
+              -DBUILD_VULKAN=OFF ^
+              -DBUILD_METAL=OFF ^
+              -DBUILD_DX9=OFF ^
+              -DBUILD_DX11=OFF ^
+              -DBUILD_DX12=OFF ^
+              -DBUILD_VIEWER=OFF ^
+              -DBUILD_EDITOR=OFF ^
+              -DBUILD_EXAMPLES=OFF ^
+              -DBUILD_TEST=OFF ^
+              -DBUILD_UNITYPLUGIN=OFF ^
+              -DUSE_LIBPNG_LOADER=OFF ^
+              -DNETWORK_ENABLED=OFF
+          if errorlevel 1 exit /b 1
+
+          cmake --build "%EFK_BUILD%" --config Release --target Effekseer EffekseerRendererGL
+          if errorlevel 1 exit /b 1
+          for /R "%EFK_BUILD%" %%f in (Effekseer.lib) do (
+              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\Effekseer.lib" >nul
+          )
+          for /R "%EFK_BUILD%" %%f in (EffekseerRendererGL.lib) do (
+              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\EffekseerRendererGL.lib" >nul
+          )
+
+          cmake --build "%EFK_BUILD%" --config Debug --target Effekseer EffekseerRendererGL
+          if errorlevel 1 exit /b 1
+          for /R "%EFK_BUILD%" %%f in (Effekseer.lib) do (
+              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\Effekseer_d.lib" >nul
+          )
+          for /R "%EFK_BUILD%" %%f in (EffekseerRendererGL.lib) do (
+              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\EffekseerRendererGL_d.lib" >nul
+          )
+
+          REM Effekseer 공개 헤더만 복사 (.h)
+          for /R "%EFK_DIR%\Dev\Cpp\Effekseer" %%f in (*.h) do (
+              xcopy /Y "%%f" "%INCLUDE_DIR%\Effekseer\" >nul
+          )
+          for /R "%EFK_DIR%\Dev\Cpp\EffekseerRendererGL" %%f in (*.h) do (
+              xcopy /Y "%%f" "%INCLUDE_DIR%\Effekseer\" >nul
+          )
+
+          exit /b 0
+
+      - name: Build assimp (Release + Debug)
+        if: matrix.configuration == 'Release'
+        shell: cmd
+        run: |
+          set ASSIMP_DIR=%GITHUB_WORKSPACE%\extern\assimp
+          set ASSIMP_BUILD=%GITHUB_WORKSPACE%\build_extern\assimp
+          set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
+          set INCLUDE_DIR=%GITHUB_WORKSPACE%\build_extern\output\include
+
+          if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
+          if not exist "%INCLUDE_DIR%\assimp" mkdir "%INCLUDE_DIR%\assimp"
+
+          cmake -S "%ASSIMP_DIR%" -B "%ASSIMP_BUILD%" ^
+              -G "Visual Studio 17 2022" ^
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+              -DBUILD_SHARED_LIBS=OFF ^
+              -DASSIMP_BUILD_TESTS=OFF ^
+              -DASSIMP_BUILD_ASSIMP_TOOLS=OFF ^
+              -DASSIMP_BUILD_SAMPLES=OFF ^
+              -DASSIMP_INSTALL=OFF ^
+              -DASSIMP_WARNINGS_AS_ERRORS=OFF ^
+              -DASSIMP_BUILD_ZLIB=ON
+          if errorlevel 1 exit /b 1
+
+          cmake --build "%ASSIMP_BUILD%" --config Release
+          if errorlevel 1 exit /b 1
+          for /R "%ASSIMP_BUILD%" %%f in (assimp*.lib) do (
+              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\assimp.lib" >nul
+          )
+          for /R "%ASSIMP_BUILD%" %%f in (zlibstatic.lib) do (
+              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\zlibstatic.lib" >nul
+          )
+
+          cmake --build "%ASSIMP_BUILD%" --config Debug
+          if errorlevel 1 exit /b 1
+          for /R "%ASSIMP_BUILD%" %%f in (assimp*.lib) do (
+              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\assimp_d.lib" >nul
+          )
+          for /R "%ASSIMP_BUILD%" %%f in (zlibstaticd.lib) do (
+              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\zlibstatic_d.lib" >nul
+          )
+
+          REM assimp 소스 헤더 복사
+          for /R "%ASSIMP_DIR%\include\assimp" %%f in (*.h *.hpp *.inl) do (
+              xcopy /Y "%%f" "%INCLUDE_DIR%\assimp\" >nul
+          )
+          REM assimp 빌드 생성 헤더 복사 (config.h, revision.h)
+          for /R "%ASSIMP_BUILD%\include\assimp" %%f in (*.h) do (
+              xcopy /Y "%%f" "%INCLUDE_DIR%\assimp\" >nul
+          )
+
+          exit /b 0
+
+      - name: Build spdlog (Release + Debug)
+        if: matrix.configuration == 'Release'
+        shell: cmd
+        run: |
+          set SPDLOG_DIR=%GITHUB_WORKSPACE%\extern\spdlog
+          set SPDLOG_BUILD=%GITHUB_WORKSPACE%\build_extern\spdlog
+          set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
+          set INCLUDE_DIR=%GITHUB_WORKSPACE%\build_extern\output\include
+
+          if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
+          if not exist "%INCLUDE_DIR%\spdlog" mkdir "%INCLUDE_DIR%\spdlog"
+
+          cmake -S "%SPDLOG_DIR%" -B "%SPDLOG_BUILD%" ^
+              -G "Visual Studio 17 2022" ^
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+              -DSPDLOG_BUILD_EXAMPLE=OFF ^
+              -DSPDLOG_BUILD_TESTS=OFF ^
+              -DSPDLOG_BUILD_BENCH=OFF
+          if errorlevel 1 exit /b 1
+
+          cmake --build "%SPDLOG_BUILD%" --config Release
+          if errorlevel 1 exit /b 1
+          for /R "%SPDLOG_BUILD%" %%f in (spdlog.lib) do (
+              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\spdlog.lib" >nul
+          )
+
+          cmake --build "%SPDLOG_BUILD%" --config Debug
+          if errorlevel 1 exit /b 1
+          for /R "%SPDLOG_BUILD%" %%f in (spdlogd.lib) do (
+              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\spdlog_d.lib" >nul
+          )
+
+          REM spdlog 헤더 복사 (.h/.hpp/.inl, fmt/bundled/fmt.license.rst 제외)
+          for /R "%SPDLOG_DIR%\include\spdlog" %%f in (*.h *.hpp *.inl) do (
+              xcopy /Y "%%f" "%INCLUDE_DIR%\spdlog\" >nul
+          )
+
+          exit /b 0
+
+      - name: Upload new extern libs artifact (for lib/windows/)
+        if: matrix.configuration == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extern-new-libs-windows
+          path: |
+            build_extern/output/windows/box2d.lib
+            build_extern/output/windows/box2d_d.lib
+            build_extern/output/windows/Effekseer.lib
+            build_extern/output/windows/Effekseer_d.lib
+            build_extern/output/windows/EffekseerRendererGL.lib
+            build_extern/output/windows/EffekseerRendererGL_d.lib
+            build_extern/output/windows/assimp.lib
+            build_extern/output/windows/assimp_d.lib
+            build_extern/output/windows/zlibstatic.lib
+            build_extern/output/windows/zlibstatic_d.lib
+            build_extern/output/windows/spdlog.lib
+            build_extern/output/windows/spdlog_d.lib
+
+      - name: Upload new extern headers artifact (for include/)
+        if: matrix.configuration == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extern-new-headers
+          path: build_extern/output/include/
+
       - name: Configure
         run: cmake --preset msvc-2022
 

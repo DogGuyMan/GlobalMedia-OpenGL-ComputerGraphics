@@ -22,6 +22,7 @@ build_deps/
 html/
 
 ############ C/C++ #############
+lib/
 # Prerequisites
 *.d
 # Compiled Object files

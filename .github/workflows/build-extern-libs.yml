@@ -2,6 +2,7 @@ name: Build Extern Libs (Windows)
 
 # 수동 실행 전용 - lib/windows/ 에 넣을 정적 라이브러리를 아티팩트로 생성
 # 기존 BuildExternLibs.bat 는 sb7 Debug 만 빌드하므로, sb7 Release 를 추가로 만든다
+# Box2D v2.4.1, Effekseer 1.7.3.0, assimp v5.4.3, spdlog v1.17.0 도 함께 빌드 (BuildExternLibs.bat 에 포함됨)
 
 on:
   workflow_dispatch:
@@ -16,7 +17,7 @@ jobs:
         with:
           submodules: true
 
-      - name: Run BuildExternLibs.bat (glfw3 Release+Debug, sb7 Debug)
+      - name: Run BuildExternLibs.bat (glfw3 Release+Debug, sb7 Debug, Box2D Release+Debug, Effekseer Release+Debug, assimp Release+Debug, spdlog Release+Debug)
         shell: cmd
         run: shell\BuildExternLibs.bat
 
