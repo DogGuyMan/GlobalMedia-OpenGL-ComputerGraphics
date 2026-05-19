@@ -5,8 +5,7 @@
 
 #include "uniform_diagnostics.h"
 
-#include "log_util.h"
-
+#include <spdlog/spdlog.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -27,7 +26,7 @@ namespace SJH::Diagnostics
     {
         if (detail::warnedMissing[program].insert(name).second)
         {
-            Log::Warn("프로그램 {}에 uniform 누락: '{}'", program, name);
+            spdlog::warn("프로그램 {}에 uniform 누락: '{}'", program, name);
         }
     }
 
@@ -41,7 +40,7 @@ namespace SJH::Diagnostics
 
         if (detail::warnedTypeMismatch[program].insert(name).second)
         {
-            Log::Warn("프로그램 {} '{}'의 uniform 타입 불일치: 기대 0x{:x}, 실제 0x{:x}",
+            spdlog::warn("프로그램 {} '{}'의 uniform 타입 불일치: 기대 0x{:x}, 실제 0x{:x}",
                          program, name, expected, actual);
         }
     }

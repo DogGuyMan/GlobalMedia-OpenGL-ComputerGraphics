@@ -10,7 +10,7 @@
  *
  *  ### 설계 — 왜 static (인스턴스 X)
  *  - 본 클래스 자체에 *인스턴스 상태가 필요 없음* — program 별 dedup 은 내부 map 으로.
- *  - @c SJH::Uniforms 자유 함수 family 가 본 헤더를 *include 하지 않아도* 되게 함 →
+ *  - @c SJH::Uniforms 자유 함수 family 가 본 헤더를 *include 하지 않아도* 되게 함 ->
  *    diagnostics 의존성을 cpp 차원으로 가둠
  *    ([architecture.md §4](../../.claude/architecture.md) PRIVATE link 일관).
  *  - 기존 @c GLObjectLog::CheckExpectedUniforms 도 동일 패턴 (static + 내부 program 키 map).
@@ -21,7 +21,7 @@
  *
  *  ### Lifecycle
  *  - 호출자(@c SJH::Program::~Program())가 파괴 시 @c Invalidate(mProgramAddr) 명시 호출 필요.
- *    안 부르면 같은 @c GLuint 가 재발급될 때 stale 트래커 → 기대 warn 이 silently 묻힐 수 있음.
+ *    안 부르면 같은 @c GLuint 가 재발급될 때 stale 트래커 -> 기대 warn 이 silently 묻힐 수 있음.
  *  - 짝꿍: @c Uniforms::Forget — uniform location 캐시 정리. 두 함수 모두 destructor 에서 호출되어야 일관.
  *  @see SJH::Uniforms::Forget
  */
@@ -29,7 +29,9 @@
 #ifndef __SJH_DIAGNOSTICS_UNIFORM_DIAGNOSTICS_H__
 #define __SJH_DIAGNOSTICS_UNIFORM_DIAGNOSTICS_H__
 
-#include <GL/gl3w.h>
+#pragma once
+
+#include "GL/gl3w.h"
 
 namespace SJH::Diagnostics
 {
@@ -45,7 +47,7 @@ namespace SJH::Diagnostics
 
         /// @brief 타입 불일치 보고. (program, name) 조합 첫 호출만 spdlog::warn.
         /// @param expected 호출자(setter)가 *기대* 한 GL 타입 (예: @c GL_FLOAT_MAT4).
-        /// @param actual   셰이더에서 *실제로* 선언된 타입. @c 0 이면 active 정보 없음 → 검증 skip.
+        /// @param actual   셰이더에서 *실제로* 선언된 타입. @c 0 이면 active 정보 없음 -> 검증 skip.
         static void NotifyTypeMismatch(GLuint program, const char *name,
                                        GLenum expected, GLenum actual);
 

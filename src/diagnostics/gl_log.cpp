@@ -1,7 +1,7 @@
 #include "gl_log.h"
 
-#include "log_util.h"
-
+#include <spdlog/fmt/ranges.h>
+#include <spdlog/spdlog.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -79,9 +79,9 @@ namespace SJH::Diagnostics
 
         const std::string log = FetchShaderInfoLog(shader);
         if (tag.empty())
-            Log::Error("셰이더 컴파일 실패: {}", log);
+            spdlog::error("셰이더 컴파일 실패: {}", log);
         else
-            Log::Error("셰이더 컴파일 실패 [{}]: {}", tag, log);
+            spdlog::error("셰이더 컴파일 실패 [{}]: {}", tag, log);
         return false;
     }
 
@@ -94,9 +94,9 @@ namespace SJH::Diagnostics
 
         const std::string log = FetchProgramInfoLog(program);
         if (tag.empty())
-            Log::Error("프로그램 링크 실패: {}", log);
+            spdlog::error("프로그램 링크 실패: {}", log);
         else
-            Log::Error("프로그램 링크 실패 [{}]: {}", tag, log);
+            spdlog::error("프로그램 링크 실패 [{}]: {}", tag, log);
         return false;
     }
 
@@ -110,9 +110,9 @@ namespace SJH::Diagnostics
 
         const std::string log = FetchProgramInfoLog(program);
         if (tag.empty())
-            Log::Warn("프로그램 검증 실패: {}", log);
+            spdlog::warn("프로그램 검증 실패: {}", log);
         else
-            Log::Warn("프로그램 검증 실패 [{}]: {}", tag, log);
+            spdlog::warn("프로그램 검증 실패 [{}]: {}", tag, log);
         return false;
     }
 
@@ -136,10 +136,10 @@ namespace SJH::Diagnostics
         if (!allFound)
         {
             if (tag.empty())
-                Log::Warn("프로그램 {}에 기대 uniform 누락: [{}]", program, Log::Join(missing, ", "));
+                spdlog::warn("프로그램 {}에 기대 uniform 누락: [{}]", program, fmt::join(missing, ", "));
             else
-                Log::Warn("프로그램 {} [{}]에 기대 uniform 누락: [{}]",
-                             program, tag, Log::Join(missing, ", "));
+                spdlog::warn("프로그램 {} [{}]에 기대 uniform 누락: [{}]",
+                             program, tag, fmt::join(missing, ", "));
         }
 
         detail::uniformChecked[program] = allFound;
@@ -166,10 +166,10 @@ namespace SJH::Diagnostics
         if (!allFound)
         {
             if (tag.empty())
-                Log::Warn("프로그램 {}에 기대 attribute 누락: [{}]", program, Log::Join(missing, ", "));
+                spdlog::warn("프로그램 {}에 기대 attribute 누락: [{}]", program, fmt::join(missing, ", "));
             else
-                Log::Warn("프로그램 {} [{}]에 기대 attribute 누락: [{}]",
-                             program, tag, Log::Join(missing, ", "));
+                spdlog::warn("프로그램 {} [{}]에 기대 attribute 누락: [{}]",
+                             program, tag, fmt::join(missing, ", "));
         }
 
         detail::attribChecked[program] = allFound;
@@ -190,10 +190,10 @@ namespace SJH::Diagnostics
         case GL_NO_ERROR:
             return true;
         case GL_INVALID_VALUE:
-            Log::Error("glGenVertexArrays: n<0 (전달값 1)");
+            spdlog::error("glGenVertexArrays: n<0 (전달값 1)");
             return false;
         default:
-            Log::Error("glGenVertexArrays: 예기치 않은 오류 0x{:x}", err);
+            spdlog::error("glGenVertexArrays: 예기치 않은 오류 0x{:x}", err);
             return false;
         }
     }
@@ -205,12 +205,12 @@ namespace SJH::Diagnostics
         case GL_NO_ERROR:
             return true;
         case GL_INVALID_OPERATION:
-            Log::Error("glBindVertexArray: 유효하지 않은 VAO 핸들 ({}) — "
+            spdlog::error("glBindVertexArray: 유효하지 않은 VAO 핸들 ({}) — "
                           "glGenVertexArrays 미반환 또는 이미 삭제됨",
                           vao);
             return false;
         default:
-            Log::Error("glBindVertexArray: 예기치 않은 오류 0x{:x}", err);
+            spdlog::error("glBindVertexArray: 예기치 않은 오류 0x{:x}", err);
             return false;
         }
     }
@@ -223,14 +223,14 @@ namespace SJH::Diagnostics
         case GL_NO_ERROR:
             return true;
         case GL_INVALID_ENUM:
-            Log::Error("glBindBuffer: 허용되지 않는 target enum "
+            spdlog::error("glBindBuffer: 허용되지 않는 target enum "
                           "(GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER, ... 이어야 함)");
             return false;
         case GL_INVALID_VALUE:
-            Log::Error("glBindBuffer: 버퍼 ({})가 glGenBuffers 미반환 핸들", vbo);
+            spdlog::error("glBindBuffer: 버퍼 ({})가 glGenBuffers 미반환 핸들", vbo);
             return false;
         default:
-            Log::Error("glBindBuffer: 예기치 않은 오류 0x{:x}", err);
+            spdlog::error("glBindBuffer: 예기치 않은 오류 0x{:x}", err);
             return false;
         }
     }
@@ -243,14 +243,14 @@ namespace SJH::Diagnostics
         case GL_NO_ERROR:
             return true;
         case GL_INVALID_ENUM:
-            Log::Error("glBindBuffer: 허용되지 않는 target enum "
+            spdlog::error("glBindBuffer: 허용되지 않는 target enum "
                           "(GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER, ... 이어야 함)");
             return false;
         case GL_INVALID_VALUE:
-            Log::Error("glBindBuffer: 버퍼 ({})가 glGenBuffers 미반환 핸들", vbo);
+            spdlog::error("glBindBuffer: 버퍼 ({})가 glGenBuffers 미반환 핸들", vbo);
             return false;
         default:
-            Log::Error("glBindBuffer: 예기치 않은 오류 0x{:x}", err);
+            spdlog::error("glBindBuffer: 예기치 않은 오류 0x{:x}", err);
             return false;
         }
     }
@@ -263,20 +263,20 @@ namespace SJH::Diagnostics
         case GL_NO_ERROR:
             return true;
         case GL_INVALID_ENUM:
-            Log::Error("glBufferData: 허용되지 않는 target 또는 usage");
+            spdlog::error("glBufferData: 허용되지 않는 target 또는 usage");
             return false;
         case GL_INVALID_VALUE:
-            Log::Error("glBufferData: size<0 ({})", data_size);
+            spdlog::error("glBufferData: size<0 ({})", data_size);
             return false;
         case GL_INVALID_OPERATION:
-            Log::Error("glBufferData: 버퍼 0 바인딩됨 (= glBindBuffer 미호출), "
+            spdlog::error("glBufferData: 버퍼 0 바인딩됨 (= glBindBuffer 미호출), "
                           "또는 버퍼가 현재 mapped 상태");
             return false;
         case GL_OUT_OF_MEMORY:
-            Log::Error("glBufferData: GPU 메모리 부족 ({} bytes)", data_size);
+            spdlog::error("glBufferData: GPU 메모리 부족 ({} bytes)", data_size);
             return false;
         default:
-            Log::Error("glBufferData: 예기치 않은 오류 0x{:x}", err);
+            spdlog::error("glBufferData: 예기치 않은 오류 0x{:x}", err);
             return false;
         }
     }
@@ -289,13 +289,13 @@ namespace SJH::Diagnostics
         case GL_NO_ERROR:
             return true;
         case GL_INVALID_OPERATION:
-            Log::Error("glEnableVertexAttribArray: VAO 미바인딩 (3.3 core 강제)");
+            spdlog::error("glEnableVertexAttribArray: VAO 미바인딩 (3.3 core 강제)");
             return false;
         case GL_INVALID_VALUE:
-            Log::Error("glEnableVertexAttribArray: index >= GL_MAX_VERTEX_ATTRIBS");
+            spdlog::error("glEnableVertexAttribArray: index >= GL_MAX_VERTEX_ATTRIBS");
             return false;
         default:
-            Log::Error("glEnableVertexAttribArray: 예기치 않은 오류 0x{:x}", err);
+            spdlog::error("glEnableVertexAttribArray: 예기치 않은 오류 0x{:x}", err);
             return false;
         }
     }
@@ -307,20 +307,20 @@ namespace SJH::Diagnostics
         case GL_NO_ERROR:
             return true;
         case GL_INVALID_VALUE:
-            Log::Error("glVertexAttribPointer: index>=max, size가 {{1,2,3,4,GL_BGRA}} 아님, "
+            spdlog::error("glVertexAttribPointer: index>=max, size가 {{1,2,3,4,GL_BGRA}} 아님, "
                           "또는 stride<0 ({})",
-                          Log::Join(strides, ","));
+                          fmt::join(strides, ","));
             return false;
         case GL_INVALID_ENUM:
-            Log::Error("glVertexAttribPointer: 허용되지 않는 type "
+            spdlog::error("glVertexAttribPointer: 허용되지 않는 type "
                           "(GL_FLOAT, GL_INT, GL_HALF_FLOAT, ... 이어야 함)");
             return false;
         case GL_INVALID_OPERATION:
-            Log::Error("glVertexAttribPointer: VAO 미바인딩, 또는 "
+            spdlog::error("glVertexAttribPointer: VAO 미바인딩, 또는 "
                           "non-zero offset인데 VBO 미바인딩");
             return false;
         default:
-            Log::Error("glVertexAttribPointer: 예기치 않은 오류 0x{:x}", err);
+            spdlog::error("glVertexAttribPointer: 예기치 않은 오류 0x{:x}", err);
             return false;
         }
     }

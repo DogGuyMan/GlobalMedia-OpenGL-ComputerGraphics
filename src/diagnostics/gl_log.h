@@ -1,7 +1,9 @@
 #ifndef __SJH_DIAGNOSTICS_GL_LOG_H__
 #define __SJH_DIAGNOSTICS_GL_LOG_H__
 
-#include <GL/gl3w.h>
+#pragma once
+
+#include "GL/gl3w.h"
 #include <initializer_list>
 #include <string_view>
 #include <vector>
@@ -63,7 +65,7 @@ namespace SJH::Diagnostics
     /// @brief GL 호출별 *명시적* 에러 검사 헬퍼 모음 (호출-당 1:1 진단).
     /// @details
     ///  - 각 함수는 *특정 GL 호출 직후* 에 호출하는 용도. 함수명이 곧 계약.
-    ///  - 내부에서 @c glGetError 1회 호출 → GL 명세상 가능한 enum 들을 case 별로 보고.
+    ///  - 내부에서 @c glGetError 1회 호출 -> GL 명세상 가능한 enum 들을 case 별로 보고.
     ///  - 학습 단계에서 *어떤 호출이 어떤 에러를 낼 수 있는지* 코드에 명시되도록 풀어놓은 형태.
     ///  - 콜백/매크로 방식 (@c SJH_GL_CHECK) 대비 verbose 하지만 가르침 가치 큼.
     /// @note 모든 함수는 호출 직전 GL 큐가 비어있다고 가정 — 호출별 일관 적용 필수.

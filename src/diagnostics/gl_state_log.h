@@ -6,7 +6,7 @@
  *  ### 책임 (Task 5)
  *  - `Dump(tag)` — 현재 GL 상태를 spdlog::info로 한 번 출력. 디버깅 시 위치 식별용.
  *  - `EnableAutoOnError(bool)` — KHR_debug 콜백에서 GL_DEBUG_SEVERITY_HIGH 발생 시
- *    자동 Dump 활성화. macOS GL 3.3은 KHR_debug 미지원 → std::call_once warn 후 no-op.
+ *    자동 Dump 활성화. macOS GL 3.3은 KHR_debug 미지원 -> std::call_once warn 후 no-op.
  *
  *  ### 비-책임
  *  - 테스트 측 RAII / Diff — 그건 `test/support/gl_state_snapshot.h` (Task 6).
@@ -22,6 +22,8 @@
 #ifndef __SJH_DIAGNOSTICS_GL_STATE_LOG_H__
 #define __SJH_DIAGNOSTICS_GL_STATE_LOG_H__
 
+#pragma once
+
 #include <string_view>
 
 namespace SJH::Diagnostics
@@ -34,7 +36,7 @@ namespace SJH::Diagnostics
         static void Dump(std::string_view tag = {});
 
         /// KHR_debug 콜백에서 GL_DEBUG_SEVERITY_HIGH 발생 시 자동 Dump 활성화.
-        /// macOS GL 3.3은 KHR_debug 미지원 → std::call_once warn 후 no-op.
+        /// macOS GL 3.3은 KHR_debug 미지원 -> std::call_once warn 후 no-op.
         /// @param enable true면 활성화 시도, false면 비활성화 (TODO: 비활성화는 미구현)
         static void EnableAutoOnError(bool enable);
     };

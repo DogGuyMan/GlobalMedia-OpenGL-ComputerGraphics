@@ -1,6 +1,6 @@
 #ifndef __ENGINE_CONSTANTS_H__
 #define __ENGINE_CONSTANTS_H__
-#include "GL/glcorearb.h"
+#include "GL/gl3w.h"
 #include "vmath.h"
 #include <cmath>
 #include <vector>

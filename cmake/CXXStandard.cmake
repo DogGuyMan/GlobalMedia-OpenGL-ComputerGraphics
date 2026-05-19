@@ -16,6 +16,8 @@ if(NOT MSVC) # GCC/Clang 전용
         $<$<CONFIG:Debug>:-Wno-unused-function>
         $<$<CONFIG:Debug>:-Wno-unused-parameter>
         # sb7 외부 헤더의 #warning (gl.h + gl3.h 동시 포함)을 에러로 처리하지 않음
+        $<$<CONFIG:Debug>:-Wpessimizing-move>
+        $<$<CONFIG:Debug>:-Wno-error=pessimizing-move>
         "$<$<CONFIG:Debug>:-Wno-error=#warnings>"
     )
 else() # MSVC 전용 옵션

@@ -6,9 +6,8 @@
 #include "diagnostics/gl_state_log.h"
 #include "diagnostics/gl_state_fields.h"
 
-#include "log_util.h"
-
-#include <GL/gl3w.h>
+#include "GL/gl3w.h"
+#include <spdlog/spdlog.h>
 #include <mutex>
 
 namespace SJH::Diagnostics
@@ -17,9 +16,9 @@ namespace SJH::Diagnostics
     {
         auto fields = CaptureGLState();
         if (!tag.empty()) {
-            Log::Info("[GLStateLog/{}]\n{}", tag, FieldsToString(fields));
+            spdlog::info("[GLStateLog/{}]\n{}", tag, FieldsToString(fields));
         } else {
-            Log::Info("[GLStateLog]\n{}", FieldsToString(fields));
+            spdlog::info("[GLStateLog]\n{}", FieldsToString(fields));
         }
     }
 
@@ -29,7 +28,7 @@ namespace SJH::Diagnostics
         if (glDebugMessageCallback != nullptr) {
             // TODO(future): KHR_debug callback 등록. 현재는 macOS 우선 — 미구현.
             // 구현 시 기존 GLDebug::Init과 통합 (architecture.md §6 Layer 1).
-            Log::Info("[GLStateLog] EnableAutoOnError: KHR_debug 콜백 등록 (TODO)");
+            spdlog::info("[GLStateLog] EnableAutoOnError: KHR_debug 콜백 등록 (TODO)");
             return;
         }
 #endif
@@ -37,7 +36,7 @@ namespace SJH::Diagnostics
         // std::call_once로 1회만 warn — 매 호출마다 noise 방지
         static std::once_flag warned;
         std::call_once(warned, []() {
-            Log::Warn("[GLStateLog] EnableAutoOnError: KHR_debug 미지원 환경 — no-op");
+            spdlog::warn("[GLStateLog] EnableAutoOnError: KHR_debug 미지원 환경 — no-op");
         });
     }
 }
