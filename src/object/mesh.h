@@ -20,20 +20,12 @@
 #include "buffer/buffer.h"
 #include "common/common.h"
 #include "layout/vertex_layout.h"
+#include "object/vertex.h"
 #include "GL/gl3w.h"
 #include <vector>
-#include <vmath.h>
 
 namespace SJH
 {
-    /// @brief 단일 정점 — 위치 + 법선 + UV 좌표.
-    struct Vertex
-    {
-        vmath::vec3 position; ///< 정점 위치 (object space)
-        vmath::vec3 normal;   ///< 법선 벡터 (object space, 정규화 가정)
-        vmath::vec2 texCoord; ///< UV 좌표 (0~1 범위 권장)
-    };
-
     CLASS_PTR(Mesh);
     /**
      * @brief GL 버퍼(VBO/EBO) + VAO 를 소유하는 메시 단위 RAII 래퍼.
