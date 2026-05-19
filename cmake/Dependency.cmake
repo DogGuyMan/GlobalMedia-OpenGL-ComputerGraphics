@@ -129,8 +129,10 @@ else()
         IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libspdlog_d.a)
 endif()
 # 컴파일된 정적 라이브러리를 쓰므로 소비자는 SPDLOG_COMPILED_LIB 매크로가 필요하다.
+# INTERFACE_INCLUDE_DIRECTORIES — spdlog 헤더는 include/ 에 있어 소비자에게 전파 필요.
 set_target_properties(spdlog PROPERTIES
-    INTERFACE_COMPILE_DEFINITIONS SPDLOG_COMPILED_LIB)
+    INTERFACE_COMPILE_DEFINITIONS SPDLOG_COMPILED_LIB
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include")
 
 # 헤더 온리 — 헤더는 이미 include/ 에 체크인. INTERFACE 타겟은 game_deps 멤버 표식.
 add_library(entt INTERFACE)

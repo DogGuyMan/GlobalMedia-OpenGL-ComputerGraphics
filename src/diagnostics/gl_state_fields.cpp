@@ -1,8 +1,7 @@
 #include "diagnostics/gl_state_fields.h"
 
-#include "log_util.h"
-
-#include <cstdio>
+#include <spdlog/fmt/fmt.h>
+#include <spdlog/spdlog.h>
 
 namespace SJH::Diagnostics
 {
@@ -71,7 +70,7 @@ namespace SJH::Diagnostics
         return buf;
     }
 
-    /// GLStateFields → 사람이 읽는 다중라인. Task 5 본 구현 + audit 트랙 A
+    /// GLStateFields -> 사람이 읽는 다중라인. Task 5 본 구현 + audit 트랙 A
     /// (attribute_layouts 출력) 통합.
     ///
     /// 포맷 정책:
@@ -87,27 +86,27 @@ namespace SJH::Diagnostics
         // 헤더 — 비대칭 (enum=symbolic, handle=raw)을 한 줄 설명
         out += "# GL state (enum=symbolic, handle=raw integer)\n";
 
-        out += Log::Format("vao:            {}\n", f.vao);
-        out += Log::Format("program:        {}\n", f.program);
-        out += Log::Format("array_buffer:   {}\n", f.array_buffer);
+        out += fmt::format("vao:            {}\n", f.vao);
+        out += fmt::format("program:        {}\n", f.program);
+        out += fmt::format("array_buffer:   {}\n", f.array_buffer);
 
         // VAO=0 일 때 element_buffer 라인에 주석 (spec 4.4 — 사용자 EBO incident memory 반영)
         if (f.vao == 0) {
-            out += Log::Format("element_buffer: {}  (note: EBO state is per-VAO; with VAO=0, this is always 0)\n",
+            out += fmt::format("element_buffer: {}  (note: EBO state is per-VAO; with VAO=0, this is always 0)\n",
                                f.element_buffer);
         } else {
-            out += Log::Format("element_buffer: {}\n", f.element_buffer);
+            out += fmt::format("element_buffer: {}\n", f.element_buffer);
         }
 
-        out += Log::Format("draw_fbo:       {}\n", f.draw_fbo);
-        out += Log::Format("read_fbo:       {}\n", f.read_fbo);
-        out += Log::Format("active_texture: {}\n", SymbolicName(f.active_texture));
+        out += fmt::format("draw_fbo:       {}\n", f.draw_fbo);
+        out += fmt::format("read_fbo:       {}\n", f.read_fbo);
+        out += fmt::format("active_texture: {}\n", SymbolicName(f.active_texture));
 
         // 텍스처 unit — 0이 아닌 것만 출력 (노이즈 최소화)
         bool any_unit = false;
         for (int i = 0; i < 16; ++i) {
             if (f.texture_2d_per_unit[i] != 0) {
-                out += Log::Format("tex_2d[unit {}]: {}\n", i, f.texture_2d_per_unit[i]);
+                out += fmt::format("tex_2d[unit {}]: {}\n", i, f.texture_2d_per_unit[i]);
                 any_unit = true;
             }
         }
@@ -115,28 +114,28 @@ namespace SJH::Diagnostics
             out += "tex_2d[*]:      (all units empty)\n";
         }
 
-        out += Log::Format("viewport:       [{}, {}, {}, {}]\n",
+        out += fmt::format("viewport:       [{}, {}, {}, {}]\n",
                            f.viewport[0], f.viewport[1], f.viewport[2], f.viewport[3]);
 
-        out += Log::Format("depth_test:     {}\n", f.depth_test_enabled ? "ENABLED" : "disabled");
-        out += Log::Format("depth_func:     {}\n", SymbolicName(f.depth_func));
-        out += Log::Format("depth_write:    {}\n", f.depth_write_mask ? "true" : "false");
+        out += fmt::format("depth_test:     {}\n", f.depth_test_enabled ? "ENABLED" : "disabled");
+        out += fmt::format("depth_func:     {}\n", SymbolicName(f.depth_func));
+        out += fmt::format("depth_write:    {}\n", f.depth_write_mask ? "true" : "false");
 
-        out += Log::Format("blend:          {}\n", f.blend_enabled ? "ENABLED" : "disabled");
-        out += Log::Format("blend_src_rgb:  {}\n", SymbolicName(f.blend_src_rgb));
-        out += Log::Format("blend_dst_rgb:  {}\n", SymbolicName(f.blend_dst_rgb));
+        out += fmt::format("blend:          {}\n", f.blend_enabled ? "ENABLED" : "disabled");
+        out += fmt::format("blend_src_rgb:  {}\n", SymbolicName(f.blend_src_rgb));
+        out += fmt::format("blend_dst_rgb:  {}\n", SymbolicName(f.blend_dst_rgb));
 
-        out += Log::Format("cull_face:      {}\n", f.cull_face_enabled ? "ENABLED" : "disabled");
-        out += Log::Format("cull_face_mode: {}\n", SymbolicName(f.cull_face_mode));
-        out += Log::Format("front_face:     {}\n", SymbolicName(f.front_face));
+        out += fmt::format("cull_face:      {}\n", f.cull_face_enabled ? "ENABLED" : "disabled");
+        out += fmt::format("cull_face_mode: {}\n", SymbolicName(f.cull_face_mode));
+        out += fmt::format("front_face:     {}\n", SymbolicName(f.front_face));
 
-        out += Log::Format("color_write:    [{}, {}, {}, {}]\n",
+        out += fmt::format("color_write:    [{}, {}, {}, {}]\n",
                            f.color_write_mask[0] ? 'R':'-',
                            f.color_write_mask[1] ? 'G':'-',
                            f.color_write_mask[2] ? 'B':'-',
                            f.color_write_mask[3] ? 'A':'-');
 
-        out += Log::Format("clear_color:    [{:.3f}, {:.3f}, {:.3f}, {:.3f}]\n",
+        out += fmt::format("clear_color:    [{:.3f}, {:.3f}, {:.3f}, {:.3f}]\n",
                            f.clear_color[0], f.clear_color[1], f.clear_color[2], f.clear_color[3]);
 
         // attribute_layouts (audit 트랙 A) — enabled인 slot만 출력
@@ -144,7 +143,7 @@ namespace SJH::Diagnostics
         for (size_t i = 0; i < f.attribute_layouts.size(); ++i) {
             const auto& a = f.attribute_layouts[i];
             if (a.enabled) {
-                out += Log::Format("attrib[{}]:      vec{} {}, normalized={}, stride={}, vbo={}\n",
+                out += fmt::format("attrib[{}]:      vec{} {}, normalized={}, stride={}, vbo={}\n",
                                    i, a.size, SymbolicName(a.type),
                                    a.normalized ? "true" : "false",
                                    a.stride, a.buffer_binding);
@@ -252,7 +251,7 @@ namespace SJH::Diagnostics
         // 8. post-check
         GLenum err = glGetError();
         if (err != GL_NO_ERROR) {
-            Log::Warn("[GLStateLog::Capture] produced GL error 0x{:X} — "
+            spdlog::warn("[GLStateLog::Capture] produced GL error 0x{:X} — "
                          "all fields populated but values may be stale",
                          static_cast<unsigned>(err));
         }

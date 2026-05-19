@@ -6,8 +6,8 @@
  *  ### 책임 (Task 1 / audit 트랙 A)
  *  - @c VertexAttribInfo — 한 vertex attribute slot 의 layout 상태 (size/type/stride/binding).
  *  - @c GLStateFields — 한 시점의 GL 바인딩 + 픽셀 파이프라인 + viewport + attribute 배열 스냅샷.
- *  - @c CaptureGLState — 부수효과 0 캡처 (active_texture 저장→유닛 순회→복원).
- *  - @c SymbolicName — GLenum → 사람이 읽는 이름 (~28 사전 + GL_TEXTUREn 동적).
+ *  - @c CaptureGLState — 부수효과 0 캡처 (active_texture 저장->유닛 순회->복원).
+ *  - @c SymbolicName — GLenum -> 사람이 읽는 이름 (~28 사전 + GL_TEXTUREn 동적).
  *  - @c FieldsToString — 멀티라인 포맷팅. enum 은 SymbolicName, GLuint 핸들은 raw (비대칭 정책).
  *
  *  ### 비-책임
@@ -16,8 +16,8 @@
  *  - ❌ 셰이더/uniform 진단 — `uniform_diagnostics.h`.
  *
  *  ### 비대칭 포맷팅 정책 (spec 2.3)
- *  - enum 필드 (depth_func / blend_factor / cull_face_mode 등) → @c SymbolicName 적용.
- *  - GLuint 핸들 (vao / program / buffer 등) → raw 정수.
+ *  - enum 필드 (depth_func / blend_factor / cull_face_mode 등) -> @c SymbolicName 적용.
+ *  - GLuint 핸들 (vao / program / buffer 등) -> raw 정수.
  *    이유: 핸들 식별자 자체에 의미가 없음, 테스트는 *어떤 객체가 바인딩됐는지* 가 아니라
  *    *어떤 enum 정책이 활성인지* 를 단언해야 회귀 가시성이 큼.
  *
@@ -32,7 +32,9 @@
 #ifndef __SJH_DIAGNOSTICS_GL_STATE_FIELDS_H__
 #define __SJH_DIAGNOSTICS_GL_STATE_FIELDS_H__
 
-#include <GL/gl3w.h>
+#pragma once
+
+#include "GL/gl3w.h"
 #include <array>
 #include <string>
 
@@ -100,17 +102,17 @@ namespace SJH::Diagnostics
         std::array<VertexAttribInfo, 16> attribute_layouts{};
     };
 
-    /// 현재 GL 상태 캡처. 부수효과 0 (active_texture 저장→유닛 순회→복원).
+    /// 현재 GL 상태 캡처. 부수효과 0 (active_texture 저장->유닛 순회->복원).
     /// @pre  GL context active (caller 책임)
     /// @post 17 필드 모두 채워 반환. glGetError가 non-zero 였으면 spdlog::warn (값 정확성 의심)
     GLStateFields CaptureGLState();
 
-    /// GLenum → 사람이 읽는 이름. ~28 사전 + GL_TEXTUREn 동적. 미적중 시 "0xXXXX".
+    /// GLenum -> 사람이 읽는 이름. ~28 사전 + GL_TEXTUREn 동적. 미적중 시 "0xXXXX".
     /// @note SymbolicName(0) == "GL_ZERO" — blend factor 컨텍스트 가정. 자세한 근거는
     ///       spec 2.1 / test_gl_state_fields.cpp "GL_ZERO 정책" 케이스 참조.
     const char* SymbolicName(GLenum e);
 
-    /// GLStateFields → 사람이 읽는 다중라인 문자열.
+    /// GLStateFields -> 사람이 읽는 다중라인 문자열.
     /// VAO=0인 경우 element_buffer 라인에 주석 자동 포함.
     /// enum 필드는 SymbolicName, GLuint 핸들은 raw 정수 (의도된 비대칭).
     std::string FieldsToString(const GLStateFields& fields);
