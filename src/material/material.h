@@ -6,7 +6,6 @@
  *  ### 책임
  *  - 텍스처 *논리 이름* + *해석된 비소유 관찰자*(@c const @c Texture*) 보관.
  *  - uniform 전송 대상 셰이더 프로그램 참조 보관 (@c SetProgram 으로 주입).
- *  - @c Apply — 보유 프로그램에 sampler 슬롯/shininess uniform + 텍스처 바인딩 일괄 적용.
  *  - Phong shininess 지수 (specular highlight 집중도).
  *
  *  ### 모듈 위치 — 왜 `shader` 가 아니라 독립 `material` 모듈인가
@@ -32,8 +31,8 @@
 
 namespace SJH
 {
-    class Texture; // 비소유 관찰자 — 완전 정의는 material.cpp 만 필요 (Apply)
-    class Program; // 비소유 관찰자 — 완전 정의는 material.cpp 만 필요 (Apply)
+    class Texture; // 비소유 관찰자 — SetResolvedTextures 인자 타입 전방선언
+    class Program; // 비소유 관찰자 — SetProgram 인자 타입 전방선언
 
     CLASS_PTR(Material);
     /// @brief 텍스처 기반 Phong 머티리얼 (디퓨즈 + 스페큘러 맵 + shininess).
@@ -92,13 +91,11 @@ namespace SJH
         }
 
         /// @brief uniform 을 전송할 셰이더 프로그램을 주입 (생성 후 셋업 시점 1회).
-        /// @details 비소유 관찰자 — @p program 의 수명은 외부가 보장. @ref Apply 가 이 프로그램을 사용.
+        /// @details 비소유 관찰자 — @p program 의 수명은 외부가 보장. MaterialApplier 가 이 프로그램을 사용.
         void SetProgram(const Program *program) { mProgram = program; }
 
-        /// @brief 보유 프로그램에 머티리얼 상태(텍스처 바인딩 + sampler/shininess uniform)를 일괄 적용.
-        /// @details @c mProgram 이 nullptr 이면 no-op. 정의는 @c material.cpp —
-        ///          @c Program / @c Texture 의 완전 정의가 필요해 헤더 inline 을 회피한다.
-        void Apply() const;
+        /// @brief 현재 바인딩된 프로그램 반환 (비소유 관찰자). RenderSystem 이 DrawCommand 빌드 시 사용.
+        const Program* GetProgram() const { return mProgram; }
 
         // === Getters — 모두 const, 읽기 전용 ===
         const std::string &GetDiffuseTextureName() const { return mDiffuseTextureName; }

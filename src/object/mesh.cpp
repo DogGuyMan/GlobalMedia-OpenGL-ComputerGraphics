@@ -46,9 +46,13 @@ namespace SJH
         return Create(data.vertices, data.indices, GL_TRIANGLES);
     }
 
-    void Mesh::Draw() const
+    GLuint Mesh::GetVAO() const
     {
-        mVertexLayout->Bind();
-        glDrawElements(mPrimitiveType, mIndexBuffer->GetCount(), GL_UNSIGNED_INT, 0);
+        return mVertexLayout ? mVertexLayout->GetVAO() : 0;
+    }
+
+    GLsizei Mesh::GetIndexCount() const
+    {
+        return mIndexBuffer ? static_cast<GLsizei>(mIndexBuffer->GetCount()) : 0;
     }
 }

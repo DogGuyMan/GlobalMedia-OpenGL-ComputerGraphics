@@ -15,7 +15,7 @@ target_link_libraries(sjhopengl_object
     PUBLIC  SJH::common      # mesh.h: CLASS_PTR(Mesh) 매크로
             SJH::buffer      # mesh.h: Buffer / BufferPtr 필드
             SJH::layout      # mesh.h: VertexLayout / VertexLayoutUPtr 필드
-            SJH::material    # model.h: RenderUnit.material / mMaterials / Material::Apply()
+            SJH::material    # model.h: RenderUnit.material / mMaterials / Material
             project_deps     # mesh.h: <glad/glad.h>, GLuint
             assimp
 )

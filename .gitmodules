@@ -7,9 +7,6 @@
 [submodule "extern/Effekseer"]
 	path = extern/Effekseer
 	url = https://github.com/effekseer/Effekseer.git
-[submodule "extern/entt"]
-	path = extern/entt
-	url = https://github.com/skypjack/entt.git
 [submodule "extern/tweeny"]
 	path = extern/tweeny
 	url = https://github.com/mobius3/tweeny.git

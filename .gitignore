@@ -1,6 +1,9 @@
 ########### macOS ###########
 .DS_Store
 
+########### .claude — 로컬 전용 (CLAUDE.md 만 tracked) ###########
+.claude/architecture.md
+
 ########### vcpkg local files ###########
 vcpkg_installed/
 
@@ -12,6 +15,7 @@ docs/
 ###########  FILES  ############
 *.pptx
 *.zip
+installer/
 
 ########### FOLDERS ############
 build_project/
@@ -24,6 +28,8 @@ html/
 
 ############ C/C++ #############
 lib/
+# FMOD Core API 헤더 — 독점 SDK 라이선스상 재배포 금지 (doc/FMOD_Setup.md §7)
+include/fmod/
 # Prerequisites
 *.d
 # Compiled Object files

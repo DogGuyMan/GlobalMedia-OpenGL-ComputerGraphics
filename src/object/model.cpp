@@ -119,14 +119,4 @@ namespace SJH
         mRenderUnit.push_back({std::move(glMesh), mat});
     }
 
-    void Model::Draw() const
-    {
-        for (auto &unit : mRenderUnit)
-        {
-            // 머티리얼이 uniform/텍스처를 자기 프로그램에 적용 -> 그 다음 메시 기하 드로우.
-            if (unit.material)
-                unit.material->Apply();
-            unit.mesh->Draw();
-        }
-    }
 }
