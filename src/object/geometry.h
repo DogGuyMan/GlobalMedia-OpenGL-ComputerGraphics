@@ -2,8 +2,12 @@
 #define __OBJECT_GEOMETRY_H__
 
 #include "object/vertex.h"
+#include <GL/glcorearb.h>
 #include <cstdint>
 #include <vector>
+
+// Assimp aiMesh — 헤더 의존을 cpp 로 격리하기 위해 전방선언만.
+struct aiMesh;
 
 namespace SJH
 {
@@ -14,7 +18,7 @@ namespace SJH
         std::vector<uint32_t> indices;  ///< 인덱스 배열 (uint32_t ≡ GLuint)
     };
 
-    /// @brief engine 빌더에 위임하는 도형 데이터 생성기. 출력은 object-space 정규 형상.
+    /// @brief 절차적 도형 데이터 생성기 + Assimp 메시 변환기. 출력은 object-space 정규 형상.
     /// @note 배치(offset)는 노출하지 않음 — Transform 책임. winding 반전만 back_face 로 제어.
     namespace Geometry
     {
@@ -45,6 +49,10 @@ namespace SJH
         MeshData HemiSphere(double us, double ue, int uRes,
                             double vs, double ve, int vRes,
                             float radius = 1.0f, bool back_face = false);
+
+        /// @brief Assimp aiMesh → MeshData 변환. position/normal/texCoord 채널을 그대로 복사하고
+        ///        삼각형 face 인덱스를 펼침. (Triangulate 전처리 가정 — 모든 face 는 3 인덱스)
+        MeshData FromAssimp(const aiMesh *mesh);
     } // namespace Geometry
 } // namespace SJH
 

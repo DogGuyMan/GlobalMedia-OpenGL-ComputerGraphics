@@ -1,7 +1,6 @@
 #include "program/program.h"
 #include "diagnostics/gl_log.h"
 #include "diagnostics/uniform_diagnostics.h"
-#include "program/program_uniforms.h"
 #include <type_traits>
 
 // SP1 — RAII 의미론 컴파일 타임 검증.
@@ -15,6 +14,12 @@ static_assert(!std::is_move_constructible_v<SJH::Program>,
 static_assert(!std::is_move_assignable_v<SJH::Program>,
               "SJH::Program must be non-move-assignable (factory + UPtr only)");
 
+// (SP2) GetLocation / GetType 이 const 호출 가능한지 컴파일 타임 검증.
+static_assert(std::is_invocable_v<decltype(&SJH::Program::GetLocation), const SJH::Program&, const char*>,
+              "Program::GetLocation must be const-callable (pure query)");
+static_assert(std::is_invocable_v<decltype(&SJH::Program::GetType), const SJH::Program&, const char*>,
+              "Program::GetType must be const-callable (pure query)");
+
 namespace SJH
 {
     ProgramUPtr Program::Create(const std::vector<ShaderPtr> &shaders)
@@ -24,7 +29,7 @@ namespace SJH
             return nullptr;
 
         // link 성공 직후 uniform 캐시 eager build — 호출자는 즉시 Uniforms::Set* 호출 가능.
-        Uniforms::BuildCache(*program);
+        program->BuildUniformCache();
         return program;
     }
 
@@ -44,16 +49,9 @@ namespace SJH
     {
         if (mProgramAddr != 0)
         {
-            // GL ID 가 다른 프로그램에 재할당될 가능성 -> 외부 캐시 항목 먼저 제거.
-            Uniforms::Forget(mProgramAddr);
             Diagnostics::UniformDiagnostics::Invalidate(mProgramAddr);
             glDeleteProgram(mProgramAddr);
         }
-    }
-
-    void Program::Use() const
-    {
-        glUseProgram(mProgramAddr);
     }
 
     bool Program::TryLink(const std::vector<ShaderPtr> &shaders)
@@ -65,5 +63,45 @@ namespace SJH
 
         glLinkProgram(mProgramAddr);
         return SJH::Diagnostics::GLObjectLog::CheckProgramLink(mProgramAddr);
+    }
+
+    void Program::BuildUniformCache()
+    {
+        GLint count = 0;
+        glGetProgramiv(mProgramAddr, GL_ACTIVE_UNIFORMS, &count);
+        if (count <= 0) return;
+
+        GLint maxNameLen = 0;
+        glGetProgramiv(mProgramAddr, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxNameLen);
+        if (maxNameLen <= 0) return;
+
+        std::vector<char> nameBuf(static_cast<size_t>(maxNameLen + 1), '\0');
+        for (GLint i = 0; i < count; ++i)
+        {
+            GLsizei nameSize = 0;
+            GLint   size     = 0;
+            GLenum  type     = 0;
+            glGetActiveUniform(mProgramAddr, static_cast<GLuint>(i),
+                               maxNameLen, &nameSize, &size, &type, nameBuf.data());
+
+            const GLint loc = glGetUniformLocation(mProgramAddr, nameBuf.data());
+            mUniformCache.emplace(
+                std::string(nameBuf.data(), static_cast<size_t>(nameSize)),
+                UniformEntry{loc, type});
+        }
+    }
+
+    GLint Program::GetLocation(const char* name) const
+    {
+        auto it = mUniformCache.find(name);
+        if (it == mUniformCache.end()) return -1;
+        return it->second.Location;
+    }
+
+    GLenum Program::GetType(const char* name) const
+    {
+        auto it = mUniformCache.find(name);
+        if (it == mUniformCache.end()) return 0;
+        return it->second.Type;
     }
 }

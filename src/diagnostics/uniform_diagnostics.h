@@ -17,13 +17,12 @@
  *
  *  ### 비-책임
  *  - ❌ uniform 값 setter — @c SJH::Uniforms 자유 함수 family 에서 (@c program/ 모듈).
- *  - ❌ location 캐싱 — @c SJH::Uniforms 의 TU-local 정적 캐시 (@c program_uniforms.cpp) 에서.
+ *  - ❌ location 캐싱 — @c Program::mUniformCache (멤버, resource-attached, SP2).
  *
  *  ### Lifecycle
  *  - 호출자(@c SJH::Program::~Program())가 파괴 시 @c Invalidate(mProgramAddr) 명시 호출 필요.
  *    안 부르면 같은 @c GLuint 가 재발급될 때 stale 트래커 -> 기대 warn 이 silently 묻힐 수 있음.
- *  - 짝꿍: @c Uniforms::Forget — uniform location 캐시 정리. 두 함수 모두 destructor 에서 호출되어야 일관.
- *  @see SJH::Uniforms::Forget
+ *  - 짝꿍: @c Program::~Program 가 @c Invalidate 호출 — @c mUniformCache 는 멤버 destroy.
  */
 
 #ifndef __SJH_DIAGNOSTICS_UNIFORM_DIAGNOSTICS_H__
