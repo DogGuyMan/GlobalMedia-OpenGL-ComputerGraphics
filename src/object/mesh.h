@@ -1,15 +1,16 @@
 /**
  * @file mesh.h
- * @brief GL 메시 (VAO + VBO + EBO) RAII 래퍼 — 정점 배열과 드로우콜 캡슐화.
+ * @brief GL 메시 (VAO + VBO + EBO) RAII 래퍼 — 정점 배열 GPU 업로드 + 핸들 노출.
  *
  * @details
  *  ### 책임
  *  - Vertex 배열(VBO) + 인덱스 배열(EBO) 를 GL 에 업로드하고 VAO(@c VertexLayout) 로 묶음.
- *  - `primitiveType` (@c GL_TRIANGLES 등) 에 따라 @c Draw 가 `glDrawElements` 를 호출.
+ *  - @c GetVAO / @c GetIndexCount getter 로 렌더 핸들을 노출 — 실제 GL 드로우는 RenderContext 가 수행.
  *  - @c CreateBox 팩토리로 기본 박스(큐브) 메시 생성.
  *  - @c CreatePlane 팩토리로 평면(quad) 메시 생성.
  *
  *  ### 비-책임
+ *  - ❌ GL 드로우콜 직접 호출 — RenderContext::DrawIndexed 가 담당 (Pattern Y 정통).
  *  - ❌ 텍스처 바인딩 — Material / Context 가 담당.
  *  - ❌ 셰이더/uniform 전송 — Context::Render 가 담당.
  *  - ❌ VAO/VBO 재사용 최적화 — 현재 메시별 독립 VAO.
@@ -31,7 +32,8 @@ namespace SJH
     /**
      * @brief GL 버퍼(VBO/EBO) + VAO 를 소유하는 메시 단위 RAII 래퍼.
      * @details
-     *  정점 데이터를 GPU 에 업로드하고 @ref Draw 한 번으로 @c glDrawElements 를 호출.
+     *  정점 데이터를 GPU 에 업로드하고 @c GetVAO / @c GetIndexCount getter 로 렌더 핸들을 노출 —
+     *  실제 드로우는 @c RenderContext 가 수행 (SP3 Pattern Y).
      *  소유 관계: @c Mesh -> @c VertexLayout (VAO) + @c Buffer ×2 (VBO/EBO).
      *  박스 메시는 @ref CreateBox 팩토리, 평면 메시는 @ref CreatePlane 팩토리가 제공.
      */
@@ -65,8 +67,11 @@ namespace SJH
         /// @brief 드로우 토폴로지 반환 (@c GL_TRIANGLES / @c GL_LINES 등).
         GLuint GetPrimitiveType() const { return mPrimitiveType; }
 
-        /// @brief VAO 바인딩 후 @c glDrawElements 호출. @c mPrimitiveType 에 따라 토폴로지 결정.
-        void Draw() const;
+        /// @brief VAO GL 핸들 — RenderContext::BindVAO 인자.
+        GLuint GetVAO() const;
+
+        /// @brief 인덱스 개수 — RenderContext::DrawIndexed 인자.
+        GLsizei GetIndexCount() const;
 
     private:
         Mesh() = default;

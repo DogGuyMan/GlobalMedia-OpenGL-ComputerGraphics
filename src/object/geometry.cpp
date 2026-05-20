@@ -234,6 +234,9 @@ namespace SJH
                 }
             }
 
+            // Disk 는 cylinder/hemisphere 와 달리 normal 이 ±Y (라디알 아님). 위치식 z=-sin(θ) 는
+            // +Y 에서 봤을 때 CW 회전이라, 표준 winding {p0,p1,p2,p0,p2,p3} 는 cross=-Y 가 된다.
+            // → +Y 외향(back_face=false)을 보장하려면 인덱스를 뒤집어야 함.
             for (int row = 0; row < vRes; row++)
             {
                 for (int col = 0; col < uRes; col++)
@@ -244,21 +247,23 @@ namespace SJH
                     GLuint p3 = base + static_cast<GLuint>((row + 1) * numCols + col);
                     if (!back_face)
                     {
+                        // CCW 외향 = +Y. (p0,p3,p2) cross = +Y, (p0,p2,p1) cross = +Y.
                         indices.push_back(p0);
-                        indices.push_back(p1);
-                        indices.push_back(p2);
-                        indices.push_back(p0);
-                        indices.push_back(p2);
                         indices.push_back(p3);
+                        indices.push_back(p2);
+                        indices.push_back(p0);
+                        indices.push_back(p2);
+                        indices.push_back(p1);
                     }
                     else
                     {
+                        // CCW 외향 = -Y. 위치식이 +Y 에서 CW 라서 표준 winding 이 곧 -Y front.
                         indices.push_back(p0);
-                        indices.push_back(p2);
                         indices.push_back(p1);
-                        indices.push_back(p0);
-                        indices.push_back(p3);
                         indices.push_back(p2);
+                        indices.push_back(p0);
+                        indices.push_back(p2);
+                        indices.push_back(p3);
                     }
                 }
             }

@@ -137,7 +137,6 @@ set_target_properties(spdlog PROPERTIES
 add_library(spdlog::spdlog ALIAS spdlog)
 
 # 헤더 온리 — 헤더는 이미 include/ 에 체크인. INTERFACE 타겟은 game_deps 멤버 표식.
-add_library(entt INTERFACE)
 add_library(tweeny INTERFACE)
 add_library(stb_extra INTERFACE)
 
@@ -149,8 +148,8 @@ target_link_libraries(game_deps INTERFACE
     EffekseerRendererGL
     assimp
     spdlog
-    entt tweeny stb_extra)
-# SYSTEM 인클루드 — 서드파티 헤더(Effekseer/EnTT/Tweeny/Box2D 등)는 Debug 의
+    tweeny stb_extra)
+# SYSTEM 인클루드 — 서드파티 헤더(Effekseer/Tweeny/Box2D 등)는 Debug 의
 # -Wall -Werror 대상에서 제외한다. (예: <Effekseer/Effekseer.h> 의 -Wmacro-redefined,
 #  -Woverloaded-virtual 가 -Werror 로 빌드를 깨지 않도록.)
 target_include_directories(game_deps SYSTEM INTERFACE "${CMAKE_SOURCE_DIR}/include")

@@ -27,7 +27,7 @@ namespace SJH
      * @details
      *  - 한 파일에서 여러 assimp 서브메시를 @ref RenderUnit 목록으로 변환.
      *  - @c mTextures / @c mMaterials 가 생존 기간 동안 GPU 자원 소유.
-     *  - @ref Draw 는 모든 RenderUnit 의 메시를 순서대로 드로우.
+     *  - GL 드로우콜은 RenderContext 게이트웨이가 담당 (Pattern Y 정통).
      */
     class Model
     {
@@ -45,8 +45,8 @@ namespace SJH
         /// @brief index 번째 머티리얼의 비소유 관찰자 — 셋업 시 @c SetProgram 주입용.
         Material *GetMaterial(int index) const { return mMaterials[(size_t)index].get(); }
 
-        /// @brief 모든 RenderUnit 을 순서대로 — 머티리얼 Apply 후 메시 드로우.
-        void Draw() const;
+        /// @brief 모든 RenderUnit 의 const view — ModelSpawner 가 Actor 펼침 시 사용.
+        const std::vector<RenderUnit>& GetRenderUnits() const { return mRenderUnit; }
 
     private:
         Model() = default;

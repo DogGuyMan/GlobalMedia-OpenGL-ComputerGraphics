@@ -216,6 +216,16 @@ target_link_libraries(test_transform PRIVATE
 target_compile_features(test_transform PRIVATE cxx_std_17)
 catch_discover_tests(test_transform)
 
+#  Phase SP3 — Actor 라이프사이클 (GL 불요)
+add_executable(test_actor_lifecycle test_actor_lifecycle.cpp)
+target_link_libraries(test_actor_lifecycle PRIVATE
+    Catch2::Catch2WithMain
+    SJH::scene                # "scene/actor.h" + Transform 전파
+    SJH::object               # vmath::vec3/mat4 (Transform 헤더 의존)
+)
+target_compile_features(test_actor_lifecycle PRIVATE cxx_std_17)
+catch_discover_tests(test_actor_lifecycle)
+
 #  object 모듈 — SceneNode 노드/계층 (GL 불요) [비활성화]
 # 대상 헤더 src/object/scene_node.h 가 아직 미존재 — 구현 후 활성화.
 # add_executable(test_scene_node test_scene_node.cpp)
