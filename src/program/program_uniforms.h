@@ -51,6 +51,9 @@ namespace SJH
     class PointLight;
     class SpotLight;
 
+    /// @note (SP2 흡수 예정) 본 namespace 의 자유 함수 family 와 캐시 자료구조
+    ///       @c sCacheRegistry 는 향후 @c RenderContext 의 멤버로 이전될 예정 —
+    ///       호출 형태가 @c renderCtx.SetMat4(name, m) 으로 바뀐다.
     namespace Uniforms
     {
         /// @brief 캐시 한 칸 — name -> (location, type).

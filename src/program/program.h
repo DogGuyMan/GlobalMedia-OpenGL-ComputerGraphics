@@ -58,6 +58,9 @@ namespace SJH
 
         /// @brief 내부 GL 프로그램 핸들 반환 — @c glUseProgram / @c Uniforms 자유 함수의 키.
         GLuint GetProgramAddr() const { return mProgramAddr; }
+
+        /// @note (SP2 seam) 향후 RenderContext 가 @c glUseProgram 의 owner 가 됨 —
+        ///       호출 경로는 @c RenderContext::UseProgram(*program) 으로 이전될 예정.
         void Use() const;
 
     private:
