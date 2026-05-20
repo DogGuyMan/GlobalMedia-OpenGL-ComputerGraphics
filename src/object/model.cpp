@@ -1,4 +1,5 @@
 #include "model.h"
+#include "object/geometry.h"
 #include "resource_registry/texture.h"
 #include "material/material.h"
 #include <spdlog/spdlog.h>
@@ -108,31 +109,12 @@ namespace SJH
         spdlog::info("process mesh: {}, #vert: {}, #face: {}",
                      mesh->mName.C_Str(), mesh->mNumVertices, mesh->mNumFaces);
 
-        // 1. Vertex 정보 수집
-        std::vector<Vertex> vertices;
-        vertices.resize(mesh->mNumVertices);
-        for (uint32_t i = 0; i < mesh->mNumVertices; i++)
-        {
-            auto &v = vertices[i];
-            v.position = vmath::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
-            v.normal = vmath::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
-            v.texCoord = vmath::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
-        }
+        // aiMesh → MeshData 변환은 Geometry::FromAssimp 책임 (절차적 빌더와 동일한 출력 형식).
+        auto data = Geometry::FromAssimp(mesh);
+        auto glMesh = Mesh::Create(data.vertices, data.indices, GL_TRIANGLES);
 
-        // 2. Indices 정보 수집
-        std::vector<uint32_t> indices;
-        indices.resize(mesh->mNumFaces * 3);
-        for (uint32_t i = 0; i < mesh->mNumFaces; i++)
-        {
-            indices[3 * i] = mesh->mFaces[i].mIndices[0];
-            indices[3 * i + 1] = mesh->mFaces[i].mIndices[1];
-            indices[3 * i + 2] = mesh->mFaces[i].mIndices[2];
-        }
-
-        // 우리가 만들었던 Mesh 코드 호출
-        auto glMesh = Mesh::Create(vertices, indices, GL_TRIANGLES);
         Material *mat = nullptr;
-        if (mesh->mMaterialIndex < mMaterials.size()) //  m_materials -> mMaterials, unsigned 범위 안전
+        if (mesh->mMaterialIndex < mMaterials.size())
             mat = mMaterials[mesh->mMaterialIndex].get();
         mRenderUnit.push_back({std::move(glMesh), mat});
     }

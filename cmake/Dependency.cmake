@@ -133,6 +133,8 @@ endif()
 set_target_properties(spdlog PROPERTIES
     INTERFACE_COMPILE_DEFINITIONS SPDLOG_COMPILED_LIB
     INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include")
+# spdlog::spdlog ALIAS — 외부 코드(테스트 등)가 표준 네임스페이스 형식으로 링크 가능.
+add_library(spdlog::spdlog ALIAS spdlog)
 
 # 헤더 온리 — 헤더는 이미 include/ 에 체크인. INTERFACE 타겟은 game_deps 멤버 표식.
 add_library(entt INTERFACE)

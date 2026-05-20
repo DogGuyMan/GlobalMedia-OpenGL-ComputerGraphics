@@ -38,12 +38,12 @@ namespace SJH
         /// @brief 서브메시(RenderUnit) 개수 반환.
         int GetMeshCount() const { return (int)mRenderUnit.size(); }
         /// @brief index 번째 메시의 비소유 관찰자. Model 보다 오래 보관 금지 — owner 는 RenderUnit.
-        Mesh *GetMesh(int index) const { return mRenderUnit[index].mesh.get(); }
+        Mesh *GetMesh(int index) const { return mRenderUnit[(size_t)index].mesh.get(); }
 
         /// @brief 보유 머티리얼 개수.
         int GetMaterialCount() const { return (int)mMaterials.size(); }
         /// @brief index 번째 머티리얼의 비소유 관찰자 — 셋업 시 @c SetProgram 주입용.
-        Material *GetMaterial(int index) const { return mMaterials[index].get(); }
+        Material *GetMaterial(int index) const { return mMaterials[(size_t)index].get(); }
 
         /// @brief 모든 RenderUnit 을 순서대로 — 머티리얼 Apply 후 메시 드로우.
         void Draw() const;

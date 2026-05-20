@@ -49,14 +49,14 @@ namespace SJH::Const
 		const std::vector<vmath::vec4> TRIANGLE_BASE_POSITION = {
 		    {0.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 0.0, 1.0},
-		    {0.5, 0.866, 0.0, 1.0},
+		    {0.5, 0.866f, 0.0, 1.0},
 		};
 
 		const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
 		    {0.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 0.0, 1.0},
-		    {0.5, 0.0, 0.866, 1.0},
-		    {0.5, 0.816, 0.2886, 1.0},
+		    {0.5, 0.0, 0.866f, 1.0},
+		    {0.5, 0.816f, 0.2886f, 1.0},
 		};
 
 		const std::vector<std::vector<GLuint>> TETRA_FACE_INDICES = {

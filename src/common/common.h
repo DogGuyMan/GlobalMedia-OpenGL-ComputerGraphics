@@ -36,7 +36,6 @@ namespace SJH
      *          GLSL 셰이더 소스 등 텍스트 리소스 로딩에 사용.
      */
     std::optional<std::string> LoadTextFile(const std::string &filename);
-
 }
 
 #endif //__SJH_COMMON_H__
