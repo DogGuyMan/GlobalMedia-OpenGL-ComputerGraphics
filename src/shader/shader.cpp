@@ -1,6 +1,18 @@
 #include "shader/shader.h"
 #include "diagnostics/gl_log.h"
 #include <memory>
+#include <type_traits>
+
+// SP1 — RAII 의미론 컴파일 타임 검증.
+// glDeleteShader 이중 호출 위험 차단 — 명시적 = delete 가 필요.
+static_assert(!std::is_copy_constructible_v<SJH::Shader>,
+              "SJH::Shader must be non-copy-constructible (RAII)");
+static_assert(!std::is_copy_assignable_v<SJH::Shader>,
+              "SJH::Shader must be non-copy-assignable (RAII)");
+static_assert(!std::is_move_constructible_v<SJH::Shader>,
+              "SJH::Shader must be non-move-constructible (factory + UPtr only)");
+static_assert(!std::is_move_assignable_v<SJH::Shader>,
+              "SJH::Shader must be non-move-assignable (factory + UPtr only)");
 
 namespace SJH
 {

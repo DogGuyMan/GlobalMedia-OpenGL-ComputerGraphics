@@ -48,6 +48,13 @@ namespace SJH
         /// @brief @c glDeleteShader 호출 (핸들이 0 이 아닐 때만).
         ~Shader();
 
+        // SP1 — 자원 핸들 이중 해제 차단. 팩토리 + UPtr 패턴이므로 외부에서
+        //       복사·이동할 경로가 애초에 없음.
+        Shader(const Shader&)            = delete;
+        Shader& operator=(const Shader&) = delete;
+        Shader(Shader&&)                 = delete;
+        Shader& operator=(Shader&&)      = delete;
+
         /// @brief 내부 GL 셰이더 핸들 반환 — @c Program::Create 가 attach 시 사용.
         GLuint GetShaderAddr() const { return mShaderAddr; }
 
