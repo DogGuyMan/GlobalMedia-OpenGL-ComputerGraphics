@@ -49,6 +49,13 @@ namespace SJH
         /// @brief @c Uniforms::Forget 으로 외부 캐시 정리 후 @c glDeleteProgram 호출 (핸들이 0 이 아닐 때만).
         ~Program();
 
+        // SP1 — 자원 핸들 이중 해제 차단. 팩토리 + UPtr 패턴이므로 외부에서
+        //       복사·이동할 경로가 애초에 없음.
+        Program(const Program&)            = delete;
+        Program& operator=(const Program&) = delete;
+        Program(Program&&)                 = delete;
+        Program& operator=(Program&&)      = delete;
+
         /// @brief 내부 GL 프로그램 핸들 반환 — @c glUseProgram / @c Uniforms 자유 함수의 키.
         GLuint GetProgramAddr() const { return mProgramAddr; }
         void Use() const;

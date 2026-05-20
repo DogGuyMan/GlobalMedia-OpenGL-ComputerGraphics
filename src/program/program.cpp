@@ -2,6 +2,18 @@
 #include "diagnostics/gl_log.h"
 #include "diagnostics/uniform_diagnostics.h"
 #include "program/program_uniforms.h"
+#include <type_traits>
+
+// SP1 — RAII 의미론 컴파일 타임 검증.
+// glDeleteProgram 이중 호출 위험 차단 — 명시적 = delete 가 필요.
+static_assert(!std::is_copy_constructible_v<SJH::Program>,
+              "SJH::Program must be non-copy-constructible (RAII)");
+static_assert(!std::is_copy_assignable_v<SJH::Program>,
+              "SJH::Program must be non-copy-assignable (RAII)");
+static_assert(!std::is_move_constructible_v<SJH::Program>,
+              "SJH::Program must be non-move-constructible (factory + UPtr only)");
+static_assert(!std::is_move_assignable_v<SJH::Program>,
+              "SJH::Program must be non-move-assignable (factory + UPtr only)");
 
 namespace SJH
 {
