@@ -74,10 +74,11 @@ namespace SJH
             const auto diffuse = _lambdaLoadTexture(aiMat, aiTextureType_DIFFUSE);
             const auto specular = _lambdaLoadTexture(aiMat, aiTextureType_SPECULAR);
 
-            // 새 Material API — 이름은 비워두고 *해석된 관찰자 + sampler 유닛* 만 설정.
-            glMaterial->SetResolvedTextures(
-                /*diffuse */ diffuse, /*diffuseUnit*/ 0,
-                /*specular*/ specular, /*specularUnit*/ 1);
+            // SP6 — Material 의 properties bag 에 텍스처 슬롯 직접 store (Unity 정통).
+            // 셰이더의 sampler uniform 이름 (lighting.fs 의 material.diffuse / material.specular) 과 1:1.
+            if (diffuse)  glMaterial->Textures["material.diffuse"]  = { diffuse,  /*unit*/ 0 };
+            if (specular) glMaterial->Textures["material.specular"] = { specular, /*unit*/ 1 };
+            glMaterial->Floats["material.shininess"] = 32.0f;   // 기본 Phong shininess.
 
             mMaterials.push_back(std::move(glMaterial)); //  m_materials -> mMaterials
         }
@@ -109,7 +110,7 @@ namespace SJH
         spdlog::info("process mesh: {}, #vert: {}, #face: {}",
                      mesh->mName.C_Str(), mesh->mNumVertices, mesh->mNumFaces);
 
-        // aiMesh → MeshData 변환은 Geometry::FromAssimp 책임 (절차적 빌더와 동일한 출력 형식).
+        // aiMesh -> MeshData 변환은 Geometry::FromAssimp 책임 (절차적 빌더와 동일한 출력 형식).
         auto data = Geometry::FromAssimp(mesh);
         auto glMesh = Mesh::Create(data.vertices, data.indices, GL_TRIANGLES);
 

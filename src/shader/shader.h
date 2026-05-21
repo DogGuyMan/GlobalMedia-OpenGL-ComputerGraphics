@@ -1,7 +1,7 @@
 #ifndef __SJH_SHADER_H__
 #define __SJH_SHADER_H__
 
-// 가드 이름은 __SJH_SHADER_H__ — sb7code 의 include/shader.h 가 __SHADER_H__ 를
+// 가드 이름은 __SJH_SHADER_H__ — sb7code 의 include/shader.h 가 __SJH_SHADER_H__ 를
 // 선점하므로 동일 가드 사용 시 sb7::shader::load 가 보이지 않는 버그 회피.
 
 #include "common/common.h"
@@ -65,4 +65,4 @@ namespace SJH
         GLuint mShaderAddr{0};
     };
 }
-#endif // __SHADER_H__
+#endif // __SJH_SHADER_H__

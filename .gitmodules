@@ -7,6 +7,7 @@
 [submodule "extern/Effekseer"]
 	path = extern/Effekseer
 	url = https://github.com/effekseer/Effekseer.git
+	ignore = dirty
 [submodule "extern/tweeny"]
 	path = extern/tweeny
 	url = https://github.com/mobius3/tweeny.git

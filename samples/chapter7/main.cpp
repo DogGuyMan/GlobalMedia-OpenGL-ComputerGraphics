@@ -60,7 +60,7 @@ namespace Engine::Context
 	GLuint dummyVAO = 0;
 
 
-	// GL 컨텍스트 살아있는 동안 호출. program → ResourceManagement → SceneGraph → dummyVAO 순.
+	// GL 컨텍스트 살아있는 동안 호출. program -> ResourceManagement -> SceneGraph -> dummyVAO 순.
 	void TeardownGL()
 	{
 		program.reset();
@@ -121,7 +121,7 @@ namespace chapter7
 			cube->Build(data);
 
 			// Material 은 ResourceManagement 가 소유. Model 은 raw 포인터로 참조만.
-			// Material → Program 단방향 의존: 어떤 셰이더로 그릴지 Material 이 안다.
+			// Material -> Program 단방향 의존: 어떤 셰이더로 그릴지 Material 이 안다.
 			auto *wallMat = Engine::Context::resourceManagement.AddMaterial(
 			    "wall",
 			    std::make_unique<Engine::Material::Material>());

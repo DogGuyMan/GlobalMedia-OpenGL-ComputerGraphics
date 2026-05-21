@@ -59,7 +59,7 @@ namespace SJH::Const
 		    {0.5, 0.816f, 0.2886f, 1.0},
 		};
 
-		// 면 0~2 : 옆면 (apex v[3] 포함). cross 가 apex 반대 방향 = 외향 → CCW.
+		// 면 0~2 : 옆면 (apex v[3] 포함). cross 가 apex 반대 방향 = 외향 -> CCW.
 		// 면 3   : 바닥(y=0). CCW 외향 = -Y 가 되도록 {0,1,2}. 과거 {1,0,2} 는 inward(+Y) 였음.
 		const std::vector<std::vector<GLuint>> TETRA_FACE_INDICES = {
 		    {1, 0, 3}, {2, 1, 3}, {0, 2, 3}, {0, 1, 2}};

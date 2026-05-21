@@ -10,7 +10,6 @@
 #include "scene/components.h"
 #include "object/mesh.h"
 #include "material/material.h"
-#include "program/program_uniforms.h"
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -59,12 +58,8 @@ public:
                                              "resources/shaders/postprocess/invert.fs");
         if (!postfxProg) { std::cerr << "postfx shader 로드 실패\n"; std::exit(1); }
 
-        // invert.fs 의 uScene sampler 를 unit 0 으로 고정 바인딩 (1회).
-        // MaterialApplier 는 material.diffuse 에 unit 번호를 쓰지만,
-        // invert.fs 는 uScene 을 사용하므로 프로그램 링크 직후 직접 설정.
-        glUseProgram(postfxProg->GetProgramAddr());
-        glUniform1i(glGetUniformLocation(postfxProg->GetProgramAddr(), "uScene"), 0);
-        glUseProgram(0);
+        // SP6 — manual glUniform1i(uScene, 0) 제거. Material 의 properties bag (Textures["uScene"])
+        // 에 unit 0 와 함께 store -> MaterialApplier::Apply 가 sampler slot + 텍스처 바인딩 일괄.
 
         // 2) Mesh — Box (3D) + ScreenQuad (NDC).
         auto* boxMesh  = reg.RegisterMesh("box",         SJH::Mesh::CreateBox());
@@ -81,11 +76,10 @@ public:
         mSceneFB = SJH::Framebuffer::Create(info.windowWidth, info.windowHeight);
         if (!mSceneFB) { std::cerr << "SceneFB 생성 실패\n"; std::exit(1); }
 
-        // 5) postfxMat 의 diffuse 슬롯에 SceneFB 의 color attachment 텍스처 바인딩.
-        //    BindTextures 가 unit 0 에 SceneFB.color 를 glBindTexture 하면
-        //    invert.fs 의 uScene(unit 0) 이 자동으로 읽음.
-        postfxMat->SetResolvedTextures(mSceneFB->GetColorAttachment().get(), 0,
-                                       nullptr, 1);
+        // 5) SP6 — Material properties bag 에 sampler 슬롯 직접 store (Unity 정통).
+        //    invert.fs 의 uniform sampler2D uScene 와 1:1 매핑.
+        //    Apply 시점에 UniformCache 교집합 검사 + glBindTexture + SetInt(uScene, 0) 일괄.
+        postfxMat->Textures["uScene"] = { mSceneFB->GetColorAttachment().get(), /*unit*/ 0 };
 
         // 6) Scene 구성 — layer + cullingMask 로 카메라별 가시성 분리 (SP4 D-15).
         //    Box.layer = 1 (비트 0), Quad.layer = 2 (비트 1).
@@ -114,17 +108,17 @@ public:
         const float aspect = static_cast<float>(info.windowWidth) /
                              static_cast<float>(info.windowHeight);
         auto* sc = sceneCam->AddComponent<SJH::Scene::Camera>(45.0f, aspect, 0.1f, 100.0f);
-        sc->SetDepth(0);
+        sc->Depth = 0;
         sc->SetTargetFramebuffer(mSceneFB.get());
-        sc->SetCullingMask(LAYER_SCENE);
+        sc->CullingMask = LAYER_SCENE;
         dir.Root().AddChild(std::move(sceneCam));
 
         // PostFXCamera (depth=1, target=nullptr=backbuffer, mask=LAYER_POSTFX).
         auto fxCam = std::make_unique<SJH::Scene::Actor>("PostFXCamera");
         auto* fc = fxCam->AddComponent<SJH::Scene::Camera>(45.0f, aspect, 0.1f, 100.0f);
-        fc->SetDepth(1);
-        // SetTargetFramebuffer 안 부름 → nullptr = default backbuffer.
-        fc->SetCullingMask(LAYER_POSTFX);
+        fc->Depth = 1;
+        // SetTargetFramebuffer 안 부름 -> nullptr = default backbuffer.
+        fc->CullingMask = LAYER_POSTFX;
         dir.Root().AddChild(std::move(fxCam));
 
         dir.Enter();

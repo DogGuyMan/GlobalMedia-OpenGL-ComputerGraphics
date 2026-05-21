@@ -26,7 +26,7 @@ class deptest_application : public sb7::application
 		auto entity = registry.create();
 		registry.emplace<int>(entity, 42);
 
-		// Tweeny — 0→100 보간 트윈
+		// Tweeny — 0->100 보간 트윈
 		auto tween = tweeny::from(0).to(100).during(100);
 		int mid = tween.step(50);
 

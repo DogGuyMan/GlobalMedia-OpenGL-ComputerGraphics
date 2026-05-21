@@ -1,8 +1,11 @@
 ########### macOS ###########
 .DS_Store
 
-########### .claude — 로컬 전용 (CLAUDE.md 만 tracked) ###########
-.claude/architecture.md
+########### .claude — 로컬 전용 (untracked 강제) ###########
+.claude
+.claude/
+**/.claude/
+CLAUDE.md
 
 ########### vcpkg local files ###########
 vcpkg_installed/
@@ -11,6 +14,11 @@ vcpkg_installed/
 doc/html/
 doc/latex/
 docs/
+
+########### docs/superpowers — 로컬 전용 (untracked 강제, 2026-05-22 history 제거됨) ###########
+docs/superpowers
+docs/superpowers/
+**/docs/superpowers/
 
 ###########  FILES  ############
 *.pptx

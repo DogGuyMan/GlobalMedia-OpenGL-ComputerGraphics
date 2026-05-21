@@ -223,8 +223,8 @@ EOF
 - [ ] **Step 2.1.1: 헤더 전체를 다음으로 교체**
 
 ```cpp
-#ifndef __SHADER_H__
-#define __SHADER_H__
+#ifndef __SJH_SHADER_H__
+#define __SJH_SHADER_H__
 
 #pragma once
 
@@ -272,7 +272,7 @@ namespace SJH
         GLuint mShaderAddr{0};
     };
 }
-#endif // __SHADER_H__
+#endif // __SJH_SHADER_H__
 ```
 
 - [ ] **Step 2.1.2: 빌드 통과 확인**

@@ -11,10 +11,15 @@
 # add_subdirectory(imguitest)
 
 # ecs_demo — SP3 Actor+Component+RenderSystem+RenderQueue 시각 통합 검증 (T10)
-add_subdirectory(ecs_demo)
+# [삭제됨] migrate_demo / postfx_demo 로 통합 검증 이전.
+# add_subdirectory(ecs_demo)
 
 # postfx_demo — SP4 multi-pass + invert post-processing 시각 검증 (T6b)
 add_subdirectory(postfx_demo)
+
+# migrate_demo — SP5 (Light) + SP6 (Material) + SP7 (Camera/Input) 통합 검증
+#   Compound Actor / TargetLock / CameraController Builder Pattern / Phong 색상 셰이더.
+add_subdirectory(migrate_demo)
 
 # audio_demo — FMOD Studio + ImGui 파라미터 데모 (신규)
 # [임시 비활성] ImGui 의존 — src/imgui/ 모듈 복원 후 재활성.

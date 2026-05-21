@@ -32,7 +32,7 @@ namespace SJH
         void Clear()                        { mItems.clear(); }
         std::size_t Size() const            { return mItems.size(); }
 
-        /// @brief Multi-stage sort: queueLayer → program → material → depth (back-to-front).
+        /// @brief Multi-stage sort: queueLayer -> program -> material -> depth (back-to-front).
         void SortMultiStage();
 
         /// @brief 정렬된 command 발행.

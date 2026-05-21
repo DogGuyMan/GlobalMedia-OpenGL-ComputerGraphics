@@ -1,124 +1,139 @@
 /**
  * @file material.h
- * @brief 표면 머티리얼 — 디퓨즈/스페큘러 텍스처 관찰자 + sampler 유닛 + Phong shininess.
+ * @brief Unity-식 Material — *셰이더 schema 무관 properties bag* + Program 참조 + UniformCache 참조.
  *
  * @details
- *  ### 책임
- *  - 텍스처 *논리 이름* + *해석된 비소유 관찰자*(@c const @c Texture*) 보관.
- *  - uniform 전송 대상 셰이더 프로그램 참조 보관 (@c SetProgram 으로 주입).
- *  - Phong shininess 지수 (specular highlight 집중도).
+ *  ### 책임 (SP6)
+ *  - **Properties bag**: name 키 기반 typed-map (Float/Int/Vec3/Vec4/Mat4/Texture).
+ *    셰이더가 `material.shininess` 같은 *임의 이름* 의 uniform 을 받든, postprocess 가 `uScene`
+ *    sampler 를 받든, *Material 클래스 자체는 무관*. 셋업 시 `SetFloat / SetVec3 / SetTexture` 호출만.
+ *  - **Program 참조** (비소유): `SetProgram(p)` 시 — RegisterMaterial (Observer 등록) +
+ *    UniformCache reference 보유 (셰이더 schema 자기 단위 인식).
+ *  - **Observer cascade**: Program 해제 시 `OnProgramReleased` cascade -> mProgram=nullptr +
+ *    cache reference clear. dangling 구조적 차단.
  *
- *  ### 모듈 위치 — 왜 `shader` 가 아니라 독립 `material` 모듈인가
- *  - @c Material 은 셰이더(@c SJH::shader)·프로그램(@c SJH::program) *위* 계층.
- *  - @c shader/material.h 에 두면 `shader ← program ← material` 이 `shader` 한 노드로 접혀
- *    `shader ↔ program` 순환이 됨. 독립 모듈로 분리해 단방향 DAG 유지.
- *
- *  ### 캡슐화 — 왜 getter/setter (직접 대입 차단)
- *  - 텍스처 *이름* 과 *해석된 관찰자* 는 *짝* — 이름을 함부로 바꾸면 관찰자가 stale.
- *    -> 이름 setter 가 *해석 캐시 무효화*(@c nullptr).
- *  - shininess 는 유효 범위 권장 @c [2, 256] — @c SetShininess 가 clamp.
+ *  ### Unity 매핑 (정통)
+ *  - Unity `material.SetFloat("_Color", c)` ↔ `SJH::Uniforms::SetFloat(mat, "_Color", c)`.
+ *  - 셋업과 송신 분리 — `SetXxx` 는 *bag 에 store*, `MaterialApplier::Apply` 가 *Apply 시점에
+ *    UniformCache 교집합으로 일괄 GL 송신*. 셰이더가 안 받는 properties 는 silent skip.
  *
  *  ### 비-책임
- *  - ❌ 텍스처 *데이터 보유* — @c SJH::ResourceRegistry / @c Model 의 책임 (Material 은 관찰자만).
- *  - ❌ 셰이더 프로그램 *소유* — @c mProgram 은 비소유 관찰자, 외부가 수명 보장.
+ *  - ❌ 셰이더 schema 정의 — `Program::UniformCache` 가 cache build 시 자동 enumerate.
+ *  - ❌ Texture / Program 데이터 *소유* — 모두 비소유 관찰자.
+ *  - ❌ GL 호출 직접 — `MaterialApplier::Apply` 가 담당.
+ *
+ *  ### 모듈 위치
+ *  - INTERFACE 라이브러리 (header-only). `program` 모듈에 *역방향 의존* — Program::RegisterMaterial 호출.
+ *    `program -> material` 도 `Material::OnProgramReleased` cascade — 두 모듈 양방향 inline.
  */
 #ifndef __SJH_MATERIAL_H__
 #define __SJH_MATERIAL_H__
 
-#include "common/common.h" // CLASS_PTR 매크로 + 스마트 포인터 별칭 alias
+#include "common/common.h"
+#include "program/program.h"
 #include "GL/gl3w.h"
 #include <string>
+#include <unordered_map>
+#include <vmath.h>
 
 namespace SJH
 {
-    class Texture; // 비소유 관찰자 — SetResolvedTextures 인자 타입 전방선언
-    class Program; // 비소유 관찰자 — SetProgram 인자 타입 전방선언
+    class Texture;   // 비소유 관찰자.
 
     CLASS_PTR(Material);
-    /// @brief 텍스처 기반 Phong 머티리얼 (디퓨즈 + 스페큘러 맵 + shininess).
+
+    /// @brief Unity Material 정통 — 셰이더 무관 properties bag + Program 참조 + UniformCache reference.
     class Material
     {
     public:
-        static MaterialUPtr Create()
+        /// @brief 텍스처 바인딩 — sampler unit 과 비소유 텍스처 관찰자.
+        struct TextureBinding
         {
-            return MaterialUPtr(new Material());
-        }
-        // === 초기화 진입점 — 텍스처 이름 키 설정을 감싼다 ===
+            const Texture* Tex  = nullptr;
+            GLint          Unit = 0;
+        };
 
-        /// @brief 디퓨즈 + 스페큘러 텍스처 이름 키를 한 번에 설정.
-        void SetTextureNames(const std::string &diffuseName, const std::string &specularName)
-        {
-            SetDiffuseTextureName(diffuseName);
-            SetSpecularTextureName(specularName);
-        }
+        // === Factory ==========================================================
+        static MaterialUPtr Create() { return MaterialUPtr(new Material()); }
 
-        /// @brief 디퓨즈 맵 이름 키 갱신 — *해석된 관찰자 무효화* (재 resolve 필요).
-        /// @details 이름이 바뀌면 기존 @c mDiffuseTexture 포인터는 stale -> nullptr 로 되돌려 강제 재해석 유도.
-        void SetDiffuseTextureName(const std::string &name)
+        // === Lifetime — Observer cascade ====================================
+        ~Material()
         {
-            mDiffuseTextureName = name;
-            mDiffuseTexture = nullptr;
+            if (mProgram) mProgram->UnregisterMaterial(this);
         }
 
-        /// @brief 스페큘러 맵 이름 키 갱신 — *해석된 관찰자 무효화*.
-        void SetSpecularTextureName(const std::string &name)
+        Material(const Material& other) { CopyFrom(other); }
+        Material& operator=(const Material& other)
         {
-            mSpecularTextureName = name;
-            mSpecularTexture = nullptr;
+            if (this != &other) { ReleaseProgram(); CopyFrom(other); }
+            return *this;
+        }
+        Material(Material&&)            = delete;
+        Material& operator=(Material&&) = delete;
+
+        // === Program — Observer 등록 + UniformCache reference ================
+        /// @brief Program 주입. 이전 Program 은 Unregister, 새 Program 에 Register + cache 참조.
+        Material& SetProgram(const Program* program)
+        {
+            if (mProgram == program) abort();
+            ReleaseProgram();
+            mProgram = program;
+            mCache   = program ? &program->GetUniformCache() : nullptr;
+            if (mProgram) mProgram->RegisterMaterial(this);
+	    return *this;
+        }
+        const Program*      GetProgram() const { return mProgram; }
+        const UniformCache* GetCache()   const { return mCache; }
+
+        /// @brief Program::~Program 의 cascade — mProgram + cache reference clear.
+        /// @details Properties bag 은 *유지* — 다른 Program 으로 재바인딩 가능 (Unity 정통).
+        void OnProgramReleased(const Program* releasing)
+        {
+            if (mProgram == releasing)
+            {
+                mProgram = nullptr;
+                mCache   = nullptr;
+            }
         }
 
-        /// @brief 이름으로부터 *해석된* 텍스처 관찰자 + sampler 유닛 설정.
-        /// @details 텍스처 소유자(ResourceRegistry 또는 Model)가 Material 보다 오래 산다는 불변식 전제.
-        void SetResolvedTextures(const Texture *diffuse, GLint diffuseUnit,
-                                 const Texture *specular, GLint specularUnit)
-        {
-            mDiffuseTexture = diffuse;
-            mDiffuseUnit = diffuseUnit;
-            mSpecularTexture = specular;
-            mSpecularUnit = specularUnit;
-        }
+        // === Properties bag — variant typed maps =============================
+        // 타입별 분리 map — type erasure 비용 회피. C++17 std::variant 보다 직접적.
+        std::unordered_map<std::string, float>           Floats;
+        std::unordered_map<std::string, int>             Ints;
+        std::unordered_map<std::string, vmath::vec3>     Vec3s;
+        std::unordered_map<std::string, vmath::vec4>     Vec4s;
+        std::unordered_map<std::string, vmath::mat4>     Mat4s;
+        std::unordered_map<std::string, TextureBinding>  Textures;
 
-        /// @brief 공유 템플릿을 per-use 가변 인스턴스로 복제 (Unreal MID / Unity renderer.material 패턴).
-        MaterialUPtr Clone() const
-        {
-            return MaterialUPtr(new Material(*this));
-        }
-
-        /// @brief Phong shininess 지수 설정 — @c [2, 256] 으로 clamp (기본 @c 32).
-        void SetShininess(float v)
-        {
-            mShininess = (v < 2.0f) ? 2.0f : (v > 256.0f ? 256.0f : v);
-        }
-
-        /// @brief uniform 을 전송할 셰이더 프로그램을 주입 (생성 후 셋업 시점 1회).
-        /// @details 비소유 관찰자 — @p program 의 수명은 외부가 보장. MaterialApplier 가 이 프로그램을 사용.
-        void SetProgram(const Program *program) { mProgram = program; }
-
-        /// @brief 현재 바인딩된 프로그램 반환 (비소유 관찰자). RenderSystem 이 DrawCommand 빌드 시 사용.
-        const Program* GetProgram() const { return mProgram; }
-
-        // === Getters — 모두 const, 읽기 전용 ===
-        const std::string &GetDiffuseTextureName() const { return mDiffuseTextureName; }
-        const std::string &GetSpecularTextureName() const { return mSpecularTextureName; }
-        const Texture *GetDiffuseTexture() const { return mDiffuseTexture; }
-        const Texture *GetSpecularTexture() const { return mSpecularTexture; }
-        GLint GetDiffuseUnit() const { return mDiffuseUnit; }
-        GLint GetSpecularUnit() const { return mSpecularUnit; }
-        float GetShininess() const { return mShininess; }
-
-        /// @brief 디퓨즈 텍스처가 해석된 상태인지 (nullptr 이면 미해석).
-        bool IsResolved() const { return mDiffuseTexture != nullptr; }
+        // === Clone (Unity MID / Unreal MID 패턴) =============================
+        /// @brief 공유 템플릿 -> per-use 가변 인스턴스 복제. Observer 등록 갱신.
+        MaterialUPtr Clone() const { return MaterialUPtr(new Material(*this)); }
 
     private:
         Material() = default;
-        std::string mDiffuseTextureName;          ///< 디퓨즈 맵 이름 키 — @c ResourceRegistry::FindTexture 조회
-        std::string mSpecularTextureName;         ///< 스페큘러 맵 이름 키 — 비어 있으면 셰이더 측 default 가정
-        const Texture *mDiffuseTexture{nullptr};  ///< 이름으로부터 해석된 비소유 텍스처 관찰자
-        const Texture *mSpecularTexture{nullptr}; ///< 스페큘러 맵 관찰자
-        const Program *mProgram{nullptr};         ///< uniform 전송 대상 — 비소유 관찰자. @ref SetProgram 으로 주입.
-        GLint mDiffuseUnit{0};                    ///< 디퓨즈 sampler2D 에 넣을 텍스처 이미지 유닛 번호
-        GLint mSpecularUnit{1};                   ///< 스페큘러 sampler2D 의 유닛 번호
-        float mShininess{32.0f};                  ///< Phong shininess — 셰이더 uniform `material.shininess`. 권장 [2,256]
+
+        void CopyFrom(const Material& other)
+        {
+            Floats   = other.Floats;
+            Ints     = other.Ints;
+            Vec3s    = other.Vec3s;
+            Vec4s    = other.Vec4s;
+            Mat4s    = other.Mat4s;
+            Textures = other.Textures;
+            mProgram = other.mProgram;
+            mCache   = other.mCache;
+            if (mProgram) mProgram->RegisterMaterial(this);   // 새 인스턴스로 register
+        }
+
+        void ReleaseProgram()
+        {
+            if (mProgram) mProgram->UnregisterMaterial(this);
+            mProgram = nullptr;
+            mCache   = nullptr;
+        }
+
+        const Program*      mProgram = nullptr;   ///< 비소유. SetProgram/Release/cascade 가 lifecycle 관리.
+        const UniformCache* mCache   = nullptr;   ///< Program 의 cache 참조 — 셰이더 schema 단축 lookup.
     };
 }
 

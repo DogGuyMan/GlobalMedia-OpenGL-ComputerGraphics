@@ -12,7 +12,7 @@ namespace SJH { class Framebuffer; class Program; class DirLight; class PointLig
 
 namespace SJH
 {
-    /// @brief Actor 트리 traverse → MeshRenderer 수집 → DrawCommand → Queue Flush.
+    /// @brief Actor 트리 traverse -> MeshRenderer 수집 -> DrawCommand -> Queue Flush.
     /// @details per-frame 호출 (multi-pass 모드):
     ///   1. Scene::Root() 부터 DFS — 모든 Camera 컴포넌트 수집 (IsActive + IsEnabled)
     ///   2. Camera::GetDepth() 오름차순 stable_sort (Unity Camera.depth 정통)
@@ -23,7 +23,7 @@ namespace SJH
     class RenderSystem
     {
     public:
-        /// @brief 씬 트리의 모든 Camera 컴포넌트 수집 → depth 정렬 → 직렬 렌더.
+        /// @brief 씬 트리의 모든 Camera 컴포넌트 수집 -> depth 정렬 -> 직렬 렌더.
         /// @details Camera 컴포넌트가 하나도 없으면 spdlog::warn + early return (프레임 skip).
         ///          Unity Camera.depth 정통 — 작은 depth 가 먼저 렌더.
         ///          각 Camera 는 자신의 targetFramebuffer (없으면 default backbuffer) 로 렌더.

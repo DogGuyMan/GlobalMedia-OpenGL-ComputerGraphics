@@ -17,7 +17,7 @@
  *  - **friend 선언 불필요** — @c GetLocation / @c GetType / @c GetProgramAddr 이 public.
  *
  *  ### Lifetime — Program 멤버 자동 소멸
- *  - 배열 원소 (@c "arr[3]") 같은 비-canonical 이름 → GetLocation 이 -1 반환 →
+ *  - 배열 원소 (@c "arr[3]") 같은 비-canonical 이름 -> GetLocation 이 -1 반환 ->
  *    setter 가 fallback 으로 @c glGetUniformLocation 직접 호출 (캐시 mutation 없음, POLA).
  *
  *  ### 책임
@@ -58,7 +58,7 @@ namespace SJH
         void SetInt  (const Program &prog, const char *name, const int& v);             ///< GL_INT / GL_SAMPLER_*
 
         /// @brief 캐시된 location 반환. 미존재면 -1 (+ 첫 호출 시 diagnostics 가 warn).
-        GLint Get(const Program &prog, const char *name);
+        GLint GetLocation(const Program &prog, const char *name);
 
         // --- 광원 struct -> uniform block 일괄 전송 helpers ----------------------------
         // 각 helper 는 `<prefix>.<field>` 형태로 셰이더 struct 멤버에 1:1 대응. 내부적으로

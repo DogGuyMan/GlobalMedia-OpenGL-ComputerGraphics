@@ -2,14 +2,16 @@
 #define __SJH_PROGRAM_H__
 
 #include "common/common.h"
+#include "program/uniform_cache.h"   // SP6 — UniformCache 분리
 #include "shader/shader.h"
 #include "GL/gl3w.h"
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace SJH
 {
+    class Material;   // SP6 Observer — Program 이 의존 Material 목록 보유.
+
     CLASS_PTR(Program)
 
     /**
@@ -61,28 +63,37 @@ namespace SJH
         /// @brief 내부 GL 프로그램 핸들 반환 — @c glUseProgram / @c Uniforms 자유 함수의 키.
         GLuint GetProgramAddr() const { return mProgramAddr; }
 
-        /// @brief uniform 이름 → location 조회. pure const query (캐시 read-only).
-        /// @return active uniform 이면 location, 그 외(예: 비-active `arr[3]`) -1.
-        /// @note  -1 반환 시 호출자가 fallback 으로 @c glGetUniformLocation 직접 호출.
-        ///        본 함수는 *cache mutation 하지 않음* — POLA 준수.
-        GLint GetLocation(const char* name) const;
+        /// @brief uniform 이름 -> location 조회 (UniformCache 위임).
+        /// @return active uniform 이면 location, 미캐시 시 -1 (호출자가 fallback).
+        /// @note  pure const query — cache mutation 없음. SP6 이후 캐시 자체는 별개 UniformCache 객체.
+        GLint  GetLocation(const char* name) const { return mUniformCache.GetLocation(name); }
 
-        /// @brief uniform 이름 → GL 타입 (GL_FLOAT_MAT4 등). pure const query.
-        /// @return active uniform 이면 type, 미캐시 시 0 — 진단의 타입 불일치 체크에 사용.
-        GLenum GetType(const char* name) const;
+        /// @brief uniform 이름 -> GL 타입 (GL_FLOAT_MAT4 등). 미캐시 시 0.
+        GLenum GetType(const char* name) const { return mUniformCache.GetType(name); }
+
+        /// @brief 내부 UniformCache const reference — Material 이 cache 참조 시 사용 (SP6).
+        const UniformCache& GetUniformCache() const { return mUniformCache; }
+
+        // ── SP6 Observer — 의존 Material 의 lifetime 추적 ────────────────────────
+        /// @brief Material 이 SetProgram(this) 시 호출 — 의존 목록에 등록.
+        /// @details ~Program 의 OnProgramReleased cascade 가 *등록된 Material* 들에 통지.
+        void RegisterMaterial(Material* m) const;
+
+        /// @brief Material 이 SetProgram(other) 또는 ~Material 시 호출 — 의존 목록에서 제거.
+        void UnregisterMaterial(Material* m) const;
 
     private:
         Program() = default;
         bool TryLink(const std::vector<ShaderPtr> &shaders);
 
-        /// @brief link 직후 active uniform 전체를 mUniformCache 에 채움 (eager).
-        void BuildUniformCache();
-
         /// @brief 내부 GL 프로그램 핸들 — @c glDeleteProgram 대상이자 @c glUseProgram 인자.
         GLuint mProgramAddr{0};
 
-        struct UniformEntry { GLint Location; GLenum Type; };
-        std::unordered_map<std::string, UniformEntry> mUniformCache;
+        /// @brief SP6 — active uniform name->(location,type) 캐시. Program 이 owner.
+        UniformCache mUniformCache;
+
+        /// @brief SP6 Observer — 의존 Material 들. mutable: const 메서드 RegisterMaterial 에서 수정.
+        mutable std::vector<Material*> mDependentMaterials;
     };
 }
 

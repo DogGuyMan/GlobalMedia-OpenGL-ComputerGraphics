@@ -3,6 +3,7 @@ add_library(sjhopengl_scene STATIC
     scene.cpp
     model_spawner.cpp
     camera.cpp
+    compound_actor.cpp
 )
 add_library(SJH::scene ALIAS sjhopengl_scene)
 
