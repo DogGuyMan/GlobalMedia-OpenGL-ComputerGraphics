@@ -13,11 +13,12 @@ target_include_directories(sjhopengl_resource_registry
 
 target_link_libraries(sjhopengl_resource_registry
     PUBLIC  SJH::common
-            SJH::object
+            SJH::object        # resource_registry.h: Mesh/Model 노출 (RegisterMesh/CreateModel)
             SJH::material      # resource_registry.h: CreateMaterial/FindMaterial 가 Material* 노출
+            SJH::program       # resource_registry.h: CreateProgram/FindProgram 가 Program* 노출
             project_deps
             spdlog
     PRIVATE SJH::diagnostics
 )
 
-target_compile_features(sjhopengl_resource_registry PRIVATE cxx_std_17)
+target_compile_features(sjhopengl_resource_registry PUBLIC cxx_std_17)

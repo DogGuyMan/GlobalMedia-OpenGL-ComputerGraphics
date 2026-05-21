@@ -1,6 +1,9 @@
 #include "shader/shader.h"
 #include "diagnostics/gl_log.h"
 #include <memory>
+#include <sb7.h>
+#include <shader.h>
+#include <spdlog/spdlog.h>
 #include <type_traits>
 
 // SP1 — RAII 의미론 컴파일 타임 검증.
@@ -50,22 +53,7 @@ namespace SJH
 
     bool Shader::TryLoadFile(const std::string &filename, GLenum shader_type)
     {
-        auto result = LoadTextFile(filename);
-        if (!result.has_value())
-            return false;
-
-        auto &code = result.value();
-        const char *codePtr = code.c_str();
-        GLint codeLength = (GLint)code.length();
-
-        // OpenGL shader object 생성
-        mShaderAddr = glCreateShader(shader_type);
-
-        // shader에 소스 코드 설정
-        glShaderSource(mShaderAddr, 1, &codePtr, &codeLength);
-
-        // 셰이더 컴파일
-        glCompileShader(mShaderAddr);
+	GLuint mShaderAddr = sb7::shader::load(filename, shader_type, true);	
         bool isSuccess = Diagnostics::GLObjectLog::CheckShaderCompile(mShaderAddr, filename);
         return isSuccess;
     }

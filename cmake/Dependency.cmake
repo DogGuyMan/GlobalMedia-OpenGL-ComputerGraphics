@@ -153,3 +153,62 @@ target_link_libraries(game_deps INTERFACE
 # -Wall -Werror 대상에서 제외한다. (예: <Effekseer/Effekseer.h> 의 -Wmacro-redefined,
 #  -Woverloaded-virtual 가 -Werror 로 빌드를 깨지 않도록.)
 target_include_directories(game_deps SYSTEM INTERFACE "${CMAKE_SOURCE_DIR}/include")
+
+# ====== FMOD 공용 — macOS rpath 설정 ======
+# FMOD Core / Studio dylib 는 install_name 이 @rpath/lib*.dylib 라 실행 파일 rpath 에
+# @loader_path 가 들어가야 startup 시 POST_BUILD 로 옆에 복사된 dylib 를 찾는다.
+# 적용 시점: add_subdirectory(apps/...) 보다 먼저여야 모든 챕터 타겟에 전파.
+# 비-FMOD 챕터에는 무해 (참조되는 @rpath dylib 가 없으면 rpath 항목은 미사용).
+if(APPLE)
+    list(APPEND CMAKE_BUILD_RPATH   "@loader_path")
+    list(APPEND CMAKE_INSTALL_RPATH "@loader_path")
+endif()
+
+# ====== FMOD Core API (독점 SDK, 수동 설치 — doc/FMOD_Setup.md 참조) ======
+# 동적 라이브러리만 배포 → SHARED IMPORTED. fmodL 은 로깅 빌드 → Debug 매핑.
+# include/fmod/fmod.h 존재 여부로 가드 — SDK 미설치자도 configure/빌드 통과(오디오 비활성).
+#
+# game_deps INTERFACE 자동 합류 — 모든 game 챕터가 fmod 를 링크하게 된다.
+# SHARED 이므로 startup 시 .dll/.dylib 가 실행 파일 옆에 있어야 한다 →
+# game_deps 를 쓰는 챕터 CMakeLists.txt 는 POST_BUILD 에서
+# $<TARGET_FILE:fmod> 를 $<TARGET_FILE_DIR:${CHAPTER_NAME}> 로 copy_if_different.
+if(EXISTS "${CMAKE_SOURCE_DIR}/include/fmod/fmod.h")
+    add_library(fmod SHARED IMPORTED)
+    if(WIN32)
+        set_target_properties(fmod PROPERTIES
+            IMPORTED_LOCATION         ${LIB_DIR}/fmod.dll
+            IMPORTED_IMPLIB           ${LIB_DIR}/fmod_vc.lib
+            IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/fmodL.dll
+            IMPORTED_IMPLIB_DEBUG     ${LIB_DIR}/fmodL_vc.lib)
+    else()
+        set_target_properties(fmod PROPERTIES
+            IMPORTED_LOCATION         ${LIB_DIR}/libfmod.dylib
+            IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libfmodL.dylib)
+    endif()
+    target_link_libraries(game_deps INTERFACE fmod)
+else()
+    message(STATUS "FMOD 미설치 — 오디오 비활성. doc/FMOD_Setup.md 참조")
+endif()
+
+# FMOD Studio API — .bank 파일 기반 이벤트/믹서 시스템 (Core 위의 고수준 layer).
+# 독립적으로 등록. fmod_studio.h 존재 시에만 활성화. fmodstudio 는 fmod 코어 심볼을
+# DT_NEEDED 로 참조 → INTERFACE 링크 의존성으로 순서 보장.
+if(EXISTS "${CMAKE_SOURCE_DIR}/include/fmod/fmod_studio.h")
+    add_library(fmodstudio SHARED IMPORTED)
+    if(WIN32)
+        set_target_properties(fmodstudio PROPERTIES
+            IMPORTED_LOCATION         ${LIB_DIR}/fmodstudio.dll
+            IMPORTED_IMPLIB           ${LIB_DIR}/fmodstudio_vc.lib
+            IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/fmodstudioL.dll
+            IMPORTED_IMPLIB_DEBUG     ${LIB_DIR}/fmodstudioL_vc.lib)
+    else()
+        set_target_properties(fmodstudio PROPERTIES
+            IMPORTED_LOCATION         ${LIB_DIR}/libfmodstudio.dylib
+            IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libfmodstudioL.dylib)
+    endif()
+    # fmodstudio 는 fmod 의 심볼에 의존 — 링크 순서 보장 + 단독 링크해도 fmod 자동 동반
+    if(TARGET fmod)
+        target_link_libraries(fmodstudio INTERFACE fmod)
+    endif()
+    target_link_libraries(game_deps INTERFACE fmodstudio)
+endif()

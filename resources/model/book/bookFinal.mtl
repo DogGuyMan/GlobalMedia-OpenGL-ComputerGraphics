@@ -1,0 +1,24 @@
+# Blender 5.0.1 MTL File: 'bookFinal.blend'
+# www.blender.org
+
+newmtl cover
+Ns 250.000000
+Ka 0.750000 0.750000 0.750000
+Kd 0.066806 0.066806 0.066806
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+newmtl pages
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd /Users/escatrgot/Downloads/book/source/Book/textures/rustypaper_albedo.png
+map_Ns /Users/escatrgot/Downloads/book/source/Book/textures/rustypaper_Roughness.png
+map_refl /Users/escatrgot/Downloads/book/source/Book/textures/rustypaper_metal.png
+map_Bump -bm 1.000000 /Users/escatrgot/Downloads/book/source/Book/textures/rustypaper_normal.png
