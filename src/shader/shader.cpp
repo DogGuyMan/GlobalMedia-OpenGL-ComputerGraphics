@@ -1,7 +1,7 @@
 #include "shader/shader.h"
 #include "diagnostics/gl_log.h"
 #include <memory>
-#include <shader.h>     // sb7::shader::load — 파일 → GLuint, sb7code 제공
+#include <shader.h>     // sb7::shader::load — 파일 -> GLuint, sb7code 제공
 #include <type_traits>
 
 // SP1 — RAII 의미론 컴파일 타임 검증.

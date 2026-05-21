@@ -1,19 +1,23 @@
-# SP3 T3 (Apply() 폐기) + T5 follow-up (MaterialApplier → SJH::render 이전) 결과로
-# material.cpp 가 빈 TU 가 되어 ranlib 가 'has no symbols' 경고를 발생시켰음.
-# INTERFACE 라이브러리로 전환 — 헤더 only, 컴파일 산출물 없음, ranlib 경고 해소.
+# SP6 — Material 이 properties bag + Program/UniformCache reference (Unity 정통) 으로 재작성.
+#   material_uniforms.cpp 의 self-link symbol 발생 → STATIC 으로 복귀 (SP4 T5 의 INTERFACE 폐기).
 #
-# material.h 의 Program/Texture 는 전방선언만 → PUBLIC link 는 common + project_deps 뿐.
-# Material 은 순수 데이터 leaf 모듈 — 다른 의존 없음.
-add_library(sjhopengl_material INTERFACE)
+# material.h 가 program.h 완전 포함 (Program::RegisterMaterial 호출) → SJH::program PUBLIC 의존.
+# material → program 정방향 의존 + program.cpp 가 material.h 의 OnProgramReleased 호출 (Observer cascade).
+# program 측 CMakeLists 에 SJH::material PRIVATE 추가 (SP6 T2 commit 9841b92).
+add_library(sjhopengl_material STATIC
+    material_uniforms.cpp
+)
 add_library(SJH::material ALIAS sjhopengl_material)
 
-target_include_directories(sjhopengl_material INTERFACE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+target_include_directories(sjhopengl_material
+    PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
 )
 
-target_link_libraries(sjhopengl_material INTERFACE
-    SJH::common
-    project_deps
+# material.h 가 program.h 완전 포함 → SJH::program PUBLIC.
+target_link_libraries(sjhopengl_material
+    PUBLIC  SJH::common
+            SJH::program
+            project_deps
 )
 
-target_compile_features(sjhopengl_material INTERFACE cxx_std_17)
+target_compile_features(sjhopengl_material PUBLIC cxx_std_17)

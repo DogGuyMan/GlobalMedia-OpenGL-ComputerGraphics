@@ -25,7 +25,7 @@ namespace SJH
     {
     public:
         /// @brief 물리 키 -> 논리 액션 바인딩 (같은 키 재바인딩 시 덮어씀).
-        void BindKey(int glfwKey, TAction action) { mKeyBindings[glfwKey] = action; }
+        void BindKey(TAction action, int glfwKey) { mKeyBindings[glfwKey] = action; }
         /// @brief @p glfwKey 의 키->액션 바인딩 제거.
         void UnbindKey(int glfwKey) { mKeyBindings.erase(glfwKey); }
 

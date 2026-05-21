@@ -48,7 +48,7 @@ namespace SJH::Scene
         const vmath::mat4 local = mTransform.GetLocalMatrix();
         if (mParent)
         {
-            // vmath matNM::operator* 는 base 타입 반환 → Tmat4(const base&) 로 명시 변환
+            // vmath matNM::operator* 는 base 타입 반환 -> Tmat4(const base&) 로 명시 변환
             return vmath::mat4(mParent->GetWorldMatrix() * local);
         }
         return local;

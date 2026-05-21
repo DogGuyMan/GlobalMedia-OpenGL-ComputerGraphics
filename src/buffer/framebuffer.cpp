@@ -87,8 +87,8 @@ namespace SJH
 
     bool Framebuffer::InitWithSize(int width, int height)
     {
-        // 내부 RGBA8 텍스처 생성 — Texture::Create(w,h,format) 가 TextureUPtr 반환 →
-        // shared_ptr 로 transfer (unique→shared move 변환). 이후 mColorAttachment 공유 소유.
+        // 내부 RGBA8 텍스처 생성 — Texture::Create(w,h,format) 가 TextureUPtr 반환 ->
+        // shared_ptr 로 transfer (unique->shared move 변환). 이후 mColorAttachment 공유 소유.
         auto textureU = Texture::Create(width, height, GL_RGBA);
         if (!textureU)
         {

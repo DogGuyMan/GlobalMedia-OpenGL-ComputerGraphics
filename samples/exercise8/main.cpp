@@ -428,7 +428,7 @@ class my_application : public sb7::application
 		glUniform1i(glGetUniformLocation(shader_program, "material.diffuse"), 1);
 		glUniform1i(glGetUniformLocation(shader_program, "material.specular"), 2);
 
-		// 텍스처 있는 메쉬 — useTexture = 1.0 → fs 가 라이팅 계산 경로 진입.
+		// 텍스처 있는 메쉬 — useTexture = 1.0 -> fs 가 라이팅 계산 경로 진입.
 		glUniform1f(glGetUniformLocation(shader_program, "useTexture"), 1.0f);
 
 		m_material.diffuseTexture = textures[1];
@@ -470,7 +470,7 @@ class my_application : public sb7::application
 		}
 
 		// 피라미드 (광원) 그리기 ---------------------------------------
-		// 텍스처 없는 unlit 메쉬 — useTexture = 0.0 → fs 가 objectColor (=lightColor) 만 출력.
+		// 텍스처 없는 unlit 메쉬 — useTexture = 0.0 -> fs 가 objectColor (=lightColor) 만 출력.
 		float scaleFactor = 0.05f;
 		vmath::mat4 transform = vmath::translate(m_light.position) *
 		                        vmath::rotate(angle * 0.5f, 0.0f, 1.0f, 0.0f) *

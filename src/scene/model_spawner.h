@@ -8,7 +8,7 @@ namespace SJH::Scene
 {
     class Actor;
 
-    /// @brief Assimp Model 의 N RenderUnit → N 자식 Actor (각자 MeshRenderer 보유).
+    /// @brief Assimp Model 의 N RenderUnit -> N 자식 Actor (각자 MeshRenderer 보유).
     /// @details Q5-1 결정 — 1 RenderUnit = 1 Actor. 부모-자식 Transform 계층 자연 흡수.
     namespace ModelSpawner
     {

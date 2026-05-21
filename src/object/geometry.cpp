@@ -97,7 +97,7 @@ namespace SJH
             // 펼친 6 정점을 순회하며 (position_idxs[k], QUAD_MESH_UVS_FAN[k]) 쌍을 키로 dedupe.
             // FRONT/BACK 모두 자동 처리 — winding 반전은 face_idxs reorder 가 인덱스 순서를 바꿔서 해결.
             // 전제: face_idxs / position_idxs / QUAD_MESH_UVS_FAN 조합이 평면 quad 의 표준 패턴
-            //       (6 → 4 unique). 비표준 입력으로 5+ unique 가 나오면 seenPos[4]/seenUv[4] 가 overrun.
+            //       (6 -> 4 unique). 비표준 입력으로 5+ unique 가 나오면 seenPos[4]/seenUv[4] 가 overrun.
             int localIdx[6];
             GLuint seenPos[4];
             GLuint seenUv[4];
@@ -236,7 +236,7 @@ namespace SJH
 
             // Disk 는 cylinder/hemisphere 와 달리 normal 이 ±Y (라디알 아님). 위치식 z=-sin(θ) 는
             // +Y 에서 봤을 때 CW 회전이라, 표준 winding {p0,p1,p2,p0,p2,p3} 는 cross=-Y 가 된다.
-            // → +Y 외향(back_face=false)을 보장하려면 인덱스를 뒤집어야 함.
+            // -> +Y 외향(back_face=false)을 보장하려면 인덱스를 뒤집어야 함.
             for (int row = 0; row < vRes; row++)
             {
                 for (int col = 0; col < uRes; col++)
@@ -341,7 +341,7 @@ namespace SJH
                                     float radius,
                                     const vmath::vec3 &offset, bool back_face)
         {
-            // 북반구(+Y), 중심 원점. 법선 = 중심→정점 (구면).
+            // 북반구(+Y), 중심 원점. 법선 = 중심->정점 (구면).
             int numCols = uRes + 1;
             int numRows = vRes + 1;
 
@@ -405,7 +405,7 @@ namespace SJH
             }
         }
 
-        // === 13-float interleaved → MeshData 변환 ===
+        // === 13-float interleaved -> MeshData 변환 ===
         // 빌더의 raw(pos4 + color4 + normal3 + uv2) 출력을 SJH::Vertex(pos3 + normal3 + uv2) 로 변환.
         // color(4 float) 와 pos.w 는 폐기.
         MeshData FromInterleaved(const std::vector<GLfloat> &raw,
@@ -445,7 +445,7 @@ namespace SJH
         MeshData ScreenQuad()
         {
             // NDC clip-space 화면 가득 quad — postprocess.vs 가 model/view/proj 우회.
-            // position 은 NDC 좌표, UV 는 화면 매핑 (좌하단 0,0 → 우상단 1,1).
+            // position 은 NDC 좌표, UV 는 화면 매핑 (좌하단 0,0 -> 우상단 1,1).
             // normal 은 +Z (사용 안 함, Vertex 구조체 충족).
             MeshData data;
             data.vertices = {

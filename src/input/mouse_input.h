@@ -20,6 +20,7 @@ namespace SJH
     public:
         /// @brief 드래그 중 이동마다 (dx, dy) 로 호출할 핸들러 (논리적으로 LookAround 액션).
         void BindLookHandler(std::function<void(double dx, double dy)> handler);
+	void UnbindLook();
 
         /// @brief GLFW mouse-button 콜백 위임 — 드래그 버튼 press 시 시작, release 시 종료.
         void HandleButton(int button, int action, double x, double y);

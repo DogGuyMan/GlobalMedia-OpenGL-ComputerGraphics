@@ -8,6 +8,10 @@ namespace SJH
         mLookHandler = std::move(handler);
     }
 
+    void MouseInput::UnbindLook() {
+	mLookHandler = nullptr;
+    }
+
     void MouseInput::HandleButton(int button, int action, double x, double y)
     {
         if (button != mDragButton)

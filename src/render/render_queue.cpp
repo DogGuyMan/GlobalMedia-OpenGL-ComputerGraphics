@@ -42,8 +42,8 @@ namespace SJH
                 lastMat  = nullptr;   // program 바뀌면 material 재바인딩 강제
             }
             if (cmd.material != lastMat) {
-                MaterialApplier::WriteUniforms(*cmd.program, *cmd.material);
-                MaterialApplier::BindTextures(rc, *cmd.material);
+                // SP6 — properties bag 통합 Apply (UniformCache 교집합 + 텍스처 바인딩 일괄).
+                MaterialApplier::Apply(rc, *cmd.material);
                 lastMat = cmd.material;
             }
             Uniforms::SetMat4(*cmd.program, "uModel", cmd.modelMatrix);

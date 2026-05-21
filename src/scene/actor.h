@@ -28,13 +28,17 @@ namespace SJH::Scene
     {
     public:
         virtual ~Component() = default;
-        virtual void OnEnter() {}
-        virtual void OnExit()  {}
-        virtual void Update(float dt) { (void)dt; }
+        virtual void OnEnter() = 0;
+        virtual void OnExit() = 0;
+        virtual void Update(float dt) = 0;
 
         bool IsEnabled() const { return mEnabled; }
         void SetEnabled(bool e) { mEnabled = e; }
         Actor* GetOwner() const { return mOwner; }
+
+    protected:
+        // 추상 베이스 — 파생 클래스 통해서만 생성 가능
+        Component() = default;
 
     private:
         friend class Actor;
@@ -67,7 +71,9 @@ namespace SJH::Scene
         // === Components ===
         template<typename T, typename... Args>
         T* AddComponent(Args&&... args);
-        template<typename T> T*   GetComponent() const;
+        template<typename T,
+                 typename = std::enable_if_t<std::is_base_of_v<Component, T>>>
+        T*   GetComponent() const;
         template<typename T> void RemoveComponent();
         void RemoveAllComponents();
 
@@ -94,7 +100,7 @@ namespace SJH::Scene
         // === Lifecycle ===
         void OnEnter();
         void OnExit();
-        /// @note 호출 순서: 자기 components (enabled 만) → 자식 Actor (재귀).
+        /// @note 호출 순서: 자기 components (enabled 만) -> 자식 Actor (재귀).
         ///       부모 Transform 갱신 후 자식이 Read 하는 케이스에서 *동일 프레임 일관성* 보장.
         void Update(float dt);
 
@@ -121,7 +127,7 @@ namespace SJH::Scene
         assert(mComponents.find(typeid(T)) == mComponents.end()
                && "Duplicate component type — Actor::AddComponent<T> called twice");
 
-        // construct → mOwner 설정 → insert → dispatch (exception-safe)
+        // construct -> mOwner 설정 -> insert -> dispatch (exception-safe)
         // T 의 ctor 가 throw 해도 map 무변동 — 다음 AddComponent<T> 가 깨끗하게 진행
         auto comp = std::make_unique<T>(std::forward<Args>(args)...);
         comp->mOwner = this;
@@ -131,7 +137,7 @@ namespace SJH::Scene
         return raw;
     }
 
-    template<typename T>
+    template<typename T, typename>
     T* Actor::GetComponent() const
     {
         auto it = mComponents.find(typeid(T));
@@ -141,6 +147,7 @@ namespace SJH::Scene
     template<typename T>
     void Actor::RemoveComponent()
     {
+        static_assert(std::is_base_of_v<Component, T>, "T must derive from Component");
         auto it = mComponents.find(typeid(T));
         if (it == mComponents.end()) return;
         if (mEntered) it->second->OnExit();   // symmetric — OnEnter 호출된 경우만 OnExit

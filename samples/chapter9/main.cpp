@@ -263,10 +263,10 @@ namespace Engine::Model::EBO
 	// 대칭 도형(정육면체/정사면체/이중 피라미드)에서 이 값은 인접 면 face normal
 	// 평균과 등가하므로 Phong 보간 시 자연스러운 셰이딩이 나온다. 면 단위 평면
 	// 셰이딩(flat)이 필요하면 정점을 면당 복제해야 함 — 이 빌더는 정점 공유를
-	// 위해 그 방식은 포기. UV 도 정점당 1개라 박스 UV 매핑 불가 → (0,0) 고정.
+	// 위해 그 방식은 포기. UV 도 정점당 1개라 박스 UV 매핑 불가 -> (0,0) 고정.
 	// ───────────────────────────────────────────────────────────────────────
 
-	// 평면 Quad: 4정점, 단일 면 → face normal 1개를 4정점 모두 공유.
+	// 평면 Quad: 4정점, 단일 면 -> face normal 1개를 4정점 모두 공유.
 	static const std::vector<vmath::vec3> QUAD_BASE_POSITIONS = {
 	    {1.0f, 0.0f, -1.0f},
 	    {-1.0f, 0.0f, -1.0f},
@@ -373,7 +373,7 @@ namespace Engine::Model::EBO
 
 	inline void BuildCube(std::vector<GLfloat> &vertex_data)
 	{
-		// bounding box 중심: y∈[0,0.5], xz∈[-0.25,0.25] → (0, 0.25, 0)
+		// bounding box 중심: y∈[0,0.5], xz∈[-0.25,0.25] -> (0, 0.25, 0)
 		const vmath::vec3 center(0.0f, 0.25f, 0.0f);
 		const vmath::vec3 white(1.0f, 1.0f, 1.0f);
 		const vmath::vec2 zeroUV(0.0f, 0.0f);
@@ -420,7 +420,7 @@ namespace Engine::Model::EBO
 	                      const std::vector<vmath::vec3> &corner_colors = QUAD_RGBY_COLORS,
 	                      const std::vector<vmath::vec2> &corner_uvs = QUAD_FLOOR_UVS)
 	{
-		// 평면 단일 면 → 4정점이 같은 face normal 공유 (radial 필요 없음)
+		// 평면 단일 면 -> 4정점이 같은 face normal 공유 (radial 필요 없음)
 		const vmath::vec3 normal = ComputeFaceNormal(QUAD_BASE_POSITIONS[0],
 		                                             QUAD_BASE_POSITIONS[1],
 		                                             QUAD_BASE_POSITIONS[2]);
@@ -436,7 +436,7 @@ namespace Engine::Model::EBO
 
 	inline void BuildPyramid(std::vector<GLfloat> &vertex_data)
 	{
-		// PYRAMID 정점들이 origin 기준 대칭 → radial normal = normalize(pos)
+		// PYRAMID 정점들이 origin 기준 대칭 -> radial normal = normalize(pos)
 		const vmath::vec3 white(1.0f, 1.0f, 1.0f);
 		const vmath::vec2 zeroUV(0.0f, 0.0f);
 
@@ -582,7 +582,7 @@ class my_application : public sb7::application
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		}
 		{
-			// BuildCube 는 인덱스 메시가 아니라 면당 6정점을 펼쳐 36정점 배열을 만든다 → glDrawArrays 로 그린다 (EBO 불필요).
+			// BuildCube 는 인덱스 메시가 아니라 면당 6정점을 펼쳐 36정점 배열을 만든다 -> glDrawArrays 로 그린다 (EBO 불필요).
 			std::vector<GLfloat> cube_vertices;
 			Engine::Model::VAO::BuildCube(cube_vertices, Engine::Model::VAO::CUBE_FACE_INDICES);
 			cube_vertex_count = static_cast<GLsizei>(cube_vertices.size() / 11);
@@ -622,7 +622,7 @@ class my_application : public sb7::application
 			glBindBuffer(GL_ARRAY_BUFFER, 0);
 		}
 		{
-			// Tetrahedron: EBO 공유정점 4개 + 인덱스 12개 → glDrawElements
+			// Tetrahedron: EBO 공유정점 4개 + 인덱스 12개 -> glDrawElements
 			std::vector<GLfloat> tetrahedron_vertices;
 			Engine::Model::EBO::BuildTetrahedron(tetrahedron_vertices);
 			// diag:: VBO 업로드 직전 — stride(11), pos(off=0,sz=3), normal(off=8,sz=3) 검증

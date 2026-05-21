@@ -31,7 +31,7 @@ namespace SJH
 
         // 2. Unity Camera.depth 정렬 — 작은 값 먼저.
         std::stable_sort(cameras.begin(), cameras.end(),
-            [](Scene::Camera* a, Scene::Camera* b) { return a->GetDepth() < b->GetDepth(); });
+            [](Scene::Camera* a, Scene::Camera* b) { return a->Depth < b->Depth; });
 
         // 3. 각 Camera 마다 1패스 실행 — target FB / view / proj 자동.
         for (auto* cam : cameras)
@@ -66,9 +66,9 @@ namespace SJH
 
         const auto viewMat = cam.GetViewMatrix();
         const auto projMat = cam.GetProjectionMatrix();
-        const auto cullingMask = cam.GetCullingMask();
+        const auto cullingMask = cam.CullingMask;
 
-        // SP5: Light + program 수집 → light uniform 송신 (씬에 등장한 모든 program 에 1회).
+        // SP5: Light + program 수집 -> light uniform 송신 (씬에 등장한 모든 program 에 1회).
         // Camera 의 world eye position 도출 — Owner 있으면 worldMatrix[3].xyz, 없으면 standalone Eye.
         vmath::vec3 viewPos(0.0f, 0.0f, 0.0f);
         if (auto* camOwner = cam.GetOwner())
@@ -235,7 +235,7 @@ namespace SJH
                 {
                     const vmath::mat4 model    = actor.GetWorldMatrix();
                     // view-space origin z: (viewMat * model) 의 4번째 열(translation) z 성분.
-                    // vmath 는 mat*vec 오버로드 미제공 → mat4 직접 인덱싱으로 depth 추출.
+                    // vmath 는 mat*vec 오버로드 미제공 -> mat4 직접 인덱싱으로 depth 추출.
                     const float       depthZ   = (viewMat * model)[3][2];
                     mQueue.Submit({
                         mr->Material->GetProgram(),

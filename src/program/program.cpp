@@ -1,6 +1,8 @@
 #include "program/program.h"
+#include "material/material.h"   // SP6 Observer — Material::OnProgramReleased cascade
 #include "diagnostics/gl_log.h"
 #include "diagnostics/uniform_diagnostics.h"
+#include <algorithm>
 #include <type_traits>
 
 // SP1 — RAII 의미론 컴파일 타임 검증.
@@ -28,25 +30,29 @@ namespace SJH
         if (!program->TryLink(shaders))
             return nullptr;
 
-        // link 성공 직후 uniform 캐시 eager build — 호출자는 즉시 Uniforms::Set* 호출 가능.
-        program->BuildUniformCache();
+        // SP6 — link 성공 직후 UniformCache eager build.
+        program->mUniformCache.Build(*program);
         return program;
     }
 
     ProgramUPtr Program::CreateWithVSFS(const std::string &vertShaderFilename,
                                         const std::string &fragShaderFilename)
     {
-        ShaderPtr vs = Shader::CreateFromFile(vertShaderFilename,
-                                              GL_VERTEX_SHADER);
-        ShaderPtr fs = Shader::CreateFromFile(fragShaderFilename,
-                                              GL_FRAGMENT_SHADER);
+        ShaderPtr vs = Shader::CreateFromFile(vertShaderFilename, GL_VERTEX_SHADER);
+        ShaderPtr fs = Shader::CreateFromFile(fragShaderFilename, GL_FRAGMENT_SHADER);
         if (!vs || !fs)
             return nullptr;
-        return std::move(Create({vs, fs}));
+        return Create({vs, fs});
     }
 
     Program::~Program()
     {
+        // SP6 Observer cascade — 의존 Material 들에 release 통지.
+        // OnProgramReleased 안에서 Material 이 UnregisterMaterial 호출 가능 -> 복사본 순회.
+        const auto dependents = mDependentMaterials;
+        for (auto* m : dependents)
+            if (m) m->OnProgramReleased(this);
+
         if (mProgramAddr != 0)
         {
             Diagnostics::UniformDiagnostics::Invalidate(mProgramAddr);
@@ -57,7 +63,6 @@ namespace SJH
     bool Program::TryLink(const std::vector<ShaderPtr> &shaders)
     {
         mProgramAddr = glCreateProgram();
-        // 모든 셰이더를 program 에 attach — 링크 시 셰이더 단계가 결합됨
         for (auto &shader : shaders)
             glAttachShader(mProgramAddr, shader->GetShaderAddr());
 
@@ -65,43 +70,21 @@ namespace SJH
         return SJH::Diagnostics::GLObjectLog::CheckProgramLink(mProgramAddr);
     }
 
-    void Program::BuildUniformCache()
+    void Program::RegisterMaterial(Material* m) const
     {
-        GLint count = 0;
-        glGetProgramiv(mProgramAddr, GL_ACTIVE_UNIFORMS, &count);
-        if (count <= 0) return;
-
-        GLint maxNameLen = 0;
-        glGetProgramiv(mProgramAddr, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxNameLen);
-        if (maxNameLen <= 0) return;
-
-        std::vector<char> nameBuf(static_cast<size_t>(maxNameLen + 1), '\0');
-        for (GLint i = 0; i < count; ++i)
+        if (!m) return;
+        // 중복 등록 방지 — Material::SetProgram 이 한 Program 에 두 번 등록 불가.
+        if (std::find(mDependentMaterials.begin(), mDependentMaterials.end(), m)
+            == mDependentMaterials.end())
         {
-            GLsizei nameSize = 0;
-            GLint   size     = 0;
-            GLenum  type     = 0;
-            glGetActiveUniform(mProgramAddr, static_cast<GLuint>(i),
-                               maxNameLen, &nameSize, &size, &type, nameBuf.data());
-
-            const GLint loc = glGetUniformLocation(mProgramAddr, nameBuf.data());
-            mUniformCache.emplace(
-                std::string(nameBuf.data(), static_cast<size_t>(nameSize)),
-                UniformEntry{loc, type});
+            mDependentMaterials.push_back(m);
         }
     }
 
-    GLint Program::GetLocation(const char* name) const
+    void Program::UnregisterMaterial(Material* m) const
     {
-        auto it = mUniformCache.find(name);
-        if (it == mUniformCache.end()) return -1;
-        return it->second.Location;
-    }
-
-    GLenum Program::GetType(const char* name) const
-    {
-        auto it = mUniformCache.find(name);
-        if (it == mUniformCache.end()) return 0;
-        return it->second.Type;
+        mDependentMaterials.erase(
+            std::remove(mDependentMaterials.begin(), mDependentMaterials.end(), m),
+            mDependentMaterials.end());
     }
 }

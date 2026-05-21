@@ -96,7 +96,7 @@ namespace SJH::Uniforms
         glUniform1i(loc, v);
     }
 
-    GLint Get(const Program &prog, const char *name)
+    GLint GetLocation(const Program &prog, const char *name)
     {
         GLint loc = prog.GetLocation(name);
         if (loc < 0) loc = glGetUniformLocation(prog.GetProgramAddr(), name);
