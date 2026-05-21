@@ -13,7 +13,7 @@ namespace SJH::Scene
 {
     namespace
     {
-        /// @brief direction vector → Transform.EulerRot (degree).
+        /// @brief direction vector  Transform.EulerRot (degree).
         /// @details OpenGL 정통 — Forward = -Z, Up = +Y. EulerRot=(pitch, yaw, 0) 의 ZYX 합성:
         ///   - pitch = asin(d.y)
         ///   - yaw   = atan2(d.x, -d.z)

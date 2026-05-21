@@ -589,9 +589,9 @@ namespace exercise::Model
 
 	//	glBindVertexArray(VAO)
 	//		glBindBuffer(GL_ARRAY_BUFFER, VBO)
-	//			glBufferData(...)               ← VBO 바인딩 후 + CPU 데이터 준비 후
-	//			glVertexAttribPointer(...)      ← VBO 바인딩 후 + VAO 바인딩 중
-	//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)  ← VAO 바인딩 중이어야 VAO에 기록
+	//			glBufferData(...)               <- VBO 바인딩 후 + CPU 데이터 준비 후
+	//			glVertexAttribPointer(...)      <- VBO 바인딩 후 + VAO 바인딩 중
+	//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)  <- VAO 바인딩 중이어야 VAO에 기록
 	//		glBufferData(GL_ELEMENT_ARRAY_BUFFER, ...)
 	ModelBase &ModelBase::Build()
 	{

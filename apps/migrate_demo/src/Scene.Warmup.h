@@ -27,6 +27,7 @@
  *   - **Depth func combo** — runtime 변경 UI 없음. GL_LESS (기본) 고정.
  */
 
+#include "GL/gl3w.h"
 #include "material/material_uniforms.h"
 #include "object/light.h"
 #include "object/mesh.h"
@@ -50,9 +51,19 @@ namespace MigrateDemo::Scene
 	constexpr uint32_t LAYER_SCENE  = 1u; // 비트 0 — Plane/Box/Outline/Windows/Light 마커
 	constexpr uint32_t LAYER_POSTFX = 2u; // 비트 1 — Screen quad (PostFXCamera 만 본다)
 
+	/// @brief 워밍업 후 ImGui 컨트롤이 잡아야 하는 핵심 actor/component 포인터.
+	/// @details 광원 enable 토글 / FlashLight 모드 / 색상 슬라이더 등을 위해 main.cpp 가 보유.
+	struct SceneRefs
+	{
+		SJH::DirLight   *dirLight       = nullptr;
+		SJH::PointLight *pointLights[2] = {nullptr, nullptr};
+		SJH::SpotLight  *spotLight      = nullptr;
+		SJH::Scene::Actor *spotLightActor = nullptr; // FlashLight 모드 시 카메라 추종.
+	};
+
 	// === Queue Layer 컨벤션 (Unity 정통) ===
-	constexpr int QUEUE_OUTLINE     = 1995; // Opaque 직전 — 셸이 먼저, Box2 가 덮어서 rim 만 보임
-	constexpr int QUEUE_OPAQUE      = 2000; // 기본 Opaque
+	constexpr int QUEUE_OPAQUE      = 2000; // 기본 Opaque (Plane / Box / 라이트 마커)
+	constexpr int QUEUE_OUTLINE     = 2005; // Opaque 직후 — Box2 가 stencil=1 도장 후 Outline 이 stencil!=1 로 rim 만 그림
 	constexpr int QUEUE_TRANSPARENT = 3000; // Alpha discard 윈도우
 
 	struct Programs
@@ -62,7 +73,7 @@ namespace MigrateDemo::Scene
 		const SJH::Program *window = nullptr; // 윈도우 — alpha discard
 	};
 
-	/// @brief 이미지 → 텍스쳐 워밍업. ResourceRegistry 에 일괄 등록.
+	/// @brief 이미지 -> 텍스쳐 워밍업. ResourceRegistry 에 일괄 등록.
 	inline void WarmupAssets(SJH::ResourceRegistry &reg)
 	{
 		// === 절차적 이미지 — Phong specular 채널용 회색 ===
@@ -178,7 +189,9 @@ namespace MigrateDemo::Scene
 			dir.Root().AddChild(std::move(box));
 		}
 
-		// --- Box2 + Outline child ---
+		// --- Box2 + Outline child (stencil 정통) ---
+		// 레퍼런스 (context.cpp): Box2 를 stencil=1 로 도장 후, Outline 셸 (scale 1.05) 을
+		// stencil!=1 + depth off 로 그려 rim 만 노출.
 		{
 			auto box = std::make_unique<SJH::Scene::Actor>("Box2");
 			box->SetLayer(LAYER_SCENE);
@@ -187,16 +200,38 @@ namespace MigrateDemo::Scene
 			box->GetTransform().Scale     = vmath::vec3(1.5f, 1.5f, 1.5f);
 			auto *matBox2 = detail::MakePhongMat(reg, "mat_box2", progs.phong,
 			                                       texContainer2, texContainer2Spec, 64.0f);
-			box->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matBox2, QUEUE_OPAQUE);
+			auto *mrBox2 = box->AddComponent<SJH::Scene::MeshRenderer>(
+			    meshBox, matBox2, QUEUE_OPAQUE);
+			// stencil=1 도장 — 어느 픽셀이 Box2 내부인지 mark.
+			mrBox2->Stencil.Enabled   = true;
+			mrBox2->Stencil.Func      = GL_ALWAYS;
+			mrBox2->Stencil.Ref       = 1;
+			mrBox2->Stencil.TestMask  = 0xFFu;
+			mrBox2->Stencil.SFail     = GL_KEEP;
+			mrBox2->Stencil.DpFail    = GL_KEEP;
+			mrBox2->Stencil.DpPass    = GL_REPLACE; // depth+stencil pass 시 stencil 에 ref(1) 쓰기.
+			mrBox2->Stencil.WriteMask = 0xFFu;
 
-			// Outline 셸 — Box2 의 자식이므로 부모 transform 누적. scale 1.05 로 약간 큼.
-			// queueLayer 1995 < 2000 이라 본체보다 먼저 그려져 rim 만 노출 (depth 트릭).
+			// Outline 셸 — Box2 의 자식. scale 1.05. queueLayer 2005 > 2000 이라 Box2 다음.
 			auto outline = std::make_unique<SJH::Scene::Actor>("Outline");
 			outline->SetLayer(LAYER_SCENE);
 			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f);
 			auto *matOutline = detail::MakeSimpleMat(reg, "mat_outline", progs.simple,
 			                                         vmath::vec4(1.0f, 1.0f, 0.5f, 1.0f));
-			outline->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matOutline, QUEUE_OUTLINE);
+			auto *mrOutline = outline->AddComponent<SJH::Scene::MeshRenderer>(
+			    meshBox, matOutline, QUEUE_OUTLINE);
+			// Outline 픽셀은 stencil!=1 일 때만 그림 (Box2 가 도장한 안쪽은 skip).
+			mrOutline->Stencil.Enabled   = true;
+			mrOutline->Stencil.Func      = GL_NOTEQUAL;
+			mrOutline->Stencil.Ref       = 1;
+			mrOutline->Stencil.TestMask  = 0xFFu;
+			mrOutline->Stencil.SFail     = GL_KEEP;
+			mrOutline->Stencil.DpFail    = GL_KEEP;
+			mrOutline->Stencil.DpPass    = GL_KEEP;
+			mrOutline->Stencil.WriteMask = 0x00u; // stencil 에 쓰지 않음 (read-only).
+			// depth 비활성 — Outline 이 다른 오브젝트 뒤에 있어도 표면 그려지도록.
+			mrOutline->DepthTest  = false;
+			mrOutline->DepthWrite = false;
 			box->AddChild(std::move(outline));
 
 			dir.Root().AddChild(std::move(box));
@@ -225,13 +260,15 @@ namespace MigrateDemo::Scene
 	}
 
 	/// @brief 광원 워밍업 — DirLight + PointLight × 2 + SpotLight + 각 점/스포트 광원 마커 큐브.
-	inline void WarmupLights(const Programs &progs, SJH::Scene::Director &dir)
+	/// @return SceneRefs — main.cpp 의 ImGui 컨트롤이 잡아야 하는 component/actor 포인터.
+	inline SceneRefs WarmupLights(const Programs &progs, SJH::Scene::Director &dir)
 	{
 		auto &reg     = SJH::ResourceRegistry::Get();
 		auto *meshBox = reg.FindMesh("mesh_box");
 
+		SceneRefs refs;
+
 		// === DirLight (마커 없음 — 평행광이라 위치 무의미) ===
-		// 레퍼런스 context.cpp: EulerRot {-90, 0, 0} → forward = (0,-1,0).
 		{
 			auto sun = SJH::Scene::CreateDirLightActor("Sun", vmath::vec3(0.0f, -1.0f, 0.0f));
 			sun->SetLayer(LAYER_SCENE);
@@ -239,6 +276,7 @@ namespace MigrateDemo::Scene
 			dl->Ambient  = vmath::vec3(1.0f, 1.0f, 1.0f);
 			dl->Diffuse  = vmath::vec3(1.0f, 1.0f, 1.0f);
 			dl->Specular = vmath::vec3(1.0f, 1.0f, 1.0f);
+			refs.dirLight = dl;
 			dir.Root().AddChild(std::move(sun));
 		}
 
@@ -257,6 +295,7 @@ namespace MigrateDemo::Scene
 			auto *mat = detail::MakeSimpleMat(reg, "mat_marker_lamp0", progs.simple,
 			                                   vmath::vec4(pl->Diffuse, 1.0f));
 			lamp->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat, QUEUE_OPAQUE);
+			refs.pointLights[0] = pl;
 			dir.Root().AddChild(std::move(lamp));
 		}
 
@@ -275,11 +314,11 @@ namespace MigrateDemo::Scene
 			auto *mat = detail::MakeSimpleMat(reg, "mat_marker_lamp1", progs.simple,
 			                                   vmath::vec4(pl->Diffuse, 1.0f));
 			lamp->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat, QUEUE_OPAQUE);
+			refs.pointLights[1] = pl;
 			dir.Root().AddChild(std::move(lamp));
 		}
 
 		// === SpotLight — translate(1, 4, 4), 아래 방향, cutoff 5°/120° ===
-		// 레퍼런스: CutoffAngleDeg=5, OuterCutoffAngleDeg=120, Distance=128.
 		{
 			auto spot = SJH::Scene::CreateSpotLightActor("Sun_Spot",
 			                                              vmath::vec3(1.0f, 4.0f, 4.0f),
@@ -297,7 +336,11 @@ namespace MigrateDemo::Scene
 			auto *mat = detail::MakeSimpleMat(reg, "mat_marker_spot", progs.simple,
 			                                   vmath::vec4(sl->Diffuse, 1.0f));
 			spot->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat, QUEUE_OPAQUE);
+			refs.spotLight      = sl;
+			refs.spotLightActor = spot.get();
 			dir.Root().AddChild(std::move(spot));
 		}
+
+		return refs;
 	}
 } // namespace MigrateDemo::Scene

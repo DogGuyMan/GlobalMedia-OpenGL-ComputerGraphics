@@ -1,6 +1,7 @@
 #ifndef __SJH_RENDER_QUEUE_H__
 #define __SJH_RENDER_QUEUE_H__
 
+#include "scene/components.h"   // StencilState
 #include <vmath.h>
 #include <cstddef>
 #include <vector>
@@ -13,7 +14,8 @@ namespace SJH
     class Material;
     class RenderContext;
 
-    /// @brief Cocos 식 Layer A — 한 프레임의 정렬 가능한 draw command (7 필드, Q2-3).
+    /// @brief Cocos 식 Layer A — 한 프레임의 정렬 가능한 draw command.
+    /// @details MeshRenderer 의 per-actor GL 상태 (Stencil / DepthTest / DepthWrite) 를 함께 캐리.
     struct DrawCommand
     {
         const Program*       program     = nullptr;
@@ -23,6 +25,11 @@ namespace SJH
         int                  queueLayer  = 2000;
         const Scene::Actor*  actor       = nullptr;   ///< 디버그 추적
         float                depth       = 0.0f;      ///< view-space z (back-to-front)
+
+        // ── per-actor override (MeshRenderer 에서 복사) ──
+        Scene::StencilState  stencil;                  ///< 기본 disabled.
+        bool                 depthTest   = true;
+        bool                 depthWrite  = true;
     };
 
     class RenderQueue

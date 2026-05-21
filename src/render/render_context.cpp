@@ -59,7 +59,10 @@ namespace SJH
     void RenderContext::BeginFrame(RenderTarget& target)
     {
         BindTarget(target);
-        Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // Stencil 도 함께 clear — Framebuffer 가 DEPTH24_STENCIL8 라 함께 사용 가정.
+        // Stencil 미사용 패스는 영향 없음 (단 한 번의 clear 비용만 추가).
+        glClearStencil(0);
+        Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         SetDepthTest(true, GL_LESS);
         SetBlend(true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
