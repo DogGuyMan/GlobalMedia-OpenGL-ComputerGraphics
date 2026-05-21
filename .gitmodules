@@ -7,9 +7,6 @@
 [submodule "extern/Effekseer"]
 	path = extern/Effekseer
 	url = https://github.com/effekseer/Effekseer.git
-[submodule "extern/entt"]
-	path = extern/entt
-	url = https://github.com/skypjack/entt.git
 [submodule "extern/tweeny"]
 	path = extern/tweeny
 	url = https://github.com/mobius3/tweeny.git
@@ -22,3 +19,11 @@
 [submodule "extern/spdlog"]
 	path = extern/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "extern/imgui"]
+	path = extern/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = master
+[submodule "extern/Catch2"]
+	path = extern/Catch2
+	url = https://github.com/catchorg/Catch2.git
+	branch = devel

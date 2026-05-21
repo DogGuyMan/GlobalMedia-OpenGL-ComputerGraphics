@@ -18,3 +18,23 @@ endif()
 
 # ______ 챕터별 실행 파일 ______
 add_subdirectory(apps)
+
+# ______ 테스트 (Catch2 v3 — extern/Catch2 서브모듈로 통합) ______
+# 기본 OFF — 챕터 빌드 시 Catch2 컴파일 오버헤드 제외.
+# 활성화: cmake --preset ninja -DENABLE_TESTING=ON
+option(ENABLE_TESTING "Build unit tests (Catch2 v3)" OFF)
+if(ENABLE_TESTING)
+    if(NOT EXISTS ${CMAKE_SOURCE_DIR}/extern/Catch2/CMakeLists.txt)
+        message(FATAL_ERROR
+            "extern/Catch2 가 비어 있습니다. 'git submodule update --init --recursive' 실행 후 다시 시도하세요.")
+    endif()
+    # Catch2 자체 CMake — Catch2::Catch2 / Catch2::Catch2WithMain 타겟 노출
+    add_subdirectory(extern/Catch2)
+    # extras/Catch.cmake — include(Catch) + catch_discover_tests(...) 매크로
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/extern/Catch2/extras")
+    enable_testing()
+    add_subdirectory(test_smoke)
+    if(EXISTS ${CMAKE_SOURCE_DIR}/test/CMakeLists.txt)
+        add_subdirectory(test)
+    endif()
+endif()

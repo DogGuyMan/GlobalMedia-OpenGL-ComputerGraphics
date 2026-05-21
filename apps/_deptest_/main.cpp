@@ -1,8 +1,6 @@
 // 의존성 등록 검증용 임시 타겟 — Task 8 에서 비활성화한다.
 #include <sb7.h>
 
-#include <entt/entt.hpp>
-
 #define STB_RECT_PACK_IMPLEMENTATION
 #include <stb_rect_pack.h>
 
