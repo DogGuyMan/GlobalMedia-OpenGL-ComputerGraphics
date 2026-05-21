@@ -1,4 +1,4 @@
-#version 330 core
+#version 410 core
 
 in vec3 vsNormal;
 in vec3 vsPosition;

@@ -3,6 +3,7 @@
 
 #include "object/transform.h"
 #include <cassert>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -84,6 +85,12 @@ namespace SJH::Scene
         void SetActive(bool a) { mActive = a; }
         bool IsEntered() const { return mEntered; }
 
+        // === Layer (SP4 D-15) ===
+        /// @brief Actor 의 가시성 layer (Unity 정통 비트마스크).
+        /// @details 기본값 = 1 (비트 0). Camera::cullingMask 와 AND 검사로 RenderSystem 이 필터.
+        void     SetLayer(uint32_t layer) { mLayer = layer; }
+        uint32_t GetLayer() const         { return mLayer; }
+
         // === Lifecycle ===
         void OnEnter();
         void OnExit();
@@ -99,6 +106,7 @@ namespace SJH::Scene
         Transform   mTransform;
         bool        mActive  = true;
         bool        mEntered = false;
+        uint32_t    mLayer   = 1u;   // 기본 layer (비트 0) — 모든 Camera 의 기본 mask(~0u) 와 매치.
     };
 
     // === Template 정의 (ddd 2 차 patch 적용) ===

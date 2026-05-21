@@ -12,10 +12,6 @@
  *  - **diffuse**: 표면 normal 과 광원 방향의 cos 으로 감쇠 — *주된* 밝기 항.
  *  - **specular**: 시선 방향과 반사 벡터의 cos^shininess — *하이라이트*.
  *
- *  ### 변경 이력
- *  - **Phase 10 (306d9f4)**: Context 가 직접 라이팅 멤버 보유 (`mLightPos` / `mLightColor` / `mAmbientStrength` 등 8개).
- *  - **Phase 12 (02bd90e)**: 본 클래스로 분리 — Phong 3항을 색상 vec3 로 표현.
- *
  *  ### 비-책임
  *  - ❌ 셰이더 uniform 전송 — @c Context::Render 가 @c Uniforms::SetVec3 로 직접 push.
  *  - ❌ 광원 *타입* (점/방향/스포트) 분기 — 현재 점광원만 지원. 추후 enum + subclass 도입 예정.
@@ -26,6 +22,7 @@
 
 #ifndef __SJH_LIGHT_H__
 #define __SJH_LIGHT_H__
+#include "scene/actor.h"   // SP5: Component base + Actor::GetWorldMatrix (모두 inline → link 의존 0)
 #include <vmath.h>
 
 namespace SJH
@@ -56,22 +53,24 @@ namespace SJH
      *  모든 표면에 동일한 방향에서 평행하게 들어오는 무한원 광원.
      *  거리 감쇠(attenuation) 없음 — 태양광 모델링에 적합.
      *  셰이더 구조체 `DirLight` 와 1:1 매핑.
+     *
+     *  SP5 — `Scene::Component` 상속 추가. Owner Actor 의 Transform 이 방향 제공:
+     *  `GetWorldDirection()` = worldMatrix[2] (forward = +Z) 정규화.
      */
-    class DirLight
+    class DirLight : public Scene::Component
     {
     public:
         /// @brief Ambient 항 색상 (RGB, 0~1). 셰이더 uniform `light.ambient`.
-        /// @details 광원과 무관한 기본 밝기. 일반적으로 매우 작은 값 (예: @c (0.1, 0.1, 0.1)) 으로 그림자 영역에도 약간의 색.
-        /// @note 방향은 `SceneNodeId::DirLight` 노드의 Transform(EulerRot) 이 소유 — WorldForward() 가 산출.
         vmath::vec3 Ambient{vmath::vec3(0.1f, 0.1f, 0.1f)};
 
         /// @brief Diffuse 항 색상 (RGB, 0~1). 셰이더 uniform `light.diffuse`.
-        /// @details Lambertian 항의 광원 색. 광원의 *주된 색상* — 일반적으로 흰색 근처.
         vmath::vec3 Diffuse{vmath::vec3(0.5f, 0.5f, 0.5f)};
 
         /// @brief Specular 항 색상 (RGB, 0~1). 셰이더 uniform `light.specular`.
-        /// @details 하이라이트 색. 일반적으로 흰색 — 금속이 아닌 표면은 광원 색을 그대로 반사.
         vmath::vec3 Specular{vmath::vec3(1.0f, 1.0f, 1.0f)};
+
+        /// @brief Owner Actor 의 worldMatrix forward(+Z) 컬럼 정규화. Owner 없을 때 (-Z) fallback.
+        vmath::vec3 GetWorldDirection() const;
     };
 
     /**
@@ -79,59 +78,57 @@ namespace SJH
      * @details
      *  거리 감쇠(attenuation)를 적용하는 점 광원. 셰이더 구조체 `PointLight` 와 1:1 매핑.
      *  감쇠 계수(Kc, Kl, Kq)는 @ref GetAttenuationCoeff 가 도달 거리(@c Distance)에서 자동 도출.
-     * @note 배열로 다수 인스턴스화 가능 — 셰이더 `pointLights[i].*` 의 `i` 와 배열 인덱스를 동기.
+     *
+     *  SP5 — `Scene::Component` 상속 추가. Owner Actor 의 Transform 이 위치 제공:
+     *  `GetWorldPosition()` = worldMatrix[3].xyz (translate column).
+     *
+     * @note Actor 가 컴포넌트 map 에 `type_index` 로 저장 — *PointLight 두 개 같은 Actor 에 부착 불가*.
+     *       복수 점광원은 Actor 인스턴스를 분리해 구성 (RenderSystem 이 모두 수집).
      */
-    class PointLight
+    class PointLight : public Scene::Component
     {
     public:
-        /// @brief 거리 감쇠 산출 기준 도달 거리. 셰이더 uniform `pointLights[i].attenuation`(vec3) 는 @ref GetAttenuationCoeff 로 도출.
-        /// @note 위치는 `SceneNodeId::PointLight*` 노드의 Transform(Translate) 이 소유 — World() 가 산출.
+        /// @brief 거리 감쇠 산출 기준 도달 거리.
         float Distance{32.0f};
 
-        /// @brief Ambient 항 색상 (RGB, 0~1). 셰이더 uniform `light.ambient`.
-        /// @details 광원과 무관한 기본 밝기. 일반적으로 매우 작은 값 (예: @c (0.1, 0.1, 0.1)) 으로 그림자 영역에도 약간의 색.
+        /// @brief Ambient 항 색상 (RGB, 0~1).
         vmath::vec3 Ambient{vmath::vec3(0.1f, 0.1f, 0.1f)};
 
-        /// @brief Diffuse 항 색상 (RGB, 0~1). 셰이더 uniform `light.diffuse`.
-        /// @details Lambertian 항의 광원 색. 광원의 *주된 색상* — 일반적으로 흰색 근처.
+        /// @brief Diffuse 항 색상 (RGB, 0~1).
         vmath::vec3 Diffuse{vmath::vec3(0.5f, 0.5f, 0.5f)};
 
-        /// @brief Specular 항 색상 (RGB, 0~1). 셰이더 uniform `light.specular`.
-        /// @details 하이라이트 색. 일반적으로 흰색 — 금속이 아닌 표면은 광원 색을 그대로 반사.
+        /// @brief Specular 항 색상 (RGB, 0~1).
         vmath::vec3 Specular{vmath::vec3(1.0f, 1.0f, 1.0f)};
+
+        /// @brief Owner Actor 의 worldMatrix translate column. Owner 없을 때 원점.
+        vmath::vec3 GetWorldPosition() const;
     };
 
     /// @brief 스포트라이트 — 위치 + 콘 축 방향 + inner/outer 컷오프 + 거리 감쇠 + Phong 3항.
     /// @details PointLight 에 방향(@ref Direction)과 콘 컷오프(@ref CutoffAngleDeg, @ref OuterCutoffAngleDeg)
     ///          가 추가된 형태. 콘 안쪽은 fully lit, 바깥쪽은 fully dark,
     ///          inner~outer 구간은 부드럽게 감쇠(soft edge) 시키는 데 사용.
-    class SpotLight
+    ///
+    ///          SP5 — `Scene::Component` 상속. 위치 + 방향 모두 Owner Actor Transform 도출.
+    class SpotLight : public Scene::Component
     {
     public:
-        /// @note 위치/방향은 `SceneNodeId::SpotLight` 노드의 Transform 이 소유 —
-        ///       위치는 World(), 방향은 WorldForward() 가 산출.
-
         /// @brief 콘 안쪽 컷오프 각도 (degree). 이 각도 이내는 fully lit.
-        /// @details degree 로 보관 — 셰이더 송신 시 `cosf(vmath::radians(mCutoffAngleDeg))` 변환 후 push.
+        /// @details degree 로 보관 — 송신 시점 (Uniforms::SetSpotLight) 에 cosf(radians) 변환.
         float CutoffAngleDeg{12.5f};
 
         /// @brief 콘 바깥쪽 컷오프 각도 (degree). 이 각도 바깥은 fully dark.
-        /// @details CutoffAngleDeg ~ OuterCutoffAngleDeg 구간은 smoothstep 으로 부드럽게 감쇠.
-        ///          현재 셰이더(lighting.fs) 는 `light.cutoff` 단일 float 만 사용 — outer 는 향후 확장용.
         float OuterCutoffAngleDeg{17.5f};
 
         /// @brief 거리 감쇠 산출 기준 도달 거리.
-        /// @details 셰이더 uniform `light.attenuation`(vec3 = Kc, Kl, Kq) 는 @ref GetAttenuationCoeff 로 도출.
         float Distance{32.0f};
 
-        /// @brief Ambient 항 색상 (RGB, 0~1). 셰이더 uniform `light.ambient`.
         vmath::vec3 Ambient{vmath::vec3(0.1f, 0.1f, 0.1f)};
-
-        /// @brief Diffuse 항 색상 (RGB, 0~1). 셰이더 uniform `light.diffuse`.
         vmath::vec3 Diffuse{vmath::vec3(0.5f, 0.5f, 0.5f)};
-
-        /// @brief Specular 항 색상 (RGB, 0~1). 셰이더 uniform `light.specular`.
         vmath::vec3 Specular{vmath::vec3(1.0f, 1.0f, 1.0f)};
+
+        vmath::vec3 GetWorldPosition() const;
+        vmath::vec3 GetWorldDirection() const;
     };
 
     /**
@@ -143,9 +140,9 @@ namespace SJH
     static vmath::vec3 GetAttenuationCoeff(float distance)
     {
         const auto linear_coeff = vmath::vec4(
-            8.4523112e-05, 4.4712582e+00, -1.8516388e+00, 3.3955811e+01);
+            8.4523112e-05f, 4.4712582e+00f, -1.8516388e+00f, 3.3955811e+01f);
         const auto quad_coeff = vmath::vec4(
-            -7.6103583e-04, 9.0120201e+00, -1.1618500e+01, 1.0000464e+02);
+            -7.6103583e-04f, 9.0120201e+00f, -1.1618500e+01f, 1.0000464e+02f);
 
         float kc = 1.0f;
         float d = 1.0f / distance;

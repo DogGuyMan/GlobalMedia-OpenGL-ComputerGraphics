@@ -46,6 +46,13 @@ namespace SJH
         return Create(data.vertices, data.indices, GL_TRIANGLES);
     }
 
+    MeshUPtr Mesh::CreateScreenQuad()
+    {
+        // NDC clip-space 화면 가득 quad — SP4 post-processing 패스용.
+        MeshData data = Geometry::ScreenQuad();
+        return Create(data.vertices, data.indices, GL_TRIANGLES);
+    }
+
     GLuint Mesh::GetVAO() const
     {
         return mVertexLayout ? mVertexLayout->GetVAO() : 0;

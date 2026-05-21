@@ -442,6 +442,22 @@ namespace SJH
             return FromInterleaved(raw, idx);
         }
 
+        MeshData ScreenQuad()
+        {
+            // NDC clip-space 화면 가득 quad — postprocess.vs 가 model/view/proj 우회.
+            // position 은 NDC 좌표, UV 는 화면 매핑 (좌하단 0,0 → 우상단 1,1).
+            // normal 은 +Z (사용 안 함, Vertex 구조체 충족).
+            MeshData data;
+            data.vertices = {
+                { { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
+                { {  1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+                { {  1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+                { { -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+            };
+            data.indices = { 0, 1, 2, 0, 2, 3 };
+            return data;
+        }
+
         MeshData Plane(bool back_face)
         {
             using namespace Const::GEOMETRY;

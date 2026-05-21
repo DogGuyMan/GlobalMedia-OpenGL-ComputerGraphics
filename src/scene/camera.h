@@ -2,7 +2,10 @@
 #define __SJH_SCENE_CAMERA_H__
 
 #include "scene/actor.h" // Component + Actor::GetWorldMatrix
+#include <cstdint>       // uint32_t for cullingMask (SP4 D-15)
 #include <vmath.h>
+
+namespace SJH { class Framebuffer; }   // SetTargetFramebuffer 인자 forward decl (SP4 T2).
 
 namespace SJH::Scene
 {
@@ -45,6 +48,23 @@ namespace SJH::Scene
         void SetNearZ(float v) { mNearZ = v; }
         void SetFarZ(float v) { mFarZ = v; }
 
+        // ── SP4 multi-pass ─────────────────────────────────────────────────────
+        /// @brief 렌더 대상 FBO 지정 — Unity Camera.targetTexture 정통.
+        /// @details nullptr = default backbuffer. RenderSystem 이 BeginFrame 시 자동 사용.
+        void SetTargetFramebuffer(Framebuffer* fb) { mTargetFB = fb; }
+        Framebuffer* GetTargetFramebuffer() const  { return mTargetFB; }
+
+        /// @brief Camera 정렬 키 — Unity Camera.depth 정통. 작은 값이 먼저 렌더.
+        /// @details Multi-pass 에서 SceneCamera(depth=0) → PostFXCamera(depth=1) 직렬.
+        void SetDepth(int d) { mDepth = d; }
+        int  GetDepth() const { return mDepth; }
+
+        /// @brief 가시 객체 비트마스크 — Unity Camera.cullingMask 정통 (SP4 D-15).
+        /// @details RenderSystem 이 (cam.GetCullingMask() & actor.GetLayer()) AND 로 필터.
+        ///          기본 ~0u = 모든 layer (SP3.5 호환). postfx_demo 의 SceneFB self-sampling UB 회피.
+        void     SetCullingMask(uint32_t mask) { mCullingMask = mask; }
+        uint32_t GetCullingMask() const        { return mCullingMask; }
+
     private:
         /// @brief affine 4x4 (R|t) 행렬의 역행렬 — 회전 transpose + translate negate.
         /// @details 일반 inverse 아님. scale 1 가정. sb7 vmath 가 inverse 미제공이라 자작.
@@ -60,6 +80,11 @@ namespace SJH::Scene
         vmath::vec3 mEye    = vmath::vec3(0, 0, 5);
         vmath::vec3 mTarget = vmath::vec3(0, 0, 0);
         vmath::vec3 mUp     = vmath::vec3(0, 1, 0);
+
+        // SP4 multi-pass — 렌더 대상 + 정렬 키 + 가시 mask.
+        Framebuffer* mTargetFB     = nullptr;   // 비소유 — owner 는 App/Chapter (Option C).
+        int          mDepth        = 0;         // Unity Camera.depth — 작은 값 먼저.
+        uint32_t     mCullingMask  = ~0u;       // Unity Camera.cullingMask — 기본 모든 layer.
     };
 } // namespace SJH::Scene
 

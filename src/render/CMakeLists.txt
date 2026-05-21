@@ -18,6 +18,7 @@ target_include_directories(sjhopengl_render
 target_link_libraries(sjhopengl_render
     PUBLIC  SJH::common SJH::program project_deps
     PRIVATE SJH::diagnostics SJH::material SJH::object SJH::resource_registry SJH::scene
+            SJH::buffer   # render_system.cpp 가 framebuffer.h (RenderTarget 상속 인식) 사용 (SP4 T3)
 )
 
 target_compile_features(sjhopengl_render PUBLIC cxx_std_17)
