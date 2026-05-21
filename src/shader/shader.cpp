@@ -1,9 +1,7 @@
 #include "shader/shader.h"
 #include "diagnostics/gl_log.h"
 #include <memory>
-#include <sb7.h>
-#include <shader.h>
-#include <spdlog/spdlog.h>
+#include <shader.h>     // sb7::shader::load — 파일 → GLuint, sb7code 제공
 #include <type_traits>
 
 // SP1 — RAII 의미론 컴파일 타임 검증.
@@ -53,8 +51,10 @@ namespace SJH
 
     bool Shader::TryLoadFile(const std::string &filename, GLenum shader_type)
     {
-	GLuint mShaderAddr = sb7::shader::load(filename, shader_type, true);	
-        bool isSuccess = Diagnostics::GLObjectLog::CheckShaderCompile(mShaderAddr, filename);
-        return isSuccess;
+        // common 의 LoadTextFile 폐기 — sb7::shader::load 가 파일 IO + glCreateShader +
+        // glShaderSource + glCompileShader 까지 일괄 수행 (sb7code 제공).
+        // 주의: 멤버 mShaderAddr 에 직접 대입 (지역 변수 shadow 금지).
+        mShaderAddr = sb7::shader::load(filename.c_str(), shader_type, true);
+        return Diagnostics::GLObjectLog::CheckShaderCompile(mShaderAddr, filename);
     }
 }
