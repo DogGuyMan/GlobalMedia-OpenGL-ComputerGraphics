@@ -1,17 +1,16 @@
-#version 330 core
+#version 410 core
 
-in vec4 vsColor;
-in vec2 vsTexCoord;
+in vec2 vUV;
 
 out vec4 fragColor;
 
-uniform sampler2D frameTexture;
+uniform sampler2D uScene;   // SP4 컨벤션.
 
 void main()
 {
     // 텍셀 1칸 크기 — 텍스처 해상도에서 동적 계산.
     // textureSize 는 상수식이 아니므로 전역 초기화로 두면 비표준 — 반드시 main 안에서.
-    vec2 texel = 1.0 / vec2(textureSize(frameTexture, 0));
+    vec2 texel = 1.0 / vec2(textureSize(uScene, 0));
 
     vec2 offsets[9] = vec2[](
         vec2(-texel.x,  texel.y), vec2(0.0,  texel.y), vec2(texel.x,  texel.y),
@@ -35,7 +34,7 @@ void main()
     float lum[9];
     for (int i = 0; i < 9; ++i)
     {
-        vec3 rgb = texture(frameTexture, vsTexCoord + offsets[i]).rgb;
+        vec3 rgb = texture(uScene, vUV + offsets[i]).rgb;
         lum[i] = dot(rgb, vec3(0.299, 0.587, 0.114));
     }
 

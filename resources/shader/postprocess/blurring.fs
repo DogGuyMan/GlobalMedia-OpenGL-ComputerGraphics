@@ -1,15 +1,14 @@
-#version 330 core
+#version 410 core
 
-in vec4 vsColor;
-in vec2 vsTexCoord;
+in vec2 vUV;
 
 out vec4 fragColor;
 
-uniform sampler2D frameTexture;
+uniform sampler2D uScene;   // SP4 컨벤션.
 void main()
 {
     // 텍셀 1칸 크기 — 텍스처 해상도에서 동적 계산.
-    vec2 texel = 1.0 / vec2(textureSize(frameTexture, 0));
+    vec2 texel = 1.0 / vec2(textureSize(uScene, 0));
 
     // 7-tap 1D 커널 (Pascal 삼각형 6행). 원본 합 = 64.
     const float w[7] = float[](1.0, 6.0, 15.0, 20.0, 15.0, 6.0, 1.0);
@@ -36,7 +35,7 @@ void main()
             // 중심 (3,3) 기준 -3 ~ +3 텍셀 오프셋
             vec2 off = vec2(float(x - 3), float(y - 3)) * texel;
             float weight = wShaped[x] * wShaped[y]; // 2D 가중치 = 재성형된 1D 외적
-            color += texture(frameTexture, vsTexCoord + off).rgb * weight;
+            color += texture(uScene, vUV + off).rgb * weight;
         }
     }
 

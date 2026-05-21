@@ -1,5 +1,9 @@
-#ifndef __SHADER_H__
-#define __SHADER_H__
+#ifndef __SB7_SHADER_H__
+#define __SB7_SHADER_H__
+
+// 가드 이름은 __SB7_SHADER_H__ — SJH::Shader 의 src/shader/shader.h 가 __SJH_SHADER_H__ 사용.
+// 둘이 같은 가드 쓰면 한쪽 include 시 다른 쪽 skip 되어 namespace 미정의 빌드 에러.
+// sb7 vendored 헤더는 sb7.h / sb7ktx.h / sb7textoverlay.h 의 __SB7_*_H__ 패턴 일관.
 
 namespace sb7
 {
@@ -41,4 +45,4 @@ GLuint link_from_shaders(const GLuint * shaders,
 
 }
 
-#endif /* __SHADER_H__ */
+#endif /* __SJH_SHADER_H__ */

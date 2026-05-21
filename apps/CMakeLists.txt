@@ -7,10 +7,15 @@
 # add_subdirectory(_MyApp_)
 
 # imguitest — ImGui v1.53 통합 smoke test (SP3)
-add_subdirectory(imguitest)
+# [임시 비활성] src/imgui/ 모듈 폐기 작업 진행 중 — 모듈 복원 후 재활성.
+# add_subdirectory(imguitest)
 
 # ecs_demo — SP3 Actor+Component+RenderSystem+RenderQueue 시각 통합 검증 (T10)
 add_subdirectory(ecs_demo)
 
+# postfx_demo — SP4 multi-pass + invert post-processing 시각 검증 (T6b)
+add_subdirectory(postfx_demo)
+
 # audio_demo — FMOD Studio + ImGui 파라미터 데모 (신규)
-add_subdirectory(audio_demo)
+# [임시 비활성] ImGui 의존 — src/imgui/ 모듈 복원 후 재활성.
+# add_subdirectory(audio_demo)

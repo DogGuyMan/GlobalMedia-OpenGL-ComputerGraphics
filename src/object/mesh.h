@@ -55,6 +55,10 @@ namespace SJH
         /// @brief 평면(quad) 메시 생성 — XZ 평면 1×1 사각형. 바닥면 + 포스트프로세스 화면 quad 겸용.
         static MeshUPtr CreatePlane();
 
+        /// @brief NDC clip-space 화면 가득 quad — SP4 post-processing 용.
+        /// @details position 이 NDC (-1..1) 직접 좌표, postprocess.vs 가 model/view/proj 우회.
+        static MeshUPtr CreateScreenQuad();
+
         /// @brief 현재 메시의 VAO 관찰자. Mesh 보다 오래 보관 금지 — 소유자는 @c mVertexLayout.
         const VertexLayout *GetVertexLayout() const
         {

@@ -53,6 +53,12 @@ namespace SJH
         /// @brief Assimp aiMesh → MeshData 변환. position/normal/texCoord 채널을 그대로 복사하고
         ///        삼각형 face 인덱스를 펼침. (Triangulate 전처리 가정 — 모든 face 는 3 인덱스)
         MeshData FromAssimp(const aiMesh *mesh);
+
+        /// @brief NDC clip-space 화면 가득 quad — SP4 post-processing 용.
+        /// @details position 은 (-1,-1)~(1,1) NDC 좌표, UV 는 (0,0)~(1,1).
+        ///          postprocess.vs 가 model/view/proj 곱셈 없이 gl_Position = vec4(aPos,1) 직접 사용.
+        ///          normal 은 +Z (사용 안 함, Vertex 구조체 만족용).
+        MeshData ScreenQuad();
     } // namespace Geometry
 } // namespace SJH
 

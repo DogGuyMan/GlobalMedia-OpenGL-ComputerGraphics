@@ -9,7 +9,15 @@ namespace SJH
         auto framebuffer = FramebufferUPtr(new Framebuffer());
         if (!framebuffer->InitWithColorAttachment(colorAttachment))
             return nullptr;
-        return std::move(framebuffer);
+        return framebuffer;
+    }
+
+    FramebufferUPtr Framebuffer::Create(int width, int height)
+    {
+        auto framebuffer = FramebufferUPtr(new Framebuffer());
+        if (!framebuffer->InitWithSize(width, height))
+            return nullptr;
+        return framebuffer;
     }
 
     Framebuffer::~Framebuffer()
@@ -29,9 +37,20 @@ namespace SJH
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    void Framebuffer::Bind() const
+    void Framebuffer::Bind()
     {
+        // RenderTarget contract — glBindFramebuffer + glViewport. SP4 멀티패스에서
+        // RenderContext::BeginFrame(target&) 이 default backbuffer 와 FBO 둘 다 동일 코드로 처리.
         glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
+        const auto size = GetSize();
+        glViewport(0, 0, size.Width, size.Height);
+    }
+
+    Size Framebuffer::GetSize() const
+    {
+        if (mColorAttachment)
+            return Size{ mColorAttachment->GetWidth(), mColorAttachment->GetHeight() };
+        return Size{ 0, 0 };
     }
 
     bool Framebuffer::InitWithColorAttachment(const TexturePtr colorAttachment)
@@ -63,7 +82,19 @@ namespace SJH
         }
 
         BindToDefault();
-
         return true;
+    }
+
+    bool Framebuffer::InitWithSize(int width, int height)
+    {
+        // 내부 RGBA8 텍스처 생성 — Texture::Create(w,h,format) 가 TextureUPtr 반환 →
+        // shared_ptr 로 transfer (unique→shared move 변환). 이후 mColorAttachment 공유 소유.
+        auto textureU = Texture::Create(width, height, GL_RGBA);
+        if (!textureU)
+        {
+            spdlog::error("Framebuffer::Create(w,h): 내부 텍스처 생성 실패 — {}x{}", width, height);
+            return false;
+        }
+        return InitWithColorAttachment(TexturePtr(std::move(textureU)));
     }
 }
