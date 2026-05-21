@@ -11,3 +11,6 @@ add_subdirectory(imguitest)
 
 # ecs_demo — SP3 Actor+Component+RenderSystem+RenderQueue 시각 통합 검증 (T10)
 add_subdirectory(ecs_demo)
+
+# audio_demo — FMOD Studio + ImGui 파라미터 데모 (신규)
+add_subdirectory(audio_demo)

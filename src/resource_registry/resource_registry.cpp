@@ -1,22 +1,23 @@
 /**
  * @file resource_registry.cpp
- * @brief Create* — 캐시-미스 경로에서 새 자원을 생성.
- *        Find*   — 캐시-히트 경로에서 기존 인스턴스를 즉시 반환.
+ * @brief Create* / Register* — 캐시-미스 경로에서 새 자원을 생성·등록.
+ *        Find*               — 캐시-히트 경로에서 기존 인스턴스를 즉시 반환.
  *
  * @details emplace 결과의 iterator 로 raw 포인터를 꺼내 반환 — 매니저 보관 인스턴스를 가리키므로
  *          호출자에게 노출되는 lifetime 은 매니저 자신의 lifetime 과 동일하다.
  *          Image 는 스코프 한정 — GPU 업로드 후 Create* 스택 프레임을 벗어나면 즉시 소멸.
  */
 #include "resource_registry.h"
-#include <memory>
 #include <spdlog/spdlog.h>
 
 namespace SJH
 {
-    ResourceRegistryUPtr ResourceRegistry::Create()
+    ResourceRegistry& ResourceRegistry::Get()
     {
-        auto resourceManager = std::unique_ptr<ResourceRegistry>(new ResourceRegistry());
-        return std::move(resourceManager);
+        // Meyer's singleton — C++11 static local 은 thread-safe 초기화 보장.
+        // SP2 RenderContext::Get() / SP3 Scene::Director::Get() 와 동일 패턴.
+        static ResourceRegistry instance;
+        return instance;
     }
 
     ResourceRegistry::~ResourceRegistry()
@@ -88,11 +89,60 @@ namespace SJH
         return (it != mModels.end()) ? it->second.get() : nullptr;
     }
 
+    Program *ResourceRegistry::CreateProgram(const std::string &key,
+                                             const std::string &vertShaderFilename,
+                                             const std::string &fragShaderFilename)
+    {
+        if (mPrograms.find(key) != mPrograms.end())
+        {
+            spdlog::warn("CreateProgram: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+            return nullptr;
+        }
+        auto program = Program::CreateWithVSFS(vertShaderFilename, fragShaderFilename);
+        if (program == nullptr)
+        {
+            spdlog::error("CreateProgram: 셰이더 컴파일/링크 실패 — key '{}', vs '{}', fs '{}'",
+                          key, vertShaderFilename, fragShaderFilename);
+            return nullptr;
+        }
+        auto insertedIt = mPrograms.emplace(key, std::move(program)).first;
+        return insertedIt->second.get();
+    }
+
+    Program *ResourceRegistry::FindProgram(const std::string &key)
+    {
+        auto it = mPrograms.find(key);
+        return (it != mPrograms.end()) ? it->second.get() : nullptr;
+    }
+
+    Mesh *ResourceRegistry::RegisterMesh(const std::string &key, MeshUPtr mesh)
+    {
+        if (mesh == nullptr)
+        {
+            spdlog::warn("RegisterMesh: 키 '{}' 에 nullptr Mesh 위탁 요청 — 거부", key);
+            return nullptr;
+        }
+        if (mMeshes.find(key) != mMeshes.end())
+        {
+            spdlog::warn("RegisterMesh: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+            return nullptr;
+        }
+        auto insertedIt = mMeshes.emplace(key, std::move(mesh)).first;
+        return insertedIt->second.get();
+    }
+
+    Mesh *ResourceRegistry::FindMesh(const std::string &key)
+    {
+        auto it = mMeshes.find(key);
+        return (it != mMeshes.end()) ? it->second.get() : nullptr;
+    }
+
     void ResourceRegistry::Clear()
     {
         mTextures.clear();
         mMaterials.clear();
         mModels.clear();
+        mPrograms.clear();
+        mMeshes.clear();
     }
-
 }
