@@ -1,12 +1,26 @@
 #include "render/render_system.h"
 #include "render/render_context.h"
 #include "scene/scene.h"
+#include "scene/camera.h"
 #include "scene/actor.h"
 #include "scene/components.h"
 #include "material/material.h"
+#include <spdlog/spdlog.h>
 
 namespace SJH
 {
+    void RenderSystem::Render()
+    {
+        auto* cam = Scene::Director::Get().GetActiveCamera();
+        if (!cam)
+        {
+            spdlog::warn("RenderSystem::Render — Scene::Director 에 활성 Camera 미지정. "
+                         "SetActiveCamera 호출 누락 가능성. 프레임 skip.");
+            return;
+        }
+        Render(cam->GetViewMatrix(), cam->GetProjectionMatrix());
+    }
+
     void RenderSystem::Render(const vmath::mat4& viewMat, const vmath::mat4& projMat)
     {
         auto& rc = RenderContext::Get();

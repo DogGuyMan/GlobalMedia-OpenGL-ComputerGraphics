@@ -2,9 +2,11 @@
 #include <iostream>
 #include "render/render_context.h"
 #include "render/render_system.h"
+#include "resource_registry/resource_registry.h"
 #include "scene/scene.h"
+#include "scene/actor.h"
+#include "scene/camera.h"
 #include "scene/components.h"
-#include "program/program.h"
 #include "object/mesh.h"
 #include "material/material.h"
 
@@ -45,24 +47,37 @@ public:
 
     void startup() override
     {
-        // 1) Program / Mesh / Material 리소스 생성
-        mProgram = SJH::Program::CreateWithVSFS(
-            "resources/shaders/simple.vs",
-            "resources/shaders/simple.fs");
-        if (!mProgram) { std::cerr << "셰이더 로드 실패\n"; std::exit(1); }
+        // 1) 모든 자원은 ResourceRegistry 에 위탁 — 챕터/app 은 자원 owner 아님.
+        //    Cocos cc::Director::TextureCache / Unity Resources.Load 정통.
+        //    자세한 컨벤션: .claude/architecture.md §11.3.
+        auto& reg = SJH::ResourceRegistry::Get();
 
-        mBoxMesh = SJH::Mesh::CreateBox();
-        mBoxMat  = SJH::Material::Create();
-        mBoxMat->SetProgram(mProgram.get());
+        auto* prog = reg.CreateProgram("simple",
+                                       "resources/shaders/simple.vs",
+                                       "resources/shaders/simple.fs");
+        if (!prog) { std::cerr << "셰이더 로드 실패\n"; std::exit(1); }
 
-        // 2) Scene 에 Box Actor 추가
+        auto* mesh = reg.RegisterMesh("box", SJH::Mesh::CreateBox());
+        auto* mat  = reg.CreateMaterial("box");
+        mat->SetProgram(prog);
+
+        // 2) Scene 에 Box Actor 추가 — 자원은 비소유 핸들만 보유.
         auto& director = SJH::Scene::Director::Get();
         auto box = std::make_unique<SJH::Scene::Actor>("Box");
         box->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-        box->AddComponent<SJH::Scene::MeshRenderer>(mBoxMesh.get(), mBoxMat.get());
+        box->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
         director.Root().AddChild(std::move(box));
 
-        // 3) Scene 진입
+        // 3) MainCamera Actor — Camera 컴포넌트가 mOwner 따라가 InverseAffine 으로 view 계산.
+        //    Translate(0,0,5) → 카메라가 +Z 5 단위에 위치, 원점을 바라봄.
+        auto cam = std::make_unique<SJH::Scene::Actor>("MainCamera");
+        cam->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 5.0f);
+        const float aspect = static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight);
+        auto* camComp = cam->AddComponent<SJH::Scene::Camera>(45.0f, aspect, 0.1f, 100.0f);
+        director.SetActiveCamera(camComp);
+        director.Root().AddChild(std::move(cam));
+
+        // 4) Scene 진입
         director.Enter();
         mLastTime = 0.0;
     }
@@ -78,11 +93,12 @@ public:
         rc.SetDefaultTargetSize(info.windowWidth, info.windowHeight);
         rc.BeginFrame(rc.GetDefaultTarget());
 
-        const float aspect = static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight);
-        const auto view = vmath::lookat(vmath::vec3(0,0,5), vmath::vec3(0), vmath::vec3(0,1,0));
-        const auto proj = vmath::perspective(45.0f, aspect, 0.1f, 100.0f);
+        // 윈도우 리사이즈 대응 — 활성 Camera 의 aspect 매 프레임 갱신.
+        if (auto* cam = SJH::Scene::Director::Get().GetActiveCamera())
+            cam->SetAspect(static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight));
 
-        mRenderSys.Render(view, proj);
+        // 활성 Camera 자동 조회 — SP3.5 의 가시적 효과. view/proj 인자 불필요.
+        mRenderSys.Render();
     }
 
     void shutdown() override
@@ -91,16 +107,10 @@ public:
     }
 
 private:
-    // TODO(SP3.5/SP4): 자원 객체 owner 는 SJH::ResourceRegistry 로 위탁이 정통.
-    //   - Material 은 *지금도* ResourceRegistry::CreateMaterial(key) 로 위탁 가능.
-    //   - Program / Mesh 는 SP3 시점 ResourceRegistry 미지원 → 임시로 챕터 보유.
-    //     CreateProgram(key, vs, fs) + RegisterMesh(key, MeshUPtr) 추가 후 위탁.
-    //   - 자세한 컨벤션: .claude/architecture.md §11.3 (챕터 자원 보유 컨벤션).
-    SJH::ProgramUPtr  mProgram;   // ⚠️  ResourceRegistry 확장 전까지 임시 보유
-    SJH::MeshUPtr     mBoxMesh;   // ⚠️  ResourceRegistry 확장 전까지 임시 보유
-    SJH::MaterialUPtr mBoxMat;    // ⚠️  ResourceRegistry::CreateMaterial 로 위탁 가능 (즉시 적용 후보)
-    SJH::RenderSystem mRenderSys; // 시스템 — app 멤버 OK (자체 mQueue 보유)
-    double            mLastTime = 0.0;   // 시간 상태 — app 한정 OK
+    // 챕터/app 멤버는 *씬과 시스템만*. 자원은 ResourceRegistry 가 owner.
+    // .claude/architecture.md §11.3 컨벤션 적용 완료 (SP3.5).
+    SJH::RenderSystem mRenderSys; // 시스템 — 자체 mQueue 보유, app 멤버 OK
+    double            mLastTime = 0.0;
 };
 
 DECLARE_MAIN(ecs_demo_app);
