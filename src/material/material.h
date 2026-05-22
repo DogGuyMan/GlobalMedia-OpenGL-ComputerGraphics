@@ -30,6 +30,7 @@
 #define __SJH_MATERIAL_H__
 
 #include "common/common.h"
+#include "material/pass.h"   // Pass::Kind / DefaultStateOf — Material 의 렌더링 의도 선언.
 #include "program/program.h"
 #include "GL/gl3w.h"
 #include <string>
@@ -105,6 +106,26 @@ namespace SJH
         std::unordered_map<std::string, vmath::mat4>     Mat4s;
         std::unordered_map<std::string, TextureBinding>  Textures;
 
+        // === Pass — 렌더링 의도 선언 (Filament/Unreal/Cocos 정통, 진실의 원천 단일화) ====
+        /// @brief Pass 종류 변경 — fluent (SetProgram 처럼 chain 가능).
+        /// @details RenderQueue 가 이 값 보고 queue/blend/depth/cull 자동 적용.
+        ///   기본 Opaque. Transparent / AlphaTest / Skybox 시 한 줄 호출:
+        ///   `mat->SetPass(Pass::Kind::Transparent)` — depth write off + blend on + queue 3000 자동.
+        Material& SetPass(Pass::Kind k)
+        {
+            mPassKind = k;
+            return *this;
+        }
+
+        /// @brief 현재 Pass 종류.
+        Pass::Kind GetPass() const { return mPassKind; }
+
+        /// @brief 자동 도출 queue layer — `Pass::QueueOf(PassKind)` alias.
+        /// @details Material 단위 *절대 queue override* 는 *외부 API 미노출* — 진실의 원천 = PassKind 하나.
+        ///   Filament/Unreal/Cocos 정통 — Material 측은 "어떤 종류" 만, queue 값은 *PassKind 의 파생*.
+        ///   per-instance 미세 순서 조정은 `MeshRenderer::QueueOffset` 으로.
+        int GetQueueLayer() const { return Pass::QueueOf(mPassKind); }
+
         // === Clone (Unity MID / Unreal MID 패턴) =============================
         /// @brief 공유 템플릿 -> per-use 가변 인스턴스 복제. Observer 등록 갱신.
         MaterialUPtr Clone() const { return MaterialUPtr(new Material(*this)); }
@@ -120,8 +141,9 @@ namespace SJH
             Vec4s    = other.Vec4s;
             Mat4s    = other.Mat4s;
             Textures = other.Textures;
-            mProgram = other.mProgram;
-            mCache   = other.mCache;
+            mPassKind = other.mPassKind;   // Pass 의도 — Clone 시 Transparent 유지.
+            mProgram  = other.mProgram;
+            mCache    = other.mCache;
             if (mProgram) mProgram->RegisterMaterial(this);   // 새 인스턴스로 register
         }
 
@@ -132,6 +154,7 @@ namespace SJH
             mCache   = nullptr;
         }
 
+        Pass::Kind          mPassKind = Pass::Kind::Opaque;  ///< 진실의 원천 — SetPass / GetPass / GetQueueLayer 가 모두 이 값 도출.
         const Program*      mProgram = nullptr;   ///< 비소유. SetProgram/Release/cascade 가 lifecycle 관리.
         const UniformCache* mCache   = nullptr;   ///< Program 의 cache 참조 — 셰이더 schema 단축 lookup.
     };

@@ -212,3 +212,370 @@ assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 - 본 학습은 `apps/chapter9/` (단일 셰이더 quad → 프레임버퍼 도입 단계) 작업 중 정리됨
 - 챕터 설계 노트: `docs/superpowers/specs/2026-05-12-chapter9-single-shader-quad-design.md`
 - 멀티 라이팅 + GL 진단 모듈은 `doc/멀티플라이팅.md` 참고
+
+---
+
+# 📒 Blending / Fragment Discard / Depth Buffer / OIT 학습 노트
+
+> migrate_demo 의 *유리창 반투명* 시나리오 (LearnOpenGL Blending / Cookbook 챕터) 작업 중 정리.
+> 핵심 한 줄: **"투명 픽셀이 뒤를 가리는 건, depth test 가 alpha 를 모르고 fragment 를 통과시켜 depth buffer 를 갱신했기 때문이다."**
+
+---
+
+## 1단계 — 문제 제기 : 무엇이 어떻게 깨지는가
+
+### 문제 ①  반투명 물체를 무작위 순서로 그리면 *뒤가 안 보인다*
+
+시나리오 — Window0 (가까운 유리창), Window1 (먼 유리창) 두 장을 *카메라에서 먼 순서를 무시* 하고 그리면:
+
+```
+[draw Window0]  → depth buffer 의 해당 픽셀에 z=Z0 (가까움) 기록
+                → color buffer 에 Window0 의 반투명 색 alpha-blend
+[draw Window1]  → fragment depth Z1 (Z1 > Z0, 더 멈) 가 depth test 탈락
+                → Window1 의 fragment 버려짐
+```
+
+**결과**: Window1 이 안 보임. 유리창인데 뒤가 안 보이는 모순.
+
+### 문제 ②  `discard` 로는 *완전 투명* 만 해결된다
+
+PNG 의 알파를 셰이더가 받았을 때:
+
+| 알파 값 | discard 처리 | depth 갱신 | 결과 |
+|---|---|---|---|
+| `alpha = 0` (완전 투명, 창틀 구석) | ✅ `if (a < ε) discard;` | ❌ 안 함 | 뒤 픽셀 통과 — *해결* |
+| `alpha = 0.5` (반투명 유리) | ❌ (그리긴 해야 함) | ✅ 함 | 뒤 픽셀 가림 — *문제 잔존* |
+
+### 문제 ③  fragment-level 의 *순서 모순* 은 sort 로도 부족하다
+
+- 메시 단위 sort 로 *Window0/1/2 간* 의 순서는 잡힘.
+- 그러나 *한 메시 안* 의 self-overlap (오목한 알파, intersecting quad) 은 어떤 fragment 가 먼저 도착할지 알 수 없음.
+- 카메라가 회전하다 두 transparent 메시가 *서로 교차* 하면 *vertex/triangle 단위 sort 도 깨짐*.
+
+---
+
+## 2단계 — 원인 분석 : 개념 / 이론 / API
+
+### 개념 — *어디서 알파가 무시되는가*
+
+```
+[Vertex Shader] → [Rasterization] → [Fragment Shader] → [Depth Test] → [Blending]
+                                          ↓                ↑              ↑
+                                  alpha 가 계산되는 시점   여기서 alpha 무시   여기서야 alpha 가 등장
+```
+
+**핵심 — Depth Test 가 Blending 보다 *앞* 에 있다**. depth test 단계에서는 *fragment 의 z 만* 보고, alpha 는 *그 뒤 blending* 에서야 쓰인다. 따라서 *alpha 의 의미* 가 depth test 결정에 반영되지 않는다.
+
+### 이론 — Painter's Algorithm 의 전제와 한계
+
+**Painter's Algorithm**:
+- 화가가 캔버스에 *먼 풍경 → 가까운 인물* 순서로 덧칠하듯
+- GPU 에 *back-to-front* 순서로 transparent 를 그려서 alpha-blend 가 정상이 되게 함.
+
+**전제** — *fragment-level 으로 분리 가능* 한 단위만 sort 됨.
+- 메시 *간* → OK (per-mesh depth 로 sort)
+- 메시 *내부* → 깨짐 (한 draw call 의 모든 fragment 가 *같은 순서로* 처리됨이 보장되지 않음)
+
+**근본 한계**: 정렬은 *물체 단위* 인데 정합성은 *픽셀 단위* 가 필요.
+
+### API — 각각이 무엇을 *켜고/끄는가*
+
+| API | 동작 | 이 문제에서의 역할 |
+|---|---|---|
+| `glEnable(GL_DEPTH_TEST)` | depth buffer 와 비교, 통과 시 fragment 진행 | *문제의 원흉* — alpha 모르고 reject |
+| `glDepthMask(GL_TRUE/FALSE)` | depth 통과한 fragment 가 buffer 에 *쓰는지* 만 분리 토글 | Transparent 만 `FALSE` 로 — depth 비교는 하지만 *덮어쓰지는 않음* → 뒤 transparent 가 자신을 가리지 않게 |
+| `glEnable(GL_BLEND)` + `glBlendFunc` | depth 통과한 fragment 의 color 를 합성 | alpha-blend 가 동작하는 단계 (depth test 이후) |
+| `discard;` (GLSL) | fragment 를 *완전히* 버림 | depth/color write 모두 회피 — 이진 알파 (창틀) 의 정답 |
+| `gl_FragCoord.z` | *현재* fragment 의 계산된 z | 셰이더가 깊이를 *읽기* 위한 유일한 내장 (buffer 의 값 X) |
+
+**셰이더는 depth buffer 의 *값* 을 *읽지 못한다***. *현재 fragment 의 z 만* 안다. depth 의 *비교 결과* 도 모른다 — 통과/탈락은 GPU 고정 단계가 처리.
+
+---
+
+## 3단계 — 해결책 3가지 + 현 프로젝트의 선택
+
+### 해결책 A — Sort + Painter's Algorithm  *(정통, 가장 흔함)*
+
+```
+1. Opaque 먼저 그림 (front-to-back z-cull 효율)
+2. Transparent 만 back-to-front sort (멀리 → 가까이)
+3. Transparent draw 직전 glDepthMask(GL_FALSE) — 자기들끼리 가리지 않게
+```
+
+- **장점**: 단순, 모든 엔진 기본
+- **한계**: 메시 *내부* self-overlap 해결 불가
+
+### 해결책 B — Alpha-tested Discard  *(이진 알파 전용)*
+
+```glsl
+vec4 c = texture(uMainTex, vsTexCoord);
+if (c.a < 0.01) discard;     // depth 갱신 회피 + color write 회피
+fragColor = c;
+```
+
+- **장점**: sort 불필요, 단순. 잔디 / 나뭇잎 / 창틀 구석 정통
+- **한계**: 부드러운 알파 (반투명 유리) 불가능 — alpha 가 0 아니면 그대로 가림
+
+### 해결책 C — OIT (Order-Independent Transparency)  *(고급)*
+
+| 변형 | 핵심 | 비용 |
+|---|---|---|
+| **Depth Peeling** | depth 를 N pass 로 *벗겨서* per-layer 누적 | N pass × N FBO |
+| **Weighted Blended OIT** (McGuire 2013) | weight 함수로 단일 pass 근사 합성 | 1 pass, 약간의 부정확 |
+| **Per-Pixel Linked List** | atomic 으로 fragment 를 픽셀별 리스트에 push, 셰이더가 sort 후 합성 | GL 4.2+ atomic, 메모리 대량 |
+
+- **장점**: 순서 무관 — 정확한 transparent 합성
+- **한계**: GL 4.x 의존, 메모리/시간 비용 큼, 셰이더 복잡도 ↑
+
+### 현 프로젝트 — A + B 조합 (학습 적정)
+
+| 구성 요소 | 위치 | 동작 |
+|---|---|---|
+| **Sort 인프라** | [`render_queue.cpp:89-100`](../src/render/render_queue.cpp#L89) `RenderQueue::SortMultiStage` | `queueLayer` 오름차순 → 같은 layer 내 `depth > depth` (back-to-front) |
+| **Layer 컨벤션** | [`components.h`](../src/scene/components.h) `MeshRenderer::QueueLayer` | Unity 정통 — 2000 = Opaque, 3000 = Transparent |
+| **Alpha discard** | 사용자 셰이더 (`texture_alpha.fs` 등) | `if (texColor.a < 0.01) discard;` 한 줄 |
+| **Blend state** | [`render_context.h`](../src/render/render_context.h) `SetBlend` | `BeginFrame` 의 기본이 `SetBlend(true)` — 별도 호출 불필요 |
+| **OIT** | ❌ 미구현 | 학습 범위 외 — 필요 시 별도 SP |
+
+**사용 패턴** (migrate_demo P4 의 Window plane):
+```cpp
+auto win = std::make_unique<SJH::Scene::Actor>("Window0");
+win->GetTransform().Translate = position;
+win->AddComponent<SJH::Scene::MeshRenderer>(
+    planeMesh, windowMat,
+    /*queueLayer*/ 3000);   // ★ Transparent — 자동 back-to-front
+dir.Root().AddChild(std::move(win));
+```
+
+→ **창틀 구석 = discard 가 처리** + **유리창 간 순서 = sort 가 처리** + **유리창 내부 self-overlap = 미해결 (학습 범위)**.
+
+---
+
+## 부록 : 한 눈에 보는 의사결정 트리
+
+```
+유리창 / 풀잎 / 나뭇잎 등 alpha 가 있는 텍스처?
+   │
+   ├─ alpha 가 *이진* (0 또는 1) 만?
+   │     └─ YES → 해결책 B (discard) 단독
+   │
+   ├─ alpha 가 *그라데이션* (반투명)?
+   │     ├─ 메시 *간* 순서만 신경 쓰면 됨?
+   │     │     └─ YES → 해결책 A (sort + DepthMask=FALSE)
+   │     │
+   │     └─ 메시 *내부* self-overlap 도 정확해야 함?
+   │           └─ YES → 해결책 C (OIT) — 비용 감수
+   │
+   └─ 두 종류 혼재 (창틀 + 유리)?
+         └─ A + B 조합 (현 프로젝트)
+```
+
+---
+
+## 한 줄 요약 (5줄)
+
+1. **Depth test 가 Blending 보다 앞** — alpha 모른 채 fragment 통과/탈락 결정. *문제의 근본*.
+2. **discard 는 alpha 이진 케이스의 정답** — depth 갱신 회피로 뒤 fragment 통과.
+3. **반투명은 sort 필요** — Painter's Algorithm (back-to-front) + `glDepthMask(FALSE)`.
+4. **fragment-level 정확도는 OIT 만 가능** — depth peeling / weighted / linked list. 비싸다.
+5. **현 프로젝트는 A+B 조합** — `RenderQueue::SortMultiStage` + `queueLayer=3000` + `discard`. OIT 는 학습 범위 외.
+
+---
+
+# 📒 에러 핸들링 학습 노트 — Window alpha-blend 디버깅 2 케이스
+
+> migrate_demo 의 Window plane 시각 버그 두 건 — *동일한 시각 결과* (Window 가 안 그려진다) 의 *서로 다른 원인 두 가지*. 1차 fix 가 임시 우회였고 그 뒤로도 같은 증상이 *다른 원인* 으로 재발한 진단 흐름 기록.
+> 핵심 한 줄: **"증상은 같아도 원인이 다르다. 코드 흐름 끝까지 추적해야 진정한 fix."**
+
+---
+
+## 케이스 1 — Transparent material 이 Opaque 처럼 정렬되는 문제
+
+### 증상
+
+- Window 가 *정면에서는* alpha-blend OK 처럼 보임
+- 카메라가 windows 사이나 뒤편으로 이동 → Window 가 *plane/box 도 덮음* (불투명한 것처럼)
+- 멀리 있는 Window 가 가까운 것을 *덮어 그림* — alpha 합성 *반대* 결과
+
+### 원인 추적 (4 단계)
+
+#### 1차 가설 — sort 방향 부호
+
+`RenderQueue::SortMultiStage` 의 `return a.depth > b.depth`:
+- view-space z 는 카메라 forward 가 -Z 라 *카메라 앞 = 음수*. 멀수록 작은 음수.
+- `a.depth > b.depth` → -1 > -10 → *가까운 것 먼저* = **front-to-back** = Painter's Algorithm 의 *반대*
+
+**1차 fix**: 부호 반전 `<` 로 변경 → *일시적* 해결.
+
+#### 2차 — 재발
+
+postfx_demo / chapter 코드 정비 후 다시 같은 증상.
+
+#### 3차 — *진정한 원인* 발견
+
+```cpp
+// MeshRenderer 의 기본값
+int QueueLayer = 2000;   // Opaque 기본
+
+// RenderSystem::CollectFromActor 의 cmd 채움
+cmd.queueLayer = mr->QueueLayer;   // ← MeshRenderer 만 보고 Material 무시
+```
+
+챕터가 `mat->SetPass(Pass::Kind::Transparent)` 호출해도:
+- Material.PassKind = Transparent (의도 = queue 3000)
+- 그러나 *MeshRenderer 의 QueueLayer 가 기본 2000 으로 덮어씀*
+- 최종 `cmd.queueLayer = 2000` → `IsTransparentQueue(2000) = false` → Opaque sort 분기 (front-to-back) → 깨짐
+
+#### 깊은 원인 — *두 진실의 원천 충돌*
+
+```
+Material.PassKind = Transparent  →  queue 3000  ┐
+                                                  ├─→ 어느 게 진실?
+MeshRenderer.QueueLayer = 2000   →  queue 2000  ┘
+```
+
+같은 정보 (queue) 를 두 곳에서 결정 — *우선순위 모호* + *충돌*.
+
+### 해결책 진화 (4 단계)
+
+| 단계 | 접근 | 평가 |
+|---|---|---|
+| 1차 | sort 방향 부호 `<` 반전 | 증상 회피, 원인 미해결 (재발) |
+| 2차 | `MeshRenderer.QueueLayer = 0` (sentinel — 0 이면 PassKind 사용) | 동작 OK, *책임 모호* (sentinel 우회) |
+| 3차 | `MeshRenderer.QueueLayer` *제거* → `QueueOffset` 으로 의미 전환 | Unity Renderer.sortingOrder 정통 — 책임 분리 명확 |
+| 4차 | `Material.PassKind` private 화 + `GetQueueLayer()` 가 `Pass::QueueOf(PassKind)` 도출 | Filament/Unreal/Cocos 정통 — 진실의 원천 *완전 단일화* |
+
+### 최종 모델
+
+```
+Material.PassKind ──→ Pass::QueueOf(Kind) ──→ Material.GetQueueLayer() [도출 alias]
+                                                            │
+                                                            ▼
+                                          cmd.queueLayer = GetQueueLayer() + MeshRenderer.QueueOffset
+```
+
+- **Material** = "어떤 종류" (queue base + depth/blend/cull 묶음)
+- **MeshRenderer.QueueOffset** = "같은 종류 안에서 미세 순서" (Outline 의 +5 같은 경우)
+
+### 정통 매핑
+
+| 엔진 | "어떤 종류" | "미세 순서" |
+|---|---|---|
+| Unity URP | `Material.renderQueue` (auto from RenderType) | `Renderer.sortingOrder` |
+| Filament | `Material.blending` | `Renderable.priority` |
+| Unreal | `Material.BlendMode` | `Translucency Sort Priority` |
+| **우리** | `Material.PassKind` | `MeshRenderer.QueueOffset` |
+
+---
+
+## 케이스 2 — Window 가 뒷면에서 *완전히 사라지는* 문제
+
+### 증상
+
+- 정면 (카메라가 windows 의 +Z 쪽) → alpha-blend 정상
+- 카메라가 windows 의 *뒷쪽 (-Z)* 으로 이동 → **Window 가 완전히 안 보임**
+- 케이스 1 fix 가 끝난 *후* 새로 드러난 증상
+- 케이스 1 (덮어씀) 과 *다른 모드* — *지워진 것처럼* 사라짐
+
+### 원인 추적
+
+#### 1. Plane mesh 의 normal 확인
+
+```cpp
+// src/object/geometry.cpp:Plane()
+BuildQuadIndexed(...,
+    vmath::vec3(-0.5f, -0.5f, 0.0f),   // base — XY quad, z=0
+    QUAD_FACE_INDICES);                  // counter-clockwise (front face)
+```
+
+→ Plane 은 z=0 의 XY quad. **front face normal = +Z**.
+
+#### 2. Cull 상태 확인
+
+`Pass::Kind::Transparent` 의 기본 `CullMode = GL_BACK` (back-face culling).
+
+#### 3. 시나리오 매칭
+
+| 카메라 위치 | window 가 향한 면 | `GL_BACK` cull 결과 |
+|---|---|---|
+| 카메라 z > window z (+Z 쪽) | front face (+Z normal 보임) | ✅ 통과 |
+| 카메라 z < window z (-Z 쪽) | back face (+Z normal 등 돌림) | ❌ **culling** |
+
+→ 카메라 위치에 따라 *back face 가 통째로 잘림*.
+
+#### 깊은 원인 — *Transparent + Back-Cull 의 직교 충돌*
+
+- **Back-face culling** = *솔리드 (closed) 메시* 의 성능 최적화 — 뒷면 fragment 자체 처리 skip
+- **Transparent plane** (window/잎사귀/의류) = *두께 없는 면* — *어느 쪽에서 봐도 보여야* 함
+- 두 의도가 *직교* 라 `GL_BACK` 기본은 *Transparent 시나리오에 부적합*
+
+### 정통 비교
+
+| 엔진 / 자료 | Transparent 의 Cull 기본 |
+|---|---|
+| LearnOpenGL Blending 챕터 | `glDisable(GL_CULL_FACE)` 명시 |
+| Unity URP Lit Transparent | `Render Face = Both` (양면) |
+| Filament `blending: transparent` | `doubleSided = true` |
+| → 정통 결론 | **Transparent = cull off (양면)** |
+
+### 해결
+
+`Pass::Kind::Transparent` 의 기본 `CullMode` 를 `GL_BACK` → `0` (sentinel = cull disable):
+
+```cpp
+case Kind::Transparent:
+    return State{
+        /*DepthTest*/  true,      /*DepthWrite*/ false,
+        /*DepthFunc*/  GL_LEQUAL, /*CullMode*/   0,       // ★ cull off — 양면
+        /*BlendEnable*/true,      GL_SRC_ALPHA,  GL_ONE_MINUS_SRC_ALPHA,
+        /*QueueLayer*/ QueueOf(Kind::Transparent)};
+```
+
+→ 카메라가 어디서든 *양쪽 면 모두* 그려짐.
+
+### 직교성 보존
+
+다른 Pass.Kind 의 CullMode 는 *각자 시나리오 정통* 유지:
+
+| Pass::Kind | CullMode | 이유 |
+|---|---|---|
+| Opaque | `GL_BACK` | 일반 솔리드 메시 (뒷면 skip 성능) |
+| AlphaTest | `GL_BACK` | 솔리드 + discard (잎사귀 두 면 필요 시 챕터 측 override) |
+| **Transparent** | **`0` (off)** | 두께 없는 면 양쪽 표시 |
+| **Skybox** | **`GL_FRONT`** | cube 안쪽 시점 — back face 가 view 향함 |
+
+→ Pass.Kind 별 *기본값 차별화* — 변경 영향이 직교적으로 격리.
+
+---
+
+## 메타 학습 — 두 케이스의 *공통 패턴*
+
+### 패턴 ① — *두 진실의 원천 충돌*
+- 케이스 1: `Material.PassKind` vs `MeshRenderer.QueueLayer`
+- 일반화: 같은 정보를 *두 곳에서* 결정 → 우선순위 모호 + 충돌 + 변경 시 한 쪽 망각
+- **교훈**: 진실의 원천을 *단일화*. 다른 곳은 *파생/alias*. 외부 API 노출도 *단일 setter*.
+
+### 패턴 ② — *기본값의 무게*
+- 케이스 2: `CullMode = GL_BACK` 기본이 *Transparent 시나리오에 부적합*
+- 일반화: *기본값* 이 *대다수 시나리오* 에 맞아야 함. 특이 케이스가 *명시 override* 해야지, 일반 케이스가 매번 *명시 override* 면 정상이 아님.
+- **교훈**: 컨텍스트 별 *기본값 차별화* — `Pass::Kind::Opaque/Transparent/Skybox` 각자 다른 GL state 기본.
+
+### 패턴 ③ — *증상 우회 vs 원인 처리*
+- 케이스 1 의 1차 fix (sort 부호 반전) = *증상 우회*. 다른 코드 정비 시 재발.
+- 4차 fix (PassKind private + GetQueueLayer 도출) = *원인 처리*. 진실의 원천 단일화로 *구조적으로* 재발 차단.
+- **교훈**: 증상 처리는 *임시 hot fix*. *왜 그렇게 됐는지* 코드 흐름 끝까지 추적해야 다음 회귀 없음.
+
+### 패턴 ④ — *시각 결과 같음 ≠ 원인 같음*
+- 케이스 1 & 2 둘 다 시각 증상이 *"Window 가 안 그려진다"*
+- 그러나 원인은 *완전히 다름* — sort/queue 충돌 vs cull 직교 충돌
+- **교훈**: 시각 디버깅에서 *증상* 만으로 fix 하면 한 케이스 가려져도 다른 케이스 재발. *어느 GL state 단계에서 잘렸는가* 추적 (vertex / raster / fragment / depth / blend / write).
+
+---
+
+## 한 줄 요약 (4줄)
+
+1. **케이스 1 — *queue 의 두 진실의 원천 충돌***. `MeshRenderer.QueueLayer` 가 `Material.PassKind` 의 queue 를 덮어씀. *진실의 원천 단일화* 로 해결 — Material 만 결정, MeshRenderer 는 offset 만.
+2. **케이스 2 — *Transparent + back-cull 의 직교 충돌***. Plane 의 back face 가 culling 되어 카메라가 뒤편에 가면 사라짐. *Pass::Kind 별 기본값 차별화* 로 해결 — Transparent 만 `CullMode = 0`.
+3. **공통 메타 패턴** — *기본값의 무게 + 진실의 원천 단일화 + 증상 vs 원인 + 같은 증상 다른 원인*.
+4. **시각 디버깅 핵심** — 시각 증상만 보고 fix 하지 말고 *GL 파이프라인 어느 단계* 에서 fragment 가 잘렸는지 추적 (vertex/raster/fragment/depth/cull/blend/write). 케이스 1 = sort 단계, 케이스 2 = cull 단계 — *서로 다른 단계*.
+

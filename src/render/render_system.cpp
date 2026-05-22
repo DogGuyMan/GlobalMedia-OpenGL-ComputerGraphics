@@ -242,7 +242,13 @@ namespace SJH
                     cmd.mesh        = mr->Mesh;
                     cmd.material    = mr->Material;
                     cmd.modelMatrix = model;
-                    cmd.queueLayer  = mr->QueueLayer;
+                    // Filament/Unreal/Cocos 정통 — 진실의 원천 단일화:
+                    //  · Material.GetPass() = "어떤 종류" (Pass::Kind enum, private 캡슐화)
+                    //  · Material.GetQueueLayer() = Pass::QueueOf(GetPass()) 도출 (alias)
+                    //  · MeshRenderer.QueueOffset = "같은 Material 의 인스턴스 간 미세 순서" (Unity Renderer.sortingOrder)
+                    //
+                    //  최종 = Material.GetQueueLayer() + mr.QueueOffset.
+                    cmd.queueLayer = mr->Material->GetQueueLayer() + mr->QueueOffset;
                     cmd.actor       = &actor;
                     cmd.depth       = depthZ;
                     // per-actor GL 상태 override 전파.
