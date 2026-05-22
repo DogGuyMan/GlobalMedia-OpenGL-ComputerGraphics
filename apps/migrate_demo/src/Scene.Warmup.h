@@ -10,14 +10,19 @@
  *   - Plane (marble diffuse + gray specular + shininess 128) — translate(0,-0.5,0), scale(10,1,10)
  *   - Box1  (container + dark_gray + shininess 16) — translate(-1,0.75,-4), rot(0,30,0), scale(1.5)
  *   - Box2  (container2 + container2_specular + shininess 64) — translate(0,0.75,2), rot(0,20,0), scale(1.5)
- *   - Outline (simple yellow shell) — Box2 자식, scale(1.05). queueLayer 1995 로 Box2(2000) 전에 그려짐.
- *   - Windows × 3 (alpha discard 텍스쳐) — translate(0/0.2/0.4 .x, 0.5, 4/5/6), queueLayer 3000
+ *   - Outline (simple yellow shell) — Box2 자식, scale(1.05) + Stencil(NOTEQUAL, ref=1) + DepthTest off
+ *   - Windows × 3 (alpha discard 텍스쳐) — translate, Pass=Transparent (자동 queue 3000 + DepthWrite off + blend on)
  *   - PointLight0 / PointLight1 / SpotLight 마커 큐브 (simple program, scale 0.1)
  *   - DirLight (마커 없음 — 방향만)
  *
  *   ### Compound Actor 컨벤션
  *   - Camera/DirLight/PointLight/SpotLight 는 free factory (compound_actor.h).
  *   - 광원 Actor 에 MeshRenderer 를 추가로 부착 — Light Component 와 type_index 충돌 없음.
+ *
+ *   ### Pass 컨벤션 (SP-Pass)
+ *   - Material 의 `SetPass(Pass::Kind::Transparent)` 한 줄로 queue/blend/depthWrite 자동.
+ *   - 챕터/사용자가 *수동으로 `DepthWrite=false` / `QueueLayer=3000`* 설정 *불필요*.
+ *   - Material 측 선언이 *진실의 원천* — Unity SurfaceType / Cocos technique 정통.
  *
  *   ### 모자란 부분 (의도된 단순화)
  *   - **Stencil outline** — 레퍼런스는 stencil 마스킹으로 outline. SJH RenderSystem 은
@@ -28,7 +33,9 @@
  */
 
 #include "GL/gl3w.h"
+#include "material/material.h"
 #include "material/material_uniforms.h"
+#include "material/pass.h"
 #include "object/light.h"
 #include "object/mesh.h"
 #include "program/program.h"
@@ -61,10 +68,12 @@ namespace MigrateDemo::Scene
 		SJH::Scene::Actor *spotLightActor = nullptr; // FlashLight 모드 시 카메라 추종.
 	};
 
-	// === Queue Layer 컨벤션 (Unity 정통) ===
-	constexpr int QUEUE_OPAQUE      = 2000; // 기본 Opaque (Plane / Box / 라이트 마커)
-	constexpr int QUEUE_OUTLINE     = 2005; // Opaque 직후 — Box2 가 stencil=1 도장 후 Outline 이 stencil!=1 로 rim 만 그림
-	constexpr int QUEUE_TRANSPARENT = 3000; // Alpha discard 윈도우
+	// === Queue Layer 컨벤션 (엔진 측 SJH::Pass::Kind underlying value 가 진실의 원천) ===
+	// `static_cast<int>(SJH::Pass::Kind::Opaque)`      == 2000
+	// `static_cast<int>(SJH::Pass::Kind::AlphaTest)`   == 2450
+	// `static_cast<int>(SJH::Pass::Kind::Transparent)` == 3000
+	// 일반 Material 은 `mat->SetPass(Pass::Kind::Xxx)` 한 줄로 queue/blend/depth 자동.
+	// 챕터 측이 *명시 override* 필요한 케이스만 `Pass::QueueOf(Kind, offset)` 사용.
 
 	struct Programs
 	{
@@ -101,54 +110,13 @@ namespace MigrateDemo::Scene
 
 		// === Mesh — Box + Plane + ScreenQuad (postfx) ===
 		reg.RegisterMesh("mesh_box",         SJH::Mesh::CreateBox());
-		reg.RegisterMesh("mesh_plane",       SJH::Mesh::CreatePlane());
+		reg.RegisterMesh("mesh_plane",         SJH::Mesh::CreatePlane());
 		reg.RegisterMesh("mesh_screen_quad", SJH::Mesh::CreateScreenQuad());
 	}
 
-	namespace detail
-	{
-		/// @brief Phong material 헬퍼 — sampler2D material.diffuse / specular + shininess.
-		inline SJH::Material *MakePhongMat(SJH::ResourceRegistry &reg,
-		                                    const std::string &key,
-		                                    const SJH::Program *prog,
-		                                    const SJH::Texture *diffuse,
-		                                    const SJH::Texture *specular,
-		                                    float shininess)
-		{
-			auto *mat = reg.CreateMaterial(key);
-			mat->SetProgram(prog);
-			SJH::Uniforms::SetTexture(*mat, "material.diffuse",  diffuse,  0);
-			SJH::Uniforms::SetTexture(*mat, "material.specular", specular, 1);
-			SJH::Uniforms::SetFloat  (*mat, "material.shininess", shininess);
-			return mat;
-		}
-
-		/// @brief Simple material — baseColor 단색.
-		inline SJH::Material *MakeSimpleMat(SJH::ResourceRegistry &reg,
-		                                     const std::string &key,
-		                                     const SJH::Program *prog,
-		                                     const vmath::vec4 &color)
-		{
-			auto *mat = reg.CreateMaterial(key);
-			mat->SetProgram(prog);
-			SJH::Uniforms::SetVec4(*mat, "baseColor", color);
-			return mat;
-		}
-
-		/// @brief Window material — sampler tex0 (alpha discard).
-		inline SJH::Material *MakeWindowMat(SJH::ResourceRegistry &reg,
-		                                     const std::string &key,
-		                                     const SJH::Program *prog,
-		                                     const SJH::Texture *tex)
-		{
-			auto *mat = reg.CreateMaterial(key);
-			mat->SetProgram(prog);
-			SJH::Uniforms::SetTexture(*mat, "tex0", tex, 0);
-			return mat;
-		}
-	} // namespace detail
-
 	/// @brief 본체 액터 워밍업 — Plane / Box1 / Box2 (+ Outline) / Windows × 3.
+	/// @details Pass::Kind 컨벤션 — Material 측 선언으로 queue/blend/depthWrite 자동.
+	///          factory wrapper (Make*Mat) 미사용 — 제너럴 Material::Create + SetProgram + SetXxx + SetPass 패턴.
 	inline void WarmupActors(const Programs &progs, SJH::Scene::Director &dir)
 	{
 		auto &reg = SJH::ResourceRegistry::Get();
@@ -164,44 +132,56 @@ namespace MigrateDemo::Scene
 		auto *texContainer2Spec = reg.FindTexture("tex_container2_spec");
 		auto *texWindow         = reg.FindTexture("tex_window");
 
-		// --- Plane (marble + gray + shininess 128) ---
+		// --- Plane (marble + gray + shininess 128) — Pass=Opaque (기본) ---
 		{
+			auto *mat = reg.CreateMaterial("mat_plane");
+			mat->SetProgram(progs.phong);
+			SJH::Uniforms::SetTexture(*mat, "material.diffuse",  texMarble, 0);
+			SJH::Uniforms::SetTexture(*mat, "material.specular", texGray,   1);
+			SJH::Uniforms::SetFloat  (*mat, "material.shininess", 128.0f);
+			// Pass::Kind::Opaque 가 기본 — 명시 호출 불요.
+
 			auto plane = std::make_unique<SJH::Scene::Actor>("Plane");
 			plane->SetLayer(LAYER_SCENE);
 			plane->GetTransform().Translate = vmath::vec3(0.0f, -0.5f, 0.0f);
 			plane->GetTransform().Scale     = vmath::vec3(10.0f, 1.0f, 10.0f);
-			auto *mat = detail::MakePhongMat(reg, "mat_plane", progs.phong,
-			                                   texMarble, texGray, 128.0f);
-			plane->AddComponent<SJH::Scene::MeshRenderer>(meshPlane, mat, QUEUE_OPAQUE);
+			plane->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat);
 			dir.Root().AddChild(std::move(plane));
 		}
 
-		// --- Box1 (container + dark_gray + shininess 16) ---
+		// --- Box1 (container + dark_gray + shininess 16) — Pass=Opaque ---
 		{
+			auto *mat = reg.CreateMaterial("mat_box1");
+			mat->SetProgram(progs.phong);
+			SJH::Uniforms::SetTexture(*mat, "material.diffuse",  texContainer, 0);
+			SJH::Uniforms::SetTexture(*mat, "material.specular", texDarkGray,  1);
+			SJH::Uniforms::SetFloat  (*mat, "material.shininess", 16.0f);
+
 			auto box = std::make_unique<SJH::Scene::Actor>("Box1");
 			box->SetLayer(LAYER_SCENE);
 			box->GetTransform().Translate = vmath::vec3(-1.0f, 0.75f, -4.0f);
 			box->GetTransform().EulerRot  = vmath::vec3(0.0f, 30.0f, 0.0f);
 			box->GetTransform().Scale     = vmath::vec3(1.5f, 1.5f, 1.5f);
-			auto *mat = detail::MakePhongMat(reg, "mat_box1", progs.phong,
-			                                   texContainer, texDarkGray, 16.0f);
-			box->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat, QUEUE_OPAQUE);
+			box->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat);
 			dir.Root().AddChild(std::move(box));
 		}
 
-		// --- Box2 + Outline child (stencil 정통) ---
+		// --- Box2 + Outline child (stencil 정통) — Pass=Opaque ---
 		// 레퍼런스 (context.cpp): Box2 를 stencil=1 로 도장 후, Outline 셸 (scale 1.05) 을
 		// stencil!=1 + depth off 로 그려 rim 만 노출.
 		{
+			auto *matBox2 = reg.CreateMaterial("mat_box2");
+			matBox2->SetProgram(progs.phong);
+			SJH::Uniforms::SetTexture(*matBox2, "material.diffuse",  texContainer2,     0);
+			SJH::Uniforms::SetTexture(*matBox2, "material.specular", texContainer2Spec, 1);
+			SJH::Uniforms::SetFloat  (*matBox2, "material.shininess", 64.0f);
+
 			auto box = std::make_unique<SJH::Scene::Actor>("Box2");
 			box->SetLayer(LAYER_SCENE);
 			box->GetTransform().Translate = vmath::vec3(0.0f, 0.75f, 2.0f);
 			box->GetTransform().EulerRot  = vmath::vec3(0.0f, 20.0f, 0.0f);
 			box->GetTransform().Scale     = vmath::vec3(1.5f, 1.5f, 1.5f);
-			auto *matBox2 = detail::MakePhongMat(reg, "mat_box2", progs.phong,
-			                                       texContainer2, texContainer2Spec, 64.0f);
-			auto *mrBox2 = box->AddComponent<SJH::Scene::MeshRenderer>(
-			    meshBox, matBox2, QUEUE_OPAQUE);
+			auto *mrBox2 = box->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matBox2);
 			// stencil=1 도장 — 어느 픽셀이 Box2 내부인지 mark.
 			mrBox2->Stencil.Enabled   = true;
 			mrBox2->Stencil.Func      = GL_ALWAYS;
@@ -212,14 +192,19 @@ namespace MigrateDemo::Scene
 			mrBox2->Stencil.DpPass    = GL_REPLACE; // depth+stencil pass 시 stencil 에 ref(1) 쓰기.
 			mrBox2->Stencil.WriteMask = 0xFFu;
 
-			// Outline 셸 — Box2 의 자식. scale 1.05. queueLayer 2005 > 2000 이라 Box2 다음.
+			// Outline 셸 — Box2 의 자식. queueLayer override (Box2 이후 그리도록 2005).
+			auto *matOutline = reg.CreateMaterial("mat_outline");
+			matOutline->SetProgram(progs.simple);
+			SJH::Uniforms::SetVec4(*matOutline, "baseColor", vmath::vec4(1.0f, 1.0f, 0.5f, 1.0f));
+
 			auto outline = std::make_unique<SJH::Scene::Actor>("Outline");
 			outline->SetLayer(LAYER_SCENE);
 			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f);
-			auto *matOutline = detail::MakeSimpleMat(reg, "mat_outline", progs.simple,
-			                                         vmath::vec4(1.0f, 1.0f, 0.5f, 1.0f));
+			// Outline 은 Box2 (Opaque, queue 2000) *직후* 그려야 stencil 마스킹 의도.
+			// matOutline 의 PassKind=Opaque (기본) 라 base queue 가 2000.
+			// → MeshRenderer.QueueOffset = +5 → 최종 queue 2005 — Unity Renderer.sortingOrder 정통.
 			auto *mrOutline = outline->AddComponent<SJH::Scene::MeshRenderer>(
-			    meshBox, matOutline, QUEUE_OUTLINE);
+			    meshBox, matOutline, /*queueOffset*/ 5);
 			// Outline 픽셀은 stencil!=1 일 때만 그림 (Box2 가 도장한 안쪽은 skip).
 			mrOutline->Stencil.Enabled   = true;
 			mrOutline->Stencil.Func      = GL_NOTEQUAL;
@@ -229,7 +214,7 @@ namespace MigrateDemo::Scene
 			mrOutline->Stencil.DpFail    = GL_KEEP;
 			mrOutline->Stencil.DpPass    = GL_KEEP;
 			mrOutline->Stencil.WriteMask = 0x00u; // stencil 에 쓰지 않음 (read-only).
-			// depth 비활성 — Outline 이 다른 오브젝트 뒤에 있어도 표면 그려지도록.
+			// depth 비활성 — Outline 이 다른 오브젝트 뒤에 있어도 표면 그려지도록. AND 합성으로 *false 가 우선*.
 			mrOutline->DepthTest  = false;
 			mrOutline->DepthWrite = false;
 			box->AddChild(std::move(outline));
@@ -237,8 +222,13 @@ namespace MigrateDemo::Scene
 			dir.Root().AddChild(std::move(box));
 		}
 
-		// --- Windows × 3 (alpha discard) — y 같음, x 점진 +0.2 / z 4/5/6 ---
+		// --- Windows × 3 (alpha discard) — Pass=Transparent (자동 queue 3000 + DepthWrite off + blend on) ---
 		{
+			auto *matWindow = reg.CreateMaterial("mat_window");
+			matWindow->SetProgram(progs.window);
+			SJH::Uniforms::SetTexture(*matWindow, "tex0", texWindow, 0);
+			matWindow->SetPass(SJH::Pass::Kind::Transparent);   // ★ 한 줄로 모든 state 자동
+
 			const vmath::vec3 positions[3] = {
 			    vmath::vec3(0.0f, 0.5f, 4.0f),
 			    vmath::vec3(0.2f, 0.5f, 5.0f),
@@ -249,11 +239,8 @@ namespace MigrateDemo::Scene
 				auto win = std::make_unique<SJH::Scene::Actor>("Window" + std::to_string(i));
 				win->SetLayer(LAYER_SCENE);
 				win->GetTransform().Translate = positions[i];
-				// 단일 머티리얼 공유 — Material::Clone 미사용 (셋업 동일).
-				auto *mat = (i == 0)
-				              ? detail::MakeWindowMat(reg, "mat_window", progs.window, texWindow)
-				              : reg.FindMaterial("mat_window");
-				win->AddComponent<SJH::Scene::MeshRenderer>(meshPlane, mat, QUEUE_TRANSPARENT);
+				// QueueLayer / DepthWrite 수동 설정 *불필요* — Pass=Transparent 가 자동.
+				win->AddComponent<SJH::Scene::MeshRenderer>(meshPlane, matWindow);
 				dir.Root().AddChild(std::move(win));
 			}
 		}
@@ -292,9 +279,11 @@ namespace MigrateDemo::Scene
 			pl->Diffuse  = vmath::vec3(0.8f, 0.4f, 0.2f);
 			pl->Specular = vmath::vec3(1.0f, 1.0f, 1.0f);
 
-			auto *mat = detail::MakeSimpleMat(reg, "mat_marker_lamp0", progs.simple,
-			                                   vmath::vec4(pl->Diffuse, 1.0f));
-			lamp->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat, QUEUE_OPAQUE);
+			auto *mat = reg.CreateMaterial("mat_marker_lamp0");
+			mat->SetProgram(progs.simple);
+			SJH::Uniforms::SetVec4(*mat, "baseColor", vmath::vec4(pl->Diffuse, 1.0f));
+
+			lamp->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat);
 			refs.pointLights[0] = pl;
 			dir.Root().AddChild(std::move(lamp));
 		}
@@ -311,9 +300,11 @@ namespace MigrateDemo::Scene
 			pl->Diffuse  = vmath::vec3(0.2f, 0.4f, 0.8f);
 			pl->Specular = vmath::vec3(1.0f, 1.0f, 1.0f);
 
-			auto *mat = detail::MakeSimpleMat(reg, "mat_marker_lamp1", progs.simple,
-			                                   vmath::vec4(pl->Diffuse, 1.0f));
-			lamp->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat, QUEUE_OPAQUE);
+			auto *mat = reg.CreateMaterial("mat_marker_lamp1");
+			mat->SetProgram(progs.simple);
+			SJH::Uniforms::SetVec4(*mat, "baseColor", vmath::vec4(pl->Diffuse, 1.0f));
+
+			lamp->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat);
 			refs.pointLights[1] = pl;
 			dir.Root().AddChild(std::move(lamp));
 		}
@@ -333,9 +324,11 @@ namespace MigrateDemo::Scene
 			sl->Diffuse  = vmath::vec3(1.0f, 1.0f, 1.0f);
 			sl->Specular = vmath::vec3(1.0f, 1.0f, 1.0f);
 
-			auto *mat = detail::MakeSimpleMat(reg, "mat_marker_spot", progs.simple,
-			                                   vmath::vec4(sl->Diffuse, 1.0f));
-			spot->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat, QUEUE_OPAQUE);
+			auto *mat = reg.CreateMaterial("mat_marker_spot");
+			mat->SetProgram(progs.simple);
+			SJH::Uniforms::SetVec4(*mat, "baseColor", vmath::vec4(sl->Diffuse, 1.0f));
+
+			spot->AddComponent<SJH::Scene::MeshRenderer>(meshBox, mat);
 			refs.spotLight      = sl;
 			refs.spotLightActor = spot.get();
 			dir.Root().AddChild(std::move(spot));

@@ -27,16 +27,33 @@ namespace SJH::Scene
         GLuint WriteMask = 0xFFu;        ///< glStencilMask — write 시 비트마스크 (0 = read-only).
     };
 
-    /// @brief Unity MeshRenderer 식 통합 컴포넌트 — Mesh + Material + Visible + QueueLayer + 추가 GL 상태.
-    /// @details RenderSystem 이 이 컴포넌트를 수집 -> DrawCommand 빌드.
-    ///          Stencil/DepthTest/DepthWrite/CullFace 는 *override* — 기본값 = 표준 opaque 동작.
+    /// @brief Unity MeshRenderer 식 통합 컴포넌트 — Mesh + Material + Visible + QueueOffset + 추가 GL 상태.
+    /// @details
+    ///   RenderSystem 이 이 컴포넌트를 수집 -> DrawCommand 빌드.
+    ///   Stencil/DepthTest/DepthWrite/CullFace 는 *override* — 기본값 = 표준 opaque 동작.
+    ///
+    ///   ### Queue 결정 모델 (Unity 정통, 직교 축)
+    ///   - **절대 queue** = `Material.PassKind` (Material 측 — "어떤 종류" 의도 선언)
+    ///   - **per-renderer 미세 조정** = `MeshRenderer.QueueOffset` (Renderer 측 — "같은 종류 내 순서")
+    ///   - 최종 queue = `Pass::QueueOf(material.PassKind, mr.QueueOffset)`
+    ///
+    ///   예:
+    ///   - Box: Material.SetPass(Opaque) + QueueOffset=0  → 2000
+    ///   - Outline (Box 직후): Material.SetPass(Opaque) + QueueOffset=5  → 2005
+    ///   - Window: Material.SetPass(Transparent) + QueueOffset=0  → 3000
+    ///   - Skybox: Material.SetPass(Skybox) + QueueOffset=0  → 2500
+    ///
+    ///   Unity 매핑: `Material.renderQueue` ↔ Material.PassKind / `Renderer.sortingOrder` ↔ MeshRenderer.QueueOffset
     class MeshRenderer : public Component
     {
     public:
         MeshRenderer() = default;
+        /// @param queueOffset  Material.PassKind 의 queue 에 더해질 *정수 offset* (Unity Renderer.sortingOrder).
+        ///                     기본 0 = Material 의 queue 그대로 (정통 경로).
+        ///                     Outline 등 *같은 Pass 내 미세 순서* 필요 시 양수 (예: +5).
         MeshRenderer(SJH::Mesh* const mesh, SJH::Material* const material,
-                     int queueLayer = 2000)
-            : Mesh(mesh), Material(material), QueueLayer(queueLayer) {}
+                     int queueOffset = 0)
+            : Mesh(mesh), Material(material), QueueOffset(queueOffset) {}
 
 	virtual void OnEnter() override {}
         virtual void OnExit() override {}
@@ -47,7 +64,9 @@ namespace SJH::Scene
         SJH::Mesh*     const Mesh       = nullptr;
         SJH::Material* const Material   = nullptr;
         bool                 Visible    = true;
-        int                  QueueLayer = 2000;   // Unity: 2000=Opaque, 3000=Transparent
+        /// @brief Material.PassKind 의 queue 에 더해질 offset (Unity Renderer.sortingOrder 정통).
+        ///        같은 Pass::Kind 안에서 *미세 순서 조정* 용 (예: Outline = +5).
+        int                  QueueOffset = 0;
 
         // ── 추가 per-actor GL 상태 (override) — RenderQueue::Flush 가 적용 ──
         StencilState         Stencil;             ///< 기본 disabled — 활성 시 stencil pass 흐름.
