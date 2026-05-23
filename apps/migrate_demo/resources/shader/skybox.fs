@@ -10,26 +10,26 @@ out vec4 fragColor;
 // 향후 Material 의 properties bag 으로 색을 노출하면 챕터에서 SetVec3 로 조절 가능.
 void main()
 {
-    vec3 dir = normalize(vsLocalDir);
+        vec3 dir = normalize(vsLocalDir);
 
-    // 색상 팔레트 — 새벽 하늘 톤.
-    const vec3 ZENITH  = vec3(0.20, 0.40, 0.75);   // 천정 — 진한 파랑
-    const vec3 HORIZON = vec3(0.80, 0.85, 0.95);   // 수평선 — 밝은 회청색
-    const vec3 GROUND  = vec3(0.25, 0.20, 0.18);   // 지면 — 어두운 갈색
+        // 색상 팔레트 — 새벽 하늘 톤.
+        const vec3 ZENITH = vec3(0.20, 0.40, 0.75); // 천정 — 진한 파랑
+        const vec3 HORIZON = vec3(0.80, 0.85, 0.95); // 수평선 — 밝은 회청색
+        const vec3 GROUND = vec3(0.25, 0.20, 0.18); // 지면 — 어두운 갈색
 
-    vec3 sky;
-    if (dir.y >= 0.0)
-    {
-        // 위쪽 반구 — horizon → zenith
-        float t = smoothstep(0.0, 1.0, dir.y);
-        sky = mix(HORIZON, ZENITH, t);
-    }
-    else
-    {
-        // 아래쪽 반구 — horizon → ground
-        float t = smoothstep(0.0, 1.0, -dir.y);
-        sky = mix(HORIZON, GROUND, t);
-    }
+        vec3 sky;
+        if (dir.y >= 0.0)
+        {
+                // 위쪽 반구 — horizon -> zenith
+                float t = smoothstep(0.0, 1.0, dir.y);
+                sky = mix(HORIZON, ZENITH, t);
+        }
+        else
+        {
+                // 아래쪽 반구 — horizon -> ground
+                float t = smoothstep(0.0, 1.0, -dir.y);
+                sky = mix(HORIZON, GROUND, t);
+        }
 
-    fragColor = vec4(sky, 1.0);
+        fragColor = vec4(sky, 1.0);
 }

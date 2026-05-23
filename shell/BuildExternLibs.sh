@@ -228,9 +228,9 @@ build_assimp() {
 
     local ASSIMP_BUILD="$BUILD_DIR/assimp_${BUILD_TYPE}"
     # assimp v5.4.3 옵션:
-    #  - ASSIMP_INJECT_DEBUG_POSTFIX 가 기본 ON → Debug 빌드는 CMAKE_DEBUG_POSTFIX=d
+    #  - ASSIMP_INJECT_DEBUG_POSTFIX 가 기본 ON -> Debug 빌드는 CMAKE_DEBUG_POSTFIX=d
     #    가 적용되어 libassimpd.a / libzlibstaticd.a 가 생성됨 (find 로 탐색).
-    #  - ASSIMP_BUILD_ZLIB=ON → 번들 zlib(zlibstatic) 을 함께 빌드.
+    #  - ASSIMP_BUILD_ZLIB=ON -> 번들 zlib(zlibstatic) 을 함께 빌드.
     cmake -S "$ASSIMP_DIR" -B "$ASSIMP_BUILD" \
         -G "Ninja" \
         -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
@@ -271,7 +271,7 @@ build_assimp Debug "_d"
 # (패치는 멱등이라 다음 실행 시 자동 재적용 — 'm extern/assimp' 오염 방지.)
 git -C "$ASSIMP_DIR" checkout -- contrib/zlib/zutil.h 2>/dev/null || true
 
-# assimp 헤더 복사: 소스 트리의 공개 헤더 → 그 위에 생성 헤더(config.h/revision.h) 덮어쓰기
+# assimp 헤더 복사: 소스 트리의 공개 헤더 -> 그 위에 생성 헤더(config.h/revision.h) 덮어쓰기
 mkdir -p "$INCLUDE_DIR/assimp"
 cp -r "$ASSIMP_DIR/include/assimp/." "$INCLUDE_DIR/assimp/"
 # config.h / revision.h 는 소스 트리에 없고 Release 빌드 트리에서 생성됨
@@ -291,7 +291,7 @@ build_spdlog() {
 
     local SPDLOG_BUILD="$BUILD_DIR/spdlog_${BUILD_TYPE}"
     # spdlog v1.17.0 옵션:
-    #  - SPDLOG_DEBUG_POSTFIX "d" (기본값) → Debug 빌드는 libspdlogd.a 생성
+    #  - SPDLOG_DEBUG_POSTFIX "d" (기본값) -> Debug 빌드는 libspdlogd.a 생성
     #  - 헤더 온리 모드가 아닌 컴파일 정적 라이브러리로 빌드 (기본 동작)
     cmake -S "$SPDLOG_DIR" -B "$SPDLOG_BUILD" \
         -G "Ninja" \

@@ -207,8 +207,8 @@ vec4 DepthResult()
         float linearDepth = (2.0 * nearPlane * farPlane) / (farPlane + nearPlane - z * (farPlane - nearPlane));
 
         // 보고 싶은 거리 범위를 [0,1] 로 늘려 saturate — 평활화 흉내
-        float minDist = 1.0; // 이보다 가까운 픽셀 → 1.0 (흰색)
-        float maxDist = 5.0; // 이보다 먼 픽셀     → 0.0 (검정)
+        float minDist = 1.0; // 이보다 가까운 픽셀 -> 1.0 (흰색)
+        float maxDist = 5.0; // 이보다 먼 픽셀     -> 0.0 (검정)
         float t = clamp((linearDepth - minDist) / (maxDist - minDist), 0.0, 1.0); // saturate
         float res = 1.0 - t; // 가까울수록 밝게
         return vec4(res, res, res, 1.0);

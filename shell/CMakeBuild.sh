@@ -14,7 +14,9 @@ else
 fi
 
 if [ -n "$TARGET" ]; then
-    cmake --build "$BUILD_DIR" --target "$TARGET"
+    # CMake 타겟명은 디렉토리 경로가 아닌 leaf 이름 (box2d_demo/box2d_demo1 -> box2d_demo1)
+    TARGET_NAME="$(basename "$TARGET")"
+    cmake --build "$BUILD_DIR" --target "$TARGET_NAME"
 else
     cmake --build "$BUILD_DIR"
 fi

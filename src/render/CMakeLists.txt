@@ -14,7 +14,7 @@ target_include_directories(sjhopengl_render
 )
 
 # property_block_setter / pipeline_state_setter 는 GL 호출이 본업이므로 render 모듈 소속.
-# 공개 헤더(mesh_pass_processor.h / property_block_setter.h) 는 Material/Texture forward decl 만 →
+# 공개 헤더(mesh_pass_processor.h / property_block_setter.h) 는 Material/Texture forward decl 만 ->
 # SJH::material + SJH::resource_registry 는 PRIVATE.
 target_link_libraries(sjhopengl_render
     PUBLIC  SJH::common SJH::program project_deps

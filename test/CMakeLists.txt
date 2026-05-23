@@ -27,7 +27,7 @@ catch_discover_tests(test_common)
 
 #  Phase B1 — Headless GL 컨텍스트 fixture (재사용 STATIC lib)
 # 향후 GL 상태 쿼리 테스트들이 공유하는 인프라.
-# PUBLIC link 로 project_deps(gl3w + glfw3) 전파 → 소비 테스트가 #include "GL/gl3w.h" 가능.
+# PUBLIC link 로 project_deps(gl3w + glfw3) 전파 -> 소비 테스트가 #include "GL/gl3w.h" 가능.
 add_library(gl_test_fixture STATIC support/gl_test_fixture.cpp)
 target_link_libraries(gl_test_fixture PUBLIC
     project_deps
@@ -51,7 +51,7 @@ target_include_directories(spdlog_capture PUBLIC
 target_compile_features(spdlog_capture PRIVATE cxx_std_17)
 
 #  Task 6 — GL state snapshot wrapper + Diff (재사용 STATIC lib)
-# SJH::diagnostics PUBLIC link → 소비 테스트가 GLStateFields/SymbolicName 자동 가시.
+# SJH::diagnostics PUBLIC link -> 소비 테스트가 GLStateFields/SymbolicName 자동 가시.
 # 사용처: test_gl_state_snapshot.cpp (Task 6) + 향후 다른 테스트가 GLStateSnapshot/Diff 활용.
 add_library(gl_state_snapshot STATIC support/gl_state_snapshot.cpp)
 target_link_libraries(gl_state_snapshot PUBLIC
@@ -98,7 +98,7 @@ target_compile_features(test_uniform_diagnostics PRIVATE cxx_std_17)
 catch_discover_tests(test_uniform_diagnostics)
 
 #  program 모듈 — Uniforms 자유 함수 family 의 location 캐시 + setter 동작
-# 인라인 GLSL → Shader::CreateFromSource → Program::Create → Uniforms::Set*/Get 검증.
+# 인라인 GLSL -> Shader::CreateFromSource -> Program::Create -> Uniforms::Set*/Get 검증.
 add_executable(test_program_uniforms test_program_uniforms.cpp)
 target_link_libraries(test_program_uniforms PRIVATE
     Catch2::Catch2WithMain

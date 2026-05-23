@@ -36,7 +36,7 @@ add_subdirectory(input)
 #
 #  사용:
 #    target_link_libraries(<chapter> PRIVATE project_deps SJH::engine)
-#    → 모든 코어 모듈 (13개) 자동 link + include 경로 자동 전파.
+#    -> 모든 코어 모듈 (13개) 자동 link + include 경로 자동 전파.
 #
 #  명시 모듈 link 도 호환 — SJH::scene 만 link 같은 부분 사용 OK.
 #  주의 — SJH::imgui 도 포함. ImGui *컨텍스트 초기화* 는 클라이언트 책임 (link 만 보장).
