@@ -165,24 +165,38 @@ namespace SJH::Const
 	inline constexpr auto PATH_TEX_WINDOW = "./resources/texture/blending_transparent_window.png";
 
 	// ─── 셰이더 uniform 이름 ───
+	// transform builtin (MeshPassProcessor::Process 가 자동 송신 — Unity Camera builtin uniform 정통).
+	inline constexpr auto UNI_MODEL = "uModel";  ///< per-draw transient (world matrix).
+	inline constexpr auto UNI_VIEW  = "uView";   ///< per-camera-pass transient (view matrix).
+	inline constexpr auto UNI_PROJ  = "uProj";   ///< per-camera-pass transient (projection matrix).
+
+	// legacy combined transform — 신규 셰이더는 uModel/uView/uProj 분리. 일부 데모만 잔존.
 	inline constexpr auto UNI_BASE_COLOR = "baseColor";
 	inline constexpr auto UNI_TRANSFORM_MAT = "transformMat";
 	inline constexpr auto UNI_MODEL_TRANSFORM_MAT = "modelTransformMat";
+
+	// lighting builtin (SceneRenderer::SendLightUniforms 가 자동 송신 — 씬 전역).
 	inline constexpr auto UNI_VIEW_POS = "viewPos";
 	inline constexpr auto UNI_DIR_LIGHT = "dirLight";
 	inline constexpr auto UNI_SPOT_LIGHT = "spotLight";
 	inline constexpr auto UNI_DIR_LIGHT_ENABLED = "dirLightEnabled";
 	inline constexpr auto UNI_SPOT_LIGHT_ENABLED = "spotLightEnabled";
+
+	// material / texture builtin (PropertyBlockSetter 가 송신).
 	inline constexpr auto UNI_TEX = "tex";
 	inline constexpr auto UNI_POSTPROCESS_FRAMETEXTURE = "frameTexture";
 	inline constexpr auto UNI_POSTPROCESS_GAMMA = "gamma";
 	inline constexpr auto UNI_MATERIAL_DIFFUSE = "material.diffuse";
 	inline constexpr auto UNI_MATERIAL_SPECULAR = "material.specular";
 	inline constexpr auto UNI_MATERIAL_SHININESS = "material.shininess";
+
 	// 배열 uniform — prefix + 인덱스 + STR_INDEX_CLOSE 로 결합. 예: "pointLights[" + "0" + "]".
 	inline constexpr auto UNI_POINT_LIGHTS_PREFIX = "pointLights[";
 	inline constexpr auto UNI_POINT_LIGHTS_ENABLED_PREFIX = "pointLightsEnabled[";
 	inline constexpr auto STR_INDEX_CLOSE = "]";
+
+	// 셰이더 schema 와 1:1 — phong_tex.fs / lighting.fs 의 `#define NUM_POINT_LIGHTS`.
+	inline constexpr int NUM_POINT_LIGHTS = 2;
 
 	// ─── uniform struct 멤버 suffix (program_uniforms 가 prefix 와 결합) ───
 	inline constexpr auto SFX_DIRECTION = ".direction";

@@ -14,7 +14,7 @@
 #include "program/program.h"
 #include "program/program_uniforms.h"
 #include "shader/shader.h"
-#include "render/render_context.h"
+#include "render/device_context.h"
 
 #include "GL/gl3w.h"
 
@@ -74,7 +74,7 @@ TEST_CASE("Uniforms::Set* — setter family 가 crash 없이 GL 호출 위임",
     auto prog = MakeTestProgram();
     REQUIRE(prog != nullptr);
 
-    auto& rc = SJH::RenderContext::Get();
+    auto& rc = SJH::DeviceContext::Get();
     rc.UseProgram(*prog);   // setter 들이 의미 있게 동작하려면 use 상태여야 함.
 
     const vmath::mat4 identity = vmath::mat4::identity();

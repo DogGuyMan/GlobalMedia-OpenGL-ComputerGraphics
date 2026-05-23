@@ -1,6 +1,6 @@
 #include "scene/model_spawner.h"
 #include "scene/actor.h"
-#include "scene/components.h"
+#include "render/mesh_renderer.h"
 #include "object/model.h"
 
 #include <memory>

@@ -1,7 +1,7 @@
 /**
  * @file main.cpp
  * @brief migrate_demo — OpenGL-With-CMake/src/context/context.cpp 를 SJH Actor/Component
- *        그래프 + RenderSystem 으로 마이그레이트 (ImGui 컨트롤 + Stencil Outline + FlashLight 포함).
+ *        그래프 + SceneRenderer 으로 마이그레이트 (ImGui 컨트롤 + Stencil Outline + FlashLight 포함).
  *
  * @details
  *  ### 씬 (레퍼런스 회귀)
@@ -13,7 +13,7 @@
  *  ### 멀티 패스 PostFX (알파벳 순 체인)
  *  - SceneCamera (depth=0, SceneFB) — 본체 + 아웃라인 (stencil) 통합 렌더
  *  - PostFX 패스 5종 (depth=1..5, resources/shader/postprocess/&lt;name&gt;.fs):
- *      blurring → gamma → invert → sharpening → sobel
+ *      blurring -> gamma -> invert -> sharpening -> sobel
  *  - 각 패스: 자기 layer + 자기 camera + 자기 quad + 자기 intermediate FB 보유.
  *  - 매 프레임 활성 패스만 추려 chain 동적 재배선:
  *      input = (첫 패스 ? SceneFB : 이전 활성 패스의 outputFB)
@@ -45,12 +45,12 @@
 #include "input/mouse_input.h"
 #include "material/material_uniforms.h"
 #include "object/light.h"
-#include "render/render_context.h"
-#include "render/render_system.h"
+#include "render/device_context.h"
+#include "render/scene_renderer.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
-#include "scene/components.h"
+#include "render/mesh_renderer.h"
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
 
@@ -207,10 +207,12 @@ class migrate_demo_app : public sb7::application
 
 		// macOS Retina 호환 — info.windowWidth/Height (logical) 가 아닌 *physical* 사용.
 		// GLFW 가 내부 cache 한 값 반환이라 매 프레임 호출 비용 미미.
+		// SP-RTOwnership — Application 이 default backbuffer 의 owner.
 		{
 			int fbW = 0, fbH = 0;
 			glfwGetFramebufferSize(window, &fbW, &fbH);
-			SJH::RenderContext::Get().SetDefaultTargetSize(fbW, fbH);
+			if (!mDefaultTarget || mDefaultTarget->GetWidth() != fbW || mDefaultTarget->GetHeight() != fbH)
+				mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
 		}
 
 		// ImGui NewFrame 우선 — io.WantCaptureMouse/Keyboard 가 입력 디스패치에 영향.
@@ -233,9 +235,9 @@ class migrate_demo_app : public sb7::application
 		if (!io.WantCaptureKeyboard)
 			mKeyboard.PollHeld(window);
 
-		// Scene tick + 멀티 카메라 렌더 (SceneFB → PostFX chain → backbuffer).
+		// Scene tick + 멀티 카메라 렌더 (SceneFB -> PostFX chain -> backbuffer).
 		SJH::Scene::Director::Get().Update(dt);
-		mRenderSys.Render();
+		mRenderSys.Render(*mDefaultTarget);
 
 		// ImGui draws — v1.53 의 io.RenderDrawListsFn 콜백을 통해 자동 (현재 backbuffer 에).
 		ImGui::Render();
@@ -248,7 +250,7 @@ class migrate_demo_app : public sb7::application
 		ImGui::DestroyContext(mImGuiCtx);
 	}
 
-	// === sb7 입력 콜백 → ImGui forward + 게임 디스패치 ===
+	// === sb7 입력 콜백 -> ImGui forward + 게임 디스패치 ===
 	void onKey(int key, int action) override
 	{
 		ImGui_ImplGlfwGL3_KeyCallback(window, key, /*scancode*/ 0, action, /*mods*/ 0);
@@ -286,9 +288,9 @@ class migrate_demo_app : public sb7::application
 
 		sb7::application::onResize(w, h);   // base 의 info.windowWidth/Height 도 physical 로 갱신.
 		glViewport(0, 0, w, h);
-		auto &rc  = SJH::RenderContext::Get();
 		auto &dir = SJH::Scene::Director::Get();
-		rc.SetDefaultTargetSize(w, h);
+		// SP-RTOwnership — default backbuffer 는 Application 책임.
+		mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(w, h);
 
 		// 모든 카메라 aspect 일괄 갱신 (Scene + PostFX 5개).
 		const float aspect = static_cast<float>(w) / static_cast<float>(h);
@@ -465,7 +467,7 @@ class migrate_demo_app : public sb7::application
 		ImGui::End();
 	}
 
-	/// @brief UI 상태 → 씬 반영. 매 프레임 호출.
+	/// @brief UI 상태 -> 씬 반영. 매 프레임 호출.
 	/// @details 핵심 작업:
 	///   1) 광원 컴포넌트 enable 토글.
 	///   2) FlashLight 모드 — 스포트 액터 transform 을 카메라 추종.
@@ -521,21 +523,22 @@ class migrate_demo_app : public sb7::application
 				active[k - 1]->OutputFB.get();
 			const bool isLast = (k + 1 == active.size());
 
-			// uScene 재바인딩 — properties bag 의 store 만 갱신 (실제 GL bind 는 Apply 시).
-			p->Material->Textures[K::PostFXKey::USceneSampler] =
+			// uScene 재바인딩 — PropertyBlock 에 store 만 (실제 GL bind 는 PropertyBlockSetter::Set 시).
+			p->Material->Properties.Textures[K::PostFXKey::USceneSampler] =
 			    {input->GetColorAttachment().get(), 0};
 
 			// 카메라 target — 마지막 활성 패스만 backbuffer.
 			p->Camera->SetTargetFramebuffer(isLast ? nullptr : p->OutputFB.get());
 		}
 
-		// 5) Clear color — RenderContext::BeginFrame 의 clear 가 GL state 의 glClearColor 사용.
+		// 5) Clear color — DeviceContext::BeginFrame 의 clear 가 GL state 의 glClearColor 사용.
 		glClearColor(mUI.clearColor[0], mUI.clearColor[1], mUI.clearColor[2], 1.0f);
 	}
 
 	SJH::KeyboardInput<MigrateDemo::Controller::CameraController::Action> mKeyboard;
 	SJH::MouseInput mMouse;
-	SJH::RenderSystem mRenderSys;
+	SJH::SceneRenderer mRenderSys;
+	std::unique_ptr<SJH::DefaultRenderTarget> mDefaultTarget;  // SP-RTOwnership — Application owner
 	SJH::FramebufferUPtr mSceneFB;
 	MigrateDemo::Scene::SceneRefs mRefs;
 	SJH::Scene::Actor *mSceneCameraActor = nullptr;

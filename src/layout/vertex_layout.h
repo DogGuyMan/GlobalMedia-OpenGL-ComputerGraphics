@@ -52,7 +52,7 @@ namespace SJH
         /// @brief 내부 VAO 핸들 반환 — 디버깅 / 직접 GL 호출 시 사용.
         GLuint GetVAOAddr() const { return mVertexArrayObject; }
 
-        /// @brief VAO GL 핸들 반환 — RenderContext::BindVAO 인자. @c GetVAOAddr 의 의미론적 alias.
+        /// @brief VAO GL 핸들 반환 — DeviceContext::BindVAO 인자. @c GetVAOAddr 의 의미론적 alias.
         GLuint GetVAO() const { return mVertexArrayObject; }
 
         /// @brief 본 VAO 를 현재 컨텍스트에 바인딩.

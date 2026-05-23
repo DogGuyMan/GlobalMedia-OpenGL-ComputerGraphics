@@ -27,7 +27,7 @@ namespace SJH::Scene
 	///
 	///   ### Projection
 	///   Projection 은 항상 자체 파라미터 (FovYDeg / Aspect / NearZ / FarZ).
-	///   aspect 는 사용자가 매 프레임 갱신 책임 (RenderContext 의 window 크기 기반).
+	///   aspect 는 사용자가 매 프레임 갱신 책임 (DeviceContext 의 window 크기 기반).
 	class Camera : public Component
 	{
 	  public:
@@ -78,7 +78,7 @@ namespace SJH::Scene
 
 		// ── SP4 multi-pass ─────────────────────────────────────────────────────
 		/// @brief 렌더 대상 FBO 지정 — Unity Camera.targetTexture 정통.
-		/// @details nullptr = default backbuffer. RenderSystem 이 BeginFrame 시 자동 사용.
+		/// @details nullptr = default backbuffer. SceneRenderer 이 BeginFrame 시 자동 사용.
 		void SetTargetFramebuffer(Framebuffer *fb)
 		{
 			mTargetFB = fb;

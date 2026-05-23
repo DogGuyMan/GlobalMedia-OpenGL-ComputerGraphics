@@ -15,12 +15,13 @@
  *  Image 는 스코프 한정 — `CreateTexture` 가 GPU 업로드를 마치면 즉시 소멸. 매니저는 Image 를 캐시하지 않는다.
  *
  *  ### 접근
- *  Cocos `cc::Director::TextureCache` / Unity `Resources` / SP2 `RenderContext::Get()` 정통 —
+ *  Cocos `cc::Director::TextureCache` / Unity `Resources` / SP2 `DeviceContext::Get()` 정통 —
  *  Meyer's 싱글톤 `ResourceRegistry::Get()` 으로 전역 1 인스턴스. 챕터/app 의 자원 보유 컨벤션은
  *  `.claude/architecture.md §11.3` 참조.
  */
 
-#include "common/common.h"   // CLASS_PTR 매크로
+#include "buffer/framebuffer.h" 
+#include "common/common.h"
 #include "image.h"
 #include "material/material.h"
 #include "object/mesh.h"
@@ -44,7 +45,7 @@ namespace SJH
     class ResourceRegistry
     {
     public:
-        /// @brief 싱글톤 접근 — Meyer's. SP2 `RenderContext::Get()` 패턴과 일관.
+        /// @brief 싱글톤 접근 — Meyer's. SP2 `DeviceContext::Get()` 패턴과 일관.
         /// @details 첫 호출 시 lazy 인스턴스화. thread-safe (C++11 static local).
         static ResourceRegistry& Get();
 
@@ -88,6 +89,14 @@ namespace SJH
         /// @brief @p key 로 캐시된 Mesh *조회* (생성 안 함). 없으면 nullptr.
         Mesh *FindMesh(const std::string &key);
 
+        /// @brief @p key 로 Framebuffer (FBO) 를 *생성*하고 캐시. 이미 있으면 실패(nullptr).
+        /// @details SP-RTRegistry — 옛 `Framebuffer::Create()` 직접 호출 흐름의 위탁 패턴.
+        ///   `DefaultRenderTarget` (window backbuffer) 은 *Resource 가 아니라 Application 책임* — 본 매니저 대상 아님.
+        Framebuffer *CreateFramebuffer(const std::string &key, int width, int height);
+
+        /// @brief @p key 로 캐시된 Framebuffer *조회* (생성 안 함). 없으면 nullptr.
+        Framebuffer *FindFramebuffer(const std::string &key);
+
         /// @brief 보유 모든 자원 일괄 해제 (매니저 인스턴스 자체는 유지).
         void Clear();
 
@@ -100,11 +109,12 @@ namespace SJH
     private:
         ResourceRegistry() = default;
 
-        std::unordered_map<std::string, TextureUPtr>  mTextures;
-        std::unordered_map<std::string, MaterialUPtr> mMaterials;
-        std::unordered_map<std::string, ModelUPtr>    mModels;
-        std::unordered_map<std::string, ProgramUPtr>  mPrograms;
-        std::unordered_map<std::string, MeshUPtr>     mMeshes;
+        std::unordered_map<std::string, TextureUPtr>     mTextures;
+        std::unordered_map<std::string, MaterialUPtr>    mMaterials;
+        std::unordered_map<std::string, ModelUPtr>       mModels;
+        std::unordered_map<std::string, ProgramUPtr>     mPrograms;
+        std::unordered_map<std::string, MeshUPtr>        mMeshes;
+        std::unordered_map<std::string, FramebufferUPtr> mFramebuffers;
     };
 }
 

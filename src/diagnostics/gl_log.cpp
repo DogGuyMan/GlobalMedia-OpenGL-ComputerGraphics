@@ -1,5 +1,6 @@
 #include "gl_log.h"
 
+#include <GL/glcorearb.h>
 #include <spdlog/fmt/ranges.h>
 #include <spdlog/spdlog.h>
 #include <string>
@@ -255,7 +256,7 @@ namespace SJH::Diagnostics
         }
     }
 
-    bool GLDebug::CheckGLBufferData(const GLint data_size)
+    bool GLDebug::CheckGLBufferData(const size_t data_size)
     {
         const GLenum err = glGetError();
         switch (err)

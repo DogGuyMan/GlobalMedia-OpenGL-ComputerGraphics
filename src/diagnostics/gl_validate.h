@@ -80,7 +80,7 @@ namespace SJH::Diagnostics::GLValidate
     ///       불일치 시에만 warn, 일치 시 info — 매 프레임 호출해도 mismatch 없으면 조용.
     size_t CheckViewport(int expectedWidth, int expectedHeight, const char* tag);
 
-    /// 통합 진단 — A·B·C·D·F 모두 실행. Init 직후 1회 호출 권장.
+    /// 통합 진단 — A,B,C,D,F 모두 실행. Init 직후 1회 호출 권장.
     /// @return 0 = 모두 clean, > 0 = 위반 합계 (E 제외 — E는 본 함수 호출 시 1회 실행)
     size_t RunFullSweep(GLuint program,
                         const std::vector<uint32_t>& indices,

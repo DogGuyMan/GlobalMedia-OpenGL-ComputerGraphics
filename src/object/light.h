@@ -93,7 +93,7 @@ namespace SJH
 	 *  `GetWorldPosition()` = worldMatrix[3].xyz (translate column).
 	 *
 	 * @note Actor 가 컴포넌트 map 에 `type_index` 로 저장 — *PointLight 두 개 같은 Actor 에 부착 불가*.
-	 *       복수 점광원은 Actor 인스턴스를 분리해 구성 (RenderSystem 이 모두 수집).
+	 *       복수 점광원은 Actor 인스턴스를 분리해 구성 (SceneRenderer 이 모두 수집).
 	 */
 	class PointLight : public Scene::Component
 	{

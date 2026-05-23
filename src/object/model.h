@@ -27,7 +27,7 @@ namespace SJH
      * @details
      *  - 한 파일에서 여러 assimp 서브메시를 @ref RenderUnit 목록으로 변환.
      *  - @c mTextures / @c mMaterials 가 생존 기간 동안 GPU 자원 소유.
-     *  - GL 드로우콜은 RenderContext 게이트웨이가 담당 (Pattern Y 정통).
+     *  - GL 드로우콜은 DeviceContext 게이트웨이가 담당 (Pattern Y 정통).
      */
     class Model
     {

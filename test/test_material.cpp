@@ -30,12 +30,12 @@ TEST_CASE("Material default — properties bag 이 비어 있음", "[material][d
     auto m_uptr = SJH::Material::Create();
     auto& m = *m_uptr;
 
-    REQUIRE(m.Floats.empty());
-    REQUIRE(m.Ints.empty());
-    REQUIRE(m.Vec3s.empty());
-    REQUIRE(m.Vec4s.empty());
-    REQUIRE(m.Mat4s.empty());
-    REQUIRE(m.Textures.empty());
+    REQUIRE(m.Properties.Floats.empty());
+    REQUIRE(m.Properties.Ints.empty());
+    REQUIRE(m.Properties.Vec3s.empty());
+    REQUIRE(m.Properties.Vec4s.empty());
+    REQUIRE(m.Properties.Mat4s.empty());
+    REQUIRE(m.Properties.Textures.empty());
     REQUIRE(m.GetProgram() == nullptr);
     REQUIRE(m.GetCache()   == nullptr);
 }
@@ -46,13 +46,13 @@ TEST_CASE("Uniforms::SetFloat — properties bag 에 store", "[material][propert
     auto& m = *m_uptr;
 
     SJH::Uniforms::SetFloat(m, "material.shininess", 64.0f);
-    REQUIRE(m.Floats.size() == 1);
-    REQUIRE_THAT(m.Floats["material.shininess"], WithinAbs(64.0f, 1e-6f));
+    REQUIRE(m.Properties.Floats.size() == 1);
+    REQUIRE_THAT(m.Properties.Floats["material.shininess"], WithinAbs(64.0f, 1e-6f));
 
     // 동일 키 overwrite — Unity 정통 동작.
     SJH::Uniforms::SetFloat(m, "material.shininess", 128.0f);
-    REQUIRE(m.Floats.size() == 1);
-    REQUIRE_THAT(m.Floats["material.shininess"], WithinAbs(128.0f, 1e-6f));
+    REQUIRE(m.Properties.Floats.size() == 1);
+    REQUIRE_THAT(m.Properties.Floats["material.shininess"], WithinAbs(128.0f, 1e-6f));
 }
 
 TEST_CASE("Uniforms::SetInt — properties bag 에 store", "[material][properties][int]")
@@ -61,7 +61,7 @@ TEST_CASE("Uniforms::SetInt — properties bag 에 store", "[material][propertie
     auto& m = *m_uptr;
 
     SJH::Uniforms::SetInt(m, "dirLightEnabled", 1);
-    REQUIRE(m.Ints["dirLightEnabled"] == 1);
+    REQUIRE(m.Properties.Ints["dirLightEnabled"] == 1);
 }
 
 TEST_CASE("Uniforms::SetVec3 — properties bag 에 store", "[material][properties][vec3]")
@@ -70,8 +70,8 @@ TEST_CASE("Uniforms::SetVec3 — properties bag 에 store", "[material][properti
     auto& m = *m_uptr;
 
     SJH::Uniforms::SetVec3(m, "tint", vmath::vec3(1.0f, 0.5f, 0.25f));
-    REQUIRE(m.Vec3s.size() == 1);
-    auto& v = m.Vec3s["tint"];
+    REQUIRE(m.Properties.Vec3s.size() == 1);
+    auto& v = m.Properties.Vec3s["tint"];
     REQUIRE_THAT(v[0], WithinAbs(1.0f,  1e-6f));
     REQUIRE_THAT(v[1], WithinAbs(0.5f,  1e-6f));
     REQUIRE_THAT(v[2], WithinAbs(0.25f, 1e-6f));
@@ -85,13 +85,13 @@ TEST_CASE("Uniforms::SetTexture — properties bag 에 TextureBinding store", "[
     SJH::Uniforms::SetTexture(m, "material.diffuse",  kDiffuseA, /*unit*/ 0);
     SJH::Uniforms::SetTexture(m, "material.specular", kSpecB,    /*unit*/ 1);
 
-    REQUIRE(m.Textures.size() == 2);
+    REQUIRE(m.Properties.Textures.size() == 2);
 
-    const auto& diffuseBinding = m.Textures["material.diffuse"];
+    const auto& diffuseBinding = m.Properties.Textures["material.diffuse"];
     REQUIRE(diffuseBinding.Tex  == kDiffuseA);
     REQUIRE(diffuseBinding.Unit == 0);
 
-    const auto& specularBinding = m.Textures["material.specular"];
+    const auto& specularBinding = m.Properties.Textures["material.specular"];
     REQUIRE(specularBinding.Tex  == kSpecB);
     REQUIRE(specularBinding.Unit == 1);
 }
@@ -109,18 +109,18 @@ TEST_CASE("Material::Clone — properties 복사 + 독립 mutation", "[material]
     auto& b = *b_uptr;
 
     // Clone — 값 복제.
-    REQUIRE(b.Floats["material.shininess"] == 64.0f);
-    REQUIRE(b.Textures["material.diffuse"].Tex  == kDiffuseA);
-    REQUIRE(b.Textures["material.diffuse"].Unit == 0);
-    REQUIRE_THAT(b.Vec3s["tint"][0], WithinAbs(1.0f, 1e-6f));
+    REQUIRE(b.Properties.Floats["material.shininess"] == 64.0f);
+    REQUIRE(b.Properties.Textures["material.diffuse"].Tex  == kDiffuseA);
+    REQUIRE(b.Properties.Textures["material.diffuse"].Unit == 0);
+    REQUIRE_THAT(b.Properties.Vec3s["tint"][0], WithinAbs(1.0f, 1e-6f));
 
     // b 변경이 a 에 영향 없음.
     SJH::Uniforms::SetFloat(b, "material.shininess", 2.0f);
     SJH::Uniforms::SetVec3 (b, "tint", vmath::vec3(0.0f, 1.0f, 0.0f));
 
-    REQUIRE_THAT(a.Floats["material.shininess"], WithinAbs(64.0f, 1e-6f));
-    REQUIRE_THAT(a.Vec3s["tint"][0],             WithinAbs(1.0f,  1e-6f));
-    REQUIRE_THAT(b.Vec3s["tint"][1],             WithinAbs(1.0f,  1e-6f));
+    REQUIRE_THAT(a.Properties.Floats["material.shininess"], WithinAbs(64.0f, 1e-6f));
+    REQUIRE_THAT(a.Properties.Vec3s["tint"][0],             WithinAbs(1.0f,  1e-6f));
+    REQUIRE_THAT(b.Properties.Vec3s["tint"][1],             WithinAbs(1.0f,  1e-6f));
 }
 
 TEST_CASE("Material — 4 타입 동시 store / 독립 map 검증", "[material][properties][multi]")
@@ -134,15 +134,15 @@ TEST_CASE("Material — 4 타입 동시 store / 독립 map 검증", "[material][
     SJH::Uniforms::SetVec4 (m, "w", vmath::vec4(4.0f, 4.0f, 4.0f, 4.0f));
     SJH::Uniforms::SetMat4 (m, "mvp", vmath::mat4::identity());
 
-    REQUIRE(m.Floats.size() == 1);
-    REQUIRE(m.Ints.size()   == 1);
-    REQUIRE(m.Vec3s.size()  == 1);
-    REQUIRE(m.Vec4s.size()  == 1);
-    REQUIRE(m.Mat4s.size()  == 1);
+    REQUIRE(m.Properties.Floats.size() == 1);
+    REQUIRE(m.Properties.Ints.size()   == 1);
+    REQUIRE(m.Properties.Vec3s.size()  == 1);
+    REQUIRE(m.Properties.Vec4s.size()  == 1);
+    REQUIRE(m.Properties.Mat4s.size()  == 1);
 
     // 서로 다른 map — 같은 키로 type 다른 properties 공존 가능 (Unity 와 동일).
     SJH::Uniforms::SetFloat(m, "color", 0.5f);
     SJH::Uniforms::SetVec3 (m, "color", vmath::vec3(1.0f, 0.0f, 0.0f));
-    REQUIRE(m.Floats["color"] == 0.5f);
-    REQUIRE(m.Vec3s["color"][0] == 1.0f);
+    REQUIRE(m.Properties.Floats["color"] == 0.5f);
+    REQUIRE(m.Properties.Vec3s["color"][0] == 1.0f);
 }

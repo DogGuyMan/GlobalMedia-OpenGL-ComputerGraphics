@@ -1,24 +1,23 @@
 /**
  * @file material_uniforms.h
- * @brief Material 의 properties bag 에 typed value store — Unity `material.SetFloat / SetVector / SetTexture` 정통.
+ * @brief Material properties bag 의 typed store family — Unity `material.SetXxx` 정통 (EngineAPI §4.3 / §4.5).
  *
  * @details
- *  ### 디자인 동기 (SP6)
- *  - SP1~SP5: `SJH::Uniforms::Set*(const Program&, name, value)` — 즉시 GL 호출.
- *  - SP6: 책임 이전 — Material 이 properties bag 보유. setter 는 *bag 에 store* 만, GL 호출은 Apply 시점.
- *  - 자유 함수 family 유지 — SP1~SP5 의 `Uniforms` 패턴과 일관. Material 인자 첫 자리.
+ *  ### 핵심 — *store-only* semantics
+ *  본 family 는 GL 호출을 **하지 않는다**. Material 의 typed map (Floats/Ints/Vec3s/...) 에 *값만 기록*.
+ *  실제 `glUniform*` 송신은 draw 시점에 `PropertyBlockSetter::Set` 가
+ *  `UniformCache` 교집합 (셰이더가 실제로 받는 uniform 만) 으로 일괄 수행.
  *
- *  ### Unity 매핑
- *  | Unity                                | SJH (SP6)                                 |
- *  |--------------------------------------|-------------------------------------------|
- *  | `material.SetFloat("_X", v)`         | `Uniforms::SetFloat(mat, "_X", v)`        |
- *  | `material.SetVector("_X", v4)`       | `Uniforms::SetVec4 (mat, "_X", v4)`       |
- *  | `material.SetTexture("_MainTex", t)` | `Uniforms::SetTexture(mat, "_X", t, unit)` |
+ *  ### 2-layer uniform 송신 (§4.5) — 본 family 의 자리
+ *  | family | 인자 | 동작 | 용도 |
+ *  |---|---|---|---|
+ *  | **`Set*(Material&, ...)`** *(본 헤더)* | `Material&` | **store-only** | 사용자 컨텐츠 (color/texture/shininess) |
+ *  | `Set*(const Program&, ...)` *(program_uniforms.h)* | `const Program&` | 즉시 GL 호출 | 광원 / uModel / uView / Apply 의 내부 |
  *
- *  ### 책임 분리
- *  - 본 자유함수: properties bag 에 store (GL 호출 없음).
- *  - `MaterialApplier::Apply`: bag -> UniformCache 교집합 -> 일괄 GL 송신.
- *  - `SJH::Uniforms::Set*(const Program&, ...)`: light 송신 등 Material 우회 직접 호출용 (program_uniforms.h 유지).
+ *  ### OCP 함의
+ *  셰이더 schema 가 바뀌어도 본 family 호출은 *그대로*. 셰이더에 *추가* 된 uniform 은
+ *  setup 코드에서 `SetFloat / SetTexture` 한 줄 추가, *제거* 된 uniform 은 bag 에 남아도 silent skip.
+ *  Material 클래스는 셰이더 schema 를 모른다 — 진실의 원천은 `Program::UniformCache`.
  */
 #ifndef __SJH_MATERIAL_UNIFORMS_H__
 #define __SJH_MATERIAL_UNIFORMS_H__
@@ -44,7 +43,7 @@ namespace SJH
 
         /// @brief Texture binding — Texture* 비소유 관찰자 + sampler unit.
         /// @details Apply 시점에 (a) `Uniforms::SetInt(prog, name, unit)` 으로 sampler slot 송신 +
-        ///          (b) `RenderContext::BindTexture(unit, texID)` 로 텍스처 바인딩.
+        ///          (b) `DeviceContext::BindTexture(unit, texID)` 로 텍스처 바인딩.
         void SetTexture(Material& mat, const char* name, const Texture* tex, GLint unit);
     }
 }

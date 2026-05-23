@@ -40,17 +40,21 @@ namespace SJH
     void Framebuffer::Bind()
     {
         // RenderTarget contract — glBindFramebuffer + glViewport. SP4 멀티패스에서
-        // RenderContext::BeginFrame(target&) 이 default backbuffer 와 FBO 둘 다 동일 코드로 처리.
+        // DeviceContext::BeginFrame(target&) 이 default backbuffer 와 FBO 둘 다 동일 코드로 처리.
         glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
-        const auto size = GetSize();
-        glViewport(0, 0, size.Width, size.Height);
+        glViewport(0, 0, GetWidth(), GetHeight());
     }
 
-    Size Framebuffer::GetSize() const
-    {
-        if (mColorAttachment)
-            return Size{ mColorAttachment->GetWidth(), mColorAttachment->GetHeight() };
-        return Size{ 0, 0 };
+    int Framebuffer::GetWidth() const {
+	if (mColorAttachment)
+		return mColorAttachment->GetWidth();
+	return 0;
+    }
+
+    int Framebuffer::GetHeight() const {
+	if (mColorAttachment)
+		return mColorAttachment->GetHeight();
+	return 0;
     }
 
     bool Framebuffer::InitWithColorAttachment(const TexturePtr colorAttachment)

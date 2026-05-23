@@ -25,9 +25,9 @@
  *   - Material 측 선언이 *진실의 원천* — Unity SurfaceType / Cocos technique 정통.
  *
  *   ### 모자란 부분 (의도된 단순화)
- *   - **Stencil outline** — 레퍼런스는 stencil 마스킹으로 outline. SJH RenderSystem 은
+ *   - **Stencil outline** — 레퍼런스는 stencil 마스킹으로 outline. SJH SceneRenderer 은
  *     per-actor GL 상태 변경 미지원이므로 *shell scale 트릭* 으로 근사 (queueLayer ordering).
- *     완벽한 outline 은 RenderSystem 확장 필요 (TODO).
+ *     완벽한 outline 은 SceneRenderer 확장 필요 (TODO).
  *   - **FlashLight 모드 / ImGui 컨트롤** — ImGui 모듈 폐기 상태라 키 조작/슬라이더 생략.
  *   - **Depth func combo** — runtime 변경 UI 없음. GL_LESS (기본) 고정.
  */
@@ -42,7 +42,7 @@
 #include "resource_registry/image.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
-#include "scene/components.h"
+#include "render/mesh_renderer.h"
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
 #include <cstdint>
@@ -202,7 +202,7 @@ namespace MigrateDemo::Scene
 			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f);
 			// Outline 은 Box2 (Opaque, queue 2000) *직후* 그려야 stencil 마스킹 의도.
 			// matOutline 의 PassKind=Opaque (기본) 라 base queue 가 2000.
-			// → MeshRenderer.QueueOffset = +5 → 최종 queue 2005 — Unity Renderer.sortingOrder 정통.
+			// -> MeshRenderer.QueueOffset = +5 -> 최종 queue 2005 — Unity Renderer.sortingOrder 정통.
 			auto *mrOutline = outline->AddComponent<SJH::Scene::MeshRenderer>(
 			    meshBox, matOutline, /*queueOffset*/ 5);
 			// Outline 픽셀은 stencil!=1 일 때만 그림 (Box2 가 도장한 안쪽은 skip).
