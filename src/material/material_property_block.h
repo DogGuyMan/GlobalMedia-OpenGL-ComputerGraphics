@@ -15,7 +15,7 @@
  *  ### 분리 동기 (Material 의 책임 분할)
  *  - **`Material`** = Program 참조 + Pass.Kind + `MaterialPropertyBlock` 1 개 보유 (큰 분류 + 메타)
  *  - **`MaterialPropertyBlock`** = *셰이더 무관 typed properties* (이 클래스)
- *  - **`PropertyBlockSetter`** = *block + Program → GL 송신* (별도 Applier)
+ *  - **`PropertyBlockSetter`** = *block + Program -> GL 송신* (별도 Applier)
  *
  *  세 책임 분리로 ddd Separation of Concerns + 진실의 원천 단일화 만족.
  */

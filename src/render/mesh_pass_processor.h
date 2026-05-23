@@ -1,7 +1,6 @@
 #ifndef __SJH_MESH_PASS_PROCESSOR_H__
 #define __SJH_MESH_PASS_PROCESSOR_H__
 
-#include "render/mesh_renderer.h"   // StencilState — Pass 리팩토링 후 위치 (구 scene/components.h)
 #include <vmath.h>
 #include <cstddef>
 #include <vector>
@@ -15,7 +14,8 @@ namespace SJH
     class DeviceContext;
 
     /// @brief Cocos 식 Layer A — 한 프레임의 정렬 가능한 draw command.
-    /// @details MeshRenderer 의 per-actor GL 상태 (Stencil / DepthTest / DepthWrite) 를 함께 캐리.
+    /// @details GL state override 필드 *모두 제거*. GL state 는 *오직 Material::PassKind*
+    /// `Pass::DefaultPipelineStateOf(material->GetPass())` 가 매 draw 도출.
     struct DrawCommand
     {
         const Program*       program     = nullptr;
@@ -25,11 +25,6 @@ namespace SJH
         int                  queueLayer  = 2000;
         const Scene::Actor*  actor       = nullptr;   ///< 디버그 추적
         float                depth       = 0.0f;      ///< view-space z (back-to-front)
-
-        // ── per-actor override (MeshRenderer 에서 복사) ──
-        Scene::StencilState  stencil;                  ///< 기본 disabled.
-        bool                 depthTest   = true;
-        bool                 depthWrite  = true;
     };
 
     /// @brief Low-level Orchestrator — DrawCommand 컬렉션의 *순서 + 조건* 결정 + Applier 들에게 위임.

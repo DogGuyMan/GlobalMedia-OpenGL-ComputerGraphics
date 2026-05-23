@@ -35,8 +35,6 @@
 #include <GLFW/glfw3.h>
 #include <sb7.h>
 
-// stb_image 정의 책임은 SJH::resource_registry 가 이미 보유 (image.cpp).
-
 #include <imgui.h>
 #include <imgui_impl_glfw_gl3.h>
 
@@ -45,7 +43,6 @@
 #include "input/mouse_input.h"
 #include "material/material_uniforms.h"
 #include "object/light.h"
-#include "render/device_context.h"
 #include "render/scene_renderer.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
@@ -374,7 +371,7 @@ class migrate_demo_app : public sb7::application
 
 			// Material — sampler uScene 은 ApplyUIState 가 매 프레임 chain 의 input 으로 재바인딩.
 			const std::string matKey = std::string(K::PostFXKey::MaterialPrefix) + def.Name;
-			auto *mat = reg.CreateMaterial(matKey);
+			auto *mat = reg.CreateSharedMaterial(matKey);
 			mat->SetProgram(prog);
 
 			// Intermediate FB — 항상 생성. 활성 여부와 무관 (resize 시 재생성 단순화).

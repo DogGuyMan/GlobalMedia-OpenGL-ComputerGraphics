@@ -60,10 +60,22 @@ namespace SJH
 
         /// @brief 빈 Material 을 *생성*하고 @p key 로 캐시. 이미 있으면 실패(nullptr).
         /// @details 텍스처 독립 — 호출자가 이후 @c Material::SetResolvedTextures / @c SetProgram 으로 배선.
-        Material *CreateMaterial(const std::string &key);
+        ///   *공유본* (Unity `sharedMaterial` 정통) — 모든 사용자가 같은 인스턴스. 결과 `IsInstance=false`.
+        Material *CreateSharedMaterial(const std::string &key);
 
         /// @brief @p key 로 캐시된 머티리얼 *조회* (생성 안 함). 없으면 nullptr.
-        Material *FindMaterial(const std::string &key);
+        Material *FindSharedMaterial(const std::string &key);
+
+        /// @brief @p template_ 의 Clone + 인스턴스 등록 한 호출 — Owner 가 *항상* ResourceRegistry.
+        /// @details
+        ///   - Clone() + RegisterMaterialInstance 의 2 단계를 *원자적으로* 묶음 —
+        ///     호출자가 MaterialUPtr 을 *지역 변수로 보유* 하는 실수 회피 (dangling 차단).
+        ///   - 결과는 `IsInstance=true` + `OriginalMaterial=template_` (Unreal `UMaterialInstanceDynamic` 정통).
+        ///   - Outline / 변형 사용 사례 — `mat->SetPass(Kind::OutlineVisible)` 등.
+        Material *CreateMaterialInstanceFrom(const std::string &key, const Material *template_);
+
+        /// @brief @p key 로 캐시된 *인스턴스* 머티리얼 조회 (생성 안 함). 없으면 nullptr.
+        Material *FindMaterialInstance(const std::string &key);
 
         /// @brief 파일에서 Model 을 *로드*해 @p key 로 캐시. 이미 있으면 실패(nullptr).
         Model *CreateModel(const std::string &key, const std::string &filename);
@@ -110,7 +122,8 @@ namespace SJH
         ResourceRegistry() = default;
 
         std::unordered_map<std::string, TextureUPtr>     mTextures;
-        std::unordered_map<std::string, MaterialUPtr>    mMaterials;
+        std::unordered_map<std::string, MaterialUPtr>    mSharedMaterials;     ///< Unity `sharedMaterial` 정통 — 공유 원본
+        std::unordered_map<std::string, MaterialUPtr>    mMaterialInstances;   ///< Unreal `UMaterialInstanceDynamic` 정통 — Clone 결과
         std::unordered_map<std::string, ModelUPtr>       mModels;
         std::unordered_map<std::string, ProgramUPtr>     mPrograms;
         std::unordered_map<std::string, MeshUPtr>        mMeshes;

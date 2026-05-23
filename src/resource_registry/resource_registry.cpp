@@ -46,22 +46,46 @@ namespace SJH
         return (it != mTextures.end()) ? it->second.get() : nullptr;
     }
 
-    Material *ResourceRegistry::CreateMaterial(const std::string &key)
+    Material *ResourceRegistry::CreateSharedMaterial(const std::string &key)
     {
         // 텍스처 독립 — 빈 Material 만 생성,캐시. 텍스처/프로그램 배선은 호출자 책임.
-        if (mMaterials.find(key) != mMaterials.end())
+        if (mSharedMaterials.find(key) != mSharedMaterials.end())
         {
-            spdlog::warn("CreateMaterial: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+            spdlog::warn("CreateSharedMaterial: 키 '{}' 가 이미 존재 — FindSharedMaterial 을 먼저 호출하라", key);
             return nullptr;
         }
-        auto insertedIt = mMaterials.emplace(key, Material::Create()).first;
+        auto insertedIt = mSharedMaterials.emplace(key, Material::Create()).first;
         return insertedIt->second.get();
     }
 
-    Material *ResourceRegistry::FindMaterial(const std::string &key)
+    Material *ResourceRegistry::FindSharedMaterial(const std::string &key)
     {
-        auto it = mMaterials.find(key);
-        return (it != mMaterials.end()) ? it->second.get() : nullptr;
+        auto it = mSharedMaterials.find(key);
+        return (it != mSharedMaterials.end()) ? it->second.get() : nullptr;
+    }
+
+    Material *ResourceRegistry::CreateMaterialInstanceFrom(const std::string &key, const Material *template_)
+    {
+        if (!template_)
+        {
+            spdlog::warn("CreateMaterialInstanceFrom: 키 '{}' template_ 가 nullptr — 거부", key);
+            return nullptr;
+        }
+        if (mMaterialInstances.find(key) != mMaterialInstances.end())
+        {
+            spdlog::warn("CreateMaterialInstanceFrom: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+            return nullptr;
+        }
+        // template_->Clone() 이 IsInstance=true + OriginalMaterial=template_ 자동 설정 (Material::Clone).
+        auto instance = template_->Clone();
+        auto insertedIt = mMaterialInstances.emplace(key, std::move(instance)).first;
+        return insertedIt->second.get();
+    }
+
+    Material *ResourceRegistry::FindMaterialInstance(const std::string &key)
+    {
+        auto it = mMaterialInstances.find(key);
+        return (it != mMaterialInstances.end()) ? it->second.get() : nullptr;
     }
 
     Model *ResourceRegistry::CreateModel(const std::string &key, const std::string &filename)
@@ -160,8 +184,11 @@ namespace SJH
 
     void ResourceRegistry::Clear()
     {
+        // ★ SP-MaterialMetadata — Material 의 OriginalMaterial dangling 차단:
+        //   Instance 가 *항상 Shared 보다 먼저* 소멸하도록 명시 순서 (Unreal `UMaterialInstanceDynamic::Parent` 안전).
+        mMaterialInstances.clear();   // ★ Instance 먼저 — OriginalMaterial 참조 객체들 소멸
+        mSharedMaterials.clear();     // ★ Shared 나중 — 참조 대상 소멸
         mTextures.clear();
-        mMaterials.clear();
         mModels.clear();
         mPrograms.clear();
         mMeshes.clear();
