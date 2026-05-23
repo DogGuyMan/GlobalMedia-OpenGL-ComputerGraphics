@@ -29,7 +29,7 @@ $$
 \text{attenuation} = \frac{1}{1 + c_1 d + c_2 d^2}
 $$
 
-`CalcAttenuation(vec2(c1,c2), d)` 로 구현. 셰이더 주석에 커버 거리별 권장 `c1/c2` 테이블(거리 7 → 0.7/1.8 … 3250 → 0.0014/0.000007). 거리 50 기준값은 `c1=0.09, c2=0.032`.
+`CalcAttenuation(vec2(c1,c2), d)` 로 구현. 셰이더 주석에 커버 거리별 권장 `c1/c2` 테이블(거리 7 -> 0.7/1.8 … 3250 -> 0.0014/0.000007). 거리 50 기준값은 `c1=0.09, c2=0.032`.
 
 | 항 | 거리에 따른 영향 |
 |---|---|
@@ -43,9 +43,9 @@ $$
 
 `CalcSoftEdge(theta, phi, gamma)`:
 - `theta = dot(lightDir, normalize(-light.direction))` — 프래그먼트가 원뿔 축에서 얼마나 벗어났는지(코사인).
-- `theta > cutOff` → 강도 1 (안쪽 원뿔)
-- `theta < outerCutOff` → 강도 0 (바깥)
-- 그 사이 → `(theta - gamma)/(phi - gamma)` 선형 페이드
+- `theta > cutOff` -> 강도 1 (안쪽 원뿔)
+- `theta < outerCutOff` -> 강도 0 (바깥)
+- 그 사이 -> `(theta - gamma)/(phi - gamma)` 선형 페이드
 
 $$
 \text{intensity} = \text{clamp}\!\left(\frac{\theta - \gamma}{\phi - \gamma},\ 0,\ 1\right)

@@ -35,11 +35,11 @@ which clang-tidy cppcheck
 **선정 기준** (작은 것부터):
 - ✅ 외부 의존성이 적다 (다른 패스 영향 X)
 - ✅ 결정적으로 실행 가능 (시간/RNG 의존성 없음)
-- ✅ 입출력이 명확 (입력 텍스처·UBO → 출력 텍스처)
+- ✅ 입출력이 명확 (입력 텍스처·UBO -> 출력 텍스처)
 - ❌ 동적 그림자, post-process chain, particle system은 처음엔 피한다
 
 **좋은 후보 예시**:
-- Tone mapping pass (단일 입력 → LUT → 단일 출력)
+- Tone mapping pass (단일 입력 -> LUT -> 단일 출력)
 - Bloom blur pass (이미 격리된 effect)
 - Skybox draw pass (단순)
 
@@ -245,9 +245,9 @@ Day 1에서 제외했던 약간 더 복잡한 패스 1개에 적용. 예: post-p
 
 ### "골든 이미지가 5회 재현성 통과 못함"
 원인: 비결정성. 다음 순서로 의심:
-1. 시간 의존 코드 → `frame_index` 매개변수로 대체
-2. 정렬되지 않은 컨테이너 → `std::sort` 후 순회
-3. 멀티스레드 → 단일 스레드 baseline 시나리오 별도 작성
+1. 시간 의존 코드 -> `frame_index` 매개변수로 대체
+2. 정렬되지 않은 컨테이너 -> `std::sort` 후 순회
+3. 멀티스레드 -> 단일 스레드 baseline 시나리오 별도 작성
 
 ### "render-refactorer가 같은 파일을 3번 수정함"
 A §6.3의 oscillation. 즉시 사람 escalate. 명세 모호성 의심:
@@ -255,7 +255,7 @@ A §6.3의 oscillation. 즉시 사람 escalate. 명세 모호성 의심:
 - 두 기준이 서로 충돌하는가?
 
 ### "PR 비용이 $10 cap 초과"
-- iteration budget 6→3으로 축소
+- iteration budget 6->3으로 축소
 - 또는 패스를 더 작은 단위로 분해
 
 ### "FLIP 임계값에 절대 통과 못함"

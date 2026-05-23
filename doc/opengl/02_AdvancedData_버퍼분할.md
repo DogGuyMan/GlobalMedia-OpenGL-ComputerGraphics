@@ -80,14 +80,14 @@ VBO/EBO 는 **공유**, VAO 는 **패스마다 따로**. 각 VAO 가 그 패스�
 | 1. 형상 다름 | 별개 | 별개 | 별개 |
 | 2. Attribute layout 다름 | **별개** | 공유 가능 | 공유 가능 |
 | 3. 업데이트 빈도 다름 | 별개 권장 | **별개** | 데이터에 따라 |
-| 4. Instanced per-instance attr (→ Instancing 노트) | 1개 | **2개**(per-vert + per-inst) | 1개 |
+| 4. Instanced per-instance attr (-> Instancing 노트) | 1개 | **2개**(per-vert + per-inst) | 1개 |
 | 5. 멀티패스 attribute 분기 | **패스마다 별개** | 공유 | 공유 |
 
 #### 일반 원칙
-- 형상·인덱스 패턴이 다르다 → **VBO/EBO** 분리
-- attribute layout 이나 활성화 조합이 다르다 → **VAO** 분리
-- update 빈도·hint 가 다르다 → **VBO** 분리
-- 그 외(같은 mesh를 위치만 바꿔 1000개) → 1개씩으로 충분, uniform 만 바꾸거나 instancing
+- 형상·인덱스 패턴이 다르다 -> **VBO/EBO** 분리
+- attribute layout 이나 활성화 조합이 다르다 -> **VAO** 분리
+- update 빈도·hint 가 다르다 -> **VBO** 분리
+- 그 외(같은 mesh를 위치만 바꿔 1000개) -> 1개씩으로 충분, uniform 만 바꾸거나 instancing
 
 ## 관련 노트
 - 시나리오 4 (Instanced per-instance attribute, `glVertexAttribDivisor`): `04_AdvancedOpenGL/10_Instancing.md`

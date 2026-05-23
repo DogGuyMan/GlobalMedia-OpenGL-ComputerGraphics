@@ -25,7 +25,7 @@
 | E | CaptureGLError | E (GL 상태 일반), 비-카테고리 (모든 silent GL fail) |
 | F | DumpShaderInfoLogs | A1-A5 (셰이더 무음 실패) — driver warning까지 |
 
-→ 본 모듈이 채워지면 audit 트랙 C의 `gldebug-api-extension-design.md` 의 일부 산출물 *upstream 회수*.
+-> 본 모듈이 채워지면 audit 트랙 C의 `gldebug-api-extension-design.md` 의 일부 산출물 *upstream 회수*.
 
 ---
 
@@ -67,11 +67,11 @@ namespace SJH::Diagnostics::GLValidate {
 - 입력: `program`
 - 절차:
   1. `glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &count)`
-  2. 각 active attribute에 대해 `glGetActiveAttrib` → 이름 + `GL_FLOAT_VEC3` 같은 type
-  3. `glGetAttribLocation(program, name)` → loc
-  4. `glGetVertexAttribiv(loc, GL_VERTEX_ATTRIB_ARRAY_ENABLED)` → 비활성이면 위반
-  5. `glGetVertexAttribiv(loc, GL_VERTEX_ATTRIB_ARRAY_SIZE)` → VS type 컴포넌트 수와 다르면 위반
-- 추가: VAO에 enable됐는데 VS가 안 쓰는 location (낭비) → warning
+  2. 각 active attribute에 대해 `glGetActiveAttrib` -> 이름 + `GL_FLOAT_VEC3` 같은 type
+  3. `glGetAttribLocation(program, name)` -> loc
+  4. `glGetVertexAttribiv(loc, GL_VERTEX_ATTRIB_ARRAY_ENABLED)` -> 비활성이면 위반
+  5. `glGetVertexAttribiv(loc, GL_VERTEX_ATTRIB_ARRAY_SIZE)` -> VS type 컴포넌트 수와 다르면 위반
+- 추가: VAO에 enable됐는데 VS가 안 쓰는 location (낭비) -> warning
 
 ### Cat C — CheckUniformCoverage
 - 입력: `program`
@@ -85,16 +85,16 @@ namespace SJH::Diagnostics::GLValidate {
 - 입력: `program`
 - 절차:
   1. active uniform 중 type ∈ {`GL_SAMPLER_2D`, `GL_SAMPLER_CUBE`} 추림
-  2. 각 sampler의 *현재 값* (`glGetUniformiv` → texture unit N) 조회
-  3. `glActiveTexture(GL_TEXTURE0 + N)` 후 `glGetIntegerv(GL_TEXTURE_BINDING_2D, &id)` → id == 0 이면 위반 (unit 바인딩 없음)
-  4. (선택) 같은 texture id가 여러 unit에 동시 bound → info 레벨
+  2. 각 sampler의 *현재 값* (`glGetUniformiv` -> texture unit N) 조회
+  3. `glActiveTexture(GL_TEXTURE0 + N)` 후 `glGetIntegerv(GL_TEXTURE_BINDING_2D, &id)` -> id == 0 이면 위반 (unit 바인딩 없음)
+  4. (선택) 같은 texture id가 여러 unit에 동시 bound -> info 레벨
 
 ### Cat E — CaptureGLError
-- `glGetError()` 호출 → 0이 아니면 enum → 이름 변환 후 spdlog::warn
+- `glGetError()` 호출 -> 0이 아니면 enum -> 이름 변환 후 spdlog::warn
 - rate limit: `thread_local std::unordered_set<GLenum> reportedThisFrame`. 같은 에러 코드는 프레임당 1회만 (호출자가 `ResetFrame()`을 매 frame 시작 시 호출 — 또는 그냥 같은 코드+tag 조합 1회만)
 
 ### Cat F — DumpShaderInfoLogs
-- `glAttachedShaders(program)` → 각 shader → `glGetShaderInfoLog`
+- `glAttachedShaders(program)` -> 각 shader -> `glGetShaderInfoLog`
 - `glGetProgramInfoLog(program)`
 - 비어있지 않으면 spdlog::info (경고가 아닐 수 있으므로 info 레벨; 단, 'error'/'warning' 키워드 포함 시 warn 으로 upgrade)
 
@@ -106,19 +106,19 @@ doc/inst.md §7 Criterion 3 의 *일부러 깨뜨리는 6 케이스* 를 *Catch2
 
 | Cat | 테스트 케이스 | GL ctx |
 |---|---|---|
-| A | normal 인덱스 → 0 위반 | ❌ |
-| A | 인덱스 OOB → 위반 보고 | ❌ |
-| A | degenerate triangle (`0,0,0`) → 위반 보고 | ❌ |
-| B | inline VS/FS attribute match → 0 위반 | ✅ |
-| B | location 2가 vec3 vs vec2 불일치 → 위반 | ✅ |
-| C | declared but unset uniform → 위반 | ✅ |
-| D | sampler set N, unit N bound → 0 위반 | ✅ |
-| D | sampler set N, unit N empty → 위반 | ✅ |
-| E | clean state → 0 보고 | ✅ |
-| E | `glEnable(0xDEAD)` 후 → invalid_enum 보고 | ✅ |
-| E | rate limit — 같은 코드 N회 → 1회 보고 | ✅ |
-| F | clean program → 빈 출력 | ✅ |
-| FullSweep | clean state → 0 위반 + "all clean" 메시지 | ✅ |
+| A | normal 인덱스 -> 0 위반 | ❌ |
+| A | 인덱스 OOB -> 위반 보고 | ❌ |
+| A | degenerate triangle (`0,0,0`) -> 위반 보고 | ❌ |
+| B | inline VS/FS attribute match -> 0 위반 | ✅ |
+| B | location 2가 vec3 vs vec2 불일치 -> 위반 | ✅ |
+| C | declared but unset uniform -> 위반 | ✅ |
+| D | sampler set N, unit N bound -> 0 위반 | ✅ |
+| D | sampler set N, unit N empty -> 위반 | ✅ |
+| E | clean state -> 0 보고 | ✅ |
+| E | `glEnable(0xDEAD)` 후 -> invalid_enum 보고 | ✅ |
+| E | rate limit — 같은 코드 N회 -> 1회 보고 | ✅ |
+| F | clean program -> 빈 출력 | ✅ |
+| FullSweep | clean state -> 0 위반 + "all clean" 메시지 | ✅ |
 
 **테스트 인프라**: 기존 `gl_test_fixture` + `spdlog_capture` 재사용 — 로그 출력 substring 단언.
 

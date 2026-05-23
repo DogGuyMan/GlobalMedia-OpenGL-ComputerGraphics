@@ -25,7 +25,7 @@
 
 - `GL_TEXTURE0`, `GL_TEXTURE1`, ... `GL_TEXTUREn` 슬롯은 **드라이버 컨텍스트 전역 상태**.
 - "유닛 1번에 어떤 텍스처가 바인딩되어 있는가" 는 누군가 `glBindTexture`로 다시 바꾸기 전까지 유지된다.
-- → **다른 코드가 같은 유닛을 침범하면 깨진다 (state leak).**
+- -> **다른 코드가 같은 유닛을 침범하면 깨진다 (state leak).**
 - 멀티스레드, ImGui, 프레임워크 내부, 다른 쉐이더 패스가 모두 잠재적 침범자.
 
 #### (B) 프로그램 객체 로컬 상태 — `glUniform1i(sampler, unit)`
@@ -42,7 +42,7 @@
 | 샘플러는 **몇 번 유닛**을 보러 가는가? | (B) 프로그램 객체에 저장된 uniform 정수값 |
 | 그 유닛에는 **어떤 텍스처**가 박혀 있는가? | (A) 컨텍스트 전역 슬롯 |
 
-→ **샘플러는 "어떤 텍스처를 볼지"가 아니라 "몇 번 유닛을 볼지"를 저장한다.**
+-> **샘플러는 "어떤 텍스처를 볼지"가 아니라 "몇 번 유닛을 볼지"를 저장한다.**
 
 ---
 
@@ -55,8 +55,8 @@ glUniform1i(... "material.specular", m_material.specularTexture); // textures[2]
 ```
 
 `glGenTextures`가 반환한 핸들(예: 2, 3)을 샘플러 uniform에 넣으면:
-- `material.diffuse` ← **2번 유닛**을 보러 감 → 그런데 거기엔 specular가 박혀 있음
-- `material.specular` ← **3번 유닛**을 보러 감 → 거기엔 아무것도 없음 (기본 black)
+- `material.diffuse` ← **2번 유닛**을 보러 감 -> 그런데 거기엔 specular가 박혀 있음
+- `material.specular` ← **3번 유닛**을 보러 감 -> 거기엔 아무것도 없음 (기본 black)
 
 ```cpp
 // ✅ 올바른 코드
@@ -74,8 +74,8 @@ glUniform1i(glGetUniformLocation(prog, "material.specular"), 2); // GL_TEXTURE2
 
 | 콜 | 두어도 되는가? | 비고 |
 |----|----------------|------|
-| `glUniform1i` (샘플러→유닛) | ✅ **이상적** | 프로그램에 영구 저장 |
-| `glBindTexture` (유닛→텍스처) | ⚠️ **조건부** | 외부 침범에 취약 |
+| `glUniform1i` (샘플러->유닛) | ✅ **이상적** | 프로그램에 영구 저장 |
+| `glBindTexture` (유닛->텍스처) | ⚠️ **조건부** | 외부 침범에 취약 |
 
 `glBindTexture` 를 startup 에 두려면 그 유닛에 항상 같은 텍스처가 유지되고, 다른 패스/라이브러리가 절대 침범하지 않아야 한다 — 실제 프로젝트에선 **거의 불가능**.
 
@@ -111,7 +111,7 @@ for (int i = 0; i < boxPositions.size(); i++) {
 
 #### (3) `glDrawArrays` 직전마다 — 안티패턴
 
-- 모든 박스가 같은 텍스처를 쓰는데 매번 4개 GL 콜 + 2개 `glGetUniformLocation` → **순수 낭비**.
+- 모든 박스가 같은 텍스처를 쓰는데 매번 4개 GL 콜 + 2개 `glGetUniformLocation` -> **순수 낭비**.
 - `glGetUniformLocation`은 **문자열 해시 검색**이라 특히 비싸다. **위치는 미리 캐싱하는 게 정석.**
 - 정당화되는 유일한 경우: 박스마다 텍스처가 다른 경우(인스턴스마다 material 다름).
 
@@ -138,10 +138,10 @@ for (int i = 0; i < boxPositions.size(); i++) {
 ```
 프로그램 생성 1회 (startup)
 └─ 샘플러 uniform location 캐싱
-└─ 샘플러 uniform 값 (sampler → unit)         ← 영구 (B)
+└─ 샘플러 uniform 값 (sampler -> unit)         ← 영구 (B)
 
 프레임당 1회 (render 진입부)
-└─ 텍스처 유닛 바인딩 (unit → texture object)  ← 방어적 (A)
+└─ 텍스처 유닛 바인딩 (unit -> texture object)  ← 방어적 (A)
 └─ 카메라/라이트 uniform (view, projection, light.*)
 
 객체당 1회 (draw 직전)

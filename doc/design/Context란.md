@@ -97,9 +97,9 @@
 | 4 | RenderTarget 바인딩 | `BindTarget` / `BeginFrame` |
 | 5 | Default backbuffer 보유 | `mDefaultTarget` |
 
-→ **모두 *"GPU 라는 외부 시스템과 통신하는 채널"*** — 하나의 일관된 책임. *잡동사니가 아님*.
+-> **모두 *"GPU 라는 외부 시스템과 통신하는 채널"*** — 하나의 일관된 책임. *잡동사니가 아님*.
 
-### 왜 `RenderContext` → `DeviceContext` 로 rename?
+### 왜 `RenderContext` -> `DeviceContext` 로 rename?
 
 | 비교 | RenderContext (옛) | DeviceContext (현) |
 |---|---|---|

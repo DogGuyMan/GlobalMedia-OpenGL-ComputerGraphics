@@ -9,10 +9,10 @@
 
 | # | 사보타지 | 적용 위치 | 예상 잡는 케이스 | 실제 | 드릴 날짜 |
 |--:|---|---|---|---|---|
-| 1 | unknown enum → 사전 첫 entry 반환 (default fallback이 `"GL_NEVER"` 같은 식, hex 무시) | SymbolicName의 hex fallback 부분 | "미적중 → hex fallback" — `Equals("0xDEAD")` 단언 깨짐 | (실측) | YYYY-MM-DD |
+| 1 | unknown enum -> 사전 첫 entry 반환 (default fallback이 `"GL_NEVER"` 같은 식, hex 무시) | SymbolicName의 hex fallback 부분 | "미적중 -> hex fallback" — `Equals("0xDEAD")` 단언 깨짐 | (실측) | YYYY-MM-DD |
 | 2 | 결과 lowercase (`"gl_less"`) | snprintf 또는 case의 string lit 손상 | "사전 적중" — `Equals("GL_LESS")` 정확 매칭 깨짐 + "depth_func 모든 8개" | (실측) | YYYY-MM-DD |
 | 3 | 사전에서 `case GL_LESS: return "GL_LESS";` 라인 삭제 | SymbolicName switch | "사전 적중" + "depth_func 모든 8개" 둘 다 깨짐 | (실측) | YYYY-MM-DD |
-| 4 | **(N11 후속)** vertex type case 삭제 (`case GL_FLOAT: return "GL_FLOAT";`) | SymbolicName switch의 vertex attribute types 영역 | [test/test_gl_state_log.cpp](../../../test/test_gl_state_log.cpp) "FieldsToString — attribute enabled 시 size/type/stride/vbo 출력" → `attrib[0]: vec3 0x1406, ...` 처럼 hex로 새고 `ContainsSubstring("GL_FLOAT")` 깨짐 | (실측) | YYYY-MM-DD |
+| 4 | **(N11 후속)** vertex type case 삭제 (`case GL_FLOAT: return "GL_FLOAT";`) | SymbolicName switch의 vertex attribute types 영역 | [test/test_gl_state_log.cpp](../../../test/test_gl_state_log.cpp) "FieldsToString — attribute enabled 시 size/type/stride/vbo 출력" -> `attrib[0]: vec3 0x1406, ...` 처럼 hex로 새고 `ContainsSubstring("GL_FLOAT")` 깨짐 | (실측) | YYYY-MM-DD |
 
 ## 결과 노트
 
@@ -20,7 +20,7 @@
 
 ## 발견된 plan 결함 회귀 사보타지 (N11)
 
-**N11 회귀 시나리오**: 본 plan 작성 시 audit 트랙 A에서 `attribute_layouts`를 추가하면서 `glGetVertexAttribiv(... GL_VERTEX_ATTRIB_ARRAY_TYPE ...)`로 GL_FLOAT/GL_INT/GL_UNSIGNED_BYTE 등을 캡처하지만, *그 enum들이 SymbolicName 사전에 없었음*. Task 5 빌드 후 13/13 PASS 중 1개 FAIL로 발견 → 9개 vertex type enum 추가.
+**N11 회귀 시나리오**: 본 plan 작성 시 audit 트랙 A에서 `attribute_layouts`를 추가하면서 `glGetVertexAttribiv(... GL_VERTEX_ATTRIB_ARRAY_TYPE ...)`로 GL_FLOAT/GL_INT/GL_UNSIGNED_BYTE 등을 캡처하지만, *그 enum들이 SymbolicName 사전에 없었음*. Task 5 빌드 후 13/13 PASS 중 1개 FAIL로 발견 -> 9개 vertex type enum 추가.
 
 **사보타지 4가 의미**:
 - audit가 새 enum context 도입 시 SymbolicName 사전 갱신을 *놓치는* 패턴을 영구히 잡는 회귀.

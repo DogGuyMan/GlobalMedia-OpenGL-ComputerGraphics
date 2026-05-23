@@ -142,7 +142,7 @@ namespace SJH::Pass
 			// Outline 2-pass — Pass 1 (stencil write):
 			//   > Opaque 와 동일한 색상/깊이 렌더링 (물체 정상 표시)
 			//   > StencilOpDPPass=GL_REPLACE + Ref=1 + WriteMask=0xFF — depth 통과 픽셀에 ref=1 기록
-			//   > Queue 1999 — Opaque(2000) 직전 → OutlineVisible(4000) 이 stencil 값에 의존 가능
+			//   > Queue 1999 — Opaque(2000) 직전 -> OutlineVisible(4000) 이 stencil 값에 의존 가능
 			PipelineState s;
 			s.QueueLayer = QueueOf(Kind::StencilMaskWrite);
 			s.StencilEnable = true;

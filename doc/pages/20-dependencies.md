@@ -17,7 +17,7 @@
 | **ImGuizmo** | `imguizmo` | `imguizmo::imguizmo` | ImGui 위 좌표축 / 행렬 조작 위젯. 카메라/광원 transform gizmo 용 (Phase 10~). |
 | **Catch2** | `catch2` | `Catch2::Catch2WithMain` | 단위 테스트 (`test/`) |
 
-## 의존성 그래프 (모듈 → 외부)
+## 의존성 그래프 (모듈 -> 외부)
 
 \dot
 digraph DepGraph {
@@ -125,6 +125,6 @@ cmake --build build_Darwin --target install-deps
 | `ninja required v1.13.2` | 구버전 ninja | `brew install ninja` |
 | glad "OpenGL header already included" | glfw3.h가 glad보다 먼저 include | `glad/glad.h` 를 가장 위에 |
 | `glm/glm.hpp not found` (object/camera) | `object` INTERFACE 타겟이 glm 미링크 | `src/object/CMakeLists.txt` 에 `glm::glm` INTERFACE 링크 |
-| 텍스처가 거꾸로 보임 | stb_image 의 위→아래 스캔과 GL 의 아래→위 UV 차이 | `stbi_set_flip_vertically_on_load(1)` 호출 |
+| 텍스처가 거꾸로 보임 | stb_image 의 위->아래 스캔과 GL 의 아래->위 UV 차이 | `stbi_set_flip_vertically_on_load(1)` 호출 |
 
 자세한 내용은 `.claude/build-system.md` §의존성 트러블슈팅.

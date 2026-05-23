@@ -22,9 +22,9 @@
 
 **진화 시 주의사항**:
 - 6번째 에이전트를 추가하기 전에 **기존 5개의 도구를 강화**하라
-- 예: "셰이더 검증" 단계가 더 필요하다 → 새 `render-shader-validator` 만들지 말고, `render-quality-gate`에 셰이더 검증 도구를 추가
+- 예: "셰이더 검증" 단계가 더 필요하다 -> 새 `render-shader-validator` 만들지 말고, `render-quality-gate`에 셰이더 검증 도구를 추가
 
-### 결정 2: 운영 흐름 = 분석 → 수정 → 검증 → 품질 게이트 → 통합
+### 결정 2: 운영 흐름 = 분석 -> 수정 -> 검증 -> 품질 게이트 -> 통합
 
 **근거**: D §3.4의 5-Agent 운영 기반 분리 구조 그대로:
 1. **테크 아키텍트 (분석)** = `render-architect`
@@ -66,9 +66,9 @@
 ### 결정 5: Mesa llvmpipe = 진실의 원천
 
 **근거**:
-- A 논문이 지적한 "stochastic outputs" 문제 → 그래픽스에서는 드라이버 차이가 주범
+- A 논문이 지적한 "stochastic outputs" 문제 -> 그래픽스에서는 드라이버 차이가 주범
 - llvmpipe는 CPU에서 결정론적으로 실행되는 OpenGL 소프트웨어 렌더러 (Mesa 공식 문서: "uses LLVM as a code-generator")
-- 5회 동일 PNG 재현성 확보 가능 → 골든 이미지의 결정성 보장
+- 5회 동일 PNG 재현성 확보 가능 -> 골든 이미지의 결정성 보장
 
 **진화 시 주의사항**:
 - 실 GPU에서 캡처한 이미지를 골든으로 쓰지 마라
@@ -97,9 +97,9 @@
 추가 시 수정 위치:
 - `CLAUDE.md` §A.3: 백엔드 매트릭스에 새 API 추가
 - `golden-capture.md`: API별 헤드리스 백엔드 추가
-  - DirectX 11/12 → WARP (Windows ICD)
-  - Vulkan → SwiftShader 또는 lavapipe
-  - Metal → 결정적 백엔드 부재, 별도 전략 필요
+  - DirectX 11/12 -> WARP (Windows ICD)
+  - Vulkan -> SwiftShader 또는 lavapipe
+  - Metal -> 결정적 백엔드 부재, 별도 전략 필요
 
 **주의**: 멀티 백엔드는 **각 백엔드별로 골든 이미지 별도 관리**. 한 골든을 모든 백엔드에 사용하면 드라이버 차이로 즉시 깨진다.
 
@@ -109,7 +109,7 @@
 
 추가 시:
 - `render-architect.md` 의 "Step 5"에 `mcp__rag__search` 도구 호출 추가
-- C 논문(Yonsei, 김연수)의 IEEE Std 2800 RAG 패턴 참조: 표준 문서 → vector embedding → 동적 retrieval
+- C 논문(Yonsei, 김연수)의 IEEE Std 2800 RAG 패턴 참조: 표준 문서 -> vector embedding -> 동적 retrieval
 - MCP 서버 별도 구축 필요 (Anthropic MCP spec 따름)
 
 ### 2.4 Mutation Testing 도구가 다르면
@@ -148,13 +148,13 @@ Phase 1 (1주) 끝나면 다음 질문에 답해보고 에이전트 정의를 �
 ### Q2. iteration budget(outer 6, inner 8)이 적절한가?
 
 - 평균 2-3 iteration에서 끝나면 budget 줄여도 됨 (비용 절감)
-- 자주 budget 소진하면 명세 모호성(A §6.3 oscillation) 가능성 → 사람 escalate 빈도 늘리기
+- 자주 budget 소진하면 명세 모호성(A §6.3 oscillation) 가능성 -> 사람 escalate 빈도 늘리기
 
 ### Q3. FLIP weighted median 임계값(0.05)이 게임 시각 품질에 맞는가?
 
 - 0.05가 너무 엄격하면 false positive (회귀 아닌데 회귀로 오판)
 - 너무 느슨하면 false negative (회귀를 통과시킴)
-- 게임의 시각적 특성(예: 동적 그림자가 많음 → 높은 임계값 필요)에 맞춰 캘리브레이션
+- 게임의 시각적 특성(예: 동적 그림자가 많음 -> 높은 임계값 필요)에 맞춰 캘리브레이션
 
 ### Q4. Mutation Score 60% 임계값이 현실적인가?
 
@@ -165,7 +165,7 @@ Phase 1 (1주) 끝나면 다음 질문에 답해보고 에이전트 정의를 �
 ### Q5. PR당 비용이 견적($5)에 맞는가?
 
 - A 논문 §6.5: $2-3/spec version (Anthropic API 1월 2026)
-- C++ 빌드 시간 + 골든 이미지 비교 추가 → $5 추정
+- C++ 빌드 시간 + 골든 이미지 비교 추가 -> $5 추정
 - 실측 후 조정
 
 ### Q6. 어떤 안티패턴이 실제로 발생했나?

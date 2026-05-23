@@ -31,13 +31,13 @@ FBO ─┬─ COLOR_ATTACHMENT0..N  ← Texture 또는 RBO
 | **Texture** (sampler 읽기 ⭕) | 포스트프로세싱, 미러 | 그림자맵, SSAO | 고급 마스킹 |
 | **RBO** (sampler 읽기 ❌) | MSAA 중간 버퍼 | 일반 z-buffering | 일반 stencil test |
 
-→ **6칸 모두 합법**. "Color = Texture, Depth = RBO" 는 디폴트 관습일 뿐.
+-> **6칸 모두 합법**. "Color = Texture, Depth = RBO" 는 디폴트 관습일 뿐.
 
 **결정 트리**
 ```
 이 attachment 의 값을 셰이더에서 sampler 로 한 번이라도 읽나?
-   ├─ YES → Texture
-   └─ NO  → RBO (더 가볍고 빠름)
+   ├─ YES -> Texture
+   └─ NO  -> RBO (더 가볍고 빠름)
 ```
 
 ---
@@ -50,7 +50,7 @@ FBO ─┬─ COLOR_ATTACHMENT0..N  ← Texture 또는 RBO
 | 사용 주체 | 셰이더 + 고정 단계 | 오직 고정 단계 |
 | 제어 수단 | GLSL + `glBindTexture` | OpenGL state 명령 (`glDepthFunc`, `glStencilFunc`…) |
 
-**→ RBO 의 값은 셰이더가 접근 *안* 한다. 그게 RBO 다.** Depth test / Stencil test 같은 고정 단계가 자동으로 쓴다.
+**-> RBO 의 값은 셰이더가 접근 *안* 한다. 그게 RBO 다.** Depth test / Stencil test 같은 고정 단계가 자동으로 쓴다.
 
 ---
 
@@ -59,8 +59,8 @@ FBO ─┬─ COLOR_ATTACHMENT0..N  ← Texture 또는 RBO
 **Pass = "FBO 한 번 바인딩 후 draw" 의 한 단위**
 
 ```
-[Pass 1] glBindFramebuffer(myFBO);  → 씬을 Texture/RBO 에 그림
-[Pass 2] glBindFramebuffer(0);      → 그 Texture 를 입혀 화면에 그림
+[Pass 1] glBindFramebuffer(myFBO);  -> 씬을 Texture/RBO 에 그림
+[Pass 2] glBindFramebuffer(0);      -> 그 Texture 를 입혀 화면에 그림
 ```
 
 - `glBindFramebuffer(..., 0)` 는 unbind 가 아니라 **default FBO 로 교체**
@@ -102,9 +102,9 @@ glDrawArrays(GL_TRIANGLES, 0, 3);
 
 | 단계 | 작업 |
 |---|---|
-| **초기화** | FBO 생성 → Texture/RBO attachment 생성+부착 → `glCheckFramebufferStatus` |
+| **초기화** | FBO 생성 -> Texture/RBO attachment 생성+부착 -> `glCheckFramebufferStatus` |
 | **리사이즈** | 모든 attachment 를 새 크기로 재할당 ← GLFW 가 안 해줌 |
-| **매 프레임** | Pass 별 `glBindFramebuffer` → `glViewport` → `glClear` → 셰이더/유니폼 |
+| **매 프레임** | Pass 별 `glBindFramebuffer` -> `glViewport` -> `glClear` -> 셰이더/유니폼 |
 | **정리** | `glDelete*` |
 
 ```cpp

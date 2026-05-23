@@ -33,7 +33,7 @@
 | 6 | `test/test_gl_state_capture.cpp` | (1)+(2)의 GL context 회귀 테스트 | 신규 |
 | 7 | `test/test_gl_state_snapshot.cpp` | (3)의 회귀 테스트 | 신규 |
 | 8 | `test/test_gl_state_log.cpp` | (2)의 회귀 테스트 (spdlog 캡처 사용) | 신규 |
-| 9 | `test/test_uniform_diagnostics.cpp` | `SUCCEED("...crash 없음")` → SpdlogCapture 단언으로 교체 | **수정** |
+| 9 | `test/test_uniform_diagnostics.cpp` | `SUCCEED("...crash 없음")` -> SpdlogCapture 단언으로 교체 | **수정** |
 | 10 | `scripts/check_test_smells.py` | 테스트 smell 정적 검사 | 신규 |
 | 11 | `doc/test-quality-drill.md` | 사보타지 드릴 운영 문서 | 신규 |
 | 12 | `doc/test-quality-drill/<component>.md` | 컴포넌트별 드릴 표 | 신규 (4개) |
@@ -89,17 +89,17 @@ namespace SJH::Diagnostics
         std::array<GLfloat, 4> clear_color{0, 0, 0, 0};
     };
 
-    /// 현재 GL 상태 캡처. 부수효과 0 (active_texture 저장→유닛 순회→복원).
+    /// 현재 GL 상태 캡처. 부수효과 0 (active_texture 저장->유닛 순회->복원).
     /// @pre  GL context active (caller 책임 — fixture가 보장)
     /// @post caller가 보낸 직전 호출의 결과 — error queue를 drain 후 capture
     GLStateFields CaptureGLState();
 
-    /// GLenum → 사람이 읽는 이름. 사전 ~40개 미적중 시 "0xXXXX" hex.
+    /// GLenum -> 사람이 읽는 이름. 사전 ~40개 미적중 시 "0xXXXX" hex.
     ///
     /// @note SymbolicName(0) == "GL_ZERO" 컨벤션:
     ///       OpenGL spec 상 0은 GL_NONE/GL_ZERO/GL_FALSE/GL_POINTS 모두에 매핑됨.
     ///       본 프로젝트의 17개 캡처 필드 한정 시 *enum 컨텍스트의 0*은 blend factor
-    ///       (blend_src_rgb / blend_dst_rgb)에서만 합법적으로 발생 → GL_ZERO 가 정확.
+    ///       (blend_src_rgb / blend_dst_rgb)에서만 합법적으로 발생 -> GL_ZERO 가 정확.
     ///       GL_TEXTURE_COMPARE_MODE 같은 GL_NONE-context 필드를 미래 추가 시
     ///       SymbolicName을 *필드별 함수 포인터*로 분기 (현재는 YAGNI).
     const char* SymbolicName(GLenum e);
@@ -120,7 +120,7 @@ namespace SJH::Diagnostics
         static void Dump(std::string_view tag = {});
 
         /// KHR_debug 콜백 활성화 시 GL_DEBUG_SEVERITY_HIGH 발생 직후 자동 Dump.
-        /// macOS GL 3.3은 KHR_debug 미지원 → 1회 warn 후 no-op (std::call_once).
+        /// macOS GL 3.3은 KHR_debug 미지원 -> 1회 warn 후 no-op (std::call_once).
         static void EnableAutoOnError(bool enable);
     };
 }
@@ -217,7 +217,7 @@ private:
 
 | 환경 | KHR_debug | EnableAutoOnError 동작 |
 |---|---|---|
-| macOS arm64 (GL 3.3) | ❌ | std::call_once warn → no-op |
+| macOS arm64 (GL 3.3) | ❌ | std::call_once warn -> no-op |
 | Windows x64 | ✅ | 정상 동작 |
 | llvmpipe (Linux/CI) | ✅ | 정상 동작 |
 
@@ -235,7 +235,7 @@ void GLStateLog::EnableAutoOnError(bool) {
 
 ### 3.4 결정성
 
-`GLContextFixture`(256x256 hidden window)가 viewport를 강제 → 기존 fixture 사용 테스트는 자동으로 결정적. 추가 작업 없음.
+`GLContextFixture`(256x256 hidden window)가 viewport를 강제 -> 기존 fixture 사용 테스트는 자동으로 결정적. 추가 작업 없음.
 
 ---
 
@@ -244,7 +244,7 @@ void GLStateLog::EnableAutoOnError(bool) {
 | # | 케이스 | 결정 |
 |---|---|---|
 | 4.1 | GL context 없이 Capture() | caller 책임 — 검사 안 함 ([.claude/architecture.md](../../.claude/architecture.md) §3 컨벤션) |
-| 4.2 | glGetError non-zero (캡처 자체 또는 잔여) | drain → capture → post-check warn → **17 필드 모두 채운 채 반환** (값 정확성이 의심된다는 신호 — caller가 warn 메시지로 판단) |
+| 4.2 | glGetError non-zero (캡처 자체 또는 잔여) | drain -> capture -> post-check warn -> **17 필드 모두 채운 채 반환** (값 정확성이 의심된다는 신호 — caller가 warn 메시지로 판단) |
 | 4.3 | SymbolicName(unknown) | `"0xXXXX"` hex fallback |
 | 4.4 | VAO=0 + element_buffer | ToString에 주석 출력 ("EBO state is per-VAO; with VAO=0, this is always 0") |
 | 4.5 | Diff 변화 0건 | 정확히 `"(no GL state change)\n"` |
@@ -268,9 +268,9 @@ void GLStateLog::EnableAutoOnError(bool) {
 ### 5.2 기존 테스트 개선 (같은 PR)
 
 `test/test_uniform_diagnostics.cpp:16-66` 의 3개 `SUCCEED("...crash 없음")`을 **`SpdlogCapture` 단언으로 교체**:
-- NotifyMissing(p, n) 1회 → Lines가 `n` 포함
-- NotifyMissing(p, n) 2회 → 추가 Lines 출력 X (warn-once 검증)
-- NotifyTypeMismatch 시나리오별 → Contains/미포함 단언
+- NotifyMissing(p, n) 1회 -> Lines가 `n` 포함
+- NotifyMissing(p, n) 2회 -> 추가 Lines 출력 X (warn-once 검증)
+- NotifyTypeMismatch 시나리오별 -> Contains/미포함 단언
 
 ### 5.3 사보타지 드릴 (수동, 컴포넌트별)
 
@@ -280,16 +280,16 @@ void GLStateLog::EnableAutoOnError(bool) {
 
 | 컴포넌트 | 사보타지 1 | 사보타지 2 | 사보타지 3 |
 |---|---|---|---|
-| CaptureGLState | GL_VERTEX_ARRAY_BINDING ↔ GL_CURRENT_PROGRAM swap | unit loop `i<16` → `i<1` | glActiveTexture 복원 누락 |
+| CaptureGLState | GL_VERTEX_ARRAY_BINDING ↔ GL_CURRENT_PROGRAM swap | unit loop `i<16` -> `i<1` | glActiveTexture 복원 누락 |
 | Diff | 변화 무관 항상 "(no change)" 반환 | 변화 없는 필드도 출력 | before/after 인자 swap |
-| SymbolicName | unknown → 사전 첫 entry 반환 | 결과 lowercase | 사전에서 한 entry 누락 |
+| SymbolicName | unknown -> 사전 첫 entry 반환 | 결과 lowercase | 사전에서 한 entry 누락 |
 | GLStateSnapshot::ToString | VAO=0 주석 항상 출력 | 주석 절대 출력 안 함 | enum 자리에 raw 출력 |
 
 **절차** (4 step):
 1. git stash로 안전 상태 보존
-2. 한 사보타지씩 손으로 적용 → ctest 실행 → 결과 기록 → git checkout으로 복원
-3. 모든 사보타지가 ≥1 케이스 FAIL → 합격
-4. 잡히지 않은 사보타지 → 그 카테고리에 케이스 추가 후 재드릴
+2. 한 사보타지씩 손으로 적용 -> ctest 실행 -> 결과 기록 -> git checkout으로 복원
+3. 모든 사보타지가 ≥1 케이스 FAIL -> 합격
+4. 잡히지 않은 사보타지 -> 그 카테고리에 케이스 추가 후 재드릴
 
 ---
 
@@ -333,7 +333,7 @@ void GLStateLog::EnableAutoOnError(bool) {
 | ... | gl_state_log.cpp:LL | test_xxx.cpp "..." | test_xxx.cpp "..." | 2026-MM-DD |
 ```
 
-분리 이유: 단일 파일에 4개 컴포넌트 누적 시 행 수 ~50+ → diff PR 노이즈. 컴포넌트별 파일은 git blame 추적 + grep 친화.
+분리 이유: 단일 파일에 4개 컴포넌트 누적 시 행 수 ~50+ -> diff PR 노이즈. 컴포넌트별 파일은 git blame 추적 + grep 친화.
 
 ### 6.3 Mutation Testing 보류 — 진입 트리거
 
@@ -347,7 +347,7 @@ void GLStateLog::EnableAutoOnError(bool) {
 
 ---
 
-## 7. 구현 순서 (의존성 최소 → 최대)
+## 7. 구현 순서 (의존성 최소 -> 최대)
 
 ```
 Step 1. gl_state_fields.h/.cpp + test_gl_state_fields.cpp        (GL ctx 불필요)

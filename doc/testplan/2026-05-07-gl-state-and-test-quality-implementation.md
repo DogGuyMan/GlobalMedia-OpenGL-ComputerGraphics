@@ -23,12 +23,12 @@
 Task 1-7에서 *반복 발생*한 함정을 사전 차단:
 
 ```
-□ CMakeLists.txt 편집 후 → cmake --build … --target tests (ALL 아님)
-□ 새 test executable 추가 시 → tests umbrella DEPENDS 목록에도 추가
+□ CMakeLists.txt 편집 후 -> cmake --build … --target tests (ALL 아님)
+□ 새 test executable 추가 시 -> tests umbrella DEPENDS 목록에도 추가
 □ ctest 필터는 -R "<시나리오 이름 substring>" (태그 substring 아님)
-□ 신규 코드/케이스가 STATIC_REQUIRE 사용 시 → smell linter regex 갱신 확인
+□ 신규 코드/케이스가 STATIC_REQUIRE 사용 시 -> smell linter regex 갱신 확인
 □ macOS GL 3.3 core profile 가정 검증 (Retina, VAO=0 driver-dependent 등)
-□ Catch2 매크로(SECTION, REQUIRE_THROWS) 사용 시 → linter regex에 포함됐는지 확인
+□ Catch2 매크로(SECTION, REQUIRE_THROWS) 사용 시 -> linter regex에 포함됐는지 확인
 □ 캡처 시점에 process-wide static 상태 누설 가능성 (UniformDiagnostics 등)
 □ Test program 핸들이 다른 테스트와 충돌하는지 (전역 static 사용 시)
 ```
@@ -61,7 +61,7 @@ cmake --build build_Darwin -j --target test_<name>
 
 **해결 — 의심 시**:
 ```bash
-touch <변경한 .cpp 파일>          # mtime 갱신 → 강제 recompile
+touch <변경한 .cpp 파일>          # mtime 갱신 -> 강제 recompile
 # 또는
 cmake --preset debug               # 재구성으로 의존성 그래프 갱신
 ```
@@ -80,11 +80,11 @@ cmake --preset debug               # 재구성으로 의존성 그래프 갱신
 
 ### 카테고리 B — macOS GL 3.3 core profile 한계 (plan의 가정 오류)
 
-#### N7 [Task 2]: macOS Retina HiDPI → viewport 직접 비교 깨짐
+#### N7 [Task 2]: macOS Retina HiDPI -> viewport 직접 비교 깨짐
 
 **증상**: `REQUIRE(f.viewport[2] == 256)` FAIL — actual 512.
 
-**원인**: GLFW logical 256×256 → physical framebuffer 512×512 (HiDPI 2x scaling). plan은 logical 좌표 가정.
+**원인**: GLFW logical 256×256 -> physical framebuffer 512×512 (HiDPI 2x scaling). plan은 logical 좌표 가정.
 
 **해결 — plan 패턴 변경**: 절대값 비교 대신 *capture가 actual GL 상태를 반영*하는 형식:
 ```cpp
@@ -99,7 +99,7 @@ REQUIRE(f.viewport[2] > 0);              // sanity
 
 **증상**: `REQUIRE(a.size == 4)` FAIL — actual 0. (plan은 GL spec default 4 가정)
 
-**원인**: macOS GL 3.3 core profile은 default VAO=0이 valid 하지 않음 → `glGetVertexAttribiv` 반환값이 driver-dependent.
+**원인**: macOS GL 3.3 core profile은 default VAO=0이 valid 하지 않음 -> `glGetVertexAttribiv` 반환값이 driver-dependent.
 
 **해결**: VAO=0 케이스에서는 `enabled == false`만 안전 invariant. 다른 필드의 spec default 검증은 *VAO 바인딩 후* 별도 케이스로 분리.
 
@@ -117,7 +117,7 @@ REQUIRE(f.viewport[2] > 0);              // sanity
 
 #### N2 [Task 1]: `-R` 정규식은 *태그*가 아니라 *Catch2 시나리오 이름* 매치
 
-**증상**: `-R "state_fields"` (태그 substring) → `No tests were found!!!`.
+**증상**: `-R "state_fields"` (태그 substring) -> `No tests were found!!!`.
 
 **원인**: `catch_discover_tests`는 TEST_CASE 첫 번째 인자(시나리오 이름)을 ctest 이름으로 등록. 두 번째 인자(태그)는 ctest -R로 매치 안 됨.
 
@@ -133,7 +133,7 @@ REQUIRE(f.viewport[2] > 0);              // sanity
 
 또는 *전체 실행*: `ctest --test-dir build_Darwin --output-on-failure`.
 
-#### N10 [Task 7]: smell linter regex가 `STATIC_REQUIRE`/`STATIC_CHECK` 누락 → false positive
+#### N10 [Task 7]: smell linter regex가 `STATIC_REQUIRE`/`STATIC_CHECK` 누락 -> false positive
 
 **증상**: `test_glfw_utils.cpp` (constexpr STATIC_REQUIRE 사용)에 R1 false positive 6건.
 
@@ -151,7 +151,7 @@ REQUIRE(f.viewport[2] > 0);              // sanity
 
 **증상**: Task 2 Step 3에서 5개 중 3 PASS / 2 FAIL (plan은 "결정성만 PASS, 나머지 FAIL" 모호 설명).
 
-**원인**: stub `CaptureGLState() { return {}; }`은 *아무 GL 호출도 안 함* → 부수효과 0 검증과 GL_NO_ERROR 검증이 *우연히* 통과.
+**원인**: stub `CaptureGLState() { return {}; }`은 *아무 GL 호출도 안 함* -> 부수효과 0 검증과 GL_NO_ERROR 검증이 *우연히* 통과.
 
 **해결 — Task 2 Step 3에 정확한 표 박음**:
 
@@ -171,7 +171,7 @@ REQUIRE(f.viewport[2] > 0);              // sanity
 
 **원인**: audit 트랙 A 추가 시 `attribute_layouts.type` 필드 추가했지만, 그 값을 `SymbolicName`이 처리하도록 사전 확장은 빼먹음. plan 자체의 누락.
 
-**해결**: SymbolicName에 9개 추가 — `GL_BYTE`, `GL_UNSIGNED_BYTE`, `GL_SHORT`, `GL_UNSIGNED_SHORT`, `GL_INT`, `GL_UNSIGNED_INT`, `GL_FLOAT`, `GL_DOUBLE`, `GL_HALF_FLOAT`. 사전 28 → **37개**.
+**해결**: SymbolicName에 9개 추가 — `GL_BYTE`, `GL_UNSIGNED_BYTE`, `GL_SHORT`, `GL_UNSIGNED_SHORT`, `GL_INT`, `GL_UNSIGNED_INT`, `GL_FLOAT`, `GL_DOUBLE`, `GL_HALF_FLOAT`. 사전 28 -> **37개**.
 
 **교훈**: 새 enum field 추가 시 SymbolicName 사전 *체크리스트*가 동시에 갱신 필요. 한 곳에 박혀있는 enum이 다른 곳에서 raw hex로 새는지 확인.
 
@@ -181,12 +181,12 @@ REQUIRE(f.viewport[2] > 0);              // sanity
 
 #### N4 [Task 2 시점에 흡수]: BugReport + STUDY_NOTE 통증 5개 중 1.5개만 cover
 
-**증상**: 사용자가 audit 요청 → 11 카테고리 50+ 패턴 중 현재 plan은 attribute layout / uniform 값 누락 / shader version 등 중요 카테고리 미커버.
+**증상**: 사용자가 audit 요청 -> 11 카테고리 50+ 패턴 중 현재 plan은 attribute layout / uniform 값 누락 / shader version 등 중요 카테고리 미커버.
 
 **원인**: 본 plan의 spec 단계에서 BugReport.md / STUDY_NOTE.md 분석을 충분히 하지 않음.
 
 **해결 — 3 트랙 분류**:
-- **트랙 A (현재 plan 흡수)**: vertex attribute layout (카테고리 C) → GLStateFields::attribute_layouts 추가
+- **트랙 A (현재 plan 흡수)**: vertex attribute layout (카테고리 C) -> GLStateFields::attribute_layouts 추가
 - **트랙 B (Task 5/6/9에 영향)**: FieldsToString·Diff·사보타지 드릴 갱신
 - **트랙 C (sibling spec 후보)**: shader, camera, uniform setter, C++ lifecycle, visual regression
 
@@ -204,7 +204,7 @@ REQUIRE(f.viewport[2] > 0);              // sanity
 
 **해결 — Task 4 modified plan**:
 1. 각 TEST_CASE 시작/종료 시 `Invalidate(handle)` 호출 (정리)
-2. 테스트별 *unique* program 핸들 사용 (충돌 회피): 42→142, 99→199, 7→207
+2. 테스트별 *unique* program 핸들 사용 (충돌 회피): 42->142, 99->199, 7->207
 
 **교훈**: 전역 static을 사용하는 production 모듈을 테스트할 때는 *fixture 또는 RAII 정리 메커니즘* 필요. Catch2의 `--order rand` 옵션 사용 시 더 중요.
 
@@ -232,7 +232,7 @@ REQUIRE(f.viewport[2] > 0);              // sanity
 
 ---
 
-### 결함 → Task 매핑 표
+### 결함 -> Task 매핑 표
 
 | Task | 발견된 결함 | 결과 |
 |---|---|---|
@@ -280,7 +280,7 @@ cmake --build build_Darwin -j --target tests
 cmake --build build_Darwin -j --target test_<name>
 ```
 
-→ Task 3 이후 모든 Step의 빌드 명령은 `--target tests`로 통일. 그래서 매 Task의 CMakeLists.txt 편집 시 *반드시* `tests` umbrella 의 DEPENDS 목록에 새 테스트를 추가해야 함 (이미 plan에 명시됨, 빠뜨리면 안 됨).
+-> Task 3 이후 모든 Step의 빌드 명령은 `--target tests`로 통일. 그래서 매 Task의 CMakeLists.txt 편집 시 *반드시* `tests` umbrella 의 DEPENDS 목록에 새 테스트를 추가해야 함 (이미 plan에 명시됨, 빠뜨리면 안 됨).
 
 ### N2: ctest `-R` 정규식은 *태그*가 아니라 *Catch2 시나리오 이름*을 매치
 
@@ -311,11 +311,11 @@ ctest --test-dir build_Darwin --output-on-failure | grep -E "(SymbolicName|Captu
 
 **증상**: Task 2 Step 3에서 *stub 상태로 ctest 실행 시 5개 중 3개가 PASS, 2개만 FAIL*.
 
-**원인**: stub `CaptureGLState() { return {}; }`은 *아무 GL 호출도 안 함* → 부수효과 0 검증과 GL_NO_ERROR 검증이 *우연히* 통과. 실제로 *capture가 작동해야 잡히는* 검증은 "fresh fixture default"(viewport 비교)와 "VAO 바인딩 후 반영"(handle 비교) 두 케이스.
+**원인**: stub `CaptureGLState() { return {}; }`은 *아무 GL 호출도 안 함* -> 부수효과 0 검증과 GL_NO_ERROR 검증이 *우연히* 통과. 실제로 *capture가 작동해야 잡히는* 검증은 "fresh fixture default"(viewport 비교)와 "VAO 바인딩 후 반영"(handle 비교) 두 케이스.
 
 **해결**: 본 plan의 Task 2 Step 3 Expected 설명 수정 (아래 Task 2 §). 이 비대칭은 plan 결함이지만 *학습 가치*: stub이 통과시키는 케이스는 *진짜 회귀 감지력이 약한* 케이스라는 신호. Task 9 사보타지 드릴이 이 같은 blind spot을 찾는 절차.
 
-→ Task 3 이후 모든 *FAIL 기대* Step에서 "stub이 무엇을 우연 통과시킬 수 있는지" 명시적으로 점검 후 진행.
+-> Task 3 이후 모든 *FAIL 기대* Step에서 "stub이 무엇을 우연 통과시킬 수 있는지" 명시적으로 점검 후 진행.
 
 ---
 
@@ -340,7 +340,7 @@ test/
 ├── test_gl_state_capture.cpp       [NEW]   CaptureGLState 회귀 (GL ctx 필요)
 ├── test_gl_state_snapshot.cpp      [NEW]   ToString/Diff 회귀 (대부분 GL ctx 불필요)
 ├── test_gl_state_log.cpp           [NEW]   GLStateLog::Dump 회귀 (GL ctx + SpdlogCapture)
-├── test_uniform_diagnostics.cpp    [MODIFY] SUCCEED → SpdlogCapture 단언으로 3곳 교체
+├── test_uniform_diagnostics.cpp    [MODIFY] SUCCEED -> SpdlogCapture 단언으로 3곳 교체
 └── CMakeLists.txt                  [MODIFY] STATIC libs (gl_state_snapshot, spdlog_capture) + 4 새 test exe + tests umbrella + smell linter ctest 등록
 
 scripts/
@@ -365,7 +365,7 @@ doc/
 
 ## Task 1: SymbolicName 함수 + GLStateFields struct (no GL ctx)
 
-**Goal**: 17 필드 데이터 모델 정의 + `SymbolicName(GLenum) → const char*` 함수. 사전 적중/미적중/GL_ZERO 정책 검증.
+**Goal**: 17 필드 데이터 모델 정의 + `SymbolicName(GLenum) -> const char*` 함수. 사전 적중/미적중/GL_ZERO 정책 검증.
 
 **Files:**
 - Create: `test/test_gl_state_fields.cpp`
@@ -405,7 +405,7 @@ TEST_CASE("SymbolicName 사전 적중", "[diagnostics][state_fields]")
     REQUIRE_THAT(SymbolicName(GL_SRC_ALPHA), Equals("GL_SRC_ALPHA"));
 }
 
-TEST_CASE("SymbolicName(0) → GL_ZERO 정책 (blend factor 컨텍스트)", "[diagnostics][state_fields]")
+TEST_CASE("SymbolicName(0) -> GL_ZERO 정책 (blend factor 컨텍스트)", "[diagnostics][state_fields]")
 {
     // 본 프로젝트 17개 캡처 필드 한정 시 0이 enum 값으로 합법 발생하는 곳은
     // blend_src_rgb / blend_dst_rgb 뿐 — GL_ZERO 가 정확.
@@ -413,7 +413,7 @@ TEST_CASE("SymbolicName(0) → GL_ZERO 정책 (blend factor 컨텍스트)", "[di
     REQUIRE_THAT(SymbolicName(0), Equals("GL_ZERO"));
 }
 
-TEST_CASE("SymbolicName 미적중 → hex fallback", "[diagnostics][state_fields]")
+TEST_CASE("SymbolicName 미적중 -> hex fallback", "[diagnostics][state_fields]")
 {
     REQUIRE_THAT(SymbolicName(0xDEAD),  Equals("0xDEAD"));
     REQUIRE_THAT(SymbolicName(0xBEEF),  Equals("0xBEEF"));
@@ -492,17 +492,17 @@ namespace SJH::Diagnostics
         std::array<GLfloat, 4> clear_color{0, 0, 0, 0};
     };
 
-    /// 현재 GL 상태 캡처. 부수효과 0 (active_texture 저장→유닛 순회→복원).
+    /// 현재 GL 상태 캡처. 부수효과 0 (active_texture 저장->유닛 순회->복원).
     /// @pre  GL context active (caller 책임)
     /// @post 17 필드 모두 채워 반환. glGetError가 non-zero 였으면 spdlog::warn (값 정확성 의심)
     GLStateFields CaptureGLState();
 
-    /// GLenum → 사람이 읽는 이름. ~28 사전 + GL_TEXTUREn 동적. 미적중 시 "0xXXXX".
+    /// GLenum -> 사람이 읽는 이름. ~28 사전 + GL_TEXTUREn 동적. 미적중 시 "0xXXXX".
     /// @note SymbolicName(0) == "GL_ZERO" — blend factor 컨텍스트 가정. 자세한 근거는
     ///       spec 2.1 / test_gl_state_fields.cpp "GL_ZERO 정책" 케이스 참조.
     const char* SymbolicName(GLenum e);
 
-    /// GLStateFields → 사람이 읽는 다중라인 문자열.
+    /// GLStateFields -> 사람이 읽는 다중라인 문자열.
     /// VAO=0인 경우 element_buffer 라인에 주석 자동 포함.
     /// enum 필드는 SymbolicName, GLuint 핸들은 raw 정수 (의도된 비대칭).
     std::string FieldsToString(const GLStateFields& fields);
@@ -623,7 +623,7 @@ add_custom_target(tests DEPENDS
 )
 ```
 
-- [ ] **Step 6: 빌드 + 테스트 실행 → PASS 확인**
+- [ ] **Step 6: 빌드 + 테스트 실행 -> PASS 확인**
 
 Run: `cmake --build build_Darwin -j --target tests && ctest --test-dir build_Darwin --output-on-failure -R "SymbolicName"`
 Expected: 5개 케이스 모두 PASS.
@@ -648,7 +648,7 @@ git add src/diagnostics/gl_state_fields.h \
 
 ## Task 2: CaptureGLState 구현 (GL ctx 필요)
 
-**Goal**: 17 필드 + 16 텍스처 unit을 부수효과 0으로 캡처. drain → capture → post-check.
+**Goal**: 17 필드 + 16 텍스처 unit을 부수효과 0으로 캡처. drain -> capture -> post-check.
 
 **Files:**
 - Create: `test/test_gl_state_capture.cpp`
@@ -767,7 +767,7 @@ catch_discover_tests(test_gl_state_capture)
 
 `tests` umbrella에도 `test_gl_state_capture` 추가.
 
-- [ ] **Step 3: 빌드 + 테스트 → 일부 FAIL 확인** (CaptureGLState 가 stub이라 default 반환)
+- [ ] **Step 3: 빌드 + 테스트 -> 일부 FAIL 확인** (CaptureGLState 가 stub이라 default 반환)
 
 Run: `cmake --build build_Darwin -j --target tests && ctest --test-dir build_Darwin --output-on-failure -R "CaptureGLState|fresh fixture"`
 
@@ -775,9 +775,9 @@ Run: `cmake --build build_Darwin -j --target tests && ctest --test-dir build_Dar
 
 | 시나리오 | stub 결과 | 이유 |
 |---|---|---|
-| "결정성 — byte-equal" | **PASS** | stub은 둘 다 default 반환 → 동일 |
-| "부수효과 0 — active_texture" | **PASS** ⚠️ | stub은 GL 호출 안 함 → 부수효과도 0 (우연) |
-| "후 GL_NO_ERROR" | **PASS** ⚠️ | stub은 GL 호출 안 함 → 에러 0 (우연) |
+| "결정성 — byte-equal" | **PASS** | stub은 둘 다 default 반환 -> 동일 |
+| "부수효과 0 — active_texture" | **PASS** ⚠️ | stub은 GL 호출 안 함 -> 부수효과도 0 (우연) |
+| "후 GL_NO_ERROR" | **PASS** ⚠️ | stub은 GL 호출 안 함 -> 에러 0 (우연) |
 | "fresh fixture default" | **FAIL** | viewport={0,0,0,0} ≠ {0,0,256,256} |
 | "VAO 바인딩 후 반영" | **FAIL** | f.vao=0, 실제 vao=1+ |
 
@@ -851,7 +851,7 @@ GLStateFields CaptureGLState()
 }
 ```
 
-- [ ] **Step 5: 빌드 + 테스트 → 5/5 PASS 확인**
+- [ ] **Step 5: 빌드 + 테스트 -> 5/5 PASS 확인**
 
 Run: `cmake --build build_Darwin -j --target tests && ctest --test-dir build_Darwin --output-on-failure -R "CaptureGLState|fresh fixture"`
 Expected: 5개 케이스 모두 PASS (이전 stub 상태에서 FAIL이었던 "fresh fixture default"와 "VAO 바인딩 후 반영"이 GREEN으로 전환).
@@ -869,7 +869,7 @@ git add src/diagnostics/gl_state_fields.cpp \
 
 ## Task 3: SpdlogCapture RAII (no GL ctx)
 
-**Goal**: spdlog default logger를 ostringstream sink로 잠시 교체 → 테스트가 로그 출력을 단언 가능.
+**Goal**: spdlog default logger를 ostringstream sink로 잠시 교체 -> 테스트가 로그 출력을 단언 가능.
 
 **Files:**
 - Create: `test/support/spdlog_capture.h`
@@ -1027,7 +1027,7 @@ TEST_CASE("UniformDiagnostics::NotifyMissing 다중 호출 — warn-once 트래�
     using SJH::Diagnostics::UniformDiagnostics;
     SJH::test::SpdlogCapture cap;
 
-    // (program=42, name="uMissingA") 첫 호출 → warn 출력
+    // (program=42, name="uMissingA") 첫 호출 -> warn 출력
     UniformDiagnostics::NotifyMissing(42, "uMissingA");
     REQUIRE(cap.Contains("uMissingA"));
     auto firstSize = cap.Lines().size();
@@ -1112,7 +1112,7 @@ TEST_CASE("UniformDiagnostics::Invalidate 멱등 + Invalidate 후 재발 가능"
 }
 ```
 
-- [ ] **Step 6: 빌드 + 테스트 → PASS 확인**
+- [ ] **Step 6: 빌드 + 테스트 -> PASS 확인**
 
 Run: `cmake --build build_Darwin -j --target tests && ctest --test-dir build_Darwin --output-on-failure -R "UniformDiagnostics"`
 Expected: 3개 케이스 모두 PASS.
@@ -1159,7 +1159,7 @@ namespace SJH::Diagnostics
         static void Dump(std::string_view tag = {});
 
         /// KHR_debug 콜백에서 GL_DEBUG_SEVERITY_HIGH 발생 시 자동 Dump 활성화.
-        /// macOS GL 3.3은 KHR_debug 미지원 → std::call_once warn 후 no-op.
+        /// macOS GL 3.3은 KHR_debug 미지원 -> std::call_once warn 후 no-op.
         static void EnableAutoOnError(bool enable);
     };
 }
@@ -1370,7 +1370,7 @@ catch_discover_tests(test_gl_state_log)
 
 `tests` umbrella target에 `test_gl_state_log` 추가.
 
-- [ ] **Step 6: 빌드 + 테스트 → PASS 확인**
+- [ ] **Step 6: 빌드 + 테스트 -> PASS 확인**
 
 Run: `cmake --build build_Darwin -j --target tests && ctest --test-dir build_Darwin --output-on-failure -R "GLStateLog"`
 Expected: 3개 케이스 모두 PASS.
@@ -1459,12 +1459,12 @@ namespace SJH::test
         // 단일 필드 비교 출력 — 변화 있으면 line 추가.
         template <typename T>
         void DiffField(std::string& out, const char* name, const T& a, const T& b) {
-            if (a != b) out += fmt::format("  {}: {} → {}\n", name, a, b);
+            if (a != b) out += fmt::format("  {}: {} -> {}\n", name, a, b);
         }
 
         // enum 전용 (SymbolicName 적용)
         void DiffEnum(std::string& out, const char* name, GLenum a, GLenum b) {
-            if (a != b) out += fmt::format("  {}: {} → {}\n", name, SymbolicName(a), SymbolicName(b));
+            if (a != b) out += fmt::format("  {}: {} -> {}\n", name, SymbolicName(a), SymbolicName(b));
         }
     }
 
@@ -1483,11 +1483,11 @@ namespace SJH::test
         if (a.element_buffer != b.element_buffer) {
             const bool either_zero = (a.vao == 0 || b.vao == 0);
             if (either_zero) {
-                out += fmt::format("  element_buffer: {} → {}  "
+                out += fmt::format("  element_buffer: {} -> {}  "
                                    "(note: EBO state is per-VAO; with VAO=0, this is always 0)\n",
                                    a.element_buffer, b.element_buffer);
             } else {
-                out += fmt::format("  element_buffer: {} → {}\n",
+                out += fmt::format("  element_buffer: {} -> {}\n",
                                    a.element_buffer, b.element_buffer);
             }
         }
@@ -1499,14 +1499,14 @@ namespace SJH::test
         // 텍스처 unit
         for (int i = 0; i < 16; ++i) {
             if (a.texture_2d_per_unit[i] != b.texture_2d_per_unit[i]) {
-                out += fmt::format("  tex_2d[unit {}]: {} → {}\n", i,
+                out += fmt::format("  tex_2d[unit {}]: {} -> {}\n", i,
                                    a.texture_2d_per_unit[i], b.texture_2d_per_unit[i]);
             }
         }
 
         // viewport
         if (a.viewport != b.viewport) {
-            out += fmt::format("  viewport: [{},{},{},{}] → [{},{},{},{}]\n",
+            out += fmt::format("  viewport: [{},{},{},{}] -> [{},{},{},{}]\n",
                                a.viewport[0], a.viewport[1], a.viewport[2], a.viewport[3],
                                b.viewport[0], b.viewport[1], b.viewport[2], b.viewport[3]);
         }
@@ -1528,11 +1528,11 @@ namespace SJH::test
                 return fmt::format("[{},{},{},{}]",
                     m[0]?'R':'-', m[1]?'G':'-', m[2]?'B':'-', m[3]?'A':'-');
             };
-            out += fmt::format("  color_write: {} → {}\n", fmt4(a.color_write_mask), fmt4(b.color_write_mask));
+            out += fmt::format("  color_write: {} -> {}\n", fmt4(a.color_write_mask), fmt4(b.color_write_mask));
         }
 
         if (a.clear_color != b.clear_color) {
-            out += fmt::format("  clear_color: [{:.3f},{:.3f},{:.3f},{:.3f}] → "
+            out += fmt::format("  clear_color: [{:.3f},{:.3f},{:.3f},{:.3f}] -> "
                                               "[{:.3f},{:.3f},{:.3f},{:.3f}]\n",
                 a.clear_color[0], a.clear_color[1], a.clear_color[2], a.clear_color[3],
                 b.clear_color[0], b.clear_color[1], b.clear_color[2], b.clear_color[3]);
@@ -1579,7 +1579,7 @@ TEST_CASE("Diff — handle 변화는 raw 정수 (비대칭)", "[snapshot][diff]"
     REQUIRE_THAT(d, ContainsSubstring("vao:"));
     REQUIRE_THAT(d, ContainsSubstring("3"));
     REQUIRE_THAT(d, ContainsSubstring("5"));
-    REQUIRE_THAT(d, ContainsSubstring("→"));
+    REQUIRE_THAT(d, ContainsSubstring("->"));
 }
 
 TEST_CASE("Diff — enum 변화는 SymbolicName (비대칭)", "[snapshot][diff]")
@@ -1651,7 +1651,7 @@ TEST_CASE("ToString VAO≠0 — 주석 미포함", "[snapshot][tostring]")
 
 ```cmake
 #  GL state snapshot — 테스트 측 RAII + Diff (Task 6)
-# SJH::diagnostics PUBLIC link → 소비 테스트가 GLStateFields 자동 가시.
+# SJH::diagnostics PUBLIC link -> 소비 테스트가 GLStateFields 자동 가시.
 add_library(gl_state_snapshot STATIC support/gl_state_snapshot.cpp)
 target_link_libraries(gl_state_snapshot PUBLIC
     SJH::diagnostics
@@ -1681,7 +1681,7 @@ catch_discover_tests(test_gl_state_snapshot)
 
 `tests` umbrella target에 `test_gl_state_snapshot` 추가.
 
-- [ ] **Step 5: 빌드 + 테스트 → PASS 확인**
+- [ ] **Step 5: 빌드 + 테스트 -> PASS 확인**
 
 Run: `cmake --build build_Darwin -j --target tests && ctest --test-dir build_Darwin --output-on-failure -R "Diff|ToString"`
 Expected: 8개 케이스 모두 PASS.
@@ -1911,7 +1911,7 @@ git stash --include-untracked
 $EDITOR src/diagnostics/gl_state_fields.cpp  # 표의 사보타지 1번을 직접 적용
 cmake --build build_Darwin -j --target tests
 ctest --test-dir build_Darwin --output-on-failure
-# → 결과 기록 (어느 케이스가 FAIL했는지)
+# -> 결과 기록 (어느 케이스가 FAIL했는지)
 
 # 3. 복원
 git checkout -- src/diagnostics/gl_state_fields.cpp
@@ -1935,9 +1935,9 @@ git commit -m "test: drill record for CaptureGLState (sabotage 1/3)"
 
 ## 5. 결과 해석
 
-- **모든 사보타지 ≥1 케이스 FAIL** → 합격. 표에 FAIL한 케이스 기록.
-- **어떤 사보타지가 0 케이스 FAIL** → blind spot. 그 카테고리에 케이스 추가 후 재드릴.
-- **사보타지를 잡은 케이스가 *예상과 다름*** → 케이스 의도 모호 (이름/주석 보강).
+- **모든 사보타지 ≥1 케이스 FAIL** -> 합격. 표에 FAIL한 케이스 기록.
+- **어떤 사보타지가 0 케이스 FAIL** -> blind spot. 그 카테고리에 케이스 추가 후 재드릴.
+- **사보타지를 잡은 케이스가 *예상과 다름*** -> 케이스 의도 모호 (이름/주석 보강).
 
 ## 6. Mutation Testing 보류 — 진입 트리거
 
@@ -1965,7 +1965,7 @@ git commit -m "test: drill record for CaptureGLState (sabotage 1/3)"
 | 사보타지 | 적용 위치 | 예상 잡는 케이스 | 실제 잡힌 케이스 | 드릴 날짜 |
 |---|---|---|---|---|
 | GL_VERTEX_ARRAY_BINDING ↔ GL_CURRENT_PROGRAM swap | src/diagnostics/gl_state_fields.cpp의 vao 라인 | test_gl_state_capture.cpp "fresh fixture default" | (실측 후 기재) | YYYY-MM-DD |
-| 텍스처 unit loop `i < 16` → `i < 1` | src/diagnostics/gl_state_fields.cpp 텍스처 순회부 | test_gl_state_capture.cpp "결정성" (만약 unit 1+ 가 0 아닌 경우) — 가능하면 실측 시 unit 5에 텍스처 바인딩 후 드릴 | (실측) | YYYY-MM-DD |
+| 텍스처 unit loop `i < 16` -> `i < 1` | src/diagnostics/gl_state_fields.cpp 텍스처 순회부 | test_gl_state_capture.cpp "결정성" (만약 unit 1+ 가 0 아닌 경우) — 가능하면 실측 시 unit 5에 텍스처 바인딩 후 드릴 | (실측) | YYYY-MM-DD |
 | `glActiveTexture(saved_active)` 복원 누락 | src/diagnostics/gl_state_fields.cpp의 텍스처 unit 순회 끝 | test_gl_state_capture.cpp "부수효과 0 — active_texture 변하지 않음" | (실측) | YYYY-MM-DD |
 
 ## 결과 노트
@@ -1973,8 +1973,8 @@ git commit -m "test: drill record for CaptureGLState (sabotage 1/3)"
 (드릴 실행 후 채움)
 
 - 예측이 정확했나?
-- 잡지 못한 사보타지 → 추가한 케이스
-- 잡았지만 케이스명이 의도를 안 드러내면 → 리네임 기록
+- 잡지 못한 사보타지 -> 추가한 케이스
+- 잡았지만 케이스명이 의도를 안 드러내면 -> 리네임 기록
 ```
 
 - [ ] **Step 3: 컴포넌트 표 2 — `doc/test-quality-drill/diff.md`**
@@ -1988,7 +1988,7 @@ git commit -m "test: drill record for CaptureGLState (sabotage 1/3)"
 |---|---|---|---|---|
 | 변화 무관 항상 `"(no GL state change)\n"` 반환 | test/support/gl_state_snapshot.cpp Diff 함수 첫 줄에 `return "(no GL state change)\n";` 강제 | test_gl_state_snapshot.cpp "Diff — handle 변화는 raw 정수" 등 변화 케이스 다수 | (실측) | YYYY-MM-DD |
 | 변화 없는 필드도 출력 (DiffField에서 `if (a != b)` 제거) | test/support/gl_state_snapshot.cpp DiffField helper | test_gl_state_snapshot.cpp "Diff — 동일 snapshot은 '(no GL state change)'" — 출력이 비지 않을 것 | (실측) | YYYY-MM-DD |
-| before/after 인자 swap (Diff 본문에서 a/b 교환) | test/support/gl_state_snapshot.cpp Diff | "Diff — handle 변화는 raw 정수" — `3 → 5` 가 `5 → 3`로 출력. 케이스가 substring "3"과 "5" 둘 다 검사하므로 잡힘 X 가능. **잡히지 않으면 → 케이스 강화 필요 (어느 쪽이 before, 어느 쪽이 after인지 단언)** | (실측) | YYYY-MM-DD |
+| before/after 인자 swap (Diff 본문에서 a/b 교환) | test/support/gl_state_snapshot.cpp Diff | "Diff — handle 변화는 raw 정수" — `3 -> 5` 가 `5 -> 3`로 출력. 케이스가 substring "3"과 "5" 둘 다 검사하므로 잡힘 X 가능. **잡히지 않으면 -> 케이스 강화 필요 (어느 쪽이 before, 어느 쪽이 after인지 단언)** | (실측) | YYYY-MM-DD |
 
 ## 결과 노트
 
@@ -2004,10 +2004,10 @@ git commit -m "test: drill record for CaptureGLState (sabotage 1/3)"
 
 | 사보타지 | 적용 위치 | 예상 잡는 케이스 | 실제 | 드릴 날짜 |
 |---|---|---|---|---|
-| unknown enum → 사전 첫 entry 반환 (default fallback이 "GL_NEVER" 같은 식) | src/diagnostics/gl_state_fields.cpp SymbolicName의 hex fallback | test_gl_state_fields.cpp "미적중 → hex fallback" — `"0xDEAD"` 단언 깨짐 | (실측) | YYYY-MM-DD |
+| unknown enum -> 사전 첫 entry 반환 (default fallback이 "GL_NEVER" 같은 식) | src/diagnostics/gl_state_fields.cpp SymbolicName의 hex fallback | test_gl_state_fields.cpp "미적중 -> hex fallback" — `"0xDEAD"` 단언 깨짐 | (실측) | YYYY-MM-DD |
 | 결과 lowercase (`"gl_less"`) | snprintf 또는 case의 string lit 손상 | "사전 적중" — `Equals("GL_LESS")` 정확 매칭 깨짐 | (실측) | YYYY-MM-DD |
 | 사전에서 `case GL_LESS: return "GL_LESS";` 라인 삭제 | src/diagnostics/gl_state_fields.cpp | "사전 적중" + "depth_func 모든 8개" 둘 다 깨짐 | (실측) | YYYY-MM-DD |
-| **(N11 from §Implementation Notes)** vertex type case 삭제 (`case GL_FLOAT: return "GL_FLOAT";`) | src/diagnostics/gl_state_fields.cpp SymbolicName | test_gl_state_log.cpp "FieldsToString — attribute enabled 시 ..." → `0x1406` 출력으로 hex fallback. attribute layout 출력에서 type이 hex로 새는지 검증. | (실측) | YYYY-MM-DD |
+| **(N11 from §Implementation Notes)** vertex type case 삭제 (`case GL_FLOAT: return "GL_FLOAT";`) | src/diagnostics/gl_state_fields.cpp SymbolicName | test_gl_state_log.cpp "FieldsToString — attribute enabled 시 ..." -> `0x1406` 출력으로 hex fallback. attribute layout 출력에서 type이 hex로 새는지 검증. | (실측) | YYYY-MM-DD |
 
 ## 결과 노트
 
@@ -2043,8 +2043,8 @@ git commit -m "test: drill record for CaptureGLState (sabotage 1/3)"
 
 | 사보타지 | 적용 위치 | 예상 잡는 케이스 / 절차 | 실제 | 드릴 날짜 |
 |---|---|---|---|---|
-| **(N10)** ASSERT_RE에서 `STATIC_REQUIRE\|STATIC_CHECK` alternation 삭제 | scripts/check_test_smells.py ASSERT_RE | `python3 scripts/check_test_smells.py test/` → test_glfw_utils.cpp에 R1 false positive 6건 발생 | (실측) | YYYY-MM-DD |
-| ASSERT_RE의 `REQUIRE` alternation 삭제 (가장 흔한 매크로 미감지) | 동상 | `python3 scripts/check_test_smells.py test/` → 거의 모든 테스트가 R1 false positive | (실측) | YYYY-MM-DD |
+| **(N10)** ASSERT_RE에서 `STATIC_REQUIRE\|STATIC_CHECK` alternation 삭제 | scripts/check_test_smells.py ASSERT_RE | `python3 scripts/check_test_smells.py test/` -> test_glfw_utils.cpp에 R1 false positive 6건 발생 | (실측) | YYYY-MM-DD |
+| ASSERT_RE의 `REQUIRE` alternation 삭제 (가장 흔한 매크로 미감지) | 동상 | `python3 scripts/check_test_smells.py test/` -> 거의 모든 테스트가 R1 false positive | (실측) | YYYY-MM-DD |
 | TEST_CASE_RE의 tag capture를 누락 (두 번째 인자 무시) | 동상 | 모든 TEST_CASE가 R3 (tag 누락)으로 false positive 생성 | (실측) | YYYY-MM-DD |
 
 ## 결과 노트
@@ -2096,7 +2096,7 @@ glGetIntegerv(GL_CURRENT_PROGRAM,      &tmp); f.program = ...
 cmake --build build_Darwin -j --target tests
 ctest --test-dir build_Darwin --output-on-failure -R "capture"
 # Expected: ≥1 FAIL — "fresh fixture default" 또는 "VAO 바인딩 후 fields.vao 반영"
-# 결과 기록 → doc/test-quality-drill/gl_state_capture.md 표의 "실제 잡힌 케이스"
+# 결과 기록 -> doc/test-quality-drill/gl_state_capture.md 표의 "실제 잡힌 케이스"
 
 git checkout -- src/diagnostics/gl_state_fields.cpp
 ctest --test-dir build_Darwin --output-on-failure -R "capture"
@@ -2111,7 +2111,7 @@ ctest --test-dir build_Darwin --output-on-failure -R "capture"
 cmake --build build_Darwin -j --target tests
 ctest --test-dir build_Darwin --output-on-failure -R "capture"
 # Expected: 잡힐 가능성 — fresh fixture에서 모든 unit이 0이라면 *잡히지 않음*.
-# 잡히지 않으면 → "blind spot" 발견 → 케이스 추가 후 재드릴.
+# 잡히지 않으면 -> "blind spot" 발견 -> 케이스 추가 후 재드릴.
 # 케이스 추가 예: "텍스처 unit 5 바인딩 후 capture에 반영" — 사용자가 직접 추가.
 
 git checkout -- src/diagnostics/gl_state_fields.cpp
@@ -2160,7 +2160,7 @@ git checkout -- src/diagnostics/gl_state_fields.cpp
 
 각 표를 검토:
 - 모든 12개 사보타지가 ≥1 케이스로 잡혔는가?
-- 잡지 못한 사보타지 → 그 카테고리의 케이스를 *실제 테스트 파일에 추가*하고 → 다시 빌드/테스트 통과 확인 → 재드릴.
+- 잡지 못한 사보타지 -> 그 카테고리의 케이스를 *실제 테스트 파일에 추가*하고 -> 다시 빌드/테스트 통과 확인 -> 재드릴.
 - 결과 노트 채우기 (예측 vs 실측 일치도, 발견된 blind spot, 추가한 케이스).
 
 - [ ] **Step 9: stage**
@@ -2205,15 +2205,15 @@ git add doc/test-quality-drill/
 - "Add appropriate error handling": 0건.
 - "Write tests for the above": 0건 (모든 테스트 코드 명시).
 - "Similar to Task N": 0건.
-- 정의되지 않은 함수/타입: 점검 — `FieldsToString` (Task 1 stub → Task 5 본격 구현, OK), `CaptureGLState` (Task 1 stub → Task 2 구현, OK), `SymbolicName` (Task 1 구현, OK), `GLStateSnapshot` (Task 6, OK), `Diff` (Task 6, OK), `SpdlogCapture` (Task 3, OK), `GLStateLog::Dump` / `EnableAutoOnError` (Task 5, OK).
+- 정의되지 않은 함수/타입: 점검 — `FieldsToString` (Task 1 stub -> Task 5 본격 구현, OK), `CaptureGLState` (Task 1 stub -> Task 2 구현, OK), `SymbolicName` (Task 1 구현, OK), `GLStateSnapshot` (Task 6, OK), `Diff` (Task 6, OK), `SpdlogCapture` (Task 3, OK), `GLStateLog::Dump` / `EnableAutoOnError` (Task 5, OK).
 
 ### 3. Type consistency
 
-- `GLStateFields`: Task 1 헤더 → Task 2/5 구현/사용 일관 (struct field names 동일).
-- `SymbolicName(GLenum)` 시그니처: Task 1 헤더 → Task 6 Diff 사용 일관.
-- `FieldsToString(const GLStateFields&)`: Task 1 헤더 → Task 5 구현 → Task 6 ToString 위임 일관.
-- `GLStateSnapshot::fields`: Task 6 헤더 → Task 6 테스트의 `s.fields.vao = 0` 사용 일관.
-- `SpdlogCapture::Contains(string_view)` / `Lines()`: Task 3 헤더 → Task 4/5 사용 일관.
+- `GLStateFields`: Task 1 헤더 -> Task 2/5 구현/사용 일관 (struct field names 동일).
+- `SymbolicName(GLenum)` 시그니처: Task 1 헤더 -> Task 6 Diff 사용 일관.
+- `FieldsToString(const GLStateFields&)`: Task 1 헤더 -> Task 5 구현 -> Task 6 ToString 위임 일관.
+- `GLStateSnapshot::fields`: Task 6 헤더 -> Task 6 테스트의 `s.fields.vao = 0` 사용 일관.
+- `SpdlogCapture::Contains(string_view)` / `Lines()`: Task 3 헤더 -> Task 4/5 사용 일관.
 
 **불일치 0**.
 
@@ -2223,10 +2223,10 @@ git add doc/test-quality-drill/
 
 사용자의 [auto memory phase-implementation-mode 정책](../../.claude/MEMORY.md) 에 따라:
 
-1. **Task 1부터 순서대로** 진행 (Task 1 → 2 → 3 → ... → 9)
-2. **각 Task 안의 Step 1, 2, 3, ...** 을 그대로 따름 (TDD red → green → stage 패턴)
+1. **Task 1부터 순서대로** 진행 (Task 1 -> 2 -> 3 -> ... -> 9)
+2. **각 Task 안의 Step 1, 2, 3, ...** 을 그대로 따름 (TDD red -> green -> stage 패턴)
 3. Step 안의 코드 블록은:
    - **테스트 코드**: 그대로 사용 가능 (red phase의 계약)
    - **구현 코드**: 컨벤션 가이드 — 사용자가 변형 가능
 4. 의문 생기면 [spec](2026-05-07-gl-state-and-test-quality-design.md) 의 해당 섹션 참조 (plan이 §번호로 가리킴)
-5. Task 완료 후 ctest 결과를 Claude에 공유 → review 요청
+5. Task 완료 후 ctest 결과를 Claude에 공유 -> review 요청

@@ -14,7 +14,7 @@
 #### 직관 — 풍선을 위에서 누르는 그림
 풍선을 발판 위에서 손바닥으로 누른다고 상상. 풍선은 위아래로 짜부라지고 옆으로 늘어남(Y축 0.5배, X축 2배 = non-uniform scale). 표면에 박아둔 압정(=normal)은 — 세로로 짜부 시켰으면 압정의 Y 성분이 *더 커져야*(더 위를 향해야) 새 표면에 직각.
 
-→ 정점에 적용한 변환을 normal 에는 *반대로* 적용 = `inverse`. vector 와 covector 의 차이로 한 번 더 transpose 가 붙어 `transpose(inverse(M))`.
+-> 정점에 적용한 변환을 normal 에는 *반대로* 적용 = `inverse`. vector 와 covector 의 차이로 한 번 더 transpose 가 붙어 `transpose(inverse(M))`.
 
 #### 수식 유도
 표면 위 접선 벡터 t, normal 을 n 이라 하면 정의상 `n · t = 0`. 변환 후에도 `n' · t' = 0` 유지되어야 하니, `t' = M·t` 일 때:
@@ -23,7 +23,7 @@ n' = (M^{-1})^{T} \cdot n
 $$
 
 #### 언제 생략 가능한가
-- M 이 **회전 + 균등 스케일 + 평행이동** 만이면 `(M⁻¹)ᵀ == M` (방향 성분 한정) → `mat3(M) * aNormal` 로 끝.
+- M 이 **회전 + 균등 스케일 + 평행이동** 만이면 `(M⁻¹)ᵀ == M` (방향 성분 한정) -> `mat3(M) * aNormal` 로 끝.
 - 자유 변형(non-uniform scale, shear)을 허용하면 normal matrix 필수.
 
 #### `vec4(aNormal, 0.0)` 의 0
@@ -43,7 +43,7 @@ $$
 
 #### 직관 — "지도 vs 사진"
 - **gl_Position = 사진 속 픽셀 좌표.** 원근 때문에 멀리 있는 큐브는 작게 찍힘.
-- **positionVector = 실제 세상 좌표.** "큐브 (3,0,-5), 빛 (3,3,3) → 두 점 사이 벡터 (0,3,8)" 같은 물리적 거리/방향 계산용.
+- **positionVector = 실제 세상 좌표.** "큐브 (3,0,-5), 빛 (3,3,3) -> 두 점 사이 벡터 (0,3,8)" 같은 물리적 거리/방향 계산용.
 
 ```glsl
 vec3 lightDir = normalize(lightPos - positionVector);
@@ -90,10 +90,10 @@ float spec = pow(max(dot(viewDir, reflectDir), 0.0), specularShininess);
 | Diffuse  | `k_d · max(N·L, 0)`        | N, L      | ❌ No  | matte (무광) |
 | Specular | `k_s · max(R·V, 0)^n`      | N, L, **V** | ✅ Yes | glossy (광택) |
 
-→ Diffuse 는 카메라를 옮겨도 *같은 face* 가 밝다 (Lambertian). Specular 는 카메라가 움직이면 highlight 도 따라 움직인다 (mirror-like).
+-> Diffuse 는 카메라를 옮겨도 *같은 face* 가 밝다 (Lambertian). Specular 는 카메라가 움직이면 highlight 도 따라 움직인다 (mirror-like).
 
 #### 직관 — 거울 속 천장 조명
-욕실 거울에 천장 조명이 비치는 위치는 *내가 어디 서 있느냐*에 따라 달라진다. 한 발짝 옆으로 가면 반사 spot 도 나를 따라 옆으로 움직인다 — 조명은 가만히 있어도. **빛 → 표면 → 카메라** 의 거울 반사 경로가 성립하는 픽셀에서만 highlight 가 보인다.
+욕실 거울에 천장 조명이 비치는 위치는 *내가 어디 서 있느냐*에 따라 달라진다. 한 발짝 옆으로 가면 반사 spot 도 나를 따라 옆으로 움직인다 — 조명은 가만히 있어도. **빛 -> 표면 -> 카메라** 의 거울 반사 경로가 성립하는 픽셀에서만 highlight 가 보인다.
 
 #### 카메라 위치별 spot 위치 — halfway vector H 로 보면 명확
 `H = normalize(L + V)` (자세한 Blinn-Phong 모델은 Advanced Lighting 노트):
@@ -105,7 +105,7 @@ float spec = pow(max(dot(viewDir, reflectDir), 0.0), specularShininess);
 | 90° 옆 | L 과 V 의 중간 | 광원·카메라 중간 방향 face |
 
 #### 모델 회전 시 (광원·카메라 고정)
-H 방향은 월드 좌표에서 변하지 않음. 모델이 회전하면 어떤 face 의 normal 이 H 에 가까운지가 시간에 따라 바뀜 → spot 이 face 사이를 **미끄러져** 다른 면으로 넘어가는 것이 **정상**.
+H 방향은 월드 좌표에서 변하지 않음. 모델이 회전하면 어떤 face 의 normal 이 H 에 가까운지가 시간에 따라 바뀜 -> spot 이 face 사이를 **미끄러져** 다른 면으로 넘어가는 것이 **정상**.
 
 #### 흔한 오해
 

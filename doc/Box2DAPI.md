@@ -10,10 +10,10 @@
 ```
 [초기화]
   b2World(gravity)
-      └─ CreateBody(BodyDef)  ──→  b2Body
+      └─ CreateBody(BodyDef)  ──->  b2Body
               └─ CreateFixture(Shape, density)
               └─ CreateFixture(FixtureDef)
-  b2World::CreateJoint(JointDef)  ──→  b2Joint (RevoluteJoint / WheelJoint)
+  b2World::CreateJoint(JointDef)  ──->  b2Joint (RevoluteJoint / WheelJoint)
   b2World::SetDebugDraw(b2Draw*)
 
 [매 프레임]
@@ -22,7 +22,7 @@
   DebugDraw::Flush()                    ← GPU 업로드 + 드로우콜
 
 [리셋]
-  b2World::GetBodyList() + GetNext() 순회 → DestroyBody(b) 전체 제거
+  b2World::GetBodyList() + GetNext() 순회 -> DestroyBody(b) 전체 제거
 ```
 
 ---
@@ -270,12 +270,12 @@ xf.q.GetYAxis()  // b2Vec2 — 로컬 Y축 방향 벡터
 ```
 [b2Draw 콜백]
     PushLine / PushTriangle
-        → CPU 버퍼 누적 (kMaxVerts = 1536)
+        -> CPU 버퍼 누적 (kMaxVerts = 1536)
 
 [매 프레임 끝]
     Flush()
-        FlushTriangles()  → GL_TRIANGLES (채운 shape, alpha 0.5 블렌딩)
-        FlushLines()      → GL_LINES     (외곽선)
+        FlushTriangles()  -> GL_TRIANGLES (채운 shape, alpha 0.5 블렌딩)
+        FlushLines()      -> GL_LINES     (외곽선)
 ```
 
 - **셰이더**: `#version 410 core`, 정점당 `(x, y, r, g, b, a)` 6 float

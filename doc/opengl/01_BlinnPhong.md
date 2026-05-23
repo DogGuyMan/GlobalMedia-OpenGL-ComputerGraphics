@@ -51,7 +51,7 @@ float spec = pow(max(dot(pixelNorm, halfwayDir), 0.0), shininess);
 
 ## 시험 포인트 요약
 - Blinn-Phong: `H = normalize(L+V)`, specular = `(N·H)^n`.
-- N·H 각도는 R·V 의 **절반** → 같은 sharpness 에 shininess **2~4배**.
+- N·H 각도는 R·V 의 **절반** -> 같은 sharpness 에 shininess **2~4배**.
 - grazing angle 에서 Phong 보다 자연스럽고 `reflect()` 가 빠져 약간 저렴.
 - specular 의 view 의존성은 Phong·Blinn-Phong 공통 (정의).
 

@@ -40,23 +40,23 @@ state-setting 호출이라도 *변경 범위* 가 다르다. 이것을 모르면
 | `glUniform*` | **현재 use 중인 program 안** | program 마다 별도. use 안 하면 `GL_INVALID_OPERATION` |
 | `glEnable`/`glDepthFunc`/`glViewport`/`glClearColor` | **글로벌** | 전역 렌더 상태 |
 
-> **핵심**: `glVertexAttribPointer` 는 *호출 시점의 `GL_ARRAY_BUFFER` 바인딩* 을 VAO 에 캡쳐한다. 그래서 *VBO 바인딩 → attrib 설정* 순서가 중요하고, *VAO 가 바인딩된 상태* 에서 해야 한다.
+> **핵심**: `glVertexAttribPointer` 는 *호출 시점의 `GL_ARRAY_BUFFER` 바인딩* 을 VAO 에 캡쳐한다. 그래서 *VBO 바인딩 -> attrib 설정* 순서가 중요하고, *VAO 가 바인딩된 상태* 에서 해야 한다.
 
 ---
 
 > ### 📄 3. State 변경의 *시작점*
 
-"전부 0 인 초기 상태 → 채워진 상태" 의 시작점은 **초기화 루틴(`Init`/`startup`)**. Init 이 각 팩토리(VertexLayout 생성, Buffer 생성, Texture 생성, Program 생성)를 순차 호출하며 각자 자기 영역의 state 를 켠다.
+"전부 0 인 초기 상태 -> 채워진 상태" 의 시작점은 **초기화 루틴(`Init`/`startup`)**. Init 이 각 팩토리(VertexLayout 생성, Buffer 생성, Texture 생성, Program 생성)를 순차 호출하며 각자 자기 영역의 state 를 켠다.
 
 스냅샷의 각 필드와 그것을 바꾸는 호출:
 
 | 스냅샷 필드 | state-setting 호출 |
 |------------|-------------------|
-| `vao` | `glGenVertexArrays` → `glBindVertexArray` |
-| `array_buffer` | `glGenBuffers` → `glBindBuffer(GL_ARRAY_BUFFER)` → `glBufferData` |
-| `element_buffer` | `glBindBuffer(GL_ELEMENT_ARRAY_BUFFER)` → `glBufferData` (*현재 VAO 에 기록*) |
-| `attrib[N]` | `glEnableVertexAttribArray` → `glVertexAttribPointer` |
-| `tex_2d[unit]` | `glGenTextures` → `glBindTexture` → `glTexParameteri` → `glTexImage2D` |
+| `vao` | `glGenVertexArrays` -> `glBindVertexArray` |
+| `array_buffer` | `glGenBuffers` -> `glBindBuffer(GL_ARRAY_BUFFER)` -> `glBufferData` |
+| `element_buffer` | `glBindBuffer(GL_ELEMENT_ARRAY_BUFFER)` -> `glBufferData` (*현재 VAO 에 기록*) |
+| `attrib[N]` | `glEnableVertexAttribArray` -> `glVertexAttribPointer` |
+| `tex_2d[unit]` | `glGenTextures` -> `glBindTexture` -> `glTexParameteri` -> `glTexImage2D` |
 | `active_texture` | `glActiveTexture` |
 | `program` | `glUseProgram` |
 | `clear_color` | `glClearColor` |
@@ -91,7 +91,7 @@ element_buffer: 0  (note: EBO state is per-VAO; with VAO=0, this is always 0)
 
 - `glDraw*` / `glClear` 는 **state-using** — 바인딩 상태를 안 바꾼다.
 - EBO 바인딩과 vertex attribute 는 **현재 VAO 안** 에 저장 (per-VAO 스코프).
-- `glVertexAttribPointer` 는 호출 시점 `GL_ARRAY_BUFFER` 바인딩을 VAO 에 캡쳐 → 순서 의존.
+- `glVertexAttribPointer` 는 호출 시점 `GL_ARRAY_BUFFER` 바인딩을 VAO 에 캡쳐 -> 순서 의존.
 - `glUniform*` 은 현재 use 중인 program 안 — use 없이 호출하면 `GL_INVALID_OPERATION`.
 
 ## 관련 노트

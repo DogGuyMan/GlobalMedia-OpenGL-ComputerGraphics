@@ -27,10 +27,10 @@
 
 단일 광원 버전은 `glUniform1i(..., 1)` / `glActiveTexture(GL_TEXTURE1)` 를 손으로 맞췄지만, 다중 광원 버전은 이 한 쌍을 헬퍼로 묶었다:
 
-- `UniformsSetMaterial(program, "material", mat)` → `material.diffuse` 에 `mat.diffuseUnit`, `material.specular` 에 `mat.specularUnit`, `material.shininess` 전달.
-- `BindMaterialTextures(mat)` → `glActiveTexture(GL_TEXTURE0 + mat.diffuseUnit); glBindTexture(...)` — 셰이더에 알려준 것과 **같은 유닛**에 실제 텍스처를 바인딩.
+- `UniformsSetMaterial(program, "material", mat)` -> `material.diffuse` 에 `mat.diffuseUnit`, `material.specular` 에 `mat.specularUnit`, `material.shininess` 전달.
+- `BindMaterialTextures(mat)` -> `glActiveTexture(GL_TEXTURE0 + mat.diffuseUnit); glBindTexture(...)` — 셰이더에 알려준 것과 **같은 유닛**에 실제 텍스처를 바인딩.
 
-→ "셰이더에 번호를 알려주는 쪽"과 "그 번호에 텍스처를 거는 쪽"이 항상 한 데이터(`Material`)에서 나오므로 어긋날 일이 없다.
+-> "셰이더에 번호를 알려주는 쪽"과 "그 번호에 텍스처를 거는 쪽"이 항상 한 데이터(`Material`)에서 나오므로 어긋날 일이 없다.
 
 ---
 
