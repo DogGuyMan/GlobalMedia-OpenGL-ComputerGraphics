@@ -68,6 +68,8 @@ else()
         IMPORTED_LOCATION         ${LIB_DIR}/libbox2d.a
         IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libbox2d_d.a)
 endif()
+set_target_properties(box2d PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/extern/box2d/include")
 
 # Effekseer — 파티클 엔진 + OpenGL 렌더러
 add_library(Effekseer STATIC IMPORTED)

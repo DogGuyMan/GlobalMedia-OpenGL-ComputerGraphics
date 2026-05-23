@@ -122,8 +122,8 @@ namespace SJH
         ResourceRegistry() = default;
 
         std::unordered_map<std::string, TextureUPtr>     mTextures;
-        std::unordered_map<std::string, MaterialUPtr>    mSharedMaterials;     ///< Unity `sharedMaterial` 정통 — 공유 원본
-        std::unordered_map<std::string, MaterialUPtr>    mMaterialInstances;   ///< Unreal `UMaterialInstanceDynamic` 정통 — Clone 결과
+        std::unordered_map<std::string, MaterialUPtr>    mSharedMaterials;
+        std::unordered_map<std::string, MaterialUPtr>    mMaterialInstances;
         std::unordered_map<std::string, ModelUPtr>       mModels;
         std::unordered_map<std::string, ProgramUPtr>     mPrograms;
         std::unordered_map<std::string, MeshUPtr>        mMeshes;
