@@ -13,6 +13,12 @@ REM 필요한 파일을 직접 lib\windows\, include\ 로 복사하여 사용
 
 setlocal enabledelayedexpansion
 
+REM ====== MSVC CRT 옵션 (메인 프로젝트와 일치: /MT (Release), /MTd (Debug)) ======
+REM CMakePresets.json 의 CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug> 와 동일
+REM CMP0091 정책: CMake 3.15+ 가 CMAKE_MSVC_RUNTIME_LIBRARY 변수를 인식하게 함
+REM 따옴표 필수: BAT 가 $<...> 의 < > 를 redirection 으로 해석하지 못하게 막음
+set MSVC_CRT_OPT=-DCMAKE_POLICY_DEFAULT_CMP0091=NEW "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>"
+
 set ROOT_DIR=%~dp0..
 set SB7CODE_DIR=%ROOT_DIR%\extern\sb7code
 set GLFW_DIR=%SB7CODE_DIR%\extern\glfw-3.0.4
@@ -46,6 +52,7 @@ set GLFW_BUILD=%BUILD_DIR%\glfw
 cmake -S "%GLFW_DIR%" -B "%GLFW_BUILD%" ^
     -G "Visual Studio 17 2022" ^
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+    %MSVC_CRT_OPT% ^
     -DGLFW_BUILD_EXAMPLES=OFF ^
     -DGLFW_BUILD_TESTS=OFF ^
     -DGLFW_BUILD_DOCS=OFF ^
@@ -85,6 +92,7 @@ echo target_compile_options(sb7 PRIVATE /w^)
 
 cmake -S "%SB7_BUILD%" -B "%SB7_BUILD%\build" ^
     -G "Visual Studio 17 2022" ^
+    %MSVC_CRT_OPT% ^
     -DSB7CODE_DIR="%SB7CODE_DIR%" ^
     -DGLFW_DIR="%GLFW_DIR%"
 if errorlevel 1 goto :error
@@ -108,6 +116,7 @@ set BOX2D_BUILD=%BUILD_DIR%\box2d
 cmake -S "%BOX2D_DIR%" -B "%BOX2D_BUILD%" ^
     -G "Visual Studio 17 2022" ^
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+    %MSVC_CRT_OPT% ^
     -DBOX2D_BUILD_TESTBED=OFF ^
     -DBOX2D_BUILD_UNIT_TESTS=OFF ^
     -DBOX2D_BUILD_DOCS=OFF
@@ -139,6 +148,7 @@ set EFK_BUILD=%BUILD_DIR%\effekseer
 cmake -S "%EFK_DIR%" -B "%EFK_BUILD%" ^
     -G "Visual Studio 17 2022" ^
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+    %MSVC_CRT_OPT% ^
     -DBUILD_GL=ON ^
     -DBUILD_VULKAN=OFF ^
     -DBUILD_METAL=OFF ^
@@ -191,6 +201,7 @@ set ASSIMP_BUILD=%BUILD_DIR%\assimp
 cmake -S "%ASSIMP_DIR%" -B "%ASSIMP_BUILD%" ^
     -G "Visual Studio 17 2022" ^
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+    %MSVC_CRT_OPT% ^
     -DBUILD_SHARED_LIBS=OFF ^
     -DASSIMP_BUILD_TESTS=OFF ^
     -DASSIMP_BUILD_ASSIMP_TOOLS=OFF ^
@@ -241,6 +252,7 @@ set SPDLOG_BUILD=%BUILD_DIR%\spdlog
 cmake -S "%SPDLOG_DIR%" -B "%SPDLOG_BUILD%" ^
     -G "Visual Studio 17 2022" ^
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+    %MSVC_CRT_OPT% ^
     -DSPDLOG_BUILD_EXAMPLE=OFF ^
     -DSPDLOG_BUILD_TESTS=OFF ^
     -DSPDLOG_BUILD_BENCH=OFF
@@ -266,18 +278,28 @@ for /R "%SPDLOG_DIR%\include\spdlog" %%f in (*.h *.hpp *.inl) do (
 
 echo   -^> spdlog 빌드 완료 (Release + Debug)
 
+REM ====== 자동 복사: build_extern\output\* -> lib\windows\, include\ ======
+echo.
+echo [+] lib\windows\ 및 include\ 로 자동 복사 중...
+if not exist "%ROOT_DIR%\lib\windows" mkdir "%ROOT_DIR%\lib\windows"
+xcopy /Y "%LIB_DIR%\*" "%ROOT_DIR%\lib\windows\" >nul
+xcopy /E /Y "%INCLUDE_DIR%\*" "%ROOT_DIR%\include\" >nul
+echo   -^> 복사 완료
+
 REM ====== 완료 ======
 echo.
 echo =========================================
 echo  빌드 완료!
-echo  라이브러리: %LIB_DIR%
-echo  헤더:      %INCLUDE_DIR%
+echo  라이브러리 (원본):  %LIB_DIR%
+echo  헤더 (원본):       %INCLUDE_DIR%
+echo  -^> %ROOT_DIR%\lib\windows\ 와 %ROOT_DIR%\include\ 로 자동 복사됨
 echo.
-echo  lib\windows\, include\ 로 필요한 파일을 직접 복사하세요:
-echo    xcopy /Y "%LIB_DIR%\*" "%ROOT_DIR%\lib\windows\"
-echo    xcopy /E /Y "%INCLUDE_DIR%\*" "%ROOT_DIR%\include\"
+echo  다음 단계:
+echo    git add lib\windows\ include\
+echo    git commit -m "build: Windows MSVC 사전 빌드 lib 갱신"
+echo    git push
 echo =========================================
-dir "%LIB_DIR%"
+dir "%ROOT_DIR%\lib\windows"
 goto :eof
 
 :error

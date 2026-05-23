@@ -35,7 +35,15 @@ html/
 .worktrees/
 
 ############ C/C++ #############
-lib/
+# lib/ 디렉토리 자체는 추적하되 (negation 이 작동하도록), 내부 파일은 기본 무시
+lib/*
+# MSVC CI 가 사전 빌드 lib 를 필요로 함 — lib/windows/ 만 추적 예외 (lib/macos/ 는 로컬 재생성)
+!lib/windows/
+!lib/windows/**
+# FMOD 라이브러리는 독점 SDK 라이선스상 재배포 금지 (doc/FMOD_Setup.md §7, 헤더와 동일 사유)
+# CI 는 include/fmod/ 가 없어 FMOD 타겟 자체가 안 만들어지므로 lib 없이도 빌드 가능
+lib/windows/fmod*.lib
+lib/windows/fmod*.dll
 # FMOD Core API 헤더 — 독점 SDK 라이선스상 재배포 금지 (doc/FMOD_Setup.md §7)
 include/fmod/
 # FMOD 샘플 bank — 라이선스상 재배포 제약 (doc/FMOD_Setup.md §7 와 동일 사유)

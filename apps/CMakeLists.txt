@@ -2,4 +2,5 @@
 add_subdirectory(migrate_demo)
 add_subdirectory(box2d_demo)
 add_subdirectory(effekseer_demo)
+add_subdirectory(tweeny_demo)
 # add_subdirectory(audio_demo)
