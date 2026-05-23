@@ -184,10 +184,10 @@ namespace SJH
 
     void ResourceRegistry::Clear()
     {
-        // ★ SP-MaterialMetadata — Material 의 OriginalMaterial dangling 차단:
+        // * SP-MaterialMetadata — Material 의 OriginalMaterial dangling 차단:
         //   Instance 가 *항상 Shared 보다 먼저* 소멸하도록 명시 순서 (Unreal `UMaterialInstanceDynamic::Parent` 안전).
-        mMaterialInstances.clear();   // ★ Instance 먼저 — OriginalMaterial 참조 객체들 소멸
-        mSharedMaterials.clear();     // ★ Shared 나중 — 참조 대상 소멸
+        mMaterialInstances.clear();   // * Instance 먼저 — OriginalMaterial 참조 객체들 소멸
+        mSharedMaterials.clear();     // * Shared 나중 — 참조 대상 소멸
         mTextures.clear();
         mModels.clear();
         mPrograms.clear();

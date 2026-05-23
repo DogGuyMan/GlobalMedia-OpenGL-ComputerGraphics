@@ -165,24 +165,17 @@ namespace MigrateDemo::Scene
 			dir.Root().AddChild(std::move(box));
 		}
 
-		// --- Box2 + Outline child — Pass=Opaque + OutlineVisible (Material SSoT) ---
-		// SP-MaterialSSoT: 모든 GL state 는 Material::SetPass(Kind) 가 결정.
-		// MeshRenderer 는 Stencil/DepthTest/DepthWrite override 멤버를 *보유하지 않음*.
-		//
-		// 단순화 (의도된 trade-off):
-		//   , 정통 stencil outline = (Pass 1) Box2 를 stencil=1 로 도장 -> (Pass 2) shell 을 stencil!=1 로 그림
-		//   , 현 pass.h 는 stencil-write Kind 미정착 — Pass 1 (도장) 표현 불가
-		//   , 대안 = shell-scale + OutlineVisible Kind (queue 4000, DepthWrite=false, depth test on)
-		//     -> Box2 가 먼저 depth 를 채우면, scale 1.05 shell 은 depth test 에서 rim 부분만 통과
-		//     -> stencil 없이도 외곽선 효과 (z-fighting 위험은 있지만 데모용으론 충분)
-		//   , 정통 stencil 복원은 차후 pass.h 에 StencilMaskWrite Kind 추가 후 진행.
+		// --- Box2 + Outline child — 정통 stencil 2-pass ---
+		// Pass 1 (Box2, StencilMaskWrite): Opaque 처럼 그리면서 stencil buffer 에 ref=1 기록.
+		// Pass 2 (Outline, OutlineVisible): scale 1.05 shell 을 stencil!=1 (rim) 영역에만 그림.
+		//   -> GL_NOTEQUAL ref=1 + DepthWrite=false + queue 4000 (Box2 뒤).
 		{
 			auto *matBox2 = reg.CreateSharedMaterial("mat_box2");
 			matBox2->SetProgram(progs.phong);
 			SJH::Uniforms::SetTexture(*matBox2, "material.diffuse",  texContainer2,     0);
 			SJH::Uniforms::SetTexture(*matBox2, "material.specular", texContainer2Spec, 1);
 			SJH::Uniforms::SetFloat  (*matBox2, "material.shininess", 64.0f);
-			// matBox2 는 Pass::Kind::Opaque (기본) — 명시 호출 불요.
+			matBox2->SetPass(SJH::Pass::Kind::StencilMaskWrite); // * Pass 1 — stencil buffer 에 ref=1 도장.
 
 			auto box = std::make_unique<SJH::Scene::Actor>("Box2");
 			box->SetLayer(LAYER_SCENE);
@@ -191,17 +184,16 @@ namespace MigrateDemo::Scene
 			box->GetTransform().Scale     = vmath::vec3(1.5f, 1.5f, 1.5f);
 			box->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matBox2);
 
-			// Outline 셸 — Box2 자식. Material SSoT 로 queue/depth/stencil 한 줄.
+			// Outline 셸 — Box2 자식. queue/depth/stencil 한 줄.
 			auto *matOutline = reg.CreateSharedMaterial("mat_outline");
 			matOutline->SetProgram(progs.simple);
-			SJH::Uniforms::SetVec4(*matOutline, "baseColor", vmath::vec4(1.0f, 1.0f, 0.5f, 1.0f));
-			matOutline->SetPass(SJH::Pass::Kind::OutlineVisible); // ★ queue 4000 + DepthWrite=false + stencil read-only.
+			SJH::Uniforms::SetVec4(*matOutline, "baseColor", vmath::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+			matOutline->SetPass(SJH::Pass::Kind::OutlineVisible); // *Pass 2 — stencil!=1 rim 만 그림.
 
 			auto outline = std::make_unique<SJH::Scene::Actor>("Outline");
 			outline->SetLayer(LAYER_SCENE);
-			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f); // shell-scale rim 트릭.
-			// OutlineVisible Kind 의 queue 4000 이 자동으로 Opaque 2000 뒤. QueueOffset 불필요.
-			outline->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matOutline);
+			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f); // 림 두께 — scale 차이(0.05)가 stencil!=1 rim.
+			auto mrBox2 = outline->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matOutline);
 			box->AddChild(std::move(outline));
 
 			dir.Root().AddChild(std::move(box));
@@ -212,7 +204,7 @@ namespace MigrateDemo::Scene
 			auto *matWindow = reg.CreateSharedMaterial("mat_window");
 			matWindow->SetProgram(progs.window);
 			SJH::Uniforms::SetTexture(*matWindow, "tex0", texWindow, 0);
-			matWindow->SetPass(SJH::Pass::Kind::Transparent);   // ★ 한 줄로 모든 state 자동
+			matWindow->SetPass(SJH::Pass::Kind::Transparent);   // *한 줄로 모든 state 자동
 
 			const vmath::vec3 positions[3] = {
 			    vmath::vec3(0.0f, 0.5f, 4.0f),

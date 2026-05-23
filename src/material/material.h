@@ -121,7 +121,6 @@ namespace SJH
 		Pass::Kind GetPass() const { return mPassKind; }
 
 		/// @brief 자동 도출 queue layer (`Pass::QueueOf(PassKind)` alias).
-		///   Filament/Unreal/Cocos 정통 — Material 은 "어떤 종류" 만, per-instance 미세 순서는 `MeshRenderer::QueueOffset`.
 		int GetQueueLayer() const { return Pass::QueueOf(mPassKind); }
 
 		// ── Instance metadata (Unreal `UMaterialInstanceDynamic::Parent` 정통, 읽기 전용) ──

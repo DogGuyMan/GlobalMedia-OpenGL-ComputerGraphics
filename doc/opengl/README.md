@@ -9,10 +9,10 @@
 01_GettingStarted/
   01_OpenGL_상태머신.md          (← GLState.md)
   02_AdvancedData_버퍼분할.md     (← AttributeNBuffer.md 시나리오 1·2·3·5)
-  03_Textures_샘플러유닛.md       (← UniformTexture.md)  ★ 텍스처 핸들/유닛 SSoT
+  03_Textures_샘플러유닛.md       (← UniformTexture.md)  * 텍스처 핸들/유닛 SSoT
 
 02_Lighting/
-  01_BasicLighting_Phong.md      (← Lighting.md Q1~Q4)  ★ Normal행렬·Specular view의존 SSoT
+  01_BasicLighting_Phong.md      (← Lighting.md Q1~Q4)  * Normal행렬·Specular view의존 SSoT
   02_Materials_LightingMaps.md   (← 멀티플라이팅.md §3)
   03_LightCasters.md             (← 멀티플라이팅.md §1.1·§1.3·§1.4)
   04_MultipleLights.md           (← 멀티플라이팅.md §1.2·§2·§6)

@@ -38,6 +38,8 @@ namespace SJH::Pass
 	///          (예: Background=1000, ShadowCaster=2450, UI=3000+, Skybox=2000 등)
 	enum class Kind : int
 	{
+		StencilMaskWrite = 1999, ///< Outline 2-pass의 Pass 1 — Opaque 처럼 그리면서 stencil buffer에 ref=1 기록
+		                         ///<   OutlineVisible/XRay 가 이 값에 의존 (GL_NOTEQUAL ref=1 이 의미를 가짐)
 		Opaque = 2000,    ///< depth test/write on, blend off, front-to-back sort
 		AlphaTest = 2450, ///< discard 기반 — depth test/write on, blend off
 		Skybox = 2500,
@@ -96,7 +98,7 @@ namespace SJH::Pass
 		                              // 	Reverse-Z 또는 X-Ray outline (벽 뒤에 가려진 곳만)
 		                              //	진정한 X-Ray: GL_GREATER 로 가려진 부분만
 		                              //		```cpp
-		                              //		glDepthFunc(GL_GREATER);  // ★ 새 z > 기존 z
+		                              //		glDepthFunc(GL_GREATER);  // * 새 z > 기존 z
 		                              // 		draw(outline);
 		                              //		```
 		                              //		GL_GREATER 의 의미를 풀어 보면:
@@ -118,8 +120,8 @@ namespace SJH::Pass
 
 		// Stencil (StencilEnable=false 면 나머지 필드 무시 — Outline 등 특수 효과에만 사용)
 		// LearnOpenGL Stencil Testing 정통:
-		//   , Pass 1 (stencil write): glStencilOp(KEEP, KEEP, REPLACE) + glStencilFunc(ALWAYS, 1, 0xFF) + WriteMask=0xFF
-		//   , Pass 2 (outline draw):  glStencilOp(KEEP, KEEP, KEEP)    + glStencilFunc(NOTEQUAL, 1, 0xFF) + WriteMask=0x00
+		//    Pass 1 (stencil write): glStencilOp(KEEP, KEEP, REPLACE) + glStencilFunc(ALWAYS, 1, 0xFF) + WriteMask=0xFF
+		//    Pass 2 (outline draw):  glStencilOp(KEEP, KEEP, KEEP)    + glStencilFunc(NOTEQUAL, 1, 0xFF) + WriteMask=0x00
 		bool StencilEnable = false;
 		GLenum StencilFunc = GL_ALWAYS;   ///< stencil 비교 — GL_NOTEQUAL 이 Outline 의 정통
 		GLint StencilRef = 0;             ///< 비교 기준값
@@ -136,6 +138,21 @@ namespace SJH::Pass
 	{
 		switch (k)
 		{
+		case Kind::StencilMaskWrite: {
+			// Outline 2-pass — Pass 1 (stencil write):
+			//   > Opaque 와 동일한 색상/깊이 렌더링 (물체 정상 표시)
+			//   > StencilOpDPPass=GL_REPLACE + Ref=1 + WriteMask=0xFF — depth 통과 픽셀에 ref=1 기록
+			//   > Queue 1999 — Opaque(2000) 직전 → OutlineVisible(4000) 이 stencil 값에 의존 가능
+			PipelineState s;
+			s.QueueLayer = QueueOf(Kind::StencilMaskWrite);
+			s.StencilEnable = true;
+			s.StencilFunc = GL_ALWAYS; // 항상 stencil 통과 — 도장이 목적
+			s.StencilRef = 1;
+			s.StencilOpDPPass = GL_REPLACE; // depth 통과 시 ref=1 기록
+			s.StencilWriteMask = 0xFFu;
+			return s;
+		}
+
 		case Kind::Opaque:
 			return PipelineState{
 			    /*DepthTest*/ true, /*DepthWrite*/ true,
@@ -152,10 +169,10 @@ namespace SJH::Pass
 
 		case Kind::Skybox:
 			// Skybox 정통:
-			//  , DepthWrite off — skybox 가 depth 갱신하면 뒤 transparent 가 가려짐
-			//  , DepthFunc LEQUAL — 셰이더의 .xyww 트릭으로 NDC z=1.0 강제 -> cleared depth(1.0) 와 동등 통과
-			//  , CullMode FRONT — cube 안쪽에서 보기 때문에 *back face* 가 view 에 보임 -> front 컬링
-			//  , Queue 2500 — Opaque 다음, Transparent 전 (z-cull 효율 우월)
+			//  > DepthWrite off — skybox 가 depth 갱신하면 뒤 transparent 가 가려짐
+			//  > DepthFunc LEQUAL — 셰이더의 .xyww 트릭으로 NDC z=1.0 강제 -> cleared depth(1.0) 와 동등 통과
+			//  > CullMode FRONT — cube 안쪽에서 보기 때문에 *back face* 가 view 에 보임 -> front 컬링
+			//  > Queue 2500 — Opaque 다음, Transparent 전 (z-cull 효율 우월)
 			return PipelineState{
 			    /*DepthTest*/ true, /*DepthWrite*/ false,
 			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ GL_FRONT,
@@ -164,26 +181,26 @@ namespace SJH::Pass
 
 		case Kind::Transparent:
 			// Transparent 정통 (LearnOpenGL Blending / Unity Lit Transparent):
-			//  , DepthWrite off — Transparent 들끼리 가리지 않도록
-			//  , CullMode 0 (cull off) — *양면 그리기*. 유리창/잎사귀/의류 등 *두께 없는 면*
+			//  > DepthWrite off — Transparent 들끼리 가리지 않도록
+			//  > CullMode 0 (cull off) — *양면 그리기*. 유리창/잎사귀/의류 등 *두께 없는 면*
 			//    이 카메라 어느 방향에서든 보이도록. GL_BACK 이면 plane 의 *뒷면* 이 culling 되어
 			//    카메라가 plane 뒤로 갈 때 *안 보이는 버그*.
 			return PipelineState{
 			    /*DepthTest*/ true, /*DepthWrite*/ false,
-			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ 0, // ★ cull off — 양면 그리기
+			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ 0, // * cull off — 양면 그리기
 			    /*BlendEnable*/ true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
 			    /*QueueLayer*/ QueueOf(Kind::Transparent)};
 
 		case Kind::OutlineVisible: {
 			// Outline 정통 (LearnOpenGL Stencil testing — *outline draw pass*):
-			//  , 전제: 직전에 *stencil write pass* 가 ref=1 을 객체 영역에 기록.
+			//  > 전제: 직전에 *stencil write pass* 가 ref=1 을 객체 영역에 기록.
 			//          -> 같은 mesh 를 Opaque 로 그리되 MeshRenderer override 로
 			//             StencilOpDPPass=GL_REPLACE + WriteMask=0xFF + Ref=1 설정.
-			//  , 이 패스는 *scale-up 한* 동일 mesh 를 그림 — 외곽선이 stencil != 1 인
+			//  > 이 패스는 *scale-up 한* 동일 mesh 를 그림 — 외곽선이 stencil != 1 인
 			//    바깥 영역에만 나타나 윤곽선 효과.
-			//  , DepthFunc=LEQUAL — 다른 Opaque 객체에 가려질 수 있음 (자연스러움)
-			//  , DepthWrite=false — outline 자체가 z 영토 차지 X (위에 다른 객체 정상 그려짐)
-			//  , StencilFunc=NOTEQUAL ref=1, WriteMask=0x00 — 읽기 전용 (stencil 갱신 안 함)
+			//  > DepthFunc=LEQUAL — 다른 Opaque 객체에 가려질 수 있음 (자연스러움)
+			//  > DepthWrite=false — outline 자체가 z 영토 차지 X (위에 다른 객체 정상 그려짐)
+			//  > StencilFunc=NOTEQUAL ref=1, WriteMask=0x00 — 읽기 전용 (stencil 갱신 안 함)
 			PipelineState s;
 			s.DepthWrite = false;
 			s.QueueLayer = QueueOf(Kind::OutlineVisible);
@@ -196,13 +213,13 @@ namespace SJH::Pass
 
 		case Kind::OutlineXRay: {
 			// X-Ray outline 월핵 효과
-			//  , OutlineVisible 과 동일 stencil 설정, *DepthFunc 만* GL_GREATER
-			//  , "새 z (outline) > 기존 z (이미 그린 벽)" -> outline 이 벽보다 *뒤에 있는*
+			//  > OutlineVisible 과 동일 stencil 설정, *DepthFunc 만* GL_GREATER
+			//  > "새 z (outline) > 기존 z (이미 그린 벽)" -> outline 이 벽보다 *뒤에 있는*
 			//    픽셀에서만 통과 = **벽에 가려진 부분만** 외곽선이 그려짐
-			//  , 일반 OutlineVisible 과 *함께* 그리면 (Visible=밝게, XRay=어둡게) 하이브리드 효과
+			//  > 일반 OutlineVisible 과 *함께* 그리면 (Visible=밝게, XRay=어둡게) 하이브리드 효과
 			PipelineState s;
 			s.DepthWrite = false;
-			s.DepthFunc = GL_GREATER; // ★ 핵심 — 가려진 곳만
+			s.DepthFunc = GL_GREATER; // * 핵심 — 가려진 곳만
 			s.QueueLayer = QueueOf(Kind::OutlineXRay);
 			s.StencilEnable = true;
 			s.StencilFunc = GL_NOTEQUAL;
