@@ -7,6 +7,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <cmath>
 
 /**
  * @def CLASS_PTR
@@ -39,6 +40,25 @@ namespace SJH
 	 *          GLSL 셰이더 소스 등 텍스트 리소스 로딩에 사용.
 	 */
 	std::optional<std::string> LoadTextFile(const std::string &filename);
+
+	/**
+	 * @brief Degree → Radian 변환. @c M_PI 기반.
+	 * @details @c constexpr 이므로 컴파일 타임 평가 가능. 그래픽스 코드 일반적인 @c float 정밀도.
+	 *          Effekseer 등 라디안 입력 API 호환용.
+	 */
+	constexpr inline float Deg2Rad(float deg) noexcept
+	{
+		return deg * static_cast<float>(M_PI) / 180.0f;
+	}
+
+	/**
+	 * @brief Radian → Degree 변환. @c M_PI 기반.
+	 * @details @c constexpr — 컴파일 타임 평가 가능. vmath::perspective 등 degree 입력 API 호환용.
+	 */
+	constexpr inline float Rad2Deg(float rad) noexcept
+	{
+		return rad * 180.0f / static_cast<float>(M_PI);
+	}
 } // namespace SJH
 
 #endif //__SJH_COMMON_H__

@@ -24,7 +24,7 @@ depth buffer 다음으로 만나는 framebuffer 의 또 한 attachment 가 **ste
 - **Depth 로는 "이 모양 안쪽만" 같은 임의 영역 마스킹을 못 한다.** depth 는 *거리* 만 안다 — 모양 개념이 없다.
 - **Stencil 로는 "누가 더 가까운가" 판정을 못 한다.** stencil 은 *거리* 개념이 없다 — 그냥 정수 도장.
 
-→ 둘은 *겹치지 않는 책임* 을 가진 별개 buffer.
+-> 둘은 *겹치지 않는 책임* 을 가진 별개 buffer.
 
 ---
 
@@ -91,7 +91,7 @@ glStencilFunc(GL_ALWAYS, 1, 0xFF);
 | 2 | 본체를 그리며 그 모양 = stencil 1 영역 | 도형 + 같은 모양 선택 영역 |
 | 3 | depth off + stencil 잠금 | 마스크 잠금 + 레이어 순서 무시 |
 | 4 | 1.1배 확대 | 선택 영역 확장 |
-| 5 | `NOTEQUAL 1` → 본체 영역 제외, 삐져나온 테두리만 | 확장 영역 − 원본 = 테두리 링 |
+| 5 | `NOTEQUAL 1` -> 본체 영역 제외, 삐져나온 테두리만 | 확장 영역 − 원본 = 테두리 링 |
 | 6 | 상태 원복 | 도구 정리 |
 
 #### 핵심 직관
@@ -107,7 +107,7 @@ glStencilFunc(GL_ALWAYS, 1, 0xFF);
 - stencil = **8-bit 정수 마스크/태그**, depth = **float 거리**. 책임이 직교 (대체 불가).
 - 3종 함수: `glStencilFunc`(조건) / `glStencilOp`(결과별 쓰기) / `glStencilMask`(쓰기 잠금).
 - `glStencilOp` 3분기: sfail / dpfail / dppass.
-- outlining = 확대 도형 − 원본 도형 = 테두리 (`GL_REPLACE` 로 도장 → `GL_NOTEQUAL` 로 바깥만).
+- outlining = 확대 도형 − 원본 도형 = 테두리 (`GL_REPLACE` 로 도장 -> `GL_NOTEQUAL` 로 바깥만).
 
 ## 관련 노트
 - depth 와의 차이·짝 관계: `04_AdvancedOpenGL/01_DepthTesting.md`

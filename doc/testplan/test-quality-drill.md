@@ -32,7 +32,7 @@ git stash --include-untracked                   # 안전 보존
 $EDITOR src/diagnostics/gl_state_fields.cpp     # 표의 사보타지 1번을 직접 적용
 cmake --build build_Darwin -j --target tests    # N1 함정 회피 — --target tests 명시
 ctest --test-dir build_Darwin --output-on-failure
-# → 결과 기록 (어느 케이스가 FAIL했는지)
+# -> 결과 기록 (어느 케이스가 FAIL했는지)
 
 # 3. 복원
 git checkout -- src/diagnostics/gl_state_fields.cpp
@@ -59,10 +59,10 @@ git add doc/testplan/test-quality-drill/gl_state_capture.md
 
 ## 5. 결과 해석
 
-- **모든 사보타지 ≥1 케이스 FAIL** → 합격. 표에 FAIL한 케이스 기록.
-- **어떤 사보타지가 0 케이스 FAIL** → blind spot. 그 카테고리에 케이스 추가 후 재드릴.
-- **사보타지를 잡은 케이스가 *예상과 다름*** → 케이스 의도 모호 (이름/주석 보강).
-- **예측이 빗나간 비율** → 사용자의 *멘탈모델 정확도*. 빗나감이 잦으면 코드/케이스의 의도가 코드만으로 안 드러난다는 신호.
+- **모든 사보타지 ≥1 케이스 FAIL** -> 합격. 표에 FAIL한 케이스 기록.
+- **어떤 사보타지가 0 케이스 FAIL** -> blind spot. 그 카테고리에 케이스 추가 후 재드릴.
+- **사보타지를 잡은 케이스가 *예상과 다름*** -> 케이스 의도 모호 (이름/주석 보강).
+- **예측이 빗나간 비율** -> 사용자의 *멘탈모델 정확도*. 빗나감이 잦으면 코드/케이스의 의도가 코드만으로 안 드러난다는 신호.
 
 ## 6. Mutation Testing 보류 — 진입 트리거
 
@@ -81,7 +81,7 @@ git add doc/testplan/test-quality-drill/gl_state_capture.md
 
 본 drill의 *2차 효익*: [implementation plan §Implementation Notes](2026-05-07-gl-state-and-test-quality-implementation.md)의 N1-N14 결함이 *우연이 아니라 plan 자체의 진화*임을 검증.
 
-- **N10** (STATIC_REQUIRE 누락) → smell_linter.md의 사보타지 1번이 그대로 재현
-- **N11** (SymbolicName 사전 vertex type 누락) → symbolic_name.md의 사보타지 4번이 그대로 재현
+- **N10** (STATIC_REQUIRE 누락) -> smell_linter.md의 사보타지 1번이 그대로 재현
+- **N11** (SymbolicName 사전 vertex type 누락) -> symbolic_name.md의 사보타지 4번이 그대로 재현
 
-→ 향후 plan에 새 결함이 발견되면 *그 결함을 사보타지 표에 즉시 추가*하는 것이 표준 절차.
+-> 향후 plan에 새 결함이 발견되면 *그 결함을 사보타지 표에 즉시 추가*하는 것이 표준 절차.

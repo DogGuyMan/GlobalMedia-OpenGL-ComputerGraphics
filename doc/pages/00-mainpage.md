@@ -103,7 +103,7 @@ digraph RenderSequence {
   node [shape=box, fontname="Helvetica"];
   Start [label="main()", shape=ellipse];
   init [label="GLFW init\n+ glad load"];
-  ctx [label="Context::Create()\n→ Shader → Program\n→ VAO → VBO/EBO\n→ Texture (Image: transient)"];
+  ctx [label="Context::Create()\n-> Shader -> Program\n-> VAO -> VBO/EBO\n-> Texture (Image: transient)"];
   uptr [label="glfwSetWindowUserPointer(window, ctx)\n(콜백에서 Context 역참조용)"];
   callbacks [label="GLFW callbacks 등록\n(framebuffer / key / cursor / mouse)"];
   loop [label="while (!shouldClose)\n  ProcessInput()\n  Render()\n   swapBuffers + pollEvents",
@@ -113,7 +113,7 @@ digraph RenderSequence {
 }
 \enddot
 
-## 입력 → 카메라 위임 흐름 (Phase 7, 커밋 `3696136` 반영)
+## 입력 -> 카메라 위임 흐름 (Phase 7, 커밋 `3696136` 반영)
 
 \dot
 digraph InputDelegation {
@@ -122,7 +122,7 @@ digraph InputDelegation {
 
   user    [label="사용자 입력", shape=ellipse, style=filled, fillcolor="#fff7d6"];
   glfw    [label="GLFW 콜백\n(main.cpp Handle*)", style=filled, fillcolor="#e8f0ff"];
-  uptr    [label="glfwGetWindowUserPointer()\n→ SJH::Context*", shape=note, style=filled, fillcolor="#fff3e0"];
+  uptr    [label="glfwGetWindowUserPointer()\n-> SJH::Context*", shape=note, style=filled, fillcolor="#fff3e0"];
   context [label="Context 위임 메서드\nProcessInput / MouseMove\nMouseButton / Reshape", style=filled, fillcolor="#e8f5e9"];
   camera  [label="Camera 상태\nmPos / mEulerYaw / mEulerPitch\nmIsCamControl / mAspect", style=filled, fillcolor="#fce4ec"];
 
@@ -225,7 +225,7 @@ digraph ClassDependencyGraph {
   Buffer       -> GLDebug;
   VertexLayout -> GLDebug;
 
-  // GL State 진단 (Phase 9) — Log → Fields → struct 종속
+  // GL State 진단 (Phase 9) — Log -> Fields -> struct 종속
   GLStateLog       -> GLStateFields    [label="CaptureGLState\nFieldsToString"];
   GLStateFields    -> VertexAttribInfo [label="array<.., 16>"];
 }

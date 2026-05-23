@@ -24,7 +24,7 @@
 - `apps/exercise7/resources/shaders/simple_color_vs.glsl`
 - `apps/exercise7/resources/shaders/simple_color_fs.glsl`
 
-`#version 430`은 OpenGL 4.3을 요구하지만, macOS Core Profile은 4.1까지만 지원 → GLSL 컴파일러가 `#version 430`을 거부 → 세 개의 셰이더 프로그램(`shader_programs[0..2]`)이 모두 broken 상태로 남음 → `glUseProgram` + `glDrawArrays`/`glDrawElements`가 아무 픽셀도 그리지 못함.
+`#version 430`은 OpenGL 4.3을 요구하지만, macOS Core Profile은 4.1까지만 지원 -> GLSL 컴파일러가 `#version 430`을 거부 -> 세 개의 셰이더 프로그램(`shader_programs[0..2]`)이 모두 broken 상태로 남음 -> `glUseProgram` + `glDrawArrays`/`glDrawElements`가 아무 픽셀도 그리지 못함.
 
 참고: 같은 디렉토리의 잔존 파일(`default_vs.glsl`, `texture_fs.glsl`)과 chapter2/5/6/7, exercise5/6의 모든 셰이더는 `#version 410 core`로 통일되어 있었음. exercise7의 신규 셰이더만 어긋남.
 
@@ -42,7 +42,7 @@ GLuint load(const char * filename,
 #endif
 ```
 
-`_DEBUG`는 **MSVC 전용** 매크로. macOS clang Debug 빌드에는 정의되지 않으므로 `check_errors`의 디폴트가 **false**가 됨 → 컴파일/링크 실패가 stderr 출력 없이 묻힘. exit 0 + 출력 없음 + 검정 화면이라는 매우 진단하기 어려운 상태가 만들어짐.
+`_DEBUG`는 **MSVC 전용** 매크로. macOS clang Debug 빌드에는 정의되지 않으므로 `check_errors`의 디폴트가 **false**가 됨 -> 컴파일/링크 실패가 stderr 출력 없이 묻힘. exit 0 + 출력 없음 + 검정 화면이라는 매우 진단하기 어려운 상태가 만들어짐.
 
 ## 5. 부차적인 문제 — 배경색이 검정으로 덮어써짐
 
@@ -97,7 +97,7 @@ glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 ## 7. 검증
 
-- 6개 셰이더의 `#version 430 core` → `#version 410 core` 변경 후 재빌드/실행.
+- 6개 셰이더의 `#version 430 core` -> `#version 410 core` 변경 후 재빌드/실행.
 - 바닥, 박스, 피라미드가 정상 렌더링됨을 육안 확인.
 
 ## 8. 재발 방지 가이드라인

@@ -14,8 +14,9 @@ else
 fi
 
 if [ -n "$TARGET" ]; then
-    # CMake 타겟명은 디렉토리 경로가 아닌 leaf 이름 (box2d_demo/box2d_demo1 -> box2d_demo1)
-    TARGET_NAME="$(basename "$TARGET")"
+    # 중첩 경로(box2d_demo/demo1, effekseer_demo/demo1)는 '/' -> '_' 로 변환해 cmake 고유 타겟명 생성
+    # 단순 경로(migrate_demo)는 변환 없이 그대로 사용
+    TARGET_NAME="$(echo "$TARGET" | tr '/' '_')"
     cmake --build "$BUILD_DIR" --target "$TARGET_NAME"
 else
     cmake --build "$BUILD_DIR"

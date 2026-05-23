@@ -17,7 +17,7 @@ digraph IncludeOrder {
   dep [label="cmake/Dependency.cmake\n(find_package vcpkg)"];
   cfg [label="cmake/Config.cmake\n(WINDOW_NAME/WIDTH/HEIGHT)"];
   src [label="add_subdirectory(src)\n(SJH:: aliases)"];
-  app [label="add_subdirectory(app)\n(configure_file → config.h)"];
+  app [label="add_subdirectory(app)\n(configure_file -> config.h)"];
   test [label="add_subdirectory(test)\n(Catch2)"];
   cxx -> doxy -> dep -> cfg -> src -> app -> test;
 }

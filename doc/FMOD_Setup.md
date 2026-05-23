@@ -11,7 +11,7 @@ FMOD Engine 은 독점 SDK 라 GitHub 서브모듈로 등록할 수 없다. 아�
 ## 1. SDK 다운로드
 
 - https://www.fmod.com 가입 후 로그인
-- Download → FMOD Engine → 플랫폼별 패키지 내려받기
+- Download -> FMOD Engine -> 플랫폼별 패키지 내려받기
   - macOS: FMOD Engine (macOS)
   - Windows: FMOD Engine (Windows)
 - 버전은 코드가 참조하는 API 버전(예: 2.03)에 맞춘다.
@@ -93,18 +93,18 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include/fmod/fmod_studio.h")
     add_library(fmodstudio SHARED IMPORTED)
     # ... fmodstudio 도 동일 패턴
     if(TARGET fmod)
-        target_link_libraries(fmodstudio INTERFACE fmod)   # studio → core 의존
+        target_link_libraries(fmodstudio INTERFACE fmod)   # studio -> core 의존
     endif()
     target_link_libraries(game_deps INTERFACE fmodstudio)
 endif()
 ```
 
 **조합 정책:**
-- Core 만 설치 → `fmod` 타겟만, `game_deps` 에 `fmod` 만 합류
-- Studio 까지 설치 → `fmodstudio` 추가, `game_deps` 에 둘 다 합류, `fmodstudio` 가 `fmod` 를 INTERFACE 의존성으로 잡음 → 링크/로딩 순서 자동
-- 둘 다 미설치 → STATUS 메시지만, game 챕터는 link error 로 막힘 (의도)
+- Core 만 설치 -> `fmod` 타겟만, `game_deps` 에 `fmod` 만 합류
+- Studio 까지 설치 -> `fmodstudio` 추가, `game_deps` 에 둘 다 합류, `fmodstudio` 가 `fmod` 를 INTERFACE 의존성으로 잡음 -> 링크/로딩 순서 자동
+- 둘 다 미설치 -> STATUS 메시지만, game 챕터는 link error 로 막힘 (의도)
 
-**런타임 의무**: 두 라이브러리 모두 dynamic → 6절 POST_BUILD copy 가 양쪽 다 처리해야 한다.
+**런타임 의무**: 두 라이브러리 모두 dynamic -> 6절 POST_BUILD copy 가 양쪽 다 처리해야 한다.
 
 ## 6. 챕터에서 사용 — POST_BUILD 런타임 복사 (game_deps 사용 챕터 필수)
 

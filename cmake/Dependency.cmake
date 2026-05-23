@@ -56,7 +56,7 @@ elseif(WIN32)
     target_link_libraries(project_deps INTERFACE opengl32 gdi32 winmm)
 endif()
 
-# ====== 게임/엔진 라이브러리 (extern 서브모듈 → lib/include 사전 빌드) ======
+# ====== 게임/엔진 라이브러리 (extern 서브모듈 -> lib/include 사전 빌드) ======
 # Box2D v2.4.1 — C++ 정적 라이브러리
 add_library(box2d STATIC IMPORTED)
 if(WIN32)
@@ -167,11 +167,11 @@ if(APPLE)
 endif()
 
 # ====== FMOD Core API (독점 SDK, 수동 설치 — doc/FMOD_Setup.md 참조) ======
-# 동적 라이브러리만 배포 → SHARED IMPORTED. fmodL 은 로깅 빌드 → Debug 매핑.
+# 동적 라이브러리만 배포 -> SHARED IMPORTED. fmodL 은 로깅 빌드 -> Debug 매핑.
 # include/fmod/fmod.h 존재 여부로 가드 — SDK 미설치자도 configure/빌드 통과(오디오 비활성).
 #
 # game_deps INTERFACE 자동 합류 — 모든 game 챕터가 fmod 를 링크하게 된다.
-# SHARED 이므로 startup 시 .dll/.dylib 가 실행 파일 옆에 있어야 한다 →
+# SHARED 이므로 startup 시 .dll/.dylib 가 실행 파일 옆에 있어야 한다 ->
 # game_deps 를 쓰는 챕터 CMakeLists.txt 는 POST_BUILD 에서
 # $<TARGET_FILE:fmod> 를 $<TARGET_FILE_DIR:${CHAPTER_NAME}> 로 copy_if_different.
 if(EXISTS "${CMAKE_SOURCE_DIR}/include/fmod/fmod.h")
@@ -194,7 +194,7 @@ endif()
 
 # FMOD Studio API — .bank 파일 기반 이벤트/믹서 시스템 (Core 위의 고수준 layer).
 # 독립적으로 등록. fmod_studio.h 존재 시에만 활성화. fmodstudio 는 fmod 코어 심볼을
-# DT_NEEDED 로 참조 → INTERFACE 링크 의존성으로 순서 보장.
+# DT_NEEDED 로 참조 -> INTERFACE 링크 의존성으로 순서 보장.
 if(EXISTS "${CMAKE_SOURCE_DIR}/include/fmod/fmod_studio.h")
     add_library(fmodstudio SHARED IMPORTED)
     if(WIN32)

@@ -117,7 +117,7 @@ Unity 의 `Camera` 가 매 프레임 자동 송신하는 builtin uniform 들 —
 | `SJH::material` | STATIC | Material (PropertyBlock + Pass.Kind SSoT + Instance metadata) + `Uniforms::Set*` 자유함수 |
 | `SJH::object` | STATIC | Mesh + Geometry + Transform + Light Components |
 | `SJH::scene` | STATIC | Actor + Component + Director + Camera + Compound Actor + MeshRenderer |
-| `SJH::render` | STATIC | SceneRenderer + DeviceContext + MeshPassProcessor + **PropertyBlockSetter** (Material→Program 송신) + **PipelineStateSetter** (Pass→GL state 적용) |
+| `SJH::render` | STATIC | SceneRenderer + DeviceContext + MeshPassProcessor + **PropertyBlockSetter** (Material->Program 송신) + **PipelineStateSetter** (Pass->GL state 적용) |
 | `SJH::input` | STATIC | `KeyboardInput<TAction>` + `MouseInput` |
 | `SJH::resource_registry` | STATIC | Texture/Material/Model/Program/Mesh 캐시 (싱글톤) |
 | `SJH::engine` | **INTERFACE** | **위 12 모듈 우산** — `target_link_libraries(... PRIVATE SJH::engine)` 한 줄 |
@@ -169,7 +169,7 @@ void     Framebuffer::Bind() override;
 const TexturePtr Framebuffer::GetColorAttachment() const;
 ```
 
-**사용 패턴 (multi-pass)**: `Camera::SetTargetFramebuffer(fb)` → SceneRenderer 이 `BeginFrame` 시 자동 사용.
+**사용 패턴 (multi-pass)**: `Camera::SetTargetFramebuffer(fb)` -> SceneRenderer 이 `BeginFrame` 시 자동 사용.
 
 ---
 
@@ -202,7 +202,7 @@ void Program::RegisterMaterial(Material*) const;
 void Program::UnregisterMaterial(Material*) const;
 ```
 
-**Observer cascade**: `Program::~Program` 가 등록된 모든 `Material` 의 `OnProgramReleased(this)` 호출 → `Material::mProgram = nullptr`. **dangling 구조적 차단**.
+**Observer cascade**: `Program::~Program` 가 등록된 모든 `Material` 의 `OnProgramReleased(this)` 호출 -> `Material::mProgram = nullptr`. **dangling 구조적 차단**.
 
 #### `UniformCache` ([uniform_cache.h](../src/program/uniform_cache.h))
 ```cpp
@@ -412,7 +412,7 @@ public:
 **Actor 가 컴포넌트를 `type_index` 로 저장** — 같은 Actor 에 *PointLight 두 개 부착 불가*. 복수 광원은 Actor 인스턴스를 분리해 구성.
 
 #### `GetAttenuationCoeff(distance)`
-PointLight/SpotLight 의 도달 거리 → `(Kc, Kl, Kq)` 거리 감쇠 다항식 도출 (Ogre3D / LearnOpenGL 회귀).
+PointLight/SpotLight 의 도달 거리 -> `(Kc, Kl, Kq)` 거리 감쇠 다항식 도출 (Ogre3D / LearnOpenGL 회귀).
 
 #### `Model` ([model.h](../src/object/model.h)) — Assimp 로드
 ```cpp
@@ -466,7 +466,7 @@ uint32_t           GetLayer() const;
 // Lifecycle (Cocos 정통)
 void OnEnter();
 void OnExit();
-void Update(float dt);                            // 자기 enabled components → 자식 Actor 재귀
+void Update(float dt);                            // 자기 enabled components -> 자식 Actor 재귀
 ```
 
 **중복 컴포넌트 가드** (assert): `AddComponent<T>` 를 같은 type 으로 두 번 호출 시 디버그 빌드 abort.
@@ -568,7 +568,7 @@ namespace SJH::Scene {
 }
 ```
 
-**direction → EulerRot 변환**: pitch = asin(d.y), yaw = atan2(d.x, -d.z), roll = 0. EulerRot=(0,0,0) 기본 forward = (0,0,-1) 와 일관.
+**direction -> EulerRot 변환**: pitch = asin(d.y), yaw = atan2(d.x, -d.z), roll = 0. EulerRot=(0,0,0) 기본 forward = (0,0,-1) 와 일관.
 
 #### `ModelSpawner` ([model_spawner.h](../src/scene/model_spawner.h))
 ```cpp
@@ -601,7 +601,7 @@ public:
    - **Program 수집** — 모든 MeshRenderer.Material.Program 의 unique set.
    - **SendLightUniforms** — 모든 unique program 에 viewPos + Light uniform + enabled int 일괄 송신.
    - **DrawCommand 수집** — `cullingMask & actor.Layer` AND 통과만.
-   - **MeshPassProcessor.Process** — Cache outer (Pipeline state apply → Property block set → glDraw).
+   - **MeshPassProcessor.Process** — Cache outer (Pipeline state apply -> Property block set -> glDraw).
 
 #### `RenderTarget` / `DefaultRenderTarget` / `Framebuffer` ([render_target.h](../src/render/render_target.h))
 
@@ -663,14 +663,14 @@ struct DrawCommand {
 };
 
 void MeshPassProcessor::Submit(const DrawCommand&);
-void MeshPassProcessor::SortMultiStage();              // Layer → Program → Material → Depth (stable_sort)
+void MeshPassProcessor::SortMultiStage();              // Layer -> Program -> Material -> Depth (stable_sort)
 void MeshPassProcessor::Process(DeviceContext&, const vmath::mat4& view, const vmath::mat4& proj);
 ```
 
-**SP-MaterialSSoT** — `DrawCommand` 의 stencil/depthTest/depthWrite override 필드 *전부 폐기*. `Process` 가 `material->GetPass()` 만 보고 `Pass::DefaultPipelineStateOf` 로 PipelineState 도출 → `PipelineStateSetter::Set` 호출.
+**SP-MaterialSSoT** — `DrawCommand` 의 stencil/depthTest/depthWrite override 필드 *전부 폐기*. `Process` 가 `material->GetPass()` 만 보고 `Pass::DefaultPipelineStateOf` 로 PipelineState 도출 -> `PipelineStateSetter::Set` 호출.
 
 **Stable sort 사용 이유 (3 가치)**:
-- *결정성* — 같은 queue/program/material/depth 의 객체들이 *씬에 등록된 순서* 그대로 유지 → 골든 이미지 안정성
+- *결정성* — 같은 queue/program/material/depth 의 객체들이 *씬에 등록된 순서* 그대로 유지 -> 골든 이미지 안정성
 - *Z-fighting 회피* — float depth 가 동률일 때 swap 으로 발생하는 *프레임 간 깜박임* 차단
 - *디버깅 가시성* — 의도된 순서 (Outline=Box 직후 등) 가 `QueueOffset` 만으로 보장됨
 
@@ -695,7 +695,7 @@ public:
 
     // GLFW 콜백 위임
     void PollHeld (GLFWwindow*);            // 매 프레임 호출 — 누른 키의 held handler 발화
-    void Dispatch(int glfwKey, int glfwAction);   // GLFW key callback → press/release
+    void Dispatch(int glfwKey, int glfwAction);   // GLFW key callback -> press/release
 };
 ```
 
@@ -753,7 +753,7 @@ void Clear();
 
 **Material 인스턴스 lifecycle 안전**:
 - `CreateMaterialInstanceFrom` 가 *유일한* Clone 호출자 (Material::Clone 은 private + friend). 호출자가 `MaterialUPtr` 을 *지역 변수로 보유* 하는 dangling 실수 차단.
-- `Clear()` 순서: `mMaterialInstances.clear()` → `mSharedMaterials.clear()` — Instance 가 *항상 Shared 보다 먼저* 소멸 → `OriginalMaterial` dangling 차단 (Unreal `UMaterialInstanceDynamic::Parent` 안전).
+- `Clear()` 순서: `mMaterialInstances.clear()` -> `mSharedMaterials.clear()` — Instance 가 *항상 Shared 보다 먼저* 소멸 -> `OriginalMaterial` dangling 차단 (Unreal `UMaterialInstanceDynamic::Parent` 안전).
 
 #### `Image` ([image.h](../src/resource_registry/image.h))
 ```cpp
@@ -771,7 +771,7 @@ void SetSingleColorImage(const vmath::vec4& color);
 #### `Texture` ([texture.h](../src/resource_registry/texture.h))
 ```cpp
 static TextureUPtr Texture::Create       (int w, int h, uint32_t format);   // 빈 GL 텍스처 (FBO 어태치먼트)
-static TextureUPtr Texture::CreateTexture(const Image* image);              // CPU → GPU 업로드
+static TextureUPtr Texture::CreateTexture(const Image* image);              // CPU -> GPU 업로드
 
 GLuint Texture::GetTextureID() const;
 void   Texture::Bind() const;
@@ -877,8 +877,8 @@ auto camActor = Scene::CreateCameraActor("MainCam", 45.0f, aspect, 0.1f, 100.0f)
 **TargetLock 모드** (Cinemachine Composer / Unreal SpringArm):
 ```cpp
 auto* cam = camActor->GetComponent<Camera>();
-cam->TargetLock(playerActor);   // owner.Translate → playerActor.WorldPos 로 lookat
-// → 카메라 위치(owner.Translate)는 유지, 시선만 target 추적.
+cam->TargetLock(playerActor);   // owner.Translate -> playerActor.WorldPos 로 lookat
+// -> 카메라 위치(owner.Translate)는 유지, 시선만 target 추적.
 
 cam->TargetRelease();   // 자유 시점 복귀 (마지막 EulerRot 으로)
 ```
@@ -902,9 +902,9 @@ Lock 중 CameraController 의 yaw/pitch 갱신은 *상태로만 보존* — 시�
 | Apply 내부 송신 | **씬 전역 layer 의 내부 호출** | `PropertyBlockSetter::Set` 가 `Uniforms::Set*(*prog, ...)` 호출 |
 
 **판정 기준**:
-- *DrawCommand 마다 변화하는가* → 씬 전역 (Material 에 store 시 N×Apply 비효율)
-- *모든 Material 에 동일하게 적용되는가* → 씬 전역 (Material 에 N개 복사 = SSoT 위반)
-- *Material 자기 슬롯의 컨텐츠인가* → Material 한정
+- *DrawCommand 마다 변화하는가* -> 씬 전역 (Material 에 store 시 N×Apply 비효율)
+- *모든 Material 에 동일하게 적용되는가* -> 씬 전역 (Material 에 N개 복사 = SSoT 위반)
+- *Material 자기 슬롯의 컨텐츠인가* -> Material 한정
 
 **ddd OCP 함의** — 새 셰이더 추가 시:
 - Material properties bag 은 *자동 흡수* (셋업 코드만 `SetFloat / SetTexture` 호출 추가).
@@ -1041,7 +1041,7 @@ outline.Get<MeshRenderer>().QueueOffset = 5;   // Box 의 자연 순서 + 5 = �
 | 엔진 | 변수 수 | 컨벤션 |
 |---|---|---|
 | Unity | 3 (Pass + Queue + sortingOrder) | 분리 (Material.renderQueue 직접 조작 가능) |
-| Unreal / Filament / Cocos | 2 (BlendMode + sortBias) | 통합 (BlendMode → queue 자동) |
+| Unreal / Filament / Cocos | 2 (BlendMode + sortBias) | 통합 (BlendMode -> queue 자동) |
 | Bevy | 1 (alpha_mode) | 완전 도출 |
 
 **우리 선택**: 2변수 (`Material.PassKind` private + `MeshRenderer.QueueOffset`) — Filament/Unreal/Cocos 정통.
@@ -1051,7 +1051,7 @@ outline.Get<MeshRenderer>().QueueOffset = 5;   // Box 의 자연 순서 + 5 = �
 ```cpp
 // SortMultiStage
 if (cmd.queueLayer < Pass::TRANSPARENT_THRESHOLD)
-    // Opaque: program → material → depth front-to-back (캐시 효율)
+    // Opaque: program -> material -> depth front-to-back (캐시 효율)
 else
     // Transparent: depth back-to-front (overdraw 정렬)
 ```
@@ -1084,7 +1084,7 @@ Unity TransparencySortMode 정통 — queue 2500 이 분기 기준.
 - Pass 1 의 *stencil write* 는 아직 `Pass::Kind` 로 표현되지 않음 — MeshRenderer 의 stencil override 멤버가 SSoT 위반으로 폐기됐기 때문.
 - 그래서 *완전한 stencil outline* 은 현재 표현 불가. 대안:
   - **shell-scale 트릭** — outline 자식 Actor 에 `OutlineVisible` Pass + `Transform.Scale = 1.05` + scale-up mesh.
-    Box 가 먼저 depth 를 채우면, shell 의 LEQUAL depth test 가 rim 부분만 통과 → outline 효과 (stencil 없이).
+    Box 가 먼저 depth 를 채우면, shell 의 LEQUAL depth test 가 rim 부분만 통과 -> outline 효과 (stencil 없이).
     (`migrate_demo` Scene.Warmup.h Box2 가 이 패턴)
 - *future work* — `Pass::Kind::StencilMaskWrite` 추가 시 정통 2-pass 복원.
 
@@ -1124,8 +1124,8 @@ struct MeshRenderer {
 
 **문제**: macOS Retina 에서 *logical size ≠ physical framebuffer size*.
 
-- `glfwSetWindowSizeCallback` (sb7 의 `onResize`) → **logical size** 전달 (e.g., 1600×1200 → 800×600)
-- `glViewport` / FBO 크기 / Camera.Aspect → **physical framebuffer size** 가 정답
+- `glfwSetWindowSizeCallback` (sb7 의 `onResize`) -> **logical size** 전달 (e.g., 1600×1200 -> 800×600)
+- `glViewport` / FBO 크기 / Camera.Aspect -> **physical framebuffer size** 가 정답
 
 **증상**: resize 후 화면이 *좌하단 작게 표시* (800×600 만 그려지고 나머지 black).
 
@@ -1235,9 +1235,9 @@ target_link_libraries(my_chapter PRIVATE project_deps game_deps SJH::engine)  # 
 
 ### 모듈 의존 선언 컨벤션
 
-- 헤더에 노출되는 의존 → `PUBLIC`
-- `.cpp` 내부 전용 → `PRIVATE`
-- INTERFACE 모듈 (`SJH::material`) → `INTERFACE`
+- 헤더에 노출되는 의존 -> `PUBLIC`
+- `.cpp` 내부 전용 -> `PRIVATE`
+- INTERFACE 모듈 (`SJH::material`) -> `INTERFACE`
 
 ### 빌드 명령 (macOS/Linux)
 
@@ -1272,12 +1272,12 @@ cmake --build --preset msvc-2022 --target <chapter>
 | SP7 | KeyboardInput<T> + MouseInput + CameraController (Transform-based + Builder Pattern) |
 | SP8 | Compound Actor 컨벤션 (`compound_actor.h` free factory) + Camera Transform 강제 의존 + TargetLock (Cinemachine Composer 정통) + Transform 6 방향 vector + Light 컨벤션 통일 (-Z forward) + migrate_demo 통합 챕터 |
 | SP-Pass | `Pass::Kind` enum (Opaque/AlphaTest/Skybox/Transparent — Unity Render Queue 정수) + `Pass::PipelineState` 7 GL state 자동 적용 + `Material.PassKind` private (진실의 원천 단일화) + `MeshRenderer.QueueOffset` 직교 축 분리 (Unity Renderer.sortingOrder 정통) + `MeshPassProcessor` Pass.Kind 별 sort 방향 분기 (queue 2500 이 Opaque/Transparent 경계) |
-| SP-Retina | sb7 onResize → `glfwGetFramebufferSize` 로 physical FB 변환 패턴 + `render()` 매 프레임 갱신 (resize 콜백 누락 가드) — macOS Retina 800×600 좌하단 버그 해결 |
+| SP-Retina | sb7 onResize -> `glfwGetFramebufferSize` 로 physical FB 변환 패턴 + `render()` 매 프레임 갱신 (resize 콜백 누락 가드) — macOS Retina 800×600 좌하단 버그 해결 |
 | SP-Pass2 | `Pass::Kind` 확장 — `OutlineVisible` (DepthFunc=LEQUAL, stencil NOTEQUAL ref=1) + `OutlineXRay` (DepthFunc=GREATER 월핵). `PipelineState` 에 Stencil 8 필드 추가 (Enable/Func/Ref/ReadMask/OpSFail/OpDPFail/OpDPPass/WriteMask). `PipelineStateSetter` 가 redundancy 제거 후 적용 |
-| SP-Applier | `MaterialApplier` → `PropertyBlockSetter` (Material→Program 송신) + `PipelineStateSetter` (Pass→GL state 적용) 책임 분리. `MaterialPropertyBlock` 으로 Material 의 6 typed map 캡슐화 (Material.`Properties` 멤버) |
-| SP-Rename | `RenderSystem` → `SceneRenderer` / `RenderContext` → `DeviceContext` / `RenderQueue` → `MeshPassProcessor` 일괄 개명 (DX12 PSO + Vulkan DeviceContext 정통 명명) |
+| SP-Applier | `MaterialApplier` -> `PropertyBlockSetter` (Material->Program 송신) + `PipelineStateSetter` (Pass->GL state 적용) 책임 분리. `MaterialPropertyBlock` 으로 Material 의 6 typed map 캡슐화 (Material.`Properties` 멤버) |
+| SP-Rename | `RenderSystem` -> `SceneRenderer` / `RenderContext` -> `DeviceContext` / `RenderQueue` -> `MeshPassProcessor` 일괄 개명 (DX12 PSO + Vulkan DeviceContext 정통 명명) |
 | SP-RTOwnership | RenderTarget 오너십 3 분할 — *Application* 이 `DefaultRenderTarget` (backbuffer + resize 연계), *ResourceRegistry* 가 `Framebuffer` (FBO/off-screen, `CreateFramebuffer`/`FindFramebuffer`), *DeviceContext* 는 명령 발행자 (오너 아님). `SceneRenderer::Render(defaultTarget)` 인자로 명시 전달 |
-| SP-MaterialSSoT | **Material SSoT 완성** — MeshRenderer 의 Stencil/DepthTest/DepthWrite override 필드 *전부 폐기* (모순 상태 표현 자체 차단). GL state 결정자 = `Material::SetPass(Pass::Kind)` 단일. 변형 사용은 `ResourceRegistry::CreateMaterialInstanceFrom` 으로 별도 인스턴스 생성. `Material::Clone` 은 *private + friend ResourceRegistry* — 외부 직접 호출 컴파일 차단. `Material::IsInstance` + `OriginalMaterial` + `GetRootOriginal` (path-compression cache) Unreal MID 정통 메타. `ResourceRegistry` 가 `CreateSharedMaterial` / `CreateMaterialInstanceFrom` 분리, `Clear()` 가 instance→shared 순서로 dangling 차단 |
+| SP-MaterialSSoT | **Material SSoT 완성** — MeshRenderer 의 Stencil/DepthTest/DepthWrite override 필드 *전부 폐기* (모순 상태 표현 자체 차단). GL state 결정자 = `Material::SetPass(Pass::Kind)` 단일. 변형 사용은 `ResourceRegistry::CreateMaterialInstanceFrom` 으로 별도 인스턴스 생성. `Material::Clone` 은 *private + friend ResourceRegistry* — 외부 직접 호출 컴파일 차단. `Material::IsInstance` + `OriginalMaterial` + `GetRootOriginal` (path-compression cache) Unreal MID 정통 메타. `ResourceRegistry` 가 `CreateSharedMaterial` / `CreateMaterialInstanceFrom` 분리, `Clear()` 가 instance->shared 순서로 dangling 차단 |
 
 ---
 

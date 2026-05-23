@@ -530,10 +530,10 @@ class migrate_demo_app : public sb7::application
 	SJH::KeyboardInput<MigrateDemo::Controller::CameraController::Action> mKeyboard;
 	SJH::MouseInput mMouse;
 	SJH::SceneRenderer mRenderSys;
-	std::unique_ptr<SJH::DefaultRenderTarget> mDefaultTarget;  // SP-RTOwnership — Application owner
-	SJH::FramebufferUPtr mSceneFB;
 	MigrateDemo::Scene::SceneRefs mRefs;
 	SJH::Scene::Actor *mSceneCameraActor = nullptr;
+	std::unique_ptr<SJH::DefaultRenderTarget> mDefaultTarget;  // SP-RTOwnership — Application owner
+	SJH::FramebufferUPtr mSceneFB;
 	std::array<PostFXPass, kPostFXDefs.size()> mPostFX;
 	UIState mUI;
 	ImGuiContext *mImGuiCtx = nullptr;

@@ -26,11 +26,11 @@ depth test 없이 3D 를 그리면 *그리는 순서대로* 색이 덮어써진�
 **Depth test** = 새 fragment 를 그리기 전, *그 픽셀의 기존 깊이값* 과 *새 fragment 의 깊이값* 을 비교. 통과 시에만 color buffer + depth buffer 갱신.
 
 ```
-fragment 생성 → depth 비교 (glDepthFunc 기준) → 통과? → color/depth 기록
-                                              → 실패? → fragment 폐기
+fragment 생성 -> depth 비교 (glDepthFunc 기준) -> 통과? -> color/depth 기록
+                                              -> 실패? -> fragment 폐기
 ```
 
-→ 그리는 순서와 무관하게 *항상 카메라에 가까운 면이 보인다*.
+-> 그리는 순서와 무관하게 *항상 카메라에 가까운 면이 보인다*.
 
 ---
 
@@ -57,7 +57,7 @@ fragment 생성 → depth 비교 (glDepthFunc 기준) → 통과? → color/dept
 |-----|------|
 | `GL_ALWAYS` | 항상 통과 (depth test 무력화 효과) |
 | `GL_NEVER` | 항상 실패 (아무것도 안 그려짐) |
-| `GL_LESS` | 새 깊이 < 기존 → 통과 *(기본값)* — 더 가까우면 그림 |
+| `GL_LESS` | 새 깊이 < 기존 -> 통과 *(기본값)* — 더 가까우면 그림 |
 | `GL_LEQUAL` | 같거나 가까우면 통과 |
 | `GL_GREATER` | 더 멀면 통과 |
 | `GL_GEQUAL` | 같거나 멀면 통과 |
@@ -85,7 +85,7 @@ Perspective projection 은 깊이값을 `[0, 1]` 로 정규화하며 `w` 로 나
 **예방**:
 - 면과 면을 *너무 가깝게 겹치지* 않기.
 - `near` 평면을 *너무 작게* 잡지 않기 — near 가 작을수록 `1/z` 곡선이 가팔라져 먼 쪽 정밀도가 더 망가짐.
-- 더 정밀한 depth buffer (24→32-bit) 사용.
+- 더 정밀한 depth buffer (24->32-bit) 사용.
 
 ---
 
@@ -111,7 +111,7 @@ Perspective projection 은 깊이값을 `[0, 1]` 로 정규화하며 `w` 로 나
 | `DepthWrite` | `glDepthMask(GL_TRUE/FALSE)` | "통과한 fragment 의 z 를 buffer 에 **기록**할 것인가" |
 
 ```
-fragment → [DepthTest: 비교]  → [DepthWrite: 기록]
+fragment -> [DepthTest: 비교]  -> [DepthWrite: 기록]
               ↑ 끄면 무조건 통과     ↑ 끄면 read-only (비교는 했지만 z 안 남김)
 ```
 
@@ -142,7 +142,7 @@ fragment → [DepthTest: 비교]  → [DepthWrite: 기록]
 | ❌ ⭕ | **z 만 남기고 색 안 칠함** | 그림자맵 prepass (`05_Framebuffers.md` §7) |
 | ❌ ❌ | 둘 다 차단 | Stencil 전용 마스킹 패스 |
 
-→ Skybox 가 `DepthWrite=false` 라는 건 "**색은 정상적으로 화면에 칠해진다**. 단지 그 픽셀의 z 를 *기록* 하지 않을 뿐". 시각적으로 관련돼 *보이는* 이유는 — 다음 draw 의 *depth test 판정* 이 바뀌어 → 다음 draw 의 color 가 *결과적으로* 달라지는 *간접 영향* 때문 (§8 에서 추적).
+-> Skybox 가 `DepthWrite=false` 라는 건 "**색은 정상적으로 화면에 칠해진다**. 단지 그 픽셀의 z 를 *기록* 하지 않을 뿐". 시각적으로 관련돼 *보이는* 이유는 — 다음 draw 의 *depth test 판정* 이 바뀌어 -> 다음 draw 의 color 가 *결과적으로* 달라지는 *간접 영향* 때문 (§8 에서 추적).
 
 ---
 
@@ -153,7 +153,7 @@ Unity / Cocos 의 *Render Queue 정수* (`src/material/pass.h::Kind`) 순서대�
 **시나리오**: 화면 한 줄 10픽셀, 카메라는 왼쪽.
 
 ```
-카메라 →  [유리창]  [건물]  [잎사귀]  [하늘(skybox)]
+카메라 ->  [유리창]  [건물]  [잎사귀]  [하늘(skybox)]
 z=        0.3       0.5     0.7       1.0 (셰이더 강제)
 픽셀:     2~5      0~7      6~9       전체 화면
 ```
@@ -177,7 +177,7 @@ Color  = [ 🟫 🟫 🟫 🟫 🟫 🟫 🟫 🟫 ☐ ☐ ]
 Depth  = [.5 .5 .5 .5 .5 .5 .5 .5  1  1 ]
 ```
 
-→ Write⭕ 라서 **이후 Pass 들이 "z=0.5 영토" 를 인식**. 불투명체의 핵심 역할 — *z 영토를 차지해 뒤 객체를 가리는 권리* 를 얻음.
+-> Write⭕ 라서 **이후 Pass 들이 "z=0.5 영토" 를 인식**. 불투명체의 핵심 역할 — *z 영토를 차지해 뒤 객체를 가리는 권리* 를 얻음.
 
 #### Pass B — AlphaTest (Q=2450) : Opaque 와 **동일** state
 
@@ -205,14 +205,14 @@ Depth  = [.5 .5 .5 .5 .5 .5 .5 .5 .7  1 ]
 |---|---|---|---|---|
 | 0~7 | 0.5 | 1.0 ≤ 0.5 ❌ | (건물 유지) | 0.5 유지 |
 | 8 | 0.7 | 1.0 ≤ 0.7 ❌ | (잎 유지) | 0.7 유지 |
-| 9 | 1.0 | 1.0 ≤ 1.0 ⭕ | 🟦 하늘색 | **(Write❌ → 1.0 안 적힘)** |
+| 9 | 1.0 | 1.0 ≤ 1.0 ⭕ | 🟦 하늘색 | **(Write❌ -> 1.0 안 적힘)** |
 
 ```
 Color  = [ 🟫 🟫 🟫 🟫 🟫 🟫 🟫 🟫 🟢 🟦 ]
 Depth  = [.5 .5 .5 .5 .5 .5 .5 .5 .7  1 ]
 ```
 
-→ 만약 Write⭕ 였다면 픽셀 9 에 z=1.0 *명시 기록*. 어차피 cleared 1.0 과 동일해 *이 프레임은* 결과 동일. 그럼 왜 굳이 끄나? **다음 Pass D 에서 갈린다** (아래).
+-> 만약 Write⭕ 였다면 픽셀 9 에 z=1.0 *명시 기록*. 어차피 cleared 1.0 과 동일해 *이 프레임은* 결과 동일. 그럼 왜 굳이 끄나? **다음 Pass D 에서 갈린다** (아래).
 
 #### Pass D — Transparent (Q=3000) : `Test⭕ Write❌ Blend⭕ Cull❌(off)`
 
@@ -220,7 +220,7 @@ Depth  = [.5 .5 .5 .5 .5 .5 .5 .5 .7  1 ]
 
 | 픽셀 2~5 | 기존 z | LEQUAL? | Blend = src·α + dst·(1-α) | Depth |
 |---|---|---|---|---|
-| 0.3 | 0.5 | 0.3 ≤ 0.5 ⭕ | 🟫·0.6 + 🩵·0.4 = 🟦 합성 | **(Write❌ → 0.5 유지)** |
+| 0.3 | 0.5 | 0.3 ≤ 0.5 ⭕ | 🟫·0.6 + 🩵·0.4 = 🟦 합성 | **(Write❌ -> 0.5 유지)** |
 
 ```
 Color  = [ 🟫 🟫 🟦 🟦 🟦 🟦 🟫 🟫 🟢 🟦 ]
@@ -230,15 +230,15 @@ Depth  = [.5 .5 .5 .5 .5 .5 .5 .5 .7  1 ]
 #### `Write=⭕` 회귀 시나리오 — 왜 Transparent 는 *반드시* 꺼야 하나
 
 z 가 거의 같은 두 반투명 (잎사귀 0.70 / 0.71) 이 잘못된 정렬로 들어오면:
-- **Write⭕**: 뒤 잎이 먼저 z=0.71 기록 → 앞 잎(0.70) 의 일부 픽셀이 z 차이로 fail → 알파 합성에 *구멍*
-- **Write❌**: 둘 다 건물 z=0.5 만 비교 → 둘 다 통과 → 부드러운 합성
+- **Write⭕**: 뒤 잎이 먼저 z=0.71 기록 -> 앞 잎(0.70) 의 일부 픽셀이 z 차이로 fail -> 알파 합성에 *구멍*
+- **Write❌**: 둘 다 건물 z=0.5 만 비교 -> 둘 다 통과 -> 부드러운 합성
 
 #### 4 Pass 의 영토 권리 요약
 
 | Pass | Color 기여 | Depth 영토 | 이유 |
 |---|---|---|---|
 | Opaque | ⭕ 칠함 | ⭕ **차지** | 모든 비교의 기준점 |
-| AlphaTest | ⭕ (구멍 제외) | ⭕ 차지 (구멍 제외) | discard 가 fragment 죽임 → Write 켜도 안전 |
+| AlphaTest | ⭕ (구멍 제외) | ⭕ 차지 (구멍 제외) | discard 가 fragment 죽임 -> Write 켜도 안전 |
 | Skybox | ⭕ (빈 곳만) | ❌ 안 남김 | 남기면 뒤 Transparent 가 *역가림* 당함 |
 | Transparent | ⭕ 합성 | ❌ 안 남김 | 반투명끼리 서로 통과시켜 알파 합성 유지 |
 
@@ -248,11 +248,11 @@ z 가 거의 같은 두 반투명 (잎사귀 0.70 / 0.71) 이 잘못된 정렬�
 
 > ### 📄 9. 다음 단계 — Framebuffer Object (FBO)
 
-여기까지가 *default framebuffer* (윈도우 화면) + depth buffer 의 기초. depth test 가 *default framebuffer 의 depth buffer* 를 다뤘다면, FBO 단계에선 *내가 depth attachment 를 직접 만들어 붙인다* — depth buffer 가 "자동으로 거기 있는 것"이 아니라 *framebuffer 의 한 attachment* 임을 그때 체감한다. (→ `05_Framebuffers.md`)
+여기까지가 *default framebuffer* (윈도우 화면) + depth buffer 의 기초. depth test 가 *default framebuffer 의 depth buffer* 를 다뤘다면, FBO 단계에선 *내가 depth attachment 를 직접 만들어 붙인다* — depth buffer 가 "자동으로 거기 있는 것"이 아니라 *framebuffer 의 한 attachment* 임을 그때 체감한다. (-> `05_Framebuffers.md`)
 
 ## 시험 포인트 요약
 - depth test = 픽셀별 기존 z vs 새 z 비교, 통과 시만 갱신. 기본 `GL_LESS`.
-- z 는 `[0,1]`, 0=가까움 1=멀리. 분포는 `1/z` 라 먼 쪽이 듬성 → z-fighting.
+- z 는 `[0,1]`, 0=가까움 1=멀리. 분포는 `1/z` 라 먼 쪽이 듬성 -> z-fighting.
 - 반투명: depth **test 는 하되 write 는 막음**(`glDepthMask(FALSE)`).
 - UI/Skybox 는 depth test off 또는 트릭.
 - **DepthTest vs DepthWrite**: 비교 비트 / 기록 비트 — 직교한 두 노브. Test 가 꺼지면 Write 도 무력.

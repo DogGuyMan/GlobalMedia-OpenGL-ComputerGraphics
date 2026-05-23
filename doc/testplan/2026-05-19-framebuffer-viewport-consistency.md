@@ -42,7 +42,7 @@
 즉 셋 다 `800×600` 으로 통일됐지만 **실제 윈도우(1600×1200)와 어긋남**.
 
 리사이즈하면 `framebuffer size changed: (1612 x 1212)...` 처럼 실제 물리 픽셀로
-콜백이 발동 → 모두 동기화 → 정상. **후보 B 확정.**
+콜백이 발동 -> 모두 동기화 -> 정상. **후보 B 확정.**
 
 ## 4. 근본 원인
 
@@ -58,7 +58,7 @@ Retina 에서 실제 기본 프레임버퍼는 `1600×1200`. 따라서:
 
 - `glViewport` 와 FBO 텍스처가 `800×600` 으로 잡힘 (내부적으론 일관)
 - 그러나 실제 윈도우 drawable 은 `1600×1200`
-- Pass 2 (`BindToDefault`) 의 풀스크린 quad 가 `1600×1200` 창의 *좌하단 800×600* 기준으로만 매핑 → 비율·범위 왜곡 = "기울어짐·확대"
+- Pass 2 (`BindToDefault`) 의 풀스크린 quad 가 `1600×1200` 창의 *좌하단 800×600* 기준으로만 매핑 -> 비율·범위 왜곡 = "기울어짐·확대"
 
 리사이즈가 고친 이유: 리사이즈 콜백은 *실제 물리 픽셀*을 전달하므로 모든 값이 재동기화됨.
 
@@ -74,7 +74,7 @@ OnFramebufferSizeChange(window, fbWidth, fbHeight);
 ```
 
 `glfwGetFramebufferSize` 는 HiDPI 의 물리 픽셀을 반환 (`glfwGetWindowSize` 의 논리 크기와 구분).
-이로써 startup 상태 = 리사이즈 후 상태 → 첫 프레임부터 정상.
+이로써 startup 상태 = 리사이즈 후 상태 -> 첫 프레임부터 정상.
 
 ## 6. 테스트 — GLValidate Cat G
 
@@ -88,8 +88,8 @@ size_t CheckViewport(int expectedWidth, int expectedHeight, const char* tag);
 ```
 
 현재 `glGetIntegerv(GL_VIEWPORT)` 결과를 caller 가 넘긴 기대 크기와 비교:
-- 일치 → `info` 로그, return 0
-- 불일치 → `warn` 로그, return 1
+- 일치 -> `info` 로그, return 0
+- 불일치 -> `warn` 로그, return 1
 
 순수 GL 호출 — caller 가 ground truth 를 인자로 전달한다 (예: `glfwGetFramebufferSize` 결과).
 불일치 시에만 `warn` 이므로 매 프레임 호출해도 정상일 땐 조용함.

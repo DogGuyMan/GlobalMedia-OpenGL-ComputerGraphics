@@ -30,13 +30,13 @@ VAO 1개
   - divisor 0 = 정점마다 갱신 (일반 attribute)
   - divisor 1 = 인스턴스마다 갱신 (per-instance)
 - mesh 데이터(고정)와 인스턴스별 데이터(가변)는 update 빈도·접근 패턴이 다르므로 VBO 분리가 자연스럽다
-- `glDrawElementsInstanced(..., 1000)` 한 번으로 1000개 큐브 → **CPU 호출 1회, GPU 가 N번 펼침**
+- `glDrawElementsInstanced(..., 1000)` 한 번으로 1000개 큐브 -> **CPU 호출 1회, GPU 가 N번 펼침**
 
 > 단순 draw 루프는 CPU 가 draw call 을 N번 — instancing 은 1번. CPU↔GPU 통신 병목이 큰 대량 렌더에서 결정적 차이.
 
 ## 시험 포인트 요약
-- 같은 mesh 를 위치만 바꿔 N개 → 그 자체로는 분할 불필요 (uniform 만 바꿔 draw N번).
-- **고성능** instancing → per-instance VBO 추가 (VBO 2개).
+- 같은 mesh 를 위치만 바꿔 N개 -> 그 자체로는 분할 불필요 (uniform 만 바꿔 draw N번).
+- **고성능** instancing -> per-instance VBO 추가 (VBO 2개).
 - `glVertexAttribDivisor(idx, 1)` = instance-rate. `glDrawElementsInstanced` = 단일 호출 N 전개.
 
 ## 관련 노트

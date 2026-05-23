@@ -6,7 +6,7 @@
 
 namespace SJH
 {
-	/// @brief 0-based index → 독립 bit 슬롯. reservedBits 만큼 하위 bit 를 건너뜀.
+	/// @brief 0-based index -> 독립 bit 슬롯. reservedBits 만큼 하위 bit 를 건너뜀.
 	///   Unity LayerMask / Cocos CameraMask 정통 패턴.
 	///   예: LayerBit(0,0)=bit0=1, LayerBit(0,1)=bit1=2, LayerBit(1,1)=bit2=4
 	constexpr uint32_t LayerBit(std::size_t index, std::size_t reservedBits = 1)

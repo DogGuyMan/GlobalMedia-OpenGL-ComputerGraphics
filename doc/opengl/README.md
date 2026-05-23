@@ -48,4 +48,4 @@
 ## 비고
 
 - 원본 노트의 `../../src/...` 코드 경로 링크는 정리 대상 구조에서 해석 불가라 제거하고, 노트 간 cross-reference 만 새 상대경로로 갱신.
-- LearnOpenGL 챕터 번호를 폴더/파일 prefix 로 유지 (03_Model-Loading 은 해당 노트 없음 → 결번).
+- LearnOpenGL 챕터 번호를 폴더/파일 prefix 로 유지 (03_Model-Loading 은 해당 노트 없음 -> 결번).
