@@ -35,3 +35,9 @@ endif()
 
 # 전 플랫폼: M_PI 등 수학 매크로 활성화 (MSVC에서만 실효, GCC/Clang은 무해)
 add_compile_definitions(_USE_MATH_DEFINES)
+
+# Windows 전용: windows.h 의 min/max 매크로 차단 + 헤더 슬림화
+# (game_deps 의 일부 라이브러리가 windows.h 를 끌어들이면 vmath::max/std::max 와 충돌)
+if(WIN32)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
