@@ -54,7 +54,7 @@ namespace SJH
         std::size_t Size() const { return mEntries.size(); }
 
         /// @brief 모든 active uniform entries 의 const view (name -> Entry).
-        /// @details `MaterialApplier::Apply` 의 *cache outer iteration* 용 — 셰이더 schema 가
+        /// @details `PropertyBlockSetter::Set` 의 *cache outer iteration* 용 — 셰이더 schema 가
         ///          진실의 원천. Material 의 properties bag 은 *value* 만 들고 있으므로
         ///          *어떤 uniform 이 존재하는지* 는 이 view 가 답한다.
         const std::unordered_map<std::string, Entry>& Entries() const { return mEntries; }

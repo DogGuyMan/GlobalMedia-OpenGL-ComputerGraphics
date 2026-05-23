@@ -1,6 +1,7 @@
 #ifndef __SJH_COMMON_H__
 #define __SJH_COMMON_H__
 
+#include "vmath.h"
 #pragma once
 
 #include <memory>
@@ -21,21 +22,23 @@
  * @note 모든 @c SJH:: 네임스페이스 클래스 헤더 상단에서 사용.
  */
 #define CLASS_PTR(klassName)                            \
-    class klassName;                                    \
-    using klassName##UPtr = std::unique_ptr<klassName>; \
-    using klassName##Ptr = std::shared_ptr<klassName>;  \
-    using klassName##WPtr = std::weak_ptr<klassName>;
+	class klassName;                                    \
+	using klassName##UPtr = std::unique_ptr<klassName>; \
+	using klassName##Ptr = std::shared_ptr<klassName>;  \
+	using klassName##WPtr = std::weak_ptr<klassName>;
 
 namespace SJH
 {
-    /**
-     * @brief 텍스트 파일을 한 번에 읽어 @c std::string 으로 반환.
-     * @param filename 읽을 파일의 경로 (실행 디렉토리 기준 상대 경로 또는 절대 경로).
-     * @return 성공 시 파일 내용 문자열, 실패 시 @c std::nullopt.
-     * @details 실패 사유(파일 없음/권한 등)는 @c spdlog::error 로 출력.
-     *          GLSL 셰이더 소스 등 텍스트 리소스 로딩에 사용.
-     */
-    std::optional<std::string> LoadTextFile(const std::string &filename);
-}
+	typedef vmath::vec2 Size;
+
+	/**
+	 * @brief 텍스트 파일을 한 번에 읽어 @c std::string 으로 반환.
+	 * @param filename 읽을 파일의 경로 (실행 디렉토리 기준 상대 경로 또는 절대 경로).
+	 * @return 성공 시 파일 내용 문자열, 실패 시 @c std::nullopt.
+	 * @details 실패 사유(파일 없음/권한 등)는 @c spdlog::error 로 출력.
+	 *          GLSL 셰이더 소스 등 텍스트 리소스 로딩에 사용.
+	 */
+	std::optional<std::string> LoadTextFile(const std::string &filename);
+} // namespace SJH
 
 #endif //__SJH_COMMON_H__

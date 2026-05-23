@@ -64,7 +64,9 @@ namespace SJH
         /// @brief 이 FBO 를 현재 프레임버퍼로 바인딩 + @c glViewport 를 color attachment 크기로 설정.
         void Bind() override;
         /// @brief color attachment 의 width/height 반환.
-        Size GetSize() const override;
+        virtual int GetWidth() const override;
+	virtual int GetHeight() const override;
+
 
         // ── 기존 API 보존 ─────────────────────────────────────────────────────────
         /// @brief GL FBO 핸들 반환.

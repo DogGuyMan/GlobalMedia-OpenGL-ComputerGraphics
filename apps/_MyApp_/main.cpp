@@ -21,10 +21,6 @@ class deptest_application : public sb7::application
 {
 	void startup() override
 	{
-		// EnTT — registry 에 엔티티 1개 생성
-		entt::registry registry;
-		auto entity = registry.create();
-		registry.emplace<int>(entity, 42);
 
 		// Tweeny — 0->100 보간 트윈
 		auto tween = tweeny::from(0).to(100).during(100);
@@ -49,8 +45,6 @@ class deptest_application : public sb7::application
 		std::printf("[deptest] assimp importer ready (err='%s')\n",
 					assimpImporter.GetErrorString());
 
-		std::printf("[deptest] entt=%d tweeny=%d stbrp 초기화 완료\n",
-				registry.get<int>(entity), mid);
 
 		// spdlog — 컴파일 정적 라이브러리 링크 검증
 		spdlog::info("[deptest] spdlog compiled-lib OK (v{}.{}.{})",

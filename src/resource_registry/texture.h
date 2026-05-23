@@ -54,8 +54,8 @@ namespace SJH
         Texture(Texture &&) noexcept; ///< @c noexcept 이동 — STL 컨테이너 재배치 안전.
         Texture &operator=(Texture &&) noexcept;
 
-        int GetWidth() const { return mWidth; }    ///< @brief 텍스처 너비 (픽셀).
-        int GetHeight() const { return mHeight; }  ///< @brief 텍스처 높이 (픽셀).
+        int GetWidth() const { return mWidth; }
+        int GetHeight() const { return mHeight; }
         uint32_t GetFormat() const { return mFormat; } ///< @brief GL 내부 포맷 (@c GL_RGBA 등).
         /// @brief GL 텍스처 핸들 — @c glBindTexture / @c glUniform1i 인자.
         GLuint GetTextureID() const { return mTextureID; }

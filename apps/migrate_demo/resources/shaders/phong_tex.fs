@@ -2,7 +2,7 @@
 
 // migrate_demo Phong (texture) FS — DirLight + 2 PointLight + 1 SpotLight 통합.
 // 레퍼런스 OpenGL-With-CMake/resources/shader/lighting.fs 와 동일 schema (sampler2D material).
-// SJH RenderSystem 의 light uniform schema 와 1:1 (program_uniforms.cpp 의 SFX_* suffix 컨벤션).
+// SJH SceneRenderer 의 light uniform schema 와 1:1 (program_uniforms.cpp 의 SFX_* suffix 컨벤션).
 
 in vec3 vsNormal;
 in vec3 vsPosition;

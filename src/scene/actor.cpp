@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <type_traits>
 
-// SP3 — Actor/Component 비복사·비이동 컴파일 타임 검증
+// SP3 — Actor/Component 비복사,비이동 컴파일 타임 검증
 static_assert(!std::is_copy_constructible_v<SJH::Scene::Actor>,
               "SJH::Scene::Actor must be non-copy-constructible");
 static_assert(!std::is_move_constructible_v<SJH::Scene::Actor>,

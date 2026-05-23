@@ -40,7 +40,7 @@ namespace SJH
         static ProgramUPtr Create(const std::vector<ShaderPtr> &shaders);
 
         /**
-         * @brief VS/FS 파일 경로 2개로부터 직접 Program 생성하는 편의 팩토리.
+         * @brief VS/FS 파일 경로 2개로부터 직접 Program 생성하는 Utility팩토리.
          * @param vertShaderFilename 정점 셰이더 GLSL 파일 경로 (예: @c "./resources/shader/lighting.vs").
          * @param fragShaderFilename 프래그먼트 셰이더 GLSL 파일 경로.
          * @return 두 셰이더 컴파일 + 프로그램 link 모두 성공 시 @c ProgramUPtr, 실패 시 @c nullptr.
@@ -54,7 +54,7 @@ namespace SJH
         ~Program();
 
         // SP1 — 자원 핸들 이중 해제 차단. 팩토리 + UPtr 패턴이므로 외부에서
-        //       복사·이동할 경로가 애초에 없음.
+        //       복사,이동할 경로가 애초에 없음.
         Program(const Program&)            = delete;
         Program& operator=(const Program&) = delete;
         Program(Program&&)                 = delete;

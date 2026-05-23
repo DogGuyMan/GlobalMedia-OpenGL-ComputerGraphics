@@ -1,6 +1,7 @@
 #ifndef __SJH_DIAGNOSTICS_GL_LOG_H__
 #define __SJH_DIAGNOSTICS_GL_LOG_H__
 
+#include <GL/glcorearb.h>
 #pragma once
 
 #include "GL/gl3w.h"
@@ -102,7 +103,7 @@ namespace SJH::Diagnostics
         ///  - @c GL_INVALID_OPERATION — 이름 0이 target 에 바인딩 (= @c glBindBuffer 안 함), 또는 mapped.
         ///  - @c GL_OUT_OF_MEMORY — GPU 메모리 부족.
         /// @param data_size 진단 로그에 출력할 업로드 size (bytes).
-        static bool CheckGLBufferData(const GLint data_size);
+        static bool CheckGLBufferData(const size_t data_size);
 
         /// @brief @c glEnableVertexAttribArray(idx) 직후 호출.
         /// @details 명세상 가능 에러:

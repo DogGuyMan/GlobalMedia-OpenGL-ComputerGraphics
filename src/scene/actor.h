@@ -93,7 +93,7 @@ namespace SJH::Scene
 
         // === Layer (SP4 D-15) ===
         /// @brief Actor 의 가시성 layer (Unity 정통 비트마스크).
-        /// @details 기본값 = 1 (비트 0). Camera::cullingMask 와 AND 검사로 RenderSystem 이 필터.
+        /// @details 기본값 = 1 (비트 0). Camera::cullingMask 와 AND 검사로 SceneRenderer 이 필터.
         void     SetLayer(uint32_t layer) { mLayer = layer; }
         uint32_t GetLayer() const         { return mLayer; }
 

@@ -1,15 +1,16 @@
+
 #include "render/render_target.h"
 
 namespace SJH
 {
-    DefaultRenderTarget::DefaultRenderTarget(int width, int height)
-        : mSize{width, height} {}
+	DefaultRenderTarget::DefaultRenderTarget(int width, int height)
+	    : mWidth(width), mHeight(height)
+	{
+	}
 
-    void DefaultRenderTarget::Bind()
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, mSize.Width, mSize.Height);
-    }
-
-    Size DefaultRenderTarget::GetSize() const { return mSize; }
-}
+	void DefaultRenderTarget::Bind()
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, mWidth, mHeight);
+	}
+} // namespace SJH

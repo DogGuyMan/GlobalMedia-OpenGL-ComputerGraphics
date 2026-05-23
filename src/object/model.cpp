@@ -26,7 +26,7 @@ namespace SJH
             return false;
         }
 
-        // [&] : 외부 변수 전부를 참조로 캡처. dirname·mTextures 접근에 사용.
+        // [&] : 외부 변수 전부를 참조로 캡처. dirname,mTextures 접근에 사용.
         //        수명은 LoadByAssimp 스코프 안으로 한정 -> 댕글링 위험 없음.
         //
         // 람다 캡처 리스트 종류:
@@ -34,14 +34,14 @@ namespace SJH
         // │ 문법         │ 가능한 것                  │ 불가능한 것                  │ 대표 용도                 │
         // ├──────────────┼────────────────────────────┼──────────────────────────────┼───────────────────────────┤
         // │ []           │ 람다 내부 지역 변수만       │ 외부 변수 접근 일체          │ stateless 비교자          │
-        // │ [&]          │ 외부 변수 전부 참조 읽기·쓰기│ 람다가 스코프보다 오래 살기 │ 이 코드처럼 단명 헬퍼     │
-        // │ [=]          │ 외부 변수 전부 값 복사 읽기 │ 복사본 수정(기본 const)      │ 스레드·비동기 캡처        │
-        // │ [x]          │ x 값 복사 읽기             │ 다른 외부 변수·x 수정        │ 특정 값 스냅샷            │
-        // │ [&x]         │ x 참조 읽기·쓰기           │ 다른 외부 변수 접근          │ 하나만 수정, 나머지 격리  │
+        // │ [&]          │ 외부 변수 전부 참조 읽기,쓰기│ 람다가 스코프보다 오래 살기 │ 이 코드처럼 단명 헬퍼     │
+        // │ [=]          │ 외부 변수 전부 값 복사 읽기 │ 복사본 수정(기본 const)      │ 스레드,비동기 캡처        │
+        // │ [x]          │ x 값 복사 읽기             │ 다른 외부 변수,x 수정        │ 특정 값 스냅샷            │
+        // │ [&x]         │ x 참조 읽기,쓰기           │ 다른 외부 변수 접근          │ 하나만 수정, 나머지 격리  │
         // │ [=, &x]      │ 전체 복사 + x만 참조 수정  │ —                            │ 대부분 복사, x만 out-param│
         // │ [&, x]       │ 전체 참조 + x만 값 고정    │ x 수정                       │ 루프 인덱스 고정          │
-        // │ [this]       │ 멤버 변수·함수 접근(포인터) │ 객체 수명 보장               │ 멤버 함수 내 람다         │
-        // │ [*this] C++17│ 객체 전체 값 복사          │ 복사 비용·원본 수정          │ 비동기 시 수명 독립       │
+        // │ [this]       │ 멤버 변수,함수 접근(포인터) │ 객체 수명 보장               │ 멤버 함수 내 람다         │
+        // │ [*this] C++17│ 객체 전체 값 복사          │ 복사 비용,원본 수정          │ 비동기 시 수명 독립       │
         // └──────────────┴────────────────────────────┴──────────────────────────────┴───────────────────────────┘
         auto dirname = filename.substr(0, filename.find_last_of("/"));
         // 핵심 동기 ① — LoadByAssimp 한 곳에서만 쓰는 헬퍼. 멤버 함수로 빼면 model.h 에
@@ -60,7 +60,6 @@ namespace SJH
             auto tex = Texture::CreateTexture(image.get()); // TextureUPtr
             if (!tex)
                 return nullptr;
-            // 핵심 동기 ③ — [&] 가 this 도 캡처 -> 멤버 mTextures 직접 접근.
             mTextures.push_back(std::move(tex)); // Model 이 lifetime owner
             return mTextures.back().get();       // 비소유 관찰자 반환
         };
@@ -74,11 +73,11 @@ namespace SJH
             const auto diffuse = _lambdaLoadTexture(aiMat, aiTextureType_DIFFUSE);
             const auto specular = _lambdaLoadTexture(aiMat, aiTextureType_SPECULAR);
 
-            // SP6 — Material 의 properties bag 에 텍스처 슬롯 직접 store (Unity 정통).
+            // SP-Material-Split — Material 의 MaterialPropertyBlock (Unity 정통) 에 텍스처 슬롯 store.
             // 셰이더의 sampler uniform 이름 (lighting.fs 의 material.diffuse / material.specular) 과 1:1.
-            if (diffuse)  glMaterial->Textures["material.diffuse"]  = { diffuse,  /*unit*/ 0 };
-            if (specular) glMaterial->Textures["material.specular"] = { specular, /*unit*/ 1 };
-            glMaterial->Floats["material.shininess"] = 32.0f;   // 기본 Phong shininess.
+            if (diffuse)  glMaterial->Properties.Textures["material.diffuse"]  = { diffuse,  /*unit*/ 0 };
+            if (specular) glMaterial->Properties.Textures["material.specular"] = { specular, /*unit*/ 1 };
+            glMaterial->Properties.Floats["material.shininess"] = 32.0f;   // 기본 Phong shininess.
 
             mMaterials.push_back(std::move(glMaterial)); //  m_materials -> mMaterials
         }

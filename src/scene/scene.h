@@ -7,9 +7,9 @@ namespace SJH::Scene
 {
     class Camera;   // SetActiveCamera 인자 forward decl — scene/camera.h 전체 include 회피.
 
-    /// @brief Cocos cc::Director 정통 — root Actor 보유 싱글톤. SP2 RenderContext::Get() 패턴과 일관.
+    /// @brief Cocos cc::Director 정통 — root Actor 보유 싱글톤. SP2 DeviceContext::Get() 패턴과 일관.
     /// @details `namespace SJH::Scene` 의 nested 싱글톤 — 사용: `SJH::Scene::Director::Get().Root()`.
-    ///          SP3.5 — 활성 Camera 슬롯 추가 (Unity Camera.main 정통). RenderSystem::Render()
+    ///          SP3.5 — 활성 Camera 슬롯 추가 (Unity Camera.main 정통). SceneRenderer::Render()
     ///          가 인자 없는 overload 호출 시 이 슬롯을 조회.
     class Director
     {

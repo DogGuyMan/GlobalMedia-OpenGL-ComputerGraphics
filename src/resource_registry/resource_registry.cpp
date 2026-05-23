@@ -1,6 +1,6 @@
 /**
  * @file resource_registry.cpp
- * @brief Create* / Register* — 캐시-미스 경로에서 새 자원을 생성·등록.
+ * @brief Create* / Register* — 캐시-미스 경로에서 새 자원을 생성,등록.
  *        Find*               — 캐시-히트 경로에서 기존 인스턴스를 즉시 반환.
  *
  * @details emplace 결과의 iterator 로 raw 포인터를 꺼내 반환 — 매니저 보관 인스턴스를 가리키므로
@@ -14,8 +14,6 @@ namespace SJH
 {
     ResourceRegistry& ResourceRegistry::Get()
     {
-        // Meyer's singleton — C++11 static local 은 thread-safe 초기화 보장.
-        // SP2 RenderContext::Get() / SP3 Scene::Director::Get() 와 동일 패턴.
         static ResourceRegistry instance;
         return instance;
     }
@@ -50,7 +48,7 @@ namespace SJH
 
     Material *ResourceRegistry::CreateMaterial(const std::string &key)
     {
-        // 텍스처 독립 — 빈 Material 만 생성·캐시. 텍스처/프로그램 배선은 호출자 책임.
+        // 텍스처 독립 — 빈 Material 만 생성,캐시. 텍스처/프로그램 배선은 호출자 책임.
         if (mMaterials.find(key) != mMaterials.end())
         {
             spdlog::warn("CreateMaterial: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
@@ -137,6 +135,29 @@ namespace SJH
         return (it != mMeshes.end()) ? it->second.get() : nullptr;
     }
 
+    Framebuffer *ResourceRegistry::CreateFramebuffer(const std::string &key, int width, int height)
+    {
+        if (mFramebuffers.find(key) != mFramebuffers.end())
+        {
+            spdlog::warn("CreateFramebuffer: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+            return nullptr;
+        }
+        auto fb = Framebuffer::Create(width, height);
+        if (fb == nullptr)
+        {
+            spdlog::error("CreateFramebuffer: FBO 생성 실패 — key '{}', {}x{}", key, width, height);
+            return nullptr;
+        }
+        auto insertedIt = mFramebuffers.emplace(key, std::move(fb)).first;
+        return insertedIt->second.get();
+    }
+
+    Framebuffer *ResourceRegistry::FindFramebuffer(const std::string &key)
+    {
+        auto it = mFramebuffers.find(key);
+        return (it != mFramebuffers.end()) ? it->second.get() : nullptr;
+    }
+
     void ResourceRegistry::Clear()
     {
         mTextures.clear();
@@ -144,5 +165,6 @@ namespace SJH
         mModels.clear();
         mPrograms.clear();
         mMeshes.clear();
+        mFramebuffers.clear();
     }
 }

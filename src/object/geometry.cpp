@@ -174,7 +174,7 @@ namespace SJH
         void BuildOctahedronIndexed(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
                                     const vmath::vec3 &offset, bool back_face)
         {
-            // 위·아래 사각뿔(CONE_SIDE 의 y 축 거울상). 기본은 윗절반=FRONT, 아랫절반=BACK
+            // 위,아래 사각뿔(CONE_SIDE 의 y 축 거울상). 기본은 윗절반=FRONT, 아랫절반=BACK
             // (xz 거울상이라 서로 반대 winding). back_face=true 면 둘 다 뒤집음.
             const auto &top_idxs = back_face ? TRIANGLE_FACE_INDICES_BACK : TRIANGLE_FACE_INDICES;
             const auto &bottom_idxs = back_face ? TRIANGLE_FACE_INDICES : TRIANGLE_FACE_INDICES_BACK;

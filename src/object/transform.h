@@ -33,7 +33,7 @@ namespace SJH
         vmath::vec3 Scale     = vmath::vec3(1.0f, 1.0f, 1.0f); ///< 스케일 팩터.
 
         /**
-         * @brief 로컬 모델 행렬 산출 — T·Rz·Ry·Rx·S 순서.
+         * @brief 로컬 모델 행렬 산출 — T,Rz,Ry,Rx,S 순서.
          * @return 부모를 고려하지 않은 로컬 변환 행렬.
          */
         vmath::mat4 GetLocalMatrix() const
@@ -45,7 +45,7 @@ namespace SJH
         }
 
         /**
-         * @brief Translate/Scale 무시한 *로컬 회전 행렬* — Rz·Ry·Rx.
+         * @brief Translate/Scale 무시한 *로컬 회전 행렬* — Rz,Ry,Rx.
          * @details 6 방향 벡터 추출 / 부모-자식 회전 합성 등 *방향만* 필요할 때 사용.
          */
         vmath::mat4 GetRotationMatrix() const

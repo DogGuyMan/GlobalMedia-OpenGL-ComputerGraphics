@@ -103,7 +103,7 @@ add_executable(test_program_uniforms test_program_uniforms.cpp)
 target_link_libraries(test_program_uniforms PRIVATE
     Catch2::Catch2WithMain
     gl_test_fixture
-    SJH::render      # RenderContext::UseProgram (SP2 — glUseProgram owner)
+    SJH::render      # DeviceContext::UseProgram (SP2 — glUseProgram owner)
     SJH::program
     SJH::shader      # Shader::CreateFromSource — 인라인 GLSL 컴파일
 )

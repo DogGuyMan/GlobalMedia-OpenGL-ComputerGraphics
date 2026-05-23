@@ -1,15 +1,16 @@
-#include "render/render_system.h"
-#include "render/render_context.h"
+#include "render/scene_renderer.h"
+#include "render/device_context.h"
 #include "render/render_target.h"
 #include "buffer/framebuffer.h"
 #include "scene/scene.h"
 #include "scene/camera.h"
 #include "scene/actor.h"
-#include "scene/components.h"
+#include "render/mesh_renderer.h"
 #include "material/material.h"
 #include "object/light.h"               // SP5 — DirLight/PointLight/SpotLight (Scene::Component)
 #include "program/program.h"
 #include "program/program_uniforms.h"   // SP5 — Uniforms::SetDirLight/SetPointLight/SetSpotLight
+#include "common/constants.h"            // UNI_* / NUM_POINT_LIGHTS — 매직 스트링 차단.
 #include <spdlog/spdlog.h>
 #include <algorithm>
 #include <unordered_set>
@@ -17,7 +18,7 @@
 
 namespace SJH
 {
-    void RenderSystem::Render()
+    void SceneRenderer::Render(RenderTarget& defaultTarget)
     {
         // 1. Actor 트리 DFS 로 모든 Camera 컴포넌트 수집.
         std::vector<Scene::Camera*> cameras;
@@ -25,7 +26,7 @@ namespace SJH
 
         if (cameras.empty())
         {
-            spdlog::warn("RenderSystem::Render — 씬 트리에 Camera 컴포넌트 없음. 프레임 skip.");
+            spdlog::warn("SceneRenderer::Render — 씬 트리에 Camera 컴포넌트 없음. 프레임 skip.");
             return;
         }
 
@@ -35,10 +36,10 @@ namespace SJH
 
         // 3. 각 Camera 마다 1패스 실행 — target FB / view / proj 자동.
         for (auto* cam : cameras)
-            RenderWithCamera(*cam);
+            RenderWithCamera(*cam, defaultTarget);
     }
 
-    void RenderSystem::CollectCameras(const Scene::Actor& actor,
+    void SceneRenderer::CollectCameras(const Scene::Actor& actor,
                                       std::vector<Scene::Camera*>& out)
     {
         if (!actor.IsActive()) return;
@@ -53,15 +54,15 @@ namespace SJH
             CollectCameras(*child, out);
     }
 
-    void RenderSystem::RenderWithCamera(Scene::Camera& cam)
+    void SceneRenderer::RenderWithCamera(Scene::Camera& cam, RenderTarget& defaultTarget)
     {
-        auto& rc = RenderContext::Get();
+        auto& rc = DeviceContext::Get();
 
-        // target = Camera 가 가리키는 FBO, 없으면 default backbuffer.
+        // target = Camera 가 가리키는 FBO, 없으면 Application 측 defaultTarget (SP-RTOwnership).
         // RenderTarget polymorphism — Framebuffer 와 DefaultRenderTarget 둘 다 BeginFrame 호환.
         RenderTarget& target = cam.GetTargetFramebuffer()
             ? static_cast<RenderTarget&>(*cam.GetTargetFramebuffer())
-            : static_cast<RenderTarget&>(rc.GetDefaultTarget());
+            : defaultTarget;
         rc.BeginFrame(target);
 
         const auto viewMat = cam.GetViewMatrix();
@@ -89,13 +90,13 @@ namespace SJH
         SendLightUniforms(programs, dir, points, spot, viewPos);
 
         // MeshRenderer 수집 + Queue flush — SP4 D-15 cullingMask 필터.
-        mQueue.Clear();
+        mProcessor.Clear();
         CollectFromActor(Scene::Director::Get().Root(), viewMat, cullingMask);
-        mQueue.SortMultiStage();
-        mQueue.Flush(rc, viewMat, projMat);
+        mProcessor.SortMultiStage();
+        mProcessor.Process(rc, viewMat, projMat);
     }
 
-    void RenderSystem::CollectLights(const Scene::Actor& actor,
+    void SceneRenderer::CollectLights(const Scene::Actor& actor,
                                      DirLight*& outDir,
                                      std::vector<PointLight*>& outPoints,
                                      SpotLight*& outSpot)
@@ -107,7 +108,7 @@ namespace SJH
             if (l->IsEnabled())
             {
                 if (outDir == nullptr) outDir = l;
-                else spdlog::warn("RenderSystem::CollectLights — DirLight 중복 발견. 첫 1개만 사용.");
+                else spdlog::warn("SceneRenderer::CollectLights — DirLight 중복 발견. 첫 1개만 사용.");
             }
         }
         if (auto* l = actor.GetComponent<PointLight>())
@@ -119,7 +120,7 @@ namespace SJH
             if (l->IsEnabled())
             {
                 if (outSpot == nullptr) outSpot = l;
-                else spdlog::warn("RenderSystem::CollectLights — SpotLight 중복 발견. 첫 1개만 사용.");
+                else spdlog::warn("SceneRenderer::CollectLights — SpotLight 중복 발견. 첫 1개만 사용.");
             }
         }
 
@@ -127,7 +128,7 @@ namespace SJH
             CollectLights(*child, outDir, outPoints, outSpot);
     }
 
-    void RenderSystem::CollectPrograms(const Scene::Actor& actor,
+    void SceneRenderer::CollectPrograms(const Scene::Actor& actor,
                                        std::unordered_set<const Program*>& out)
     {
         if (!actor.IsActive()) return;
@@ -142,45 +143,49 @@ namespace SJH
             CollectPrograms(*child, out);
     }
 
-    void RenderSystem::SendLightUniforms(const std::unordered_set<const Program*>& programs,
+    void SceneRenderer::SendLightUniforms(const std::unordered_set<const Program*>& programs,
                                          DirLight* dir,
                                          const std::vector<PointLight*>& points,
                                          SpotLight* spot,
                                          const vmath::vec3& viewPos)
     {
-        // lighting.fs 의 셰이더 컨벤션 매핑 (#define NUM_POINT_LIGHTS 2 와 일치).
+        // lighting.fs 의 셰이더 컨벤션 매핑 (Const::NUM_POINT_LIGHTS 와 일치).
         // 누락 uniform 은 첫 호출 1회 warn (Diagnostics::UniformDiagnostics) — lighting.fs 사용
         //   안 하는 program (e.g., simple.fs) 은 모든 light uniform 누락 warn 정상.
-        constexpr int kMaxPointLights = 2;
-        if (static_cast<int>(points.size()) > kMaxPointLights)
-            spdlog::warn("RenderSystem — PointLight {} 개 발견. 셰이더 NUM_POINT_LIGHTS={} 초과분 무시.",
-                         points.size(), kMaxPointLights);
+        if (static_cast<int>(points.size()) > Const::NUM_POINT_LIGHTS)
+            spdlog::warn("SceneRenderer — PointLight {} 개 발견. 셰이더 NUM_POINT_LIGHTS={} 초과분 무시.",
+                         points.size(), Const::NUM_POINT_LIGHTS);
 
-        auto& rc = RenderContext::Get();
+        auto& rc = DeviceContext::Get();
         for (const auto* prog : programs)
         {
             if (!prog) continue;
+            // Lighting schema sentinel — UNI_VIEW_POS 가 program 의 UniformCache 에 없으면
+            //  본 program 은 lighting 미사용 (simple/window/postfx 등) -> 송신 통째 skip.
+            //  -> warn-once 노이즈 차단 + glUseProgram 비용 회피.
+            if (prog->GetLocation(Const::UNI_VIEW_POS) < 0)
+                continue;
             rc.UseProgram(*prog);
 
             // viewPos — Phong specular 계산용.
-            Uniforms::SetVec3(*prog, "viewPos", viewPos);
+            Uniforms::SetVec3(*prog, Const::UNI_VIEW_POS, viewPos);
 
             // DirLight — 1개. 없으면 enabled=0 만 전송 (uniform 0 보장).
             if (dir)
             {
-                Uniforms::SetDirLight(*prog, "dirLight", *dir, dir->GetWorldDirection());
-                Uniforms::SetInt(*prog, "dirLightEnabled", 1);
+                Uniforms::SetDirLight(*prog, Const::UNI_DIR_LIGHT, *dir, dir->GetWorldDirection());
+                Uniforms::SetInt(*prog, Const::UNI_DIR_LIGHT_ENABLED, 1);
             }
             else
             {
-                Uniforms::SetInt(*prog, "dirLightEnabled", 0);
+                Uniforms::SetInt(*prog, Const::UNI_DIR_LIGHT_ENABLED, 0);
             }
 
-            // PointLights — 최대 2개. 초과는 무시. 부족하면 enabled=0 으로 slot 채움.
-            for (std::size_t i = 0; i < static_cast<std::size_t>(kMaxPointLights); ++i)
+            // PointLights — 최대 NUM_POINT_LIGHTS 개. 초과는 무시. 부족하면 enabled=0 으로 slot 채움.
+            for (std::size_t i = 0; i < static_cast<std::size_t>(Const::NUM_POINT_LIGHTS); ++i)
             {
-                const std::string idxStr = "pointLights[" + std::to_string(i) + "]";
-                const std::string enStr  = "pointLightsEnabled[" + std::to_string(i) + "]";
+                const std::string idxStr = Const::UNI_POINT_LIGHTS_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
+                const std::string enStr  = Const::UNI_POINT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
                 if (i < points.size())
                 {
                     Uniforms::SetPointLight(*prog, idxStr.c_str(), *points[i],
@@ -207,17 +212,19 @@ namespace SJH
         }
     }
 
-    void RenderSystem::Render(const vmath::mat4& viewMat, const vmath::mat4& projMat)
+    void SceneRenderer::Render(RenderTarget& defaultTarget,
+                               const vmath::mat4& viewMat, const vmath::mat4& projMat)
     {
         // 테스트/디버그 overlay 용 — CameraComponent 우회. 모든 layer 그림 (SP3.5 호환).
-        auto& rc = RenderContext::Get();
-        mQueue.Clear();
+        auto& rc = DeviceContext::Get();
+        rc.BeginFrame(defaultTarget);
+        mProcessor.Clear();
         CollectFromActor(Scene::Director::Get().Root(), viewMat, ~0u);
-        mQueue.SortMultiStage();
-        mQueue.Flush(rc, viewMat, projMat);
+        mProcessor.SortMultiStage();
+        mProcessor.Process(rc, viewMat, projMat);
     }
 
-    void RenderSystem::CollectFromActor(const Scene::Actor& actor,
+    void SceneRenderer::CollectFromActor(const Scene::Actor& actor,
                                         const vmath::mat4& viewMat,
                                         uint32_t cullingMask)
     {
@@ -243,9 +250,9 @@ namespace SJH
                     cmd.material    = mr->Material;
                     cmd.modelMatrix = model;
                     // Filament/Unreal/Cocos 정통 — 진실의 원천 단일화:
-                    //  · Material.GetPass() = "어떤 종류" (Pass::Kind enum, private 캡슐화)
-                    //  · Material.GetQueueLayer() = Pass::QueueOf(GetPass()) 도출 (alias)
-                    //  · MeshRenderer.QueueOffset = "같은 Material 의 인스턴스 간 미세 순서" (Unity Renderer.sortingOrder)
+                    //  , Material.GetPass() = "어떤 종류" (Pass::Kind enum, private 캡슐화)
+                    //  , Material.GetQueueLayer() = Pass::QueueOf(GetPass()) 도출 (alias)
+                    //  , MeshRenderer.QueueOffset = "같은 Material 의 인스턴스 간 미세 순서" (Unity Renderer.sortingOrder)
                     //
                     //  최종 = Material.GetQueueLayer() + mr.QueueOffset.
                     cmd.queueLayer = mr->Material->GetQueueLayer() + mr->QueueOffset;
@@ -255,7 +262,7 @@ namespace SJH
                     cmd.stencil     = mr->Stencil;
                     cmd.depthTest   = mr->DepthTest;
                     cmd.depthWrite  = mr->DepthWrite;
-                    mQueue.Submit(cmd);
+                    mProcessor.Submit(cmd);
                 }
             }
         }

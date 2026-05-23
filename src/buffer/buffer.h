@@ -4,7 +4,7 @@
 #include "common/common.h"
 #include "GL/gl3w.h"
 
-// ShaderPtr을 사용하자.
+// SharedPtr을 사용하자.
 // VBO EBO는 다른 VAO와 연결하여 재사용할 수 있다.
 namespace SJH
 {

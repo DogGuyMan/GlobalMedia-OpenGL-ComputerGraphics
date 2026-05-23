@@ -30,6 +30,8 @@
    - 4.4 [Camera 모드 (Free / TargetLock)](#44-camera-모드-free--targetlock)
    - 4.5 [Uniform 송신의 두 layer](#45-uniform-송신의-두-layer--material-한정-vs-씬-전역)
    - 4.6 [Lighting 셰이더 schema](#46-lighting-셰이더-schema)
+   - 4.7 [Pass 컨벤션 — Material 의도 선언](#47-pass-컨벤션--material-의도-선언)
+   - 4.8 [Retina HiDPI / Resize 호환](#48-retina-hidpi--resize-호환)
 5. [빠른 시작 — 새 챕터](#5-빠른-시작--새-챕터)
 6. [빌드 시스템](#6-빌드-시스템)
 
@@ -56,9 +58,9 @@
 |---|---|---|
 | 셰이더 *schema* | `UniformCache` | `Program` 소유, `Material` 참조 |
 | Material *값* (properties bag) | `Material` | `Floats / Ints / Vec3s / Vec4s / Mat4s / Textures` typed maps |
-| Material *송신* | `MaterialApplier::Apply` | Cache outer + Material lookup inner |
+| Material *송신* | `PropertyBlockSetter::Set` | Cache outer + Material lookup inner |
 | Light *값* | Component (DirLight/PointLight/SpotLight) | `src/object/light.h` |
-| Light *송신* | `RenderSystem::SendLightUniforms` | 매 프레임 모든 Program 에 자동 |
+| Light *송신* | `SceneRenderer::SendLightUniforms` | 매 프레임 모든 Program 에 자동 |
 | Camera view 행렬 | Camera 의 owner Actor Transform | `src/scene/camera.cpp` |
 
 ### Uniform 송신의 두 layer — Material 한정 vs 씬 전역 transient
@@ -68,11 +70,11 @@ Unity 의 *material.SetFloat* (instance) vs *Shader.SetGlobalFloat* (씬 전역)
 | 자유함수 family | 헤더 | 인자 | 동작 시점 | 용도 |
 |---|---|---|---|---|
 | `Uniforms::Set*(Material&, ...)` | [`material_uniforms.h`](../src/material/material_uniforms.h) | `Material&` | properties bag 에 **store 만** (GL 호출 없음) | Material instance 자기 슬롯 — color/texture/shininess 등 사용자 컨텐츠 |
-| `Uniforms::Set*(const Program&, ...)` | [`program_uniforms.h`](../src/program/program_uniforms.h) | `const Program&` | **즉시 GL `glUniform*` 호출** | 씬 전역 transient — uModel/uView/uProj / 광원 / viewPos / MaterialApplier 의 내부 송신 경로 |
+| `Uniforms::Set*(const Program&, ...)` | [`program_uniforms.h`](../src/program/program_uniforms.h) | `const Program&` | **즉시 GL `glUniform*` 호출** | 씬 전역 transient — uModel/uView/uProj / 광원 / viewPos / PropertyBlockSetter 의 내부 송신 경로 |
 
-**왜 Material 만으로 모든 uniform 송신 안 되나** — `uModel` 은 *DrawCommand 마다 다른 값* (Actor.WorldMatrix). Material 에 store 하면 N draw call 마다 N×(Material 변경 + Apply 재호출) 비효율 + 동일 Material 을 여러 Actor 가 공유 시 마지막 transform 만 적용되는 의미 깨짐. 광원도 *씬 전역* 이라 모든 Material 공통 — Material 자기 데이터 아님. 따라서 *transient state* 는 RenderQueue/RenderSystem 이 *Material 우회* 로 Program 에 직접 송신.
+**왜 Material 만으로 모든 uniform 송신 안 되나** — `uModel` 은 *DrawCommand 마다 다른 값* (Actor.WorldMatrix). Material 에 store 하면 N draw call 마다 N×(Material 변경 + Apply 재호출) 비효율 + 동일 Material 을 여러 Actor 가 공유 시 마지막 transform 만 적용되는 의미 깨짐. 광원도 *씬 전역* 이라 모든 Material 공통 — Material 자기 데이터 아님. 따라서 *transient state* 는 MeshPassProcessor/SceneRenderer 이 *Material 우회* 로 Program 에 직접 송신.
 
-Unity 의 `Camera` 가 매 프레임 자동 송신하는 builtin uniform 들 — 우리는 RenderSystem 이 명시 송신 (`SendLightUniforms`).
+Unity 의 `Camera` 가 매 프레임 자동 송신하는 builtin uniform 들 — 우리는 SceneRenderer 이 명시 송신 (`SendLightUniforms`).
 
 ---
 
@@ -97,7 +99,7 @@ Unity 의 `Camera` 가 매 프레임 자동 송신하는 builtin uniform 들 —
                      resource_registry          scene  (Actor / Camera / Compound Actor)
                                                   │
                                                   ▼
-                                                render  (RenderSystem + RenderContext + RenderQueue)
+                                                render  (SceneRenderer + DeviceContext + MeshPassProcessor)
                                                   │
                                                   ▼
                                                  input  (KeyboardInput / MouseInput)
@@ -114,7 +116,7 @@ Unity 의 `Camera` 가 매 프레임 자동 송신하는 builtin uniform 들 —
 | `SJH::material` | INTERFACE | Material properties bag + `Uniforms::Set*` 자유함수 |
 | `SJH::object` | STATIC | Mesh + Geometry + Transform + Light Components |
 | `SJH::scene` | STATIC | Actor + Component + Director + Camera + Compound Actor + MeshRenderer |
-| `SJH::render` | STATIC | RenderSystem + RenderContext + RenderQueue + MaterialApplier |
+| `SJH::render` | STATIC | SceneRenderer + DeviceContext + MeshPassProcessor + PropertyBlockSetter |
 | `SJH::input` | STATIC | `KeyboardInput<TAction>` + `MouseInput` |
 | `SJH::resource_registry` | STATIC | Texture/Material/Model/Program/Mesh 캐시 (싱글톤) |
 | `SJH::engine` | **INTERFACE** | **위 12 모듈 우산** — `target_link_libraries(... PRIVATE SJH::engine)` 한 줄 |
@@ -166,7 +168,7 @@ void     Framebuffer::Bind() override;
 const TexturePtr Framebuffer::GetColorAttachment() const;
 ```
 
-**사용 패턴 (multi-pass)**: `Camera::SetTargetFramebuffer(fb)` → RenderSystem 이 `BeginFrame` 시 자동 사용.
+**사용 패턴 (multi-pass)**: `Camera::SetTargetFramebuffer(fb)` → SceneRenderer 이 `BeginFrame` 시 자동 사용.
 
 ---
 
@@ -208,7 +210,7 @@ void   UniformCache::Build(const Program& prog);             // glGetActiveUnifo
 GLint  UniformCache::GetLocation(const char* name) const;     // 미존재 -1
 GLenum UniformCache::GetType(const char* name) const;
 std::size_t UniformCache::Size() const;
-const std::unordered_map<std::string, Entry>& UniformCache::Entries() const;   // MaterialApplier outer iteration 용
+const std::unordered_map<std::string, Entry>& UniformCache::Entries() const;   // PropertyBlockSetter outer iteration 용
 ```
 
 #### `Uniforms::Set*(Program&, ...)` ([program_uniforms.h](../src/program/program_uniforms.h)) — 씬 전역 transient 송신
@@ -231,10 +233,10 @@ namespace SJH::Uniforms {
 ```
 
 **용도** — *Material 의 properties 가 아닌* 송신 경로:
-- **per-draw transient** (`uModel`) — `RenderQueue::Flush` 가 DrawCommand 마다 호출.
-- **per-pass transient** (`uView` / `uProj` / `viewPos`) — `RenderQueue::Flush` 가 카메라 패스 시작 시 호출.
-- **씬 전역 광원** (`dirLight.*` / `pointLights[i].*` / `spotLight.*` / `*Enabled`) — `RenderSystem::SendLightUniforms` 가 모든 program 에 1 회 송신.
-- **`MaterialApplier::Apply` 의 내부 구현** — Material properties bag 의 값을 *결국 Program 에 송신* 하는 마지막 단계.
+- **per-draw transient** (`uModel`) — `MeshPassProcessor::Process` 가 DrawCommand 마다 호출.
+- **per-pass transient** (`uView` / `uProj` / `viewPos`) — `MeshPassProcessor::Process` 가 카메라 패스 시작 시 호출.
+- **씬 전역 광원** (`dirLight.*` / `pointLights[i].*` / `spotLight.*` / `*Enabled`) — `SceneRenderer::SendLightUniforms` 가 모든 program 에 1 회 송신.
+- **`PropertyBlockSetter::Set` 의 내부 구현** — Material properties bag 의 값을 *결국 Program 에 송신* 하는 마지막 단계.
 
 §1 의 *Uniform 송신의 두 layer* 표 참조 — Unity `Shader.SetGlobalFloat` 정통.
 
@@ -293,12 +295,12 @@ namespace SJH::Uniforms {
 }
 ```
 
-**의미**: properties bag 에 *store 만*. 실제 GL 호출은 `MaterialApplier::Apply` 시점.
+**의미**: properties bag 에 *store 만*. 실제 GL 호출은 `PropertyBlockSetter::Set` 시점.
 
-#### `MaterialApplier::Apply` ([material_applier.h](../src/render/material_applier.h))
+#### `PropertyBlockSetter::Set` ([property_block_setter.h](../src/render/property_block_setter.h))
 
 ```cpp
-void SJH::MaterialApplier::Apply(RenderContext& rc, const Material& mat);
+void SJH::PropertyBlockSetter::Set(DeviceContext& rc, const Material& mat);
 ```
 
 **알고리즘** (Cache outer + Type dispatch + Material lookup inner):
@@ -529,9 +531,9 @@ Model 의 RenderUnit 들을 Actor 트리로 펼침.
 
 ### 3.10 `SJH::render`
 
-#### `RenderSystem` ([render_system.h](../src/render/render_system.h))
+#### `SceneRenderer` ([render_system.h](../src/render/scene_renderer.h))
 ```cpp
-class RenderSystem {
+class SceneRenderer {
 public:
     void Render();                                                  // 모든 Camera 자동 직렬 렌더
     void Render(const vmath::mat4& viewMat, const vmath::mat4& projMat);   // 단일 view/proj
@@ -547,11 +549,11 @@ public:
    - **Program 수집** — 모든 MeshRenderer.Material.Program 의 unique set.
    - **SendLightUniforms** — 모든 unique program 에 viewPos + Light uniform + enabled int 일괄 송신.
    - **DrawCommand 수집** — `cullingMask & actor.Layer` AND 통과만.
-   - **RenderQueue.Flush** — Cache outer Apply → glDraw.
+   - **MeshPassProcessor.Flush** — Cache outer Apply → glDraw.
 
-#### `RenderContext` ([render_context.h](../src/render/render_context.h)) — 싱글톤
+#### `DeviceContext` ([device_context.h](../src/render/device_context.h)) — 싱글톤
 ```cpp
-static RenderContext& RenderContext::Get();
+static DeviceContext& DeviceContext::Get();
 
 void UseProgram(const Program&);                  // SP2 — glUseProgram owner
 void BindVAO(GLuint);
@@ -566,7 +568,7 @@ void BeginFrame(RenderTarget&);                   // BindTarget + Clear + SetDep
 void SetDefaultTargetSize(int w, int h);          // 매 프레임 갱신 (창 크기)
 ```
 
-#### `RenderQueue` + `DrawCommand` ([render_queue.h](../src/render/render_queue.h))
+#### `MeshPassProcessor` + `DrawCommand` ([render_queue.h](../src/render/mesh_pass_processor.h))
 ```cpp
 struct DrawCommand {
     const Program*  program;
@@ -578,9 +580,9 @@ struct DrawCommand {
     float           depth = 0.0f;               // view-space z (back-to-front 정렬)
 };
 
-void RenderQueue::Submit(const DrawCommand&);
-void RenderQueue::SortMultiStage();              // Layer → Program → Material → Depth
-void RenderQueue::Flush(RenderContext&, const vmath::mat4& view, const vmath::mat4& proj);
+void MeshPassProcessor::Submit(const DrawCommand&);
+void MeshPassProcessor::SortMultiStage();              // Layer → Program → Material → Depth
+void MeshPassProcessor::Process(DeviceContext&, const vmath::mat4& view, const vmath::mat4& proj);
 ```
 
 ---
@@ -730,15 +732,15 @@ SJH::Uniforms::SetVec3 (*mat, "material.specular",  vmath::vec3(0.5f));
 SJH::Uniforms::SetFloat(*mat, "material.shininess", 32.0f);
 SJH::Uniforms::SetTexture(*mat, "uMainTex", tex, 0);
 
-// 4. (자동) MaterialApplier::Apply 가 매 프레임 GL 송신
+// 4. (자동) PropertyBlockSetter::Set 가 매 프레임 GL 송신
 //    셰이더에 없는 properties 는 silent skip — UniformCache 교집합.
 ```
 
 **Apply 가 송신 안 하는 uniform** (transient state — Material 책임 아님):
-- `uModel / uView / uProj` — `RenderQueue::Flush` 가 자동 송신
-- `dirLight.* / pointLights[i].* / spotLight.* / viewPos` — `RenderSystem::SendLightUniforms` 가 자동 송신
+- `uModel / uView / uProj` — `MeshPassProcessor::Process` 가 자동 송신
+- `dirLight.* / pointLights[i].* / spotLight.* / viewPos` — `SceneRenderer::SendLightUniforms` 가 자동 송신
 
-Material 에는 *셰이더에 정의된 sampler / 사용자 컨텐츠 properties* 만 store. transform/light/viewPos 같은 builtin 은 RenderSystem 이 책임 (Unity `Camera`/`Light` 가 자동 송신하는 builtin uniform 과 동일 정통).
+Material 에는 *셰이더에 정의된 sampler / 사용자 컨텐츠 properties* 만 store. transform/light/viewPos 같은 builtin 은 SceneRenderer 이 책임 (Unity `Camera`/`Light` 가 자동 송신하는 builtin uniform 과 동일 정통).
 
 **Clone 패턴** (Unity MID): `auto custom = mat->Clone(); SJH::Uniforms::SetVec3(*custom, "...", ...);` — 공유 템플릿 → per-use 가변.
 
@@ -774,10 +776,10 @@ Lock 중 CameraController 의 yaw/pitch 갱신은 *상태로만 보존* — 시�
 | 데이터 종류 | layer | 사용 |
 |---|---|---|
 | Material 자기 컨텐츠 (color/texture/shininess/사용자 properties) | **Material 한정** | `SJH::Uniforms::Set*(Material&, name, value)` — `material_uniforms.h` |
-| per-draw transient (`uModel`) | **씬 전역** | `RenderQueue::Flush` 가 자동 — `program_uniforms.h` |
-| per-camera-pass transient (`uView` / `uProj` / `viewPos`) | **씬 전역** | `RenderQueue::Flush` + `RenderSystem` 자동 |
-| 광원 (DirLight/PointLight/SpotLight + enabled int) | **씬 전역** | `RenderSystem::SendLightUniforms` 자동 — 모든 Program 에 1 회 |
-| Apply 내부 송신 | **씬 전역 layer 의 내부 호출** | `MaterialApplier::Apply` 가 `Uniforms::Set*(*prog, ...)` 호출 |
+| per-draw transient (`uModel`) | **씬 전역** | `MeshPassProcessor::Process` 가 자동 — `program_uniforms.h` |
+| per-camera-pass transient (`uView` / `uProj` / `viewPos`) | **씬 전역** | `MeshPassProcessor::Process` + `SceneRenderer` 자동 |
+| 광원 (DirLight/PointLight/SpotLight + enabled int) | **씬 전역** | `SceneRenderer::SendLightUniforms` 자동 — 모든 Program 에 1 회 |
+| Apply 내부 송신 | **씬 전역 layer 의 내부 호출** | `PropertyBlockSetter::Set` 가 `Uniforms::Set*(*prog, ...)` 호출 |
 
 **판정 기준**:
 - *DrawCommand 마다 변화하는가* → 씬 전역 (Material 에 store 시 N×Apply 비효율)
@@ -786,11 +788,11 @@ Lock 중 CameraController 의 yaw/pitch 갱신은 *상태로만 보존* — 시�
 
 **ddd OCP 함의** — 새 셰이더 추가 시:
 - Material properties bag 은 *자동 흡수* (셋업 코드만 `SetFloat / SetTexture` 호출 추가).
-- builtin transient (transform/light) 는 RenderSystem 이 *이미 모든 program 에 송신* — 추가 작업 0.
+- builtin transient (transform/light) 는 SceneRenderer 이 *이미 모든 program 에 송신* — 추가 작업 0.
 
 ### 4.6 Lighting 셰이더 schema
 
-**`RenderSystem::SendLightUniforms`** 가 매 프레임 모든 Program 에 송신하는 uniform:
+**`SceneRenderer::SendLightUniforms`** 가 매 프레임 모든 Program 에 송신하는 uniform:
 
 ```glsl
 // DirLight
@@ -823,7 +825,206 @@ uniform mat4 uModel, uView, uProj;
 
 셰이더 schema 가 cache 에 없는 uniform 은 송신 안 됨 — *silent skip*. 셰이더가 raster 만 하면 light 무시 가능.
 
-**Light 부족 슬롯**: enabled = 0 으로 강제 (RenderSystem 이 자동).
+**Light 부족 슬롯**: enabled = 0 으로 강제 (SceneRenderer 이 자동).
+
+---
+
+### 4.7 Pass 컨벤션 — Material 의도 선언
+
+**핵심 철학**: Material 은 *"어떤 종류의 렌더링인가"* 를 한 줄로 선언한다. 그 한 줄이 *queue 정수 + 7 GL state* 의 **진실의 원천**.
+
+#### `Pass::Kind` enum — Unity Render Queue 정통
+
+```cpp
+// src/material/pass.h
+namespace Pass {
+    enum class Kind : int {
+        Opaque         = 2000,   // 일반 불투명
+        AlphaTest      = 2450,   // discard 사용 — Unity Cutout
+        Skybox         = 2500,   // depthFunc LEQUAL + cullFront 강제
+        Transparent    = 3000,   // alpha blend + depth write off + cull off
+        OutlineVisible = 4000,   // Stencil-masked outline — DepthFunc=LEQUAL (가려질 수 있음)
+        OutlineXRay    = 4001,   // Stencil-masked outline — DepthFunc=GREATER (벽 뒤만 — wallhack)
+    };
+
+    // GPU 파이프라인 고정 단계 설정값 묶음 — DirectX12 PIPELINE_STATE_DESC / Vulkan VkPipeline*StateCreateInfo 정통.
+    // (GoF State Pattern 의 행위 클래스와 무관 — 데이터 구조)
+    struct PipelineState {
+        bool   DepthTest;     // GL_DEPTH_TEST on/off
+        bool   DepthWrite;    // glDepthMask
+        GLenum DepthFunc;     // GL_LESS / GL_LEQUAL / GL_GREATER ...
+        GLenum CullMode;      // 0 = cull off, GL_BACK / GL_FRONT
+        bool   BlendEnable;
+        GLenum BlendSrc, BlendDst;
+        int    QueueLayer;    // = (int)Kind, MeshPassProcessor sort 키
+
+        // Stencil (StencilEnable=false 면 나머지 무시 — Outline 등 특수 효과 전용)
+        bool   StencilEnable;
+        GLenum StencilFunc;       // GL_NOTEQUAL 이 Outline 정통
+        GLint  StencilRef;
+        GLuint StencilReadMask;
+        GLenum StencilOpSFail, StencilOpDPFail, StencilOpDPPass;
+        GLuint StencilWriteMask;  // 0x00 = 읽기 전용
+    };
+
+    PipelineState DefaultPipelineStateOf(Kind);   // Kind 별 GL state 자동 (Depth 4 + Cull 1 + Blend 3 + Stencil 8)
+    int   QueueOf(Kind, int offset = 0); // 도출형
+    constexpr int TRANSPARENT_THRESHOLD = 2500;
+    bool  IsTransparentQueue(int q);     // q >= 2500
+}
+```
+
+#### `Material` — 진실의 원천 단일화
+
+```cpp
+class Material {
+    Pass::Kind mPassKind = Pass::Kind::Opaque;   // private — 진실의 원천
+public:
+    Material& SetPass(Pass::Kind k);   // fluent setter
+    Pass::Kind GetPass() const;
+    int  GetQueueLayer() const;        // = Pass::QueueOf(mPassKind), alias 도출
+    // ... QueueLayer 멤버 / SetQueueLayer 없음 — public 조작 금지
+};
+```
+
+**금기**: Material 에 `int QueueLayer` 멤버를 두지 말 것. `GetPass()` 와 `GetQueueLayer()` 가 *분리* 되면 두 진실의 원천 충돌 (e.g., `SetPass(Transparent)` 했는데 `QueueLayer=2000` 인 상태 가능).
+
+#### `MeshRenderer::QueueOffset` — Renderer 인스턴스 미세 조정 (Unity 정통)
+
+```cpp
+struct MeshRenderer : public Scene::Component {
+    Material* Material = nullptr;
+    int       QueueOffset = 0;   // Material.GetQueueLayer() 에 더해질 offset
+    // Unity Renderer.sortingOrder 정통 — 같은 Material 의 인스턴스 간 미세 순서
+};
+```
+
+**SceneRenderer 에서**:
+```cpp
+cmd.queueLayer = mr->Material->GetQueueLayer() + mr->QueueOffset;
+```
+
+**사용 예** — Outline 이 Box 다음 그려져야 할 때 (같은 Material 다중 인스턴스):
+```cpp
+outline.Get<MeshRenderer>().QueueOffset = 5;   // Box 의 자연 순서 + 5 = 늦게
+```
+
+#### 직교 축 분리 (Material 의도 vs Renderer 인스턴스)
+
+| 축 | 결정자 | 의미 | 예 |
+|---|---|---|---|
+| Pass.Kind | Material | *"어떤 종류"* (queue 큰 분류 + GL state) | Opaque / Transparent / Skybox |
+| QueueOffset | MeshRenderer | *"같은 종류 안에서 인스턴스 순서"* | +5 (Outline 후행) |
+
+#### 정통 엔진 비교
+
+| 엔진 | 변수 수 | 컨벤션 |
+|---|---|---|
+| Unity | 3 (Pass + Queue + sortingOrder) | 분리 (Material.renderQueue 직접 조작 가능) |
+| Unreal / Filament / Cocos | 2 (BlendMode + sortBias) | 통합 (BlendMode → queue 자동) |
+| Bevy | 1 (alpha_mode) | 완전 도출 |
+
+**우리 선택**: 2변수 (`Material.PassKind` private + `MeshRenderer.QueueOffset`) — Filament/Unreal/Cocos 정통.
+
+#### `MeshPassProcessor` — Pass.Kind 별 sort 방향 분기
+
+```cpp
+// SortMultiStage
+if (cmd.queueLayer < Pass::TRANSPARENT_THRESHOLD)
+    // Opaque: program → material → depth front-to-back (캐시 효율)
+else
+    // Transparent: depth back-to-front (overdraw 정렬)
+```
+
+Unity TransparencySortMode 정통 — queue 2500 이 분기 기준.
+
+#### 자동 적용 GL state — `Pass::DefaultPipelineStateOf` 표
+
+| Kind | DepthTest | DepthWrite | DepthFunc | CullMode | Blend (Src/Dst) | Stencil |
+|---|---|---|---|---|---|---|
+| Opaque | on | on | GL_LEQUAL | GL_BACK | off | off |
+| AlphaTest | on | on | GL_LEQUAL | GL_BACK | off | off |
+| Skybox | on | off | **GL_LEQUAL** | **GL_FRONT** | off | off |
+| Transparent | on | **off** | GL_LEQUAL | **0 (off)** | **on** (SRC_ALPHA / ONE_MINUS_SRC_ALPHA) | off |
+| **OutlineVisible** | on | **off** | GL_LEQUAL | GL_BACK | off | **NOTEQUAL, ref=1, WriteMask=0x00 (read-only)** |
+| **OutlineXRay** | on | off | **GL_GREATER** | GL_BACK | off | NOTEQUAL, ref=1, WriteMask=0x00 |
+
+**기본값의 무게** — Pass.Kind 가 *대부분의 정상 사용 case 를 기본값으로 흡수* 한다. Transparent 의 `CullMode = 0` 은 Window 뒷면도 알파 블렌딩 되도록 (정면/뒷면 직교).
+
+#### Outline 의 2-Pass 컨벤션
+
+`OutlineVisible` / `OutlineXRay` 는 **outline draw pass (Pass 2)** 의 state. 앞에 *stencil write pass (Pass 1)* 가 필요:
+
+| Pass | Kind | StencilOpDPPass | StencilFunc | WriteMask | 역할 |
+|---|---|---|---|---|---|
+| 1. Stencil Write | `Opaque` + MeshRenderer override | `GL_REPLACE` | `GL_ALWAYS, 1` | `0xFF` | 원래 mesh 를 그리며 stencil=1 기록 |
+| 2. Outline Draw | `OutlineVisible` 또는 `OutlineXRay` | `GL_KEEP` (default) | `GL_NOTEQUAL, 1` | `0x00` | scale-up 한 mesh 를 stencil != 1 인 곳에만 |
+
+Pass 1 의 stencil write 활성화는 *MeshRenderer override* 책임 — Outline 효과 전용 객체에만 적용하기 위함 (모든 Opaque 가 stencil 쓰면 낭비).
+
+**X-Ray 하이브리드** (FPS 정통):
+```cpp
+auto* normalOutline = renderer.AddOutline(Kind::OutlineVisible, /*color=*/brightCyan);
+auto* xrayOutline   = renderer.AddOutline(Kind::OutlineXRay,    /*color=*/dimRed);
+// → 벽 앞: cyan 윤곽선만 보임
+// → 벽 뒤: red 윤곽선만 보임 (벽을 투시한 듯)
+```
+
+**주의 — QueueLayer 4000+ 의 정렬 방향**: `IsTransparentQueue(4000) = true` 라 *back-to-front* 정렬됨. Outline 끼리만 영향 (Outline 간 z 순서는 거의 의미 없음). 필요하면 future tune 으로 QueueLayer 2100/2101 로 옮겨 front-to-back 정렬 회복 가능 (Unity Render Queue Geometry+1 정통).
+
+#### MeshRenderer 의 GL state override (선택)
+
+```cpp
+struct MeshRenderer {
+    StencilState  Stencil;        // Outline 등 stencil 사용 시
+    DepthTestMode DepthTest;      // Pass 기본값 override
+    bool          DepthWrite;     // 同
+};
+```
+
+`MeshPassProcessor::Process` 가 *Pass.Kind 기본 → MeshRenderer override* 순으로 적용. 일반 use case 는 Pass.Kind 한 줄로 끝.
+
+---
+
+### 4.8 Retina HiDPI / Resize 호환
+
+**문제**: macOS Retina 에서 *logical size ≠ physical framebuffer size*.
+
+- `glfwSetWindowSizeCallback` (sb7 의 `onResize`) → **logical size** 전달 (e.g., 1600×1200 → 800×600)
+- `glViewport` / FBO 크기 / Camera.Aspect → **physical framebuffer size** 가 정답
+
+**증상**: resize 후 화면이 *좌하단 작게 표시* (800×600 만 그려지고 나머지 black).
+
+**fix 패턴** — sb7 onResize 안에서 `glfwGetFramebufferSize` 로 physical 변환:
+
+```cpp
+void onResize(int /*logicalW*/, int /*logicalH*/) override {
+    int w = 0, h = 0;
+    glfwGetFramebufferSize(window, &w, &h);
+    if (w <= 0 || h <= 0) return;
+    sb7::application::onResize(w, h);          // sb7 의 info.windowWidth 갱신
+    glViewport(0, 0, w, h);
+
+    // 모든 카메라 aspect 재계산
+    for (auto* cam : mCameras) cam->Aspect = float(w) / float(h);
+    // SceneFB / PostFX chain 재생성
+    RecreateFramebuffers(w, h);
+}
+```
+
+**`render()` 에서 매 프레임 갱신** (resize 콜백 누락 가드):
+
+```cpp
+void render(double /*t*/) override {
+    int w, h; glfwGetFramebufferSize(window, &w, &h);
+    DeviceContext::Get().SetDefaultTargetSize(w, h);
+    // ...
+}
+```
+
+**금기**: `info.windowWidth/Height` 를 그대로 `glViewport` 에 넘기지 말 것 (logical 이라 Retina 에서 1/4 영역만 그림).
+
+**근거** — sb7 의 한계 (`extern/sb7code` 절대 수정 금지) 를 *챕터 측 패턴* 으로 우회. `glfwGetFramebufferSize` 는 GLFW 가 보장하는 cross-platform physical 사이즈.
 
 ---
 
@@ -835,7 +1036,7 @@ uniform mat4 uModel, uView, uProj;
 ```cpp
 #include <sb7.h>   // 반드시 *맨 앞* (gl3w + glcorearb typedef 순서)
 #include "scene/compound_actor.h"
-#include "render/render_system.h"
+#include "render/scene_renderer.h"
 // ...
 
 class my_app : public sb7::application {
@@ -847,7 +1048,7 @@ class my_app : public sb7::application {
     void render(double t) override { Director::Get().Update(dt); mRenderSys.Render(); }
     void shutdown() override { Director::Get().Exit(); }
     void onResize(int w, int h) override { /* glViewport + Camera.Aspect 갱신 */ }
-    SJH::RenderSystem mRenderSys;
+    SJH::SceneRenderer mRenderSys;
 };
 DECLARE_MAIN(my_app);
 ```
@@ -922,14 +1123,16 @@ cmake --build --preset msvc-2022 --target <chapter>
 | Sprint | 핵심 변경 |
 |---|---|
 | SP1 | Shader/Program 리소스 통합 |
-| SP2 | RenderContext — `glUseProgram` 단일 owner |
-| SP3 | Actor + Component + Scene Graph + RenderSystem + RenderQueue |
+| SP2 | DeviceContext — `glUseProgram` 단일 owner |
+| SP3 | Actor + Component + Scene Graph + SceneRenderer + MeshPassProcessor |
 | SP3.5 | Director::ActiveCamera + Camera::InverseAffine + Aspect setter |
 | SP4 | Multi-pass — Camera::TargetFramebuffer + Depth + CullingMask + Layer / postfx_demo |
-| SP5 | Light Component 화 (DirLight/PointLight/SpotLight) + RenderSystem 의 light 수집/송신 |
-| SP6 | UniformCache 분리 + Program Observer 패턴 + Material properties bag + Uniforms 자유함수 family + MaterialApplier 알고리즘 단일화 (Cache outer + Type dispatch + Material lookup) |
+| SP5 | Light Component 화 (DirLight/PointLight/SpotLight) + SceneRenderer 의 light 수집/송신 |
+| SP6 | UniformCache 분리 + Program Observer 패턴 + Material properties bag + Uniforms 자유함수 family + PropertyBlockSetter 알고리즘 단일화 (Cache outer + Type dispatch + Material lookup) |
 | SP7 | KeyboardInput<T> + MouseInput + CameraController (Transform-based + Builder Pattern) |
 | SP8 | Compound Actor 컨벤션 (`compound_actor.h` free factory) + Camera Transform 강제 의존 + TargetLock (Cinemachine Composer 정통) + Transform 6 방향 vector + Light 컨벤션 통일 (-Z forward) + migrate_demo 통합 챕터 |
+| SP-Pass | `Pass::Kind` enum (Opaque/AlphaTest/Skybox/Transparent — Unity Render Queue 정수) + `Pass::PipelineState` 7 GL state 자동 적용 + `Material.PassKind` private (진실의 원천 단일화) + `MeshRenderer.QueueOffset` 직교 축 분리 (Unity Renderer.sortingOrder 정통) + `MeshPassProcessor` Pass.Kind 별 sort 방향 분기 (queue 2500 이 Opaque/Transparent 경계) |
+| SP-Retina | sb7 onResize → `glfwGetFramebufferSize` 로 physical FB 변환 패턴 + `render()` 매 프레임 갱신 (resize 콜백 누락 가드) — macOS Retina 800×600 좌하단 버그 해결 |
 
 ---
 
