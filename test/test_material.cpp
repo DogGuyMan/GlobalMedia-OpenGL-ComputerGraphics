@@ -9,7 +9,8 @@
  *  본 테스트 카테고리 (SP6):
  *  - Properties bag default 상태 (모든 map 비어 있음).
  *  - SetFloat/SetVec3/SetTexture 자유함수 — bag 에 store.
- *  - Clone (Unity MID 패턴) — properties 복사 + Program reference (Observer 패턴은 별도 테스트).
+ *  - Material Instance (Unreal MID 정통) — `ResourceRegistry::CreateMaterialInstanceFrom` 으로 Clone.
+ *    `Material::Clone` 은 private + friend ResourceRegistry — 외부 직접 호출 컴파일 차단.
  *  - 동일 키 overwrite (Unity 동작).
  */
 
@@ -18,6 +19,7 @@
 
 #include "material/material.h"
 #include "material/material_uniforms.h"
+#include "resource_registry/resource_registry.h"
 
 // 센티넬 포인터 — Material 은 저장/반환만 하고 deref 안 함.
 static const SJH::Texture* const kDiffuseA = reinterpret_cast<const SJH::Texture*>(0xD1FFA);
@@ -96,31 +98,54 @@ TEST_CASE("Uniforms::SetTexture — properties bag 에 TextureBinding store", "[
     REQUIRE(specularBinding.Unit == 1);
 }
 
-TEST_CASE("Material::Clone — properties 복사 + 독립 mutation", "[material][clone]")
+TEST_CASE("Material Instance via ResourceRegistry — properties 복사 + Unreal MID 메타 + 독립 mutation",
+          "[material][instance][resource_registry]")
 {
-    auto a_uptr = SJH::Material::Create();
-    auto& a = *a_uptr;
+    auto& reg = SJH::ResourceRegistry::Get();
+    reg.Clear(); // 다른 테스트와의 키 충돌 방지.
 
-    SJH::Uniforms::SetFloat  (a, "material.shininess",  64.0f);
-    SJH::Uniforms::SetTexture(a, "material.diffuse",    kDiffuseA, /*unit*/ 0);
-    SJH::Uniforms::SetVec3   (a, "tint", vmath::vec3(1.0f, 0.0f, 0.0f));
+    // ── shared 원본 ─────────────────────────────────────
+    auto *a = reg.CreateSharedMaterial("test_mat_shared");
+    REQUIRE(a != nullptr);
+    REQUIRE_FALSE(a->IsInstance);
+    REQUIRE(a->OriginalMaterial == nullptr);
 
-    auto b_uptr = a.Clone();
-    auto& b = *b_uptr;
+    SJH::Uniforms::SetFloat  (*a, "material.shininess",  64.0f);
+    SJH::Uniforms::SetTexture(*a, "material.diffuse",    kDiffuseA, /*unit*/ 0);
+    SJH::Uniforms::SetVec3   (*a, "tint", vmath::vec3(1.0f, 0.0f, 0.0f));
 
-    // Clone — 값 복제.
-    REQUIRE(b.Properties.Floats["material.shininess"] == 64.0f);
-    REQUIRE(b.Properties.Textures["material.diffuse"].Tex  == kDiffuseA);
-    REQUIRE(b.Properties.Textures["material.diffuse"].Unit == 0);
-    REQUIRE_THAT(b.Properties.Vec3s["tint"][0], WithinAbs(1.0f, 1e-6f));
+    // ── instance (Unreal `UMaterialInstanceDynamic` 정통) ─
+    // `Material::Clone` 은 private — public 진입점은 ResourceRegistry::CreateMaterialInstanceFrom.
+    auto *b = reg.CreateMaterialInstanceFrom("test_mat_instance", a);
+    REQUIRE(b != nullptr);
 
-    // b 변경이 a 에 영향 없음.
-    SJH::Uniforms::SetFloat(b, "material.shininess", 2.0f);
-    SJH::Uniforms::SetVec3 (b, "tint", vmath::vec3(0.0f, 1.0f, 0.0f));
+    // Instance 메타 — Unreal `UMaterialInstanceDynamic::Parent` 검증.
+    REQUIRE(b->IsInstance);
+    REQUIRE(b->OriginalMaterial == a);
+    REQUIRE(b->GetRootOriginal() == a); // direct parent 가 root.
 
-    REQUIRE_THAT(a.Properties.Floats["material.shininess"], WithinAbs(64.0f, 1e-6f));
-    REQUIRE_THAT(a.Properties.Vec3s["tint"][0],             WithinAbs(1.0f,  1e-6f));
-    REQUIRE_THAT(b.Properties.Vec3s["tint"][1],             WithinAbs(1.0f,  1e-6f));
+    // Properties 복사 — 값 복제.
+    REQUIRE(b->Properties.Floats["material.shininess"] == 64.0f);
+    REQUIRE(b->Properties.Textures["material.diffuse"].Tex  == kDiffuseA);
+    REQUIRE(b->Properties.Textures["material.diffuse"].Unit == 0);
+    REQUIRE_THAT(b->Properties.Vec3s["tint"][0], WithinAbs(1.0f, 1e-6f));
+
+    // b 변경이 a 에 영향 없음 (독립 mutation).
+    SJH::Uniforms::SetFloat(*b, "material.shininess", 2.0f);
+    SJH::Uniforms::SetVec3 (*b, "tint", vmath::vec3(0.0f, 1.0f, 0.0f));
+
+    REQUIRE_THAT(a->Properties.Floats["material.shininess"], WithinAbs(64.0f, 1e-6f));
+    REQUIRE_THAT(a->Properties.Vec3s["tint"][0],             WithinAbs(1.0f,  1e-6f));
+    REQUIRE_THAT(b->Properties.Vec3s["tint"][1],             WithinAbs(1.0f,  1e-6f));
+
+    // 중복 키 거부 — 같은 인스턴스 키 재요청은 nullptr.
+    REQUIRE(reg.CreateMaterialInstanceFrom("test_mat_instance", a) == nullptr);
+
+    // Find* 조회.
+    REQUIRE(reg.FindSharedMaterial("test_mat_shared")   == a);
+    REQUIRE(reg.FindMaterialInstance("test_mat_instance") == b);
+
+    reg.Clear(); // 테스트 격리 — 다음 TEST_CASE 가 깨끗한 registry 보장.
 }
 
 TEST_CASE("Material — 4 타입 동시 store / 독립 map 검증", "[material][properties][multi]")

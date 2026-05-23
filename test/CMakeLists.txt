@@ -186,12 +186,15 @@ target_link_libraries(test_gl_validate PRIVATE
 target_compile_features(test_gl_validate PRIVATE cxx_std_17)
 catch_discover_tests(test_gl_validate)
 
-#  material 모듈 — Material 값 클래스 회귀 (default values + setter 불변식 + Clone)
+#  material 모듈 — Material 값 클래스 회귀 (default + setter + Instance via ResourceRegistry).
 # GL context 불필요 — Material 은 Texture*/Program* 를 저장/반환만 함.
+# SJH::resource_registry — `Material::Clone` 이 private + friend ResourceRegistry 이므로
+#                          인스턴스 테스트는 `CreateMaterialInstanceFrom` 경로로만 진행 (SSoT 강제).
 add_executable(test_material test_material.cpp)
 target_link_libraries(test_material PRIVATE
     Catch2::Catch2WithMain
-    SJH::material   # "material/material.h" 접근
+    SJH::material           # "material/material.h" 접근
+    SJH::resource_registry  # "resource_registry/resource_registry.h" — Clone 공개 진입점
 )
 target_compile_features(test_material PRIVATE cxx_std_17)
 catch_discover_tests(test_material)

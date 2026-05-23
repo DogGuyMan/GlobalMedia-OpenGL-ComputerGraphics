@@ -1,39 +1,35 @@
 /**
  * @file material.h
- * @brief Unity `material.SetXxx` 정통 — 셰이더 schema 무관 properties bag.
+ * @brief Unity Material 정통 — *셰이더 의도 선언* + *컨텐츠 properties bag* + *Instance metadata*.
  *
  * @details
- *  ### 핵심 철학 (EngineAPI §3.7 / §4.3 / §4.5)
- *  Material 은 **"이 instance 가 어떤 컨텐츠 / 어떤 종류의 렌더링인가"** 만 선언한다.
- *  셰이더 schema 는 `Program::UniformCache` 가, GL 송신은 `PropertyBlockSetter::Set` 가 담당 —
- *  *책임 3분할 (값 / 스키마 / 송신)* 로 OCP 확보.
+ *  ### 구성 4 요소 (책임 분할)
+ *  - `mPassKind` — *어떤 종류의 렌더링* (Pass::Kind, GL state 자동 도출 — SSoT)
+ *  - `mProgram` (비소유) — 셰이더 schema 출처 (Observer 등록)
+ *  - `Properties` (`MaterialPropertyBlock`) — *셰이더 무관 typed properties*
+ *  - `IsInstance` + `OriginalMaterial` — Clone 추적 (Unreal `UMaterialInstanceDynamic::Parent` 정통)
  *
- *  ### 구성 (3 reference + 1 enum + 6 typed map)
- *  - **Properties bag**: name 키 기반 typed-map (Float/Int/Vec3/Vec4/Mat4/Texture) —
- *    `SJH::Uniforms::Set*(Material&, ...)` 가 *store 만*. 셰이더가 안 받는 properties 는 silent skip.
- *  - **Program 참조** (비소유) + **UniformCache 참조** — `SetProgram(p)` 가 Observer 등록 + cache 단축 lookup.
- *
- *  ### Observer cascade — dangling 구조적 차단
- *  	Properties bag 은 *유지* — 재바인딩 가능 (Unity 정통).
- *  1. `Program::~Program`
- *  2. 등록된 모든 Material 의 `OnProgramReleased(this)
- *  3. `mProgram = nullptr` + cache clear.
- *
- *  ### 2-layer uniform 송신 (§4.5) — Material 의 책임 경계
- *  | 데이터 | 담당 | 비고 |
+ *  ### 정통 매핑
+ *  | 우리 | Unity | Unreal |
  *  |---|---|---|
- *  | 사용자 컨텐츠 (color/texture/shininess/...) | **Material 한정** | properties bag 에 store |
- *  | uModel / uView / uProj / viewPos / 광원 | **씬 전역** | MeshPassProcessor / SceneRenderer 직접 송신 |
+ *  | `CreateSharedMaterial` | `sharedMaterial` getter | `UMaterialInterface` |
+ *  | `CreateMaterialInstanceFrom` + auto Clone | `material` getter (자동 Clone) | `CreateDynamicMaterialInstance` |
+ *  | `IsInstance` / `OriginalMaterial` | Inspector "(Instance)" 표시 | `Parent` 멤버 |
  *
- *  *DrawCommand 마다 변하거나 모든 Material 공통* 인 uniform 은 Material 책임 아님 — SSoT 위반 회피.
+ *  ### SSoT 강제 — *Material 인스턴스 생성의 유일한 진입점*
+ *  - `Material::Create()` — 공유 원본 (ResourceRegistry 가 owner)
+ *  - `ResourceRegistry::CreateMaterialInstanceFrom(key, template)` — *유일한 Clone 호출자*
+ *  - `Clone()` 은 **private + friend ResourceRegistry** — 외부 직접 호출 컴파일 차단 (책임 분산 방지)
+ *
+ *  자세한 흐름: `EngineAPI.md` §3.7 / §4.3, `architecture.md` §11.3.
  */
 #ifndef __SJH_MATERIAL_H__
 #define __SJH_MATERIAL_H__
 
 #include "GL/gl3w.h"
 #include "common/common.h"
-#include "material/material_property_block.h" // Unity MaterialPropertyBlock 정통 — typed properties bag.
-#include "material/pass.h"                    // Pass::Kind / DefaultPipelineStateOf — Material 의 렌더링 의도 선언.
+#include "material/material_property_block.h"
+#include "material/pass.h"
 #include "program/program.h"
 #include <string>
 #include <unordered_map>
@@ -41,28 +37,25 @@
 
 namespace SJH
 {
-	class Texture; // 비소유 관찰자.
+	class Texture;
+	class ResourceRegistry; // friend — Clone() 의 유일한 호출자.
 
 	CLASS_PTR(Material);
 
-	/// @brief Unity Material 정통 — Pass.Kind + Program 참조 + MaterialPropertyBlock 보유.
-	/// @details 책임 분할 (SP-Material-Split):
-	///   - **본 클래스**: 메타 정보 (Program 참조 + Pass.Kind) + PropertyBlock 1 개 owner
-	///   - **`MaterialPropertyBlock`**: 셰이더 무관 typed properties (Floats/Vec3s/Textures/...)
-	///   - **`PropertyBlockSetter`**: block + Program → GL 송신 (Applier 패턴)
+	/// @brief Unity Material 정통 — Pass.Kind (SSoT) + Program 참조 + PropertyBlock + Instance metadata.
 	class Material
 	{
 	  public:
-		/// @brief 텍스처 바인딩 — `MaterialPropertyBlock::TextureBinding` forwarding alias (외부 호환).
+		/// @brief 텍스처 바인딩 — `MaterialPropertyBlock::TextureBinding` forwarding alias.
 		using TextureBinding = MaterialPropertyBlock::TextureBinding;
 
-		// === Factory ==========================================================
+		// ── Factory ───────────────────────────────────────────
 		static MaterialUPtr Create()
 		{
 			return MaterialUPtr(new Material());
 		}
 
-		// === Lifetime — Observer cascade ====================================
+		// ── Lifetime (Observer cascade — Program::~Program 가 OnProgramReleased 호출) ──
 		~Material()
 		{
 			if (mProgram)
@@ -85,9 +78,9 @@ namespace SJH
 		}
 
 		Material(Material &&) = delete;
-		
 		Material &operator=(Material &&) = delete;
 
+		// ── Program 참조 (Observer 등록) ───────────────────────
 		/// @brief Program 주입. 이전 Program 은 Unregister, 새 Program 에 Register + cache 참조.
 		Material &SetProgram(const Program *program)
 		{
@@ -100,17 +93,10 @@ namespace SJH
 				mProgram->RegisterMaterial(this);
 			return *this;
 		}
-		const Program *GetProgram() const
-		{
-			return mProgram;
-		}
-		const UniformCache *GetCache() const
-		{
-			return mCache;
-		}
+		const Program *GetProgram() const { return mProgram; }
+		const UniformCache *GetCache() const { return mCache; }
 
-		/// @brief Program::~Program 의 cascade — mProgram + cache reference clear.
-		/// @details Properties bag 은 *유지* — 다른 Program 으로 재바인딩 가능 (Unity 정통).
+		/// @brief Program::~Program cascade 진입점 — Properties bag 은 *유지* (다른 Program 재바인딩 가능).
 		void OnProgramReleased(const Program *releasing)
 		{
 			if (mProgram == releasing)
@@ -120,53 +106,65 @@ namespace SJH
 			}
 		}
 
-		/// @brief Unity MaterialPropertyBlock 정통 — 6 typed maps 통합 보유.
-		/// @details 외부 접근: `mat.Properties.Floats["..."]` / `mat.Properties.Textures["..."]`.
-		///          Setter family (`Uniforms::Set*(Material&, ...)`) 가 내부적으로 이 block 에 store.
+		// ── Properties bag (Unity MaterialPropertyBlock 정통) ─
+		/// @brief 외부 접근: `mat.Properties.Floats["..."]`. Setter family (`Uniforms::Set*(Material&, ...)`) 가 store.
 		MaterialPropertyBlock Properties;
 
-		/// @brief Pass 종류 변경 — (SetProgram 처럼 chain 가능).
-		/// @details MeshPassProcessor 가 이 값 보고 queue/blend/depth/cull 자동 적용.
-		///   기본 Opaque. Transparent / AlphaTest / Skybox 시 한 줄 호출:
-		///   `mat->SetPass(Pass::Kind::Transparent)` — depth write off + blend on + queue 3000 자동.
+		// ── Pass.Kind (GL state SSoT — Cocos technique 정통) ──
+		/// @brief Pass 종류 변경 — fluent setter. `SetPass(Transparent)` 한 줄로 depth/blend/queue 자동.
 		Material &SetPass(Pass::Kind k)
 		{
 			mPassKind = k;
 			return *this;
 		}
 
-		/// @brief 현재 Pass 종류.
-		Pass::Kind GetPass() const
-		{
-			return mPassKind;
-		}
+		Pass::Kind GetPass() const { return mPassKind; }
 
-		/// @brief 자동 도출 queue layer — `Pass::QueueOf(PassKind)` alias.
-		/// @details Material 단위 *절대 queue override* 는 *외부 API 미노출*
-		///   Filament/Unreal/Cocos 정통 — Material 측은 "어떤 종류" 만, queue 값은 *PassKind 의 파생*.
-		///   per-instance 미세 순서 조정은 `MeshRenderer::QueueOffset` 으로.
-		int GetQueueLayer() const
-		{
-			return Pass::QueueOf(mPassKind);
-		}
+		/// @brief 자동 도출 queue layer (`Pass::QueueOf(PassKind)` alias).
+		///   Filament/Unreal/Cocos 정통 — Material 은 "어떤 종류" 만, per-instance 미세 순서는 `MeshRenderer::QueueOffset`.
+		int GetQueueLayer() const { return Pass::QueueOf(mPassKind); }
 
-		/// @brief 공유 템플릿 -> per-use 가변 인스턴스 복제. Observer 등록 갱신.
-		MaterialUPtr Clone() const
+		// ── Instance metadata (Unreal `UMaterialInstanceDynamic::Parent` 정통, 읽기 전용) ──
+		/// @brief Clone 결과 인스턴스 여부. `Create()` 결과 = false, `Clone()` 결과 = true.
+		bool IsInstance = false;
+
+		/// @brief Clone 의 *직접 원본* — root 는 `GetRootOriginal()` 가 캐시.
+		/// @details
+		///   - `mutable` — 본인 슬롯은 `GetRootOriginal()` 경로 압축 캐시 쓰기를 위해
+		mutable const Material *OriginalMaterial = nullptr;
+
+		/// @brief Chain of Clones 의 *최상위 root* — direct parent 따라 거슬러 올라감.
+		///   첫 호출에 root 를 OriginalMaterial 슬롯에 *경로 압축* — 다음 호출은 O(1).
+		const Material *GetRootOriginal() const
 		{
-			return MaterialUPtr(new Material(*this));
+			const Material *p = this;
+			while (p->OriginalMaterial)
+				p = p->OriginalMaterial;
+			return this->OriginalMaterial = p; // 경로 압축 — mutable 슬롯에 cache.
 		}
 
 	  private:
 		Material() = default;
 
+		/// @brief 공유 템플릿 -> per-use 가변 인스턴스 복제. *private* — SSoT 강제.
+		/// @details `ResourceRegistry::CreateMaterialInstanceFrom` 만 호출 (friend).
+		MaterialUPtr Clone() const
+		{
+			auto clone = MaterialUPtr(new Material(*this));
+			clone->IsInstance = true;
+			clone->OriginalMaterial = this;
+			return clone;
+		}
+		friend class ResourceRegistry;
+
 		void CopyFrom(const Material &other)
 		{
-			Properties = other.Properties; // ★ MaterialPropertyBlock 통째로 복사 (6 typed map 자동)
+			Properties = other.Properties; // MaterialPropertyBlock 통째로 복사 (6 typed map 자동)
 			mPassKind = other.mPassKind;   // Pass 의도 — Clone 시 Transparent 유지.
 			mProgram = other.mProgram;
 			mCache = other.mCache;
 			if (mProgram)
-				mProgram->RegisterMaterial(this); // 새 인스턴스로 register
+				mProgram->RegisterMaterial(this);
 		}
 
 		void ReleaseProgram()
@@ -177,9 +175,9 @@ namespace SJH
 			mCache = nullptr;
 		}
 
-		Pass::Kind mPassKind = Pass::Kind::Opaque; ///< SetPass / GetPass / GetQueueLayer 가 모두 이 값 도출.
-		const Program *mProgram = nullptr;         ///< 비소유. SetProgram/Release/cascade 가 lifecycle 관리.
-		const UniformCache *mCache = nullptr;      ///< Program 의 cache 참조 — 셰이더 schema 단축 lookup.
+		Pass::Kind mPassKind = Pass::Kind::Opaque;
+		const Program *mProgram = nullptr;
+		const UniformCache *mCache = nullptr;
 	};
 } // namespace SJH
 

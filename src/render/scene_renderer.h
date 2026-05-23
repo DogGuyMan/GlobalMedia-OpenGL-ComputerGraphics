@@ -15,7 +15,7 @@ namespace SJH
     /// @brief Actor 트리 traverse -> MeshRenderer 수집 -> DrawCommand -> Queue Flush.
     /// @details per-frame 호출 (multi-pass 모드):
     ///   1. Scene::Root() 부터 DFS — 모든 Camera 컴포넌트 수집 (IsActive + IsEnabled)
-    ///   2. Camera::GetDepth() 오름차순 stable_sort (Unity Camera.depth 정통)
+    ///   2. Camera::GetDepth() 오름차순 
     ///   3. 각 Camera 마다 RenderWithCamera 1패스:
     ///      - Camera::GetTargetFramebuffer() 가 있으면 해당 FBO, 없으면 default backbuffer
     ///      - DeviceContext::BeginFrame(target) + Actor 트리 MeshRenderer 수집 + Queue Flush
