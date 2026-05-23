@@ -39,6 +39,7 @@
 #include <imgui_impl_glfw_gl3.h>
 
 #include "buffer/framebuffer.h"
+#include "common/layer.h"
 #include "input/keyboard_input.h"
 #include "input/mouse_input.h"
 #include "material/material_uniforms.h"
@@ -92,12 +93,6 @@ namespace
 
 	constexpr const char *kPostFXVertFile = "resources/shader/postprocess/postprocess.vs";
 
-	// PostFX 각 패스가 가지는 layer bit — SceneCamera 가 LAYER_SCENE(=1) 만 보므로
-	// 비트 1..5 사용. 각 PostFXCamera 는 자기 layer 만 culling mask 로 설정.
-	constexpr uint32_t kFxLayer(std::size_t i)
-	{
-		return static_cast<uint32_t>(std::size_t{1} << (i + std::size_t{1}));
-	}
 } // namespace
 
 class migrate_demo_app : public sb7::application
@@ -160,13 +155,13 @@ class migrate_demo_app : public sb7::application
 		                     static_cast<float>(info.windowHeight);
 		auto sceneCamActor = SJH::Scene::CreateCameraActor(K::Actors::SceneCamera,
 		                                                   45.0f, aspect, 0.1f, 100.0f);
-		sceneCamActor->SetLayer(MigrateDemo::Scene::LAYER_SCENE);
+		sceneCamActor->SetLayer(SJH::LAYER_SCENE);
 		sceneCamActor->GetTransform().Translate = vmath::vec3(0.0f, 2.5f, 8.0f);
 		sceneCamActor->GetTransform().EulerRot = vmath::vec3(-20.0f, 0.0f, 0.0f);
 
 		auto *sceneCam = sceneCamActor->GetComponent<SJH::Scene::Camera>();
 		sceneCam->Depth = 0;
-		sceneCam->CullingMask = MigrateDemo::Scene::LAYER_SCENE;
+		sceneCam->CullingMask = SJH::LAYER_SCENE;
 		sceneCam->SetTargetFramebuffer(mSceneFB.get());
 
 		auto *ctrl = sceneCamActor->AddComponent<MigrateDemo::Controller::CameraController>();
@@ -358,7 +353,7 @@ class migrate_demo_app : public sb7::application
 		for (std::size_t i = 0; i < kPostFXDefs.size(); ++i)
 		{
 			auto &def = kPostFXDefs[i];
-			const auto layer = kFxLayer(i);
+			const auto layer = SJH::LayerBit(i);
 
 			// Program — 이름충돌 방지 위해 prefix 부여.
 			const std::string progKey = std::string(K::PostFXKey::ProgramPrefix) + def.Name;

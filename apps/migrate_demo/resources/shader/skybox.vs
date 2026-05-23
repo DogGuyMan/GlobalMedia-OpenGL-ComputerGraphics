@@ -25,5 +25,5 @@ void main()
         mat4 viewNoTrans = mat4(mat3(uView));
 
         vec4 pos = uProj * viewNoTrans * vec4(aPos, 1.0);
-        gl_Position = pos.xyww; // ★ z = w -> perspective divide 후 NDC z = 1.0
+        gl_Position = pos.xyww; // * z = w -> perspective divide 후 NDC z = 1.0
 }

@@ -115,7 +115,7 @@
 [Low Orchestrator]    MeshPassProcessor    ── Unreal FMeshPassProcessor
 [Applier]             PropertyBlockSetter  ── Unity MaterialPropertyBlock
                       PipelineStateSetter  ── DX12 SetPipelineState
-[Primitive Wrapper]   DeviceContext        ── DX11 ID3D11DeviceContext ★
+[Primitive Wrapper]   DeviceContext        ── DX11 ID3D11DeviceContext *
 ```
 
 `DeviceContext` 는 **최하위 primitive 계층** — 그 위 모든 계층이 *DeviceContext 를 통해 GPU 와 통신*.

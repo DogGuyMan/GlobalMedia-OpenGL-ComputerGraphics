@@ -80,7 +80,7 @@ namespace SJH
     {
         const Program*       lastProg = nullptr;
         const Material*      lastMat  = nullptr;
-        PipelineStateSetter  stateSetter;  // ★ GL state machine 의 단일 owner — Process 내 한정.
+        PipelineStateSetter  stateSetter;  // * GL state machine 의 단일 owner — Process 내 한정.
 
         for (const auto& cmd : mItems)
         {
