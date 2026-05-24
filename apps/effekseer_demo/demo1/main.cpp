@@ -16,15 +16,6 @@
 #include <cstdint>
 #include <cstring>
 
-#ifdef __APPLE__
-#include <libgen.h>
-#include <limits.h>
-#include <mach-o/dyld.h>
-#include <stdint.h>
-#include <string.h>
-#include <unistd.h>
-#endif
-
 // 수정: index swap 제거 (직접 memcpy 의미)
 static Effekseer::Matrix44 ToEfkMat(const vmath::mat4 &m)
 {
@@ -47,16 +38,8 @@ class EfkDemo1 : public sb7::application
 		info.majorVersion = 4;
 		info.minorVersion = 1; // GLSL 410 정통 (memory: glsl_410_project_policy)
 
-#ifdef __APPLE__
-		char exePath[PATH_MAX] = {};
-		uint32_t exeSize = static_cast<uint32_t>(sizeof(exePath));
-		if (_NSGetExecutablePath(exePath, &exeSize) == 0)
-		{
-			char exePathCopy[PATH_MAX] = {};
-			strncpy(exePathCopy, exePath, PATH_MAX - 1);
-			chdir(dirname(exePathCopy));
-		}
-#endif
+		// macOS GLFW chdir workaround — SJH::common 흡수
+		SJH::ChdirToExecutableDir();
 	}
 
 	void startup() override

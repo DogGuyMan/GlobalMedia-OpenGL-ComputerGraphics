@@ -14,17 +14,10 @@
 #include <fmod/fmod_studio.hpp>
 #include <fmod/fmod_studio_common.h>
 
+#include "common/common.h" // SJH::ChdirToExecutableDir
+
 #include <cstdio>
 #include <cstdlib>
-
-#ifdef __APPLE__
-#include <libgen.h>      // dirname
-#include <limits.h>      // PATH_MAX
-#include <mach-o/dyld.h> // _NSGetExecutablePath
-#include <stdint.h>      // uint32_t
-#include <string.h>      // strncpy
-#include <unistd.h>      // chdir
-#endif
 
 namespace
 {
@@ -74,19 +67,8 @@ class audio_demo2_application : public sb7::application
 		info.majorVersion = 4;
 		info.minorVersion = 1;
 		std::snprintf(info.title, sizeof(info.title), "FMOD Studio Audio Demo2 — Custom Bank");
-#ifdef __APPLE__
-		// macOS GLFW 3.0.4 는 glfwInit() 시 _GLFW_USE_CHDIR 로 CWD 를
-		// 앱 번들 Resources 경로로 변경한다. bank 상대 경로를 살리기 위해
-		// 실행 파일 디렉토리로 되돌린다.
-		char exePath[PATH_MAX] = {};
-		uint32_t exeSize = static_cast<uint32_t>(sizeof(exePath));
-		if (_NSGetExecutablePath(exePath, &exeSize) == 0)
-		{
-			char exePathCopy[PATH_MAX] = {};
-			strncpy(exePathCopy, exePath, PATH_MAX - 1);
-			chdir(dirname(exePathCopy));
-		}
-#endif
+		// macOS GLFW chdir workaround — SJH::common 흡수 (bank 상대 경로 정합)
+		SJH::ChdirToExecutableDir();
 	}
 
 	// One-shot SFX 헬퍼 — create -> start -> release.
