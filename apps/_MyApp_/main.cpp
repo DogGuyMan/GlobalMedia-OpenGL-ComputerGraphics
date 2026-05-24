@@ -11,7 +11,8 @@
 #include <spdlog/spdlog.h>
 #include <vmath.h>
 
-#include "InputHandler/CameraController.h"
+#include "InputHandler/PlayerController.h"
+#include "InputHandler/TargetFollowableCameraController.h"
 #include "common/common.h"
 #include "material/material.h"
 #include "material/material_uniforms.h"
@@ -73,19 +74,16 @@ namespace TopdownShooter
 				return;
 			}
 
-			// === Material — Pass::AlphaTest (sprite frag discard) + Properties ===
 			auto *mat = reg.CreateSharedMaterial("billboard_player");
 			mat->SetProgram(prog);
-			mat->SetPass(SJH::Pass::Kind::AlphaTest); // depth ON, blend OFF, frag discard (spec §10.2)
+			mat->SetPass(SJH::Pass::Kind::AlphaTest);
 
-			// Atlas texture (UniformAtlas 가 SJH::Texture 위탁)
 			mat->Properties.Textures["uAtlas"] = {mAtlas.GetTexture(), /*unit=*/0};
-			// frame 0 uv rect
+
 			SJH::Uniforms::SetVec4(*mat, "uUvRect", mAtlas.GetUVRect(/*frameIdx=*/0));
 			SJH::Uniforms::SetFloat(*mat, "uFlipX", 1.0f);
 			SJH::Uniforms::SetVec4(*mat, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-			// === Camera Actor (compound factory) ===
 			int fbW = 0, fbH = 0;
 			glfwGetFramebufferSize(window, &fbW, &fbH);
 			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
@@ -93,30 +91,35 @@ namespace TopdownShooter
 
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
-			auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
+			auto camActor                      = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
 			camActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
-			camActor->GetTransform().EulerRot = vmath::vec3(-45.0f, 0.0f, 0.0f); // pitch (위에서 내려다봄)
-			auto *cam = camActor->GetComponent<SJH::Scene::Camera>();
-			camActor->AddComponent<Controller::CameraController>()
-			    ->SetKeyboardInput(&mKeyboard)
-			    .SetMouseInput(&mMouse)
+			camActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
+			auto *cam                          = camActor->GetComponent<SJH::Scene::Camera>();
+			// Camera Actor 의 follow 컨트롤러는 sprite 셋업 *후* SetFollowTarget 호출이 필요 — 변수 보관.
+			auto *camCtrl = camActor->AddComponent<Controller::TargetFollowableCameraController>();
+			camCtrl->SetMouseInput(&mMouse)
 			    .SetCamera(cam)
 			    .SetUp();
 			cam->SetTargetFramebuffer(nullptr);
 
 			mCameraActor = dir.Root().AddChild(std::move(camActor));
-			mCamera = cam;
+			mCamera      = cam;
 			dir.SetActiveCamera(cam);
 
-			// === 6. Sprite Actor + MeshRenderer Component ===
-			// Actor 의 Transform.Translate = 빌보드 center, Scale = 빌보드 size (셰이더 uModel 흡수)
-			auto spriteActor = std::make_unique<SJH::Scene::Actor>("PlayerSprite");
+			auto spriteActor                      = std::make_unique<SJH::Scene::Actor>("PlayerSprite");
 			spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-			spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
+			spriteActor->GetTransform().Scale     = vmath::vec3(1.0f, 1.0f, 1.0f);
 			spriteActor->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), mat);
+			spriteActor->AddComponent<Controller::PlayerController>()
+			    ->SetKeyboardInput(&mKeyboard)
+			    .SetMoveSpeed(0.05f)
+			    .SetUp();
 			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
 
-			// === 7. Director lifecycle (Camera + Sprite OnEnter 캐스케이드) ===
+			// Camera follow target — sprite Actor 가 root 의 child 로 등록된 후.
+			camCtrl->SetFollowTarget(mSpriteActor)
+			    .SetFollowOffset(vmath::vec3(0.0f, 5.0f, 5.0f));
+
 			dir.Enter();
 		}
 
@@ -124,7 +127,6 @@ namespace TopdownShooter
 		{
 			const float dt = static_cast<float>(SJH::DeltaTime(currentTime));
 
-			// Backbuffer resize 안전 — physical framebuffer 기준
 			int fbW = 0, fbH = 0;
 			glfwGetFramebufferSize(window, &fbW, &fbH);
 			if (!mDefaultTarget || mDefaultTarget->GetWidth() != fbW || mDefaultTarget->GetHeight() != fbH)
@@ -154,11 +156,6 @@ namespace TopdownShooter
 		void onKey(int key, int action) override
 		{
 			mKeyboard.Dispatch(key, action);
-			spdlog::info("Pressed {} {} {}", 
-				mCameraActor->GetTransform().Translate[0],
-				mCameraActor->GetTransform().Translate[1],
-				mCameraActor->GetTransform().Translate[2]
-			);
 		}
 
 		void onMouseButton(int button, int action) override
@@ -191,10 +188,10 @@ namespace TopdownShooter
 		SJH::MeshUPtr mPlane;
 		SJH::SceneRenderer mRenderSys;
 		SJH::RenderTargetUPtr mDefaultTarget;
-		SJH::Scene::Actor *mCameraActor = nullptr; // 비소유 — Director root child
-		SJH::Scene::Actor *mSpriteActor = nullptr; // 비소유
-		SJH::Scene::Camera *mCamera = nullptr;     // 비소유 — Camera Component
-		SJH::KeyboardInput<Controller::CameraController::Action> mKeyboard;
+		SJH::Scene::Actor *mCameraActor = nullptr;
+		SJH::Scene::Actor *mSpriteActor = nullptr;
+		SJH::Scene::Camera *mCamera = nullptr;
+		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;
 	};
 
