@@ -58,10 +58,11 @@ namespace SJH::Sprite
             return false;
         }
 
-        // === 4. 픽셀아트 매개변수 — Texture 의 default 는 LINEAR_MIPMAP_LINEAR/LINEAR. NEAREST 로 덮어쓰기. ===
+        // === 4. 픽셀아트 매개변수 — Texture 의 default (LINEAR_MIPMAP_LINEAR/LINEAR + CLAMP_TO_EDGE)
+        //        에 의존하지 않고 명시 — UniformAtlas 가 Texture 내부 default 와 분리. (Task 4 fixup follow-up) ===
         mTexture->Bind();
         mTexture->SetFilter(GL_NEAREST, GL_NEAREST);
-        // SetWrap default 는 이미 CLAMP_TO_EDGE/CLAMP_TO_EDGE (texture.cpp:82) — 추가 호출 불요.
+        mTexture->SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);   // 픽셀아트 — 인접 tile bleed 방지
 
         spdlog::info("[UniformAtlas] loaded {} ({}x{}, tile={}, {}x{} grid)",
                       path, w, h, tilePx, mCols, mRows);
