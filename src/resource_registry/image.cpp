@@ -1,11 +1,12 @@
 /**
  * @file image.cpp
- * @brief Image 정의 — stb_image 함수 호출 래퍼.
- * @note  @c STB_IMAGE_IMPLEMENTATION 매크로는 `src/sprite/uniform_atlas.cpp` 가 단일 owner (spec §B.5).
- *        본 파일은 stb_image 함수만 *호출* — symbol 정의는 SJH::sprite 가 흡수.
+ * @brief Image 정의 — stb_image implementation 을 *이 TU 에서만* 펼친다.
+ * @note  @c STB_IMAGE_IMPLEMENTATION 매크로는 프로젝트 전체에서 정확히 한 번만 정의되어야 한다
+ *        (단일 헤더 라이브러리 규칙 — 다른 .cpp 에서 중복 정의 시 링커 duplicate symbol).
  */
 #include "image.h"
 
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include <algorithm>
 #include <cstring>
