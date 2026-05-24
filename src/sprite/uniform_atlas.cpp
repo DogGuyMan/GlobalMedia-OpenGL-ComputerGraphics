@@ -1,7 +1,7 @@
-#define STB_IMAGE_IMPLEMENTATION   // ← stb_image 정의 책임 단일 위치 (spec 부록 B.5)
-#include "stb_image.h"
-
 #include "uniform_atlas.h"
+
+#include "resource_registry/image.h"   // SJH::Image::Load
+#include "GL/gl3w.h"
 #include <spdlog/spdlog.h>
 
 namespace SJH::Sprite
@@ -21,11 +21,6 @@ namespace SJH::Sprite
         return vmath::vec4(u, v, du, dv);
     }
 
-    UniformAtlas::~UniformAtlas()
-    {
-        Release();
-    }
-
     bool UniformAtlas::LoadFromPNG(const char* path, int tilePx)
     {
         if (!path || tilePx <= 0) {
@@ -34,38 +29,39 @@ namespace SJH::Sprite
             return false;
         }
 
-        stbi_set_flip_vertically_on_load(true);   // OpenGL V축 보정 (spec 부록 B.1)
-
-        int w = 0, h = 0, channels = 0;
-        unsigned char* pixels = stbi_load(path, &w, &h, &channels, 4);
-        if (!pixels) {
-            spdlog::error("[UniformAtlas] load failed: {} ({})",
-                           path, stbi_failure_reason());
+        // === 1. PNG 디코드 — SJH::Image 위임 (stbi_load + V축 보정 + RAII) ===
+        auto image = SJH::Image::Load(/*image_name=*/path, /*filepath=*/path);
+        if (!image) {
+            spdlog::error("[UniformAtlas] Image::Load failed: {}", path);
             return false;
         }
+
+        const int w = image->GetWidth();
+        const int h = image->GetHeight();
         if (w % tilePx != 0 || h % tilePx != 0) {
             spdlog::error("[UniformAtlas] atlas size {}x{} not divisible by tile {}",
                            w, h, tilePx);
-            stbi_image_free(pixels);
             return false;
         }
 
+        // === 2. grid metadata ===
         mAtlasWidth  = w;
         mAtlasHeight = h;
         mTileSize    = tilePx;
         mCols        = w / tilePx;
         mRows        = h / tilePx;
 
-        glGenTextures(1, &mTextureId);
-        glBindTexture(GL_TEXTURE_2D, mTextureId);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                      GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  // 픽셀아트
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        stbi_image_free(pixels);
+        // === 3. GL 텍스처 업로드 — SJH::Texture 위임 (glGenTextures + glTexImage2D + RAII) ===
+        mTexture = SJH::Texture::CreateTexture(image.get());
+        if (!mTexture) {
+            spdlog::error("[UniformAtlas] Texture::CreateTexture failed: {}", path);
+            return false;
+        }
+
+        // === 4. 픽셀아트 매개변수 — Texture 의 default 는 LINEAR_MIPMAP_LINEAR/LINEAR. NEAREST 로 덮어쓰기. ===
+        mTexture->Bind();
+        mTexture->SetFilter(GL_NEAREST, GL_NEAREST);
+        // SetWrap default 는 이미 CLAMP_TO_EDGE/CLAMP_TO_EDGE (texture.cpp:82) — 추가 호출 불요.
 
         spdlog::info("[UniformAtlas] loaded {} ({}x{}, tile={}, {}x{} grid)",
                       path, w, h, tilePx, mCols, mRows);
@@ -74,10 +70,7 @@ namespace SJH::Sprite
 
     void UniformAtlas::Release()
     {
-        if (mTextureId) {
-            glDeleteTextures(1, &mTextureId);
-            mTextureId = 0;
-        }
+        mTexture.reset();   // SJH::Texture::~Texture 가 glDeleteTextures 자동 호출
     }
 
     vmath::vec4 UniformAtlas::GetUVRect(int frameIdx) const
