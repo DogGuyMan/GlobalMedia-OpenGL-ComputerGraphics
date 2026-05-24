@@ -26,10 +26,50 @@ namespace SJH::Sprite
         Release();
     }
 
-    bool UniformAtlas::LoadFromPNG(const char* /*path*/, int /*tilePx*/)
+    bool UniformAtlas::LoadFromPNG(const char* path, int tilePx)
     {
-        // Task 2 에서 구현
-        return false;
+        if (!path || tilePx <= 0) {
+            spdlog::error("[UniformAtlas] invalid args: path={}, tilePx={}",
+                           path ? path : "(null)", tilePx);
+            return false;
+        }
+
+        stbi_set_flip_vertically_on_load(true);   // OpenGL V축 보정 (spec 부록 B.1)
+
+        int w = 0, h = 0, channels = 0;
+        unsigned char* pixels = stbi_load(path, &w, &h, &channels, 4);
+        if (!pixels) {
+            spdlog::error("[UniformAtlas] load failed: {} ({})",
+                           path, stbi_failure_reason());
+            return false;
+        }
+        if (w % tilePx != 0 || h % tilePx != 0) {
+            spdlog::error("[UniformAtlas] atlas size {}x{} not divisible by tile {}",
+                           w, h, tilePx);
+            stbi_image_free(pixels);
+            return false;
+        }
+
+        mAtlasWidth  = w;
+        mAtlasHeight = h;
+        mTileSize    = tilePx;
+        mCols        = w / tilePx;
+        mRows        = h / tilePx;
+
+        glGenTextures(1, &mTextureId);
+        glBindTexture(GL_TEXTURE_2D, mTextureId);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                      GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  // 픽셀아트
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        stbi_image_free(pixels);
+
+        spdlog::info("[UniformAtlas] loaded {} ({}x{}, tile={}, {}x{} grid)",
+                      path, w, h, tilePx, mCols, mRows);
+        return true;
     }
 
     void UniformAtlas::Release()
