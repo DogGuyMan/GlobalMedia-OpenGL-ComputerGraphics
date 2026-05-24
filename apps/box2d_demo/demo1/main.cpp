@@ -1,6 +1,7 @@
 #include "sb7.h"
 #include "box2d/box2d.h"
 #include "debug_draw.h"
+#include "common/common.h"
 
 // ---- Demo1: Tumbler ----
 // 회전하는 상자 안에 작은 박스를 800개까지 쏟아 넣는 시뮬레이션.
@@ -108,7 +109,7 @@ public:
             ++m_count;
         }
 
-        m_world.Step(1.0f / 60.0f, 8, 3);
+        m_world.Step(SJH::FixedTime(), 8, 3);
 
         m_draw.SetCamera(m_cam);
         m_world.DebugDraw();

@@ -34,6 +34,7 @@
 
 namespace SJH
 {
+	CLASS_PTR(RenderTarget);
 	/// @brief 그릴 대상의 *다형 추상* — Bind + Size 만 — 모든 구체가 따라야 할 *LSP 계약*.
 	/// @details
 	///   - **Bind 책임**: `glBindFramebuffer` + `glViewport` 를 *구체에 적합한 형태* 로 실행.

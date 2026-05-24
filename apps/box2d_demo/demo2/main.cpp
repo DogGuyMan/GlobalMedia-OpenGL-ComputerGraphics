@@ -1,6 +1,7 @@
 #include "sb7.h"
 #include "box2d/box2d.h"
 #include "debug_draw.h"
+#include "common/common.h"
 
 // ---- Demo2: Car ----
 // 휠 조인트(스프링 서스펜션)를 가진 자동차가 울퉁불퉁한 지형을 달린다.
@@ -169,7 +170,7 @@ public:
     {
         glClear(GL_COLOR_BUFFER_BIT);
 
-        m_world.Step(1.0f / 60.0f, 8, 3);
+        m_world.Step(SJH::FixedTime(), 8, 3);
 
         // 카메라가 자동차를 수평으로 추적
         if (m_car)

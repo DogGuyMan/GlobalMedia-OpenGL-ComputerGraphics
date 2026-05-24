@@ -17,6 +17,11 @@ namespace SJH::Uniforms
         mat.Properties.Ints[name] = v;
     }
 
+    void SetVec2(Material& mat, const char* name, const vmath::vec2& v)
+    {
+        mat.Properties.Vec2s[name] = v;
+    }
+
     void SetVec3(Material& mat, const char* name, const vmath::vec3& v)
     {
         mat.Properties.Vec3s[name] = v;

@@ -42,22 +42,45 @@ namespace SJH
 	std::optional<std::string> LoadTextFile(const std::string &filename);
 
 	/**
-	 * @brief Degree → Radian 변환. @c M_PI 기반.
+	 * @brief Degree -> Radian 변환. @c M_PI 기반.
 	 * @details @c constexpr 이므로 컴파일 타임 평가 가능. 그래픽스 코드 일반적인 @c float 정밀도.
 	 *          Effekseer 등 라디안 입력 API 호환용.
 	 */
-	constexpr inline float Deg2Rad(float deg) noexcept
+	constexpr inline float Deg2Rad(float deg)
 	{
 		return deg * static_cast<float>(M_PI) / 180.0f;
 	}
 
 	/**
-	 * @brief Radian → Degree 변환. @c M_PI 기반.
+	 * @brief Radian -> Degree 변환. @c M_PI 기반.
 	 * @details @c constexpr — 컴파일 타임 평가 가능. vmath::perspective 등 degree 입력 API 호환용.
 	 */
-	constexpr inline float Rad2Deg(float rad) noexcept
+	constexpr inline float Rad2Deg(float rad)
 	{
 		return rad * 180.0f / static_cast<float>(M_PI);
+	}
+
+	/**
+	 * @brief 직전 호출 시각과의 차이(초)를 반환.
+	 * @param currentTime sb7 가 넘겨주는 절대 시각(초). @c glfwGetTime() 기반.
+	 * @return 직전 호출 이후 경과한 시간(초). 첫 호출은 @c currentTime 그 자체.
+	 * @details @c static 내부 상태로 직전 시각을 보관 → 호출 지점이 여러 곳이면 서로 간섭한다.
+	 *          물리/파티클 등 결정적 스텝이 필요한 곳은 @ref FixedTime 사용.
+	 */
+	double inline DeltaTime(double currentTime) {
+		static double lastTime = 0;
+		double dt = currentTime - lastTime;
+		lastTime = currentTime;
+		return dt;
+	}
+
+	/**
+	 * @brief 고정 (=1/60초) 반환. @c constexpr.
+	 * @details Box2D @c b2World::Step / Effekseer 매니저 업데이트처럼 결정적 시뮬레이션이 필요한 곳에 사용.
+	 *          가변 dt 가 필요하면 @ref DeltaTime 사용.
+	 */
+	constexpr inline float FixedTime() {
+		return 1.0f / 60.0f;
 	}
 } // namespace SJH
 

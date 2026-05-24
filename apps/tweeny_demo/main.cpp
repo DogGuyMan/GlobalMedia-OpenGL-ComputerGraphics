@@ -7,144 +7,177 @@
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
 #include <sb7.h>
-#include <cstring>
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <memory>
+#include <random>
+#include <tweeny/tweeny.h>
+#include <utility>
+#include <vector>
+#include <vmath.h>
+
+#include "Constants.h"
+#include "Controller.PingPongTween.h"
+#include "common/common.h"
+#include "material/material.h"
+#include "material/material_uniforms.h"
 #include "object/mesh.h"
 #include "program/program.h"
 #include "program/program_uniforms.h"
+#include "render/mesh_renderer.h"
+#include "render/render_target.h"
+#include "render/scene_renderer.h"
+#include "resource_registry/resource_registry.h"
+#include "scene/actor.h"
+#include "scene/scene.h"
 
-#include <vmath.h>
-
-#include <tweeny/tweeny.h>
-
-#include <array>
-#include <cstdint>
-#include <random>
-#include <vector>
+#include "client.h"
 
 namespace
 {
-    struct EasingRow
-    {
-        const char*          name;
-        tweeny::tween<float> tween;
-        vmath::vec4          color;
-        float                y;
-        bool                 forward = true;
-    };
+	struct EasingRow
+	{
+		vmath::vec4 color;
+		SJH::Material *material = nullptr;
+		SJH::Scene::Actor *actor = nullptr;
+	};
 
-    constexpr int   kRowCount        = 11;
-    constexpr float kTweenFromX      = -0.85f;
-    constexpr float kTweenToX        =  0.85f;
-    constexpr int   kTweenDurationMs = 1000;
 } // namespace
 
 class tweeny_demo_app : public sb7::application
 {
-public:
-    void init() override
-    {
-        sb7::application::init();
-        info.majorVersion = 4;
-        info.minorVersion = 1; // GLSL 410 (project policy)
-        info.windowWidth  = 800;
-        info.windowHeight = 600;
-        // sb7::APPINFO::title 은 char[128] 배열 — 안전한 strncpy 로 복사.
+  public:
+	void init() override
+	{
+		sb7::application::init();
+		info.majorVersion = 4;
+		info.minorVersion = 1;
+		info.windowWidth = 800;
+		info.windowHeight = 600;
+
 #ifdef _WIN32
-        strncpy_s(info.title, sizeof(info.title), "tweeny_demo - 11 easings ping-pong", _TRUNCATE);
+		strncpy_s(info.title, sizeof(info.title), "tweeny_demo - 11 easings ping-pong", _TRUNCATE);
 #else
-        std::strncpy(info.title, "tweeny_demo - 11 easings ping-pong", sizeof(info.title) - 1);
-        info.title[sizeof(info.title) - 1] = '\0';
+		std::strncpy(info.title, "tweeny_demo - 11 easings ping-pong", sizeof(info.title) - 1);
+		info.title[sizeof(info.title) - 1] = '\0';
 #endif
-    }
+	}
 
-    void startup() override
-    {
-        mQuad    = SJH::Mesh::CreateScreenQuad();
-        mProgram = SJH::Program::CreateWithVSFS(
-            "./shader/simple.vs",
-            "./shader/simple.fs");
+	void startup() override
+	{
+		mQuad = SJH::Mesh::CreateScreenQuad();
+		mProgram = SJH::Program::CreateWithVSFS(
+		    TweenyDemo::Constants::VS_PATH,
+		    TweenyDemo::Constants::FS_PATH);
 
-        std::mt19937                          rng{42u};
-        std::uniform_real_distribution<float> distColor(0.3f, 1.0f);
+		std::mt19937 rng{42u};
+		std::uniform_real_distribution<float> distColor(0.3f, 1.0f);
 
-        auto makeRow = [&](const char* name, auto&& easing) {
-            EasingRow row;
-            row.name  = name;
-            row.tween = tweeny::from(kTweenFromX)
-                            .to(kTweenToX)
-                            .during(kTweenDurationMs)
-                            .via(easing);
-            row.color = vmath::vec4(distColor(rng), distColor(rng), distColor(rng), 1.0f);
-            return row;
-        };
+		int fbW = 0, fbH = 0;
+		glfwGetFramebufferSize(window, &fbW, &fbH);
+		onResize(fbW, fbH);
 
-        mRows.reserve(kRowCount);
-        mRows.push_back(makeRow("linear",           tweeny::easing::linear));
-        mRows.push_back(makeRow("quadraticInOut",   tweeny::easing::quadraticInOut));
-        mRows.push_back(makeRow("cubicInOut",       tweeny::easing::cubicInOut));
-        mRows.push_back(makeRow("quarticInOut",     tweeny::easing::quarticInOut));
-        mRows.push_back(makeRow("quinticInOut",     tweeny::easing::quinticInOut));
-        mRows.push_back(makeRow("sinusoidalInOut",  tweeny::easing::sinusoidalInOut));
-        mRows.push_back(makeRow("exponentialInOut", tweeny::easing::exponentialInOut));
-        mRows.push_back(makeRow("circularInOut",    tweeny::easing::circularInOut));
-        mRows.push_back(makeRow("bounceInOut",      tweeny::easing::bounceInOut));
-        mRows.push_back(makeRow("elasticInOut",     tweeny::easing::elasticInOut));
-        mRows.push_back(makeRow("backInOut",        tweeny::easing::backInOut));
+		auto makeRow = [&](const std::string &name, auto &&easing) {
+			
+			static constexpr float kTweenFromX = -0.85f;
+			static constexpr float kTweenToX = 0.85f;
+			static constexpr int kTweenDurationMs = 1000;
 
-        // 11행을 [+0.9 .. -0.9] NDC 에 균등 분포 — i=0 위, i=10 아래.
-        for (std::size_t i = 0; i < static_cast<std::size_t>(kRowCount); ++i)
-        {
-            float t    = (kRowCount == 1) ? 0.5f : static_cast<float>(i) / static_cast<float>(kRowCount - 1);
-            mRows[i].y = 0.9f + (-0.9f - 0.9f) * t; // lerp(0.9, -0.9, t)
-        }
-    }
+			auto &dir = SJH::Scene::Director::Get();
+			auto actor = std::make_unique<SJH::Scene::Actor>(name);
+			actor->AddComponent<TweenyDemo::Controller::PingPongTween>()
+			    ->SetPingPong(kTweenFromX, kTweenToX, kTweenDurationMs, easing)
+			    .SetAxis(0);
 
-    void render(double currentTime) override
-    {
-        // delta-time (ms) — sb7 의 currentTime 은 초 단위 double.
-        // tweeny step 오버로드 주의 — step(int32_t) 는 ms, step(float) 는 [0..1] 진행률 비율.
-        // float 로 ms 를 넘기면 1600%/frame 진행 → 양 끝 즉시 도달 + 토글 폭주. int32_t 강제.
-        static double prevTime = currentTime;
-        int32_t       dtMs     = static_cast<int32_t>((currentTime - prevTime) * 1000.0);
-        prevTime               = currentTime;
-        if (dtMs < 0) dtMs = 0; // 첫 프레임 안전.
+			EasingRow row;
+			row.actor = actor.get();
+			row.color = vmath::vec4(distColor(rng), distColor(rng), distColor(rng), 1.0f);
+			dir.Root().AddChild(std::move(actor));
 
-        glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+			return row;
+		};
+		
+		static constexpr int kRowCount = 11;
+		mRows.reserve(kRowCount);
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_LINEAR_TWEEN, tweeny::easing::linear));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_QUADRATICINOUT_TWEEN, tweeny::easing::quadraticInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_CUBICINOUT_TWEEN, tweeny::easing::cubicInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_QUARTICINOUT_TWEEN, tweeny::easing::quarticInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_QUINTICINOUT_TWEEN, tweeny::easing::quinticInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_SINUSOIDALINOUT_TWEEN, tweeny::easing::sinusoidalInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_EXPONENTIALINOUT_TWEEN, tweeny::easing::exponentialInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_CIRCULARINOUT_TWEEN, tweeny::easing::circularInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_BOUNCEINOUT_TWEEN, tweeny::easing::bounceInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_ELASTICINOUT_TWEEN, tweeny::easing::elasticInOut));
+		mRows.push_back(makeRow(TweenyDemo::Constants::NAME_BACKINOUT_TWEEN, tweeny::easing::backInOut));
 
-        glUseProgram(mProgram->GetProgramAddr());
-        glBindVertexArray(mQuad->GetVAO());
+		auto &reg = SJH::ResourceRegistry::Get();
+		auto &dir = SJH::Scene::Director::Get();
 
-        for (auto& row : mRows)
-        {
-            const float x = row.forward ? row.tween.step(dtMs) : row.tween.step(-dtMs);
+		auto tsm = reg.CreateSharedMaterial(TweenyDemo::Constants::MATERIAL_TWEENY_TEMPLATE);
+		tsm->SetProgram(mProgram.get());
 
-            // 방향 토글 — 양 끝 도달 시 다음 프레임부터 반대 방향.
-            if      ( row.forward && row.tween.progress() >= 1.0f) row.forward = false;
-            else if (!row.forward && row.tween.progress() <= 0.0f) row.forward = true;
+		for (std::size_t i = 0; i < static_cast<std::size_t>(kRowCount); ++i)
+		{
+			const float kRowTopY = 0.9f;
+			const float kRowBottomY = -0.9f;
+			auto &row = mRows[i];
 
-            SJH::Uniforms::SetVec2(*mProgram, "uOffset",   vmath::vec2(x, row.y));
-            SJH::Uniforms::SetVec2(*mProgram, "uScale",    vmath::vec2(0.05f, 0.035f));
-            SJH::Uniforms::SetVec4(*mProgram, "baseColor", row.color);
+			const std::string key = std::string("tweeny_row_") + row.actor->GetName();
+			row.material = reg.CreateMaterialInstanceFrom(key, tsm);
+			SJH::Uniforms::SetVec4(*row.material, "baseColor", row.color);
 
-            glDrawElements(mQuad->GetPrimitiveType(),
-                           mQuad->GetIndexCount(),
-                           GL_UNSIGNED_INT,	
-                           nullptr);
-        }
-    }
+			row.actor->AddComponent<SJH::Scene::MeshRenderer>(mQuad.get(), row.material);
 
-    void shutdown() override
-    {
-        mProgram.reset();
-        mQuad.reset();
-    }
+			float t = (kRowCount == 1) ? 0.5f : static_cast<float>(i) / static_cast<float>(kRowCount - 1);
+			auto &xform = row.actor->GetTransform();
+			xform.Translate[1] = (1.0f - t) * kRowTopY + t * kRowBottomY;
+			xform.Scale = vmath::vec3(0.05f, 0.035f, 1.0f);
+		}
 
-private:
-    SJH::MeshUPtr          mQuad;
-    SJH::ProgramUPtr       mProgram;
-    std::vector<EasingRow> mRows;
+		dir.Enter();
+	}
+
+	void render(double currentTime) override
+	{
+		double dt = SJH::DeltaTime(currentTime);
+		int32_t dtMs = static_cast<int32_t>(dt * 1000);
+		if (dtMs < 0)
+			dtMs = 0;
+
+		SJH::Scene::Director::Get().Update((float)dt);
+		const vmath::mat4 I = vmath::mat4::identity();
+		mRenderSys.Render(*mDefaultTarget, I, I);
+	}
+
+	void shutdown() override
+	{
+		mProgram.reset();
+		mQuad.reset();
+	}
+
+	void onResize(int logicalW, int logicalH) override
+	{
+		int w = 0, h = 0;
+		glfwGetFramebufferSize(window, &w, &h);
+		if (w <= 0 || h <= 0)
+			return;
+
+		sb7::application::onResize(w, h);
+		glViewport(0, 0, w, h);
+		mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(w, h);
+	}
+
+  private:
+	SJH::SceneRenderer mRenderSys;
+	SJH::MeshUPtr mQuad;
+	SJH::ProgramUPtr mProgram;
+	SJH::RenderTargetUPtr mDefaultTarget;
+
+	std::vector<EasingRow> mRows;
 };
 
 DECLARE_MAIN(tweeny_demo_app)

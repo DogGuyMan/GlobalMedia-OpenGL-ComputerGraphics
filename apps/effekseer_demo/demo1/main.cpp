@@ -112,7 +112,7 @@ class EfkDemo1 : public sb7::application
 
 	void render(double t) override
 	{
-		float dt = static_cast<float>(1.0 / 60.0);
+		float dt = SJH::FixedTime();
 		mKeyboard.PollHeld(window);
 		SJH::Scene::Director::Get().Update(dt);
 

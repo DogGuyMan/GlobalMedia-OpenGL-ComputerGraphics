@@ -46,6 +46,7 @@ namespace SJH
         // 타입별 분리 map — type erasure 비용 회피.
         std::unordered_map<std::string, float> Floats;
         std::unordered_map<std::string, int> Ints;
+        std::unordered_map<std::string, vmath::vec2> Vec2s;
         std::unordered_map<std::string, vmath::vec3> Vec3s;
         std::unordered_map<std::string, vmath::vec4> Vec4s;
         std::unordered_map<std::string, vmath::mat4> Mat4s;

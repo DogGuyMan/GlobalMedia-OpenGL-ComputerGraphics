@@ -1,6 +1,7 @@
 #include "sb7.h"
 #include "box2d/box2d.h"
 #include "debug_draw.h"
+#include "common/common.h"
 
 // ---- Demo3: Bridge ----
 // 30개 판자를 revolute joint로 연결한 현수교 + 삼각형/원 낙하 오브젝트.
@@ -134,7 +135,7 @@ public:
     {
         glClear(GL_COLOR_BUFFER_BIT);
 
-        m_world.Step(1.0f / 60.0f, 8, 3);
+        m_world.Step(SJH::FixedTime(), 8, 3);
 
         m_draw.SetCamera(m_cam);
         m_world.DebugDraw();
