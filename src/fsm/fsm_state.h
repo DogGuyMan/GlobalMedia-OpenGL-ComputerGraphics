@@ -11,8 +11,8 @@ namespace SJH::FSM
 	{
 	  public:
 		virtual ~IFsmState() = default;
-		virtual uint64_t GetStateFlag() = 0;
-		virtual uint64_t GetTransitFlag() = 0;
+		virtual uint64_t GetStateFlag() const = 0;
+		virtual uint64_t GetTransitFlag() const = 0;
 		virtual void OnEnter(TOwner &owner) = 0;
 		virtual void OnUpdate(TOwner &owner, float dt) = 0;
 		virtual void OnExit(TOwner &owner) = 0;
