@@ -1,12 +1,6 @@
 ########### macOS ###########
 .DS_Store
 
-########### .claude — 로컬 전용 (untracked 강제) ###########
-.claude
-.claude/
-**/.claude/
-CLAUDE.md
-
 ########### vcpkg local files ###########
 vcpkg_installed/
 
