@@ -103,7 +103,7 @@ namespace TopdownShooter::Algebraic::Numeric
 			mIsDirty = false;
 		}
 
-		float GetValue()
+		float GetValue() 
 		{
 			if (!mIsDirty)
 				return mCachedValue;

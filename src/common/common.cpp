@@ -25,7 +25,7 @@ namespace SJH {
 		return text.str();
 	}
 
-	void ChdirToExecutableDir()
+	void CrossPlatformDir()
 	{
 	#ifdef __APPLE__
 		char exePath[PATH_MAX] = {};

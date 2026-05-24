@@ -5,48 +5,48 @@ namespace TopdownShooter::Algebraic
 {
 	enum class ENumericStatUseType : int
 	{
-		None = 0,
-		Natural = 1,
+		None = -1,
+		Natural = 0,
 		Ratio,
 		Percentage
 	};
 
 	enum class ENumericStateCalcType : int
 	{
-		None = 0,
-		Add = 1,
-		Mul = 2
+		None = -1,
+		Add = 0,
+		Mul = 1
 	};
 
 	enum class ENumericStatType : int
 	{
-		None = 0,
+		None = -1,
 
-		MaxHp = 1,
+		MaxHp = 0,
 		Defence,
 		Power,
 		MoveSpeed,
 		Accecerate,
 		Tenacity,
 
-		MaxStamina = 11,
+		MaxStamina = 10,
 		StaminaRestoreSpeed,
 		DashForce,
 
-		InstantiableDurateLifeTimeMultiplyRatio = 21,
+		InstantiableDurateLifeTimeMultiplyRatio = 20,
 		InstantiableSizeMultiplyRatio,
 		InstantiableForwardingSpeedMultiplyRatio,
 
-		PoolSize = 31,
+		PoolSize = 30,
 		AttackSpeed,
 		MeleeRatio,
 		RangerRatio,
 		TechRatio,
 
-		EfficienceMultiplyer = 41,
+		EfficienceMultiplyer = 40,
 		CoolDownSpeed,
 
-		Luck = 51
+		Luck = 50
 	};
 }; // namespace TopdownShooter::Algebraic::Numeric
 #endif //_TOPDOWNSHOOTER_ALGEBRAIC_COMMON__

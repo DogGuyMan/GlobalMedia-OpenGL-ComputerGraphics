@@ -39,7 +39,7 @@ class EfkDemo1 : public sb7::application
 		info.minorVersion = 1; // GLSL 410 정통 (memory: glsl_410_project_policy)
 
 		// macOS GLFW chdir workaround — SJH::common 흡수
-		SJH::ChdirToExecutableDir();
+		SJH::CrossPlatformDir();
 	}
 
 	void startup() override

@@ -14,7 +14,7 @@
 #include <fmod/fmod_studio.hpp>
 #include <fmod/fmod_studio_common.h>
 
-#include "common/common.h" // SJH::ChdirToExecutableDir
+#include "common/common.h" // SJH::CrossPlatformDir
 
 #include <cstdio>
 #include <cstdlib>
@@ -68,7 +68,7 @@ class audio_demo2_application : public sb7::application
 		info.minorVersion = 1;
 		std::snprintf(info.title, sizeof(info.title), "FMOD Studio Audio Demo2 — Custom Bank");
 		// macOS GLFW chdir workaround — SJH::common 흡수 (bank 상대 경로 정합)
-		SJH::ChdirToExecutableDir();
+		SJH::CrossPlatformDir();
 	}
 
 	// One-shot SFX 헬퍼 — create -> start -> release.

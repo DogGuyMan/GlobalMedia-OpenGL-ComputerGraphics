@@ -95,7 +95,7 @@ namespace SJH
 	 *  - 본 함수가 macOS 전용 헤더 (@c libgen.h / @c mach-o/dyld.h 등) 흡수 — 호출처는
 	 *    @c "common/common.h" 만 include 하면 됨.
 	 */
-	void ChdirToExecutableDir();
+	void CrossPlatformDir();
 } // namespace SJH
 
 #endif //__SJH_COMMON_H__
