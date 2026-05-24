@@ -229,6 +229,15 @@ target_link_libraries(test_actor_lifecycle PRIVATE
 target_compile_features(test_actor_lifecycle PRIVATE cxx_std_17)
 catch_discover_tests(test_actor_lifecycle)
 
+#  Phase M1 — UniformAtlas math (GL 불요)
+add_executable(test_uniform_atlas test_uniform_atlas.cpp)
+target_link_libraries(test_uniform_atlas PRIVATE
+    Catch2::Catch2WithMain
+    SJH::sprite               # ComputeUVRect 자유함수
+)
+target_compile_features(test_uniform_atlas PRIVATE cxx_std_17)
+catch_discover_tests(test_uniform_atlas)
+
 #  object 모듈 — SceneNode 노드/계층 (GL 불요) [비활성화]
 # 대상 헤더 src/object/scene_node.h 가 아직 미존재 — 구현 후 활성화.
 # add_executable(test_scene_node test_scene_node.cpp)
@@ -329,6 +338,7 @@ add_custom_target(tests DEPENDS
     test_buffer
     test_vertex_layout
     test_texture
+    test_uniform_atlas      # M1 — UniformAtlas math (GL 불요)
 )
 
 #  Task 7 — Test smell linter (R1-R4 정적 검사, warn-only)
