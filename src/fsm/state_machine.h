@@ -49,7 +49,7 @@ namespace SJH::FSM
 		///                (I1: NONE 에서는 전이 차단). 시작 시 ForceTransit 으로 전이를 의도하면
 		///                반드시 NONE 외의 값을 전달.
 		StateMachine(TOwner &owner, TState startup = TState::NONE)
-		    : owner_(&owner), current_(startup)
+		    : mOwner(&owner), curState(startup)
 		{
 		}
 
@@ -60,7 +60,7 @@ namespace SJH::FSM
 		{
 			assert(state && "RegisterState: null state");
 			const StateU id = state->GetStateFlag();
-			states_[id] = std::move(state);
+			mStates[id] = std::move(state);
 		}
 
 		/// @brief 런타임 가드 — target 으로 전이 시도. 실패 = false.
@@ -81,7 +81,7 @@ namespace SJH::FSM
 
 		TState State() const
 		{
-			return current_;
+			return curState;
 		}
 
 		// === Scene::Component 베이스 구현 (FSM 자체 hook — Unity OnStateMachineEnter 정통 분리) ===
@@ -89,58 +89,53 @@ namespace SJH::FSM
 		/// @brief FSM 진입 — current 가 등록 state 면 그 OnEnter 발화.
 		void OnEnter() override
 		{
-			auto it = states_.find((StateU)current_);
-			if (it != states_.end() && it->second)
-			{
-				it->second->OnEnter(*owner_);
-			}
+			auto it = mStates.find((StateU)curState);
+			if (it != mStates.end() && it->second)
+				it->second->OnEnter(*mOwner);
 		}
 
 		/// @brief FSM 이탈 — current state OnExit.
 		void OnExit() override
 		{
-			auto it = states_.find((StateU)current_);
-			if (it != states_.end() && it->second)
-			{
-				it->second->OnExit(*owner_);
-			}
+			auto it = mStates.find((StateU)curState);
+			if (it != mStates.end() && it->second)
+				it->second->OnExit(*mOwner);
 		}
 
 		/// @brief 매 프레임 — 현재 state 의 OnUpdate 위임 (Godot _state.physics_process 정통).
 		void Update(float dt) override
 		{
-			auto it = states_.find((StateU)current_);
-			if (it != states_.end() && it->second)
-			{
-				it->second->OnUpdate(*owner_, dt);
-			}
+			auto it = mStates.find((StateU)curState);
+			if (it != mStates.end() && it->second)
+				it->second->OnUpdate(*mOwner, dt);
 		}
 
 	  private:
 		bool TryTransitImpl(StateU targetBit)
 		{
-			const StateU curr = (StateU)current_;
+			const StateU curr = (StateU)curState;
 			if (curr == 0)
 				return false; // I1: NONE 에서는 전이 불가
-			auto curIt = states_.find(curr);
-			if (curIt == states_.end() || !curIt->second)
-				return false; // current state 미등록 — 계약 위반
-			// I2: 현재 state 가 target 으로 갈 수 있는가? (자가 검증)
+			auto curIt = mStates.find(curr);
+			// current state 미등록 — 계약 위반
+			if (curIt == mStates.end() || !curIt->second)
+				return false; 
+			// 현재 state 가 target 으로 갈 수 있는가?
 			if ((curIt->second->GetTransitFlag() & targetBit) != targetBit)
 				return false;
-			auto targetIt = states_.find(targetBit);
-			if (targetIt == states_.end() || !targetIt->second)
-				return false; // target 미등록
-			// I3: OnExit → swap → OnEnter
-			curIt->second->OnExit(*owner_);
-			current_ = (TState)targetBit;
-			targetIt->second->OnEnter(*owner_);
+			auto targetIt = mStates.find(targetBit);
+			// target 미등록
+			if (targetIt == mStates.end() || !targetIt->second)
+				return false; 
+			curIt->second->OnExit(*mOwner);
+			curState = (TState)targetBit;
+			targetIt->second->OnEnter(*mOwner);
 			return true;
 		}
 
-		TOwner *owner_;
-		TState current_ = TState::NONE;
-		std::unordered_map<StateU, std::unique_ptr<IFsmState<TOwner>>> states_;
+		TOwner *mOwner;
+		TState curState = TState::NONE;
+		std::unordered_map<StateU, std::unique_ptr<IFsmState<TOwner>>> mStates;
 	};
 
 } // namespace SJH::FSM

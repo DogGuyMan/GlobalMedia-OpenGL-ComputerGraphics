@@ -1,6 +1,7 @@
 #ifndef _TOPDOWNSHOOTER_ENTITY_COMPONENTS_LIFE__
 #define _TOPDOWNSHOOTER_ENTITY_COMPONENTS_LIFE__
 
+#include "Algebraic/Stat.h"
 #include "Components.Interfaces.h"
 #include "scene/actor.h"
 
@@ -12,21 +13,23 @@ namespace TopdownShooter::Entity::Components
 	             public IDamageable
 	{
 	  protected:
-		int mMaxHp;
+		// MaxHp 는 Stat 으로 통합 — modifier 시스템 적용 가능 (NumericType::MaxHp, UseType::Natural).
+		Algebraic::Numeric::Stat mMaxHp;
 		int mCurHp;
 
 	  public:
-		Life() = default;
-
-		Life(int max_hp, int cur_hp = -1)
-		    : mMaxHp(max_hp), mCurHp(cur_hp == -1 ? max_hp : cur_hp)
+		Life()
+		    : mMaxHp(0.0f, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::MaxHp), mCurHp(0)
 		{
 		}
 
-		virtual void OnEnter() override
+		Life(int max_hp, int cur_hp = -1)
+		    : mMaxHp(static_cast<float>(max_hp), Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::MaxHp),
+		      mCurHp(cur_hp == -1 ? max_hp : cur_hp)
 		{
-			mMaxHp = mCurHp;
-		};
+		}
+
+		virtual void OnEnter() override {};
 		virtual void Update(float dt) override {};
 		virtual void OnExit() override {};
 
@@ -49,13 +52,15 @@ namespace TopdownShooter::Entity::Components
 				return;
 			}
 		}
+		
 		virtual int GetHp() const override
 		{
 			return mCurHp;
 		}
+
 		virtual int GetMaxHp() const override
 		{
-			return mMaxHp;
+			return static_cast<int>(mMaxHp.GetValue());
 		}
 	};
 }; // namespace TopdownShooter::Entity::Components

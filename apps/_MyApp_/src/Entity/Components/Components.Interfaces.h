@@ -1,6 +1,7 @@
 #ifndef _TOPDOWNSHOOTER_ENTITY_COMPONENTS_INTERFACES__
 #define _TOPDOWNSHOOTER_ENTITY_COMPONENTS_INTERFACES__
 
+#include <vmath.h>
 namespace TopdownShooter::Entity
 {
 	class ILivable
@@ -58,10 +59,25 @@ namespace TopdownShooter::Entity
 		IAttackable operator=(const IAttackable &) = delete;
 		IAttackable(IAttackable &&) = delete;
 		IAttackable operator=(IAttackable &) = delete;
-		
+
 		virtual void DoAttack(IAttackable &target) = 0;
 		virtual int GetNormalAtk() const = 0;
 		// virtual string GetAttackName() const = 0;
+	};
+
+	class IMovable
+	{
+	  protected:
+		IMovable() = default;
+
+	  public:
+		virtual ~IMovable() = default;
+		IMovable(const IMovable &) = delete;
+		IMovable operator=(const IMovable &) = delete;
+		IMovable(IMovable &&) = delete;
+		IMovable operator=(IMovable &) = delete;
+
+		virtual void DoForward(vmath::vec2 dir) = 0;
 	};
 } // namespace TopdownShooter::Entity
 
