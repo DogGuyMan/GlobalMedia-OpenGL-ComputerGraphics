@@ -16,6 +16,14 @@
 
 #include <cstring>
 
+#ifdef __APPLE__
+#include <cstdint>
+#include <libgen.h>
+#include <limits.h>
+#include <mach-o/dyld.h>
+#include <unistd.h>
+#endif
+
 namespace TopdownShooter
 {
     class game_application : public sb7::application
@@ -29,6 +37,20 @@ namespace TopdownShooter
             info.flags.debug = 1;   // sb7 가 core profile + forward compat 는 unconditional 설정 — debug context 만 명시
             static const char title[] = "M1 — Topdown Shooter (sprite billboard)";
             std::memcpy(info.title, title, sizeof(title));
+
+#ifdef __APPLE__
+            // GLFW 3.0.4 의 cocoa_init.m 가 glfwInit 시 Contents/Resources 로 chdir 하므로
+            // bundle 이 아닌 일반 binary 실행 시 CWD 가 엉뚱한 곳으로 옮겨진다.
+            // 실행 파일 디렉터리로 명시적 복귀 (migrate_demo 와 동일 패턴).
+            char exePath[PATH_MAX] = {};
+            uint32_t exeSize = static_cast<uint32_t>(sizeof(exePath));
+            if (_NSGetExecutablePath(exePath, &exeSize) == 0)
+            {
+                char exePathCopy[PATH_MAX] = {};
+                std::strncpy(exePathCopy, exePath, PATH_MAX - 1);
+                chdir(dirname(exePathCopy));
+            }
+#endif
         }
 
         void startup() override
