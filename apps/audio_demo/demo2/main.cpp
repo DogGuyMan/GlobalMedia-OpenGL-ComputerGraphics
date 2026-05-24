@@ -50,7 +50,7 @@ class audio_demo2_application : public sb7::application
 	FMOD::Studio::EventDescription *mBgmDesc     = nullptr;
 	FMOD::Studio::EventInstance    *mBgmInstance = nullptr;
 
-	// SFX — one-shot 이벤트. description 만 캐시, 인스턴스는 버튼 클릭 시 생성→start→release.
+	// SFX — one-shot 이벤트. description 만 캐시, 인스턴스는 버튼 클릭 시 생성->start->release.
 	FMOD::Studio::EventDescription *mDamagedDesc = nullptr;
 	FMOD::Studio::EventDescription *mSlashDesc   = nullptr;
 
@@ -89,7 +89,7 @@ class audio_demo2_application : public sb7::application
 #endif
 	}
 
-	// One-shot SFX 헬퍼 — create → start → release.
+	// One-shot SFX 헬퍼 — create -> start -> release.
 	// release() 는 인스턴스를 즉시 파괴하지 않고, 재생이 끝나면 FMOD 가 자동 해제 (정통 one-shot 패턴).
 	void play_one_shot(FMOD::Studio::EventDescription *desc, const char *label)
 	{
