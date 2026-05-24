@@ -1,11 +1,12 @@
 /**
  * @file main.cpp
- * @brief M1.5 — SJH::Mesh::CreatePlane + SJH::Scene::Director/Camera + spherical billboard.
- *        Q1 (빌보드 정면) + Q4 (Mesh::CreatePlane 의존) 통합 fix.
+ * @brief M1 컨벤션 정착 — Director + SceneRenderer + Material + MeshRenderer 패턴.
+ *        직접 GL 호출 제거 (migrate_demo / tweeny_demo 정통).
+ *        TestPattern frame 0 빌보드 1장 정적 표시.
  */
 
 #include <sb7.h>
-#include <GL/gl3w.h>
+#include <GLFW/glfw3.h>
 #include <vmath.h>
 #include <spdlog/spdlog.h>
 
@@ -18,18 +19,22 @@
 #include <unistd.h>
 #endif
 
-#include "sprite/uniform_atlas.h"
-#include "shader/shader.h"
-#include "program/program.h"
-#include "program/program_uniforms.h"
+#include "common/common.h"                       // SJH::DeltaTime
+#include "material/material.h"
+#include "material/material_uniforms.h"          // SJH::Uniforms::Set*(Material&, ...)
 #include "object/mesh.h"
-#include "scene/scene.h"
+#include "render/render_target.h"                // SJH::DefaultRenderTarget / RenderTargetUPtr
+#include "render/scene_renderer.h"               // SJH::SceneRenderer
+#include "render/mesh_renderer.h"                // SJH::Scene::MeshRenderer
+#include "resource_registry/resource_registry.h" // SJH::ResourceRegistry
 #include "scene/actor.h"
 #include "scene/camera.h"
+#include "scene/compound_actor.h"                // SJH::Scene::CreateCameraActor
+#include "scene/scene.h"                         // SJH::Scene::Director
+#include "sprite/uniform_atlas.h"
 
 #include <cstring>
 #include <memory>
-#include <vector>
 
 namespace TopdownShooter
 {
@@ -43,7 +48,7 @@ public:
         info.majorVersion = 4;
         info.minorVersion = 1;
         info.flags.debug = 1;
-        static const char title[] = "M1.5 — Billboard + Mesh::CreatePlane + Scene::Camera";
+        static const char title[] = "M1 — Topdown Shooter (Director + SceneRenderer)";
         std::memcpy(info.title, title, sizeof(title));
 
 #ifdef __APPLE__
@@ -60,127 +65,126 @@ public:
 
     void startup() override
     {
-        // === 1. atlas 로드 (M1 그대로) ===
+        auto& reg = SJH::ResourceRegistry::Get();
+        auto& dir = SJH::Scene::Director::Get();
+
+        // === 1. atlas 로드 (SJH::Image + SJH::Texture 위임) ===
         if (!mAtlas.LoadFromPNG("resources/texture/TestPattern.png", /*tilePx=*/128)) {
-            spdlog::error("[M1.5] atlas load failed");
+            spdlog::error("[M1] atlas load failed");
             return;
         }
 
-        // === 2. 셰이더 ===
-        auto vs = SJH::Shader::CreateFromFile("resources/shaders/billboard_atlas.vert", GL_VERTEX_SHADER);
-        auto fs = SJH::Shader::CreateFromFile("resources/shaders/billboard_atlas.frag", GL_FRAGMENT_SHADER);
-        if (!vs || !fs) {
-            spdlog::error("[M1.5] shader compile failed");
-            return;
-        }
-        std::vector<SJH::ShaderPtr> shaders;
-        shaders.emplace_back(std::move(vs));
-        shaders.emplace_back(std::move(fs));
-        mProgram = SJH::Program::Create(shaders);
-        if (!mProgram) {
-            spdlog::error("[M1.5] program link failed");
+        // === 2. Program (ResourceRegistry 위탁) ===
+        auto* prog = reg.CreateProgram(
+            "billboard_atlas",
+            "resources/shaders/billboard_atlas.vert",
+            "resources/shaders/billboard_atlas.frag");
+        if (!prog) {
+            spdlog::error("[M1] program create failed");
             return;
         }
 
-        // === 3. Mesh — Mesh::CreatePlane (XY 평면 1x1 quad, indexed) ===
+        // === 3. Mesh — Plane (XY quad, indexed) ===
         mPlane = SJH::Mesh::CreatePlane();
         if (!mPlane) {
-            spdlog::error("[M1.5] Mesh::CreatePlane failed");
+            spdlog::error("[M1] mesh create failed");
             return;
         }
 
-        // === 4. Scene::Director + Camera Component 셋업 ===
-        // Camera 는 Actor 의 Component 라 root 의 child Actor 생성 후 부착.
-        auto& director = SJH::Scene::Director::Get();
-        auto& root     = director.Root();
-        auto  camActor = std::make_unique<SJH::Scene::Actor>("MainCameraActor");
+        // === 4. Material — Pass::AlphaTest (sprite frag discard) + Properties ===
+        auto* mat = reg.CreateSharedMaterial("billboard_player");
+        mat->SetProgram(prog);
+        mat->SetPass(SJH::Pass::Kind::AlphaTest);   // depth ON, blend OFF, frag discard (spec §10.2)
 
-        // 카메라 위치/방향 — Transform 의 Translate 가 진실의 원천.
-        // EulerRot 으로 pitch 약간 (위에서 내려다보는 탑다운 시점)
-        auto& camTransform = camActor->GetTransform();
-        camTransform.Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
-        camTransform.EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);   // pitch -45° (위에서 내려다봄)
+        // Atlas texture (UniformAtlas 가 SJH::Texture 위탁)
+        mat->Properties.Textures["uAtlas"] = { mAtlas.GetTexture(), /*unit=*/0 };
+        // frame 0 uv rect
+        SJH::Uniforms::SetVec4(*mat, "uUvRect", mAtlas.GetUVRect(/*frameIdx=*/0));
+        SJH::Uniforms::SetFloat(*mat, "uFlipX", 1.0f);
+        SJH::Uniforms::SetVec4(*mat, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-        // Camera Component 부착 — projection 파라미터 직접 설정
-        auto* cam = camActor->AddComponent<SJH::Scene::Camera>();
-        cam->FovYDeg = 45.0f;
-        cam->Aspect  = static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight);
-        cam->NearZ   = 0.1f;
-        cam->FarZ    = 100.0f;
+        // === 5. Camera Actor (compound factory) ===
+        int fbW = 0, fbH = 0;
+        glfwGetFramebufferSize(window, &fbW, &fbH);
+        const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 
-        // Director 의 활성 카메라 슬롯 + root 의 child 등록
-        mCameraActor = root.AddChild(std::move(camActor));
+        auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
+        camActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
+        camActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);   // pitch (위에서 내려다봄)
+        auto* cam = camActor->GetComponent<SJH::Scene::Camera>();
+        cam->SetTargetFramebuffer(nullptr);   // backbuffer 직접
+
+        mCameraActor = dir.Root().AddChild(std::move(camActor));
         mCamera      = cam;
-        director.SetActiveCamera(cam);
-        director.Enter();   // root + child + Camera 의 OnEnter 캐스케이드
+        dir.SetActiveCamera(cam);
 
-        // === 5. 일회성 GL 상태 ===
-        glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_TRUE);
-        glDisable(GL_BLEND);
+        // === 6. Sprite Actor + MeshRenderer Component ===
+        // Actor 의 Transform.Translate = 빌보드 center, Scale = 빌보드 size (셰이더 uModel 흡수)
+        auto spriteActor = std::make_unique<SJH::Scene::Actor>("PlayerSprite");
+        spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
+        spriteActor->GetTransform().Scale     = vmath::vec3(1.0f, 1.0f, 1.0f);
+        spriteActor->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), mat);
+        mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
+
+        // === 7. Director lifecycle (Camera + Sprite OnEnter 캐스케이드) ===
+        dir.Enter();
+
+        // === 8. RenderTarget — backbuffer wrapper ===
+        mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
+
         glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
-        spdlog::info("[M1.5] startup complete");
+        spdlog::info("[M1] startup complete");
     }
 
     void render(double currentTime) override
     {
-        (void)currentTime;
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        const float dt = static_cast<float>(SJH::DeltaTime(currentTime));
 
-        if (!mProgram || mAtlas.TextureId() == 0 || !mPlane || !mCamera) return;
+        // Backbuffer resize 안전 — physical framebuffer 기준
+        int fbW = 0, fbH = 0;
+        glfwGetFramebufferSize(window, &fbW, &fbH);
+        if (!mDefaultTarget || mDefaultTarget->GetWidth() != fbW || mDefaultTarget->GetHeight() != fbH) {
+            mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
+            if (mCamera) mCamera->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
+        }
 
-        // === Camera 의 view/proj 가져오기 ===
-        // Aspect 매 프레임 갱신 (resize 안전)
-        mCamera->Aspect = static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight);
-        const vmath::mat4 view = mCamera->GetViewMatrix();
-        const vmath::mat4 proj = mCamera->GetProjectionMatrix();
-
-        glUseProgram(mProgram->GetProgramAddr());
-
-        // D1 — uModel 이 빌보드 center (Translate) + size (Scale) 흡수.
-        // Actor 부착 전 M1.5 단계라 임시 identity 송신: center=(0,0,0), scale=(1,1) 동치.
-        SJH::Uniforms::SetMat4(*mProgram, "uModel", vmath::mat4::identity());
-        SJH::Uniforms::SetMat4(*mProgram, "uView", view);
-        SJH::Uniforms::SetMat4(*mProgram, "uProj", proj);
-        SJH::Uniforms::SetFloat(*mProgram, "uFlipX", 1.0f);
-
-        const vmath::vec4 uvRect = mAtlas.GetUVRect(/*frameIdx=*/0);
-        SJH::Uniforms::SetVec4(*mProgram, "uUvRect", uvRect);
-        SJH::Uniforms::SetVec4(*mProgram, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-
-        // === atlas 텍스처 ===
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, mAtlas.TextureId());
-        SJH::Uniforms::SetInt(*mProgram, "uAtlas", 0);
-
-        // === draw — Mesh 의 VAO + indexed draw ===
-        glBindVertexArray(mPlane->GetVAO());
-        glDrawElements(GL_TRIANGLES, mPlane->GetIndexCount(), GL_UNSIGNED_INT, nullptr);
-        glBindVertexArray(0);
-
-        glUseProgram(0);
+        // === 2-line render — Director + SceneRenderer ===
+        SJH::Scene::Director::Get().Update(dt);
+        mRenderSys.Render(*mDefaultTarget);
     }
 
     void shutdown() override
     {
-        // Director 트리 lifecycle 종료 (Camera Component OnExit 등)
         SJH::Scene::Director::Get().SetActiveCamera(nullptr);
         SJH::Scene::Director::Get().Exit();
-        mCamera = nullptr;
-        mCameraActor = nullptr;   // root.~Actor 가 child 소멸 처리
-
+        mCamera       = nullptr;
+        mCameraActor  = nullptr;
+        mSpriteActor  = nullptr;
         mPlane.reset();
-        mProgram.reset();
+        mDefaultTarget.reset();
         mAtlas.Release();
     }
 
+    void onResize(int /*logicalW*/, int /*logicalH*/) override
+    {
+        int w = 0, h = 0;
+        glfwGetFramebufferSize(window, &w, &h);
+        if (w <= 0 || h <= 0) return;
+        sb7::application::onResize(w, h);
+        glViewport(0, 0, w, h);
+        mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(w, h);
+        if (mCamera) mCamera->Aspect = static_cast<float>(w) / static_cast<float>(h);
+    }
+
 private:
-    SJH::Sprite::UniformAtlas        mAtlas;
-    SJH::ProgramUPtr                 mProgram;
-    SJH::MeshUPtr                    mPlane;
-    SJH::Scene::Actor*               mCameraActor = nullptr;   // 비소유 — Director root 가 child 로 owns
-    SJH::Scene::Camera*              mCamera      = nullptr;   // 비소유 — camera Actor 가 Component owns
+    SJH::Sprite::UniformAtlas       mAtlas;
+    SJH::MeshUPtr                   mPlane;
+    SJH::SceneRenderer              mRenderSys;
+    SJH::RenderTargetUPtr           mDefaultTarget;
+    SJH::Scene::Actor*              mCameraActor = nullptr;   // 비소유 — Director root child
+    SJH::Scene::Actor*              mSpriteActor = nullptr;   // 비소유
+    SJH::Scene::Camera*             mCamera      = nullptr;   // 비소유 — Camera Component
 };
 
 }  // namespace TopdownShooter
