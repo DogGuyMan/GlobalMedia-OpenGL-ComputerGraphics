@@ -1,6 +1,7 @@
 #ifndef __SJH_SPRITE_UNIFORM_ATLAS_H__
 #define __SJH_SPRITE_UNIFORM_ATLAS_H__
 
+#include "resource_registry/texture.h"   // SJH::Texture / SJH::TextureUPtr (CLASS_PTR)
 #include "GL/gl3w.h"
 #include <vmath.h>
 
@@ -21,23 +22,24 @@ namespace SJH::Sprite
     /// @details
     ///   - PNG 한 장에 동일 tile 크기 sprite N×M 행렬로 배치
     ///   - frameIdx 가 row-major (col = idx % cols, row = idx / cols)
-    ///   - GL_TEXTURE_2D 직접 보유 (Release() 로 명시 해제 또는 소멸자 자동)
+    ///   - GL texture 는 @c SJH::Texture (RAII) 가 보유 — 본 클래스는 grid metadata + texture 위탁
+    ///   - stb_image 직접 호출 안 함 — @c SJH::Image::Load 위임 (spec §B.5)
     class UniformAtlas
     {
     public:
         UniformAtlas() = default;
-        ~UniformAtlas();
+        ~UniformAtlas() = default;   // mTexture 가 자동 소멸 (SJH::Texture::~Texture 가 glDeleteTextures)
 
         UniformAtlas(const UniformAtlas&)            = delete;
         UniformAtlas& operator=(const UniformAtlas&) = delete;
         UniformAtlas(UniformAtlas&&)                 = default;
         UniformAtlas& operator=(UniformAtlas&&)      = default;
 
-        /// @brief PNG 로드 + GL_TEXTURE_2D 생성 + NEAREST/CLAMP_TO_EDGE 셋업 (픽셀아트).
-        /// @return 성공 시 true. 실패 시 spdlog::error 출력 후 false (texture 안 만듦).
+        /// @brief PNG 로드 (Image 위임) + GL_TEXTURE_2D 생성 (Texture 위임) + 픽셀아트 매개변수 (NEAREST).
+        /// @return 성공 시 true. 실패 시 spdlog::error 출력 후 false (mTexture 안 생성).
         bool LoadFromPNG(const char* path, int tilePx);
 
-        /// @brief GL_TEXTURE_2D 명시 해제. 소멸자가 자동 호출하지만 명시 해제 가능.
+        /// @brief Texture 명시 해제. 소멸자가 자동 호출하지만 명시 해제 가능.
         void Release();
 
         /// @brief frameIdx → atlas UV rect 0..1 정규화. ComputeUVRect 위임.
@@ -47,15 +49,18 @@ namespace SJH::Sprite
         int FrameCount() const { return mCols * mRows; }
 
         // === Accessors ===
-        GLuint TextureId()   const { return mTextureId; }
+        /// @brief GL 텍스처 핸들 — main.cpp 의 glBindTexture 등에 사용. 미로드 시 0.
+        GLuint TextureId()   const { return mTexture ? mTexture->GetTextureID() : 0; }
         int    AtlasWidth()  const { return mAtlasWidth; }
         int    AtlasHeight() const { return mAtlasHeight; }
         int    TileSize()    const { return mTileSize; }
         int    Cols()        const { return mCols; }
         int    Rows()        const { return mRows; }
+        /// @brief Texture* 직접 접근 — RenderSystem 등이 필요 시 사용.
+        const SJH::Texture* GetTexture() const { return mTexture.get(); }
 
     private:
-        GLuint mTextureId   = 0;
+        SJH::TextureUPtr mTexture;          // GL 텍스처 RAII 위탁
         int    mAtlasWidth  = 0;
         int    mAtlasHeight = 0;
         int    mTileSize    = 64;
