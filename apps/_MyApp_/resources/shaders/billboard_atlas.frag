@@ -1,15 +1,15 @@
 #version 410 core
 
-in vec2 v_uv;
+in vec2 vUv;
 
-uniform sampler2D u_atlas;
-uniform vec4 u_tint;
+uniform sampler2D uAtlas;
+uniform vec4 uTint;
 
 out vec4 fragColor;
 
 void main()
 {
-    vec4 c = texture(u_atlas, v_uv);
-    if (c.a < 0.01) discard;   // alpha-test (sorting 문제 회피, spec §10.2)
-    fragColor = c * u_tint;
+    vec4 c = texture(uAtlas, vUv);
+    if (c.a < 0.01) discard;   // alpha-test (sorting 회피, spec §10.2)
+    fragColor = c * uTint;
 }
