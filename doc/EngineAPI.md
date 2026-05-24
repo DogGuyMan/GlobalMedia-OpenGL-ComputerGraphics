@@ -81,29 +81,39 @@ Unity 의 `Camera` 가 매 프레임 자동 송신하는 builtin uniform 들 —
 
 ## 2. 모듈 맵 + 의존 그래프
 
-```
-                 ┌─────────────┐
-                 │  common     │  (헤더 only, 의존 0)
-                 └──────┬──────┘
-                        │
-        ┌───────────────┼──────────────┐
-        ▼               ▼              ▼
-   diagnostics       buffer         layout
-                        │              │
-                        ▼              ▼
-                     shader         object  ── object/light.cpp 가 scene 의존 (Component base)
-                        │              │
-                        ▼              ▼
-                     program ◄────► material   (Observer 패턴 — 양방향)
-                        │              │
-                        ▼              ▼
-                     resource_registry          scene  (Actor / Camera / Compound Actor)
-                                                  │
-                                                  ▼
-                                                render  (SceneRenderer + DeviceContext + MeshPassProcessor)
-                                                  │
-                                                  ▼
-                                                 input  (KeyboardInput / MouseInput)
+```mermaid
+flowchart TD
+    common["common<br/>(헤더 only, 의존 0)"]
+    diagnostics[diagnostics]
+    buffer[buffer]
+    layout[layout]
+    shader[shader]
+    object["object<br/>(light.cpp → scene Component base)"]
+    program[program]
+    material[material]
+    resource_registry[resource_registry]
+    scene["scene<br/>(Actor / Camera / Compound Actor)"]
+    render["render<br/>(SceneRenderer + DeviceContext + MeshPassProcessor)"]
+    input["input<br/>(KeyboardInput / MouseInput)"]
+
+    common --> diagnostics
+    common --> buffer
+    common --> layout
+
+    buffer --> shader
+    layout --> object
+
+    shader --> program
+    object --> material
+
+    program <-->|Observer 패턴| material
+
+    program --> resource_registry
+    material --> scene
+    object -.-> scene
+
+    scene --> render
+    render --> input
 ```
 
 | 모듈 | 종류 | 책임 (요약) |

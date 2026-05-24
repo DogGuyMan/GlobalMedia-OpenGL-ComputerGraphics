@@ -216,7 +216,6 @@ namespace SJH
 	void SceneRenderer::Render(RenderTarget &defaultTarget,
 	                           const vmath::mat4 &viewMat, const vmath::mat4 &projMat)
 	{
-		// 테스트/디버그 overlay 용 — CameraComponent 우회. 모든 layer 그림 (SP3.5 호환).
 		auto &rc = DeviceContext::Get();
 		rc.BeginFrame(defaultTarget);
 		mProcessor.Clear();

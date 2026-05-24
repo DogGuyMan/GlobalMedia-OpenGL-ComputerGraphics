@@ -8,7 +8,7 @@ set(CHAPTER_NAME "${_PARENT_NAME}_${_DEMO_NAME}")
 add_executable(${CHAPTER_NAME} main.cpp)
 set_target_properties(${CHAPTER_NAME} PROPERTIES OUTPUT_NAME "${_DEMO_NAME}")
 
-target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps game_deps box2d_common)
+target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps game_deps box2d_common SJH::common)
 
 target_include_directories(${CHAPTER_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR})

@@ -8,6 +8,8 @@ target_link_libraries(${CHAPTER_NAME} PRIVATE
     SJH::engine
 )
 
+add_subdirectory(src)
+
 if(MSVC)
     target_compile_definitions(${CHAPTER_NAME} PRIVATE WIN32 _WINDOWS)
     target_link_options(${CHAPTER_NAME} PRIVATE

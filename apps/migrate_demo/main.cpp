@@ -39,6 +39,7 @@
 #include <imgui_impl_glfw_gl3.h>
 
 #include "buffer/framebuffer.h"
+#include "common/common.h"
 #include "common/layer.h"
 #include "input/keyboard_input.h"
 #include "input/mouse_input.h"
@@ -76,8 +77,6 @@ namespace K = MigrateDemo::Constants;
 
 namespace
 {
-	// === PostFX 알파벳 순 체인 정의 (resources/shader/postprocess/*.fs) ===
-	// 인덱스 1 (gamma) 만 추가 uniform `gamma` 필요 — ApplyUIState 에서 송신.
 	struct PostFXDef
 	{
 		const char *Name;
@@ -137,7 +136,7 @@ class migrate_demo_app : public sb7::application
 
 		MigrateDemo::Scene::WarmupAssets(reg);
 
-		// === SceneFB — Scene 의 본체 렌더 타겟. PostFX 체인의 첫 입력. ===
+		// SceneFB — Scene 의 본체 렌더 타겟. PostFX 체인의 첫 입력.
 		mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
 		if (!mSceneFB)
 		{
@@ -145,12 +144,12 @@ class migrate_demo_app : public sb7::application
 			std::exit(1);
 		}
 
-		// === 씬 워밍업 ===
+		// 씬 워밍업
 		auto &dir = SJH::Scene::Director::Get();
 		MigrateDemo::Scene::WarmupActors(progs, dir);
 		mRefs = MigrateDemo::Scene::WarmupLights(progs, dir);
 
-		// === SceneCamera + Controller ===
+		// SceneCamera + Controller
 		const float aspect = static_cast<float>(info.windowWidth) /
 		                     static_cast<float>(info.windowHeight);
 		auto sceneCamActor = SJH::Scene::CreateCameraActor(K::Actors::SceneCamera,
@@ -178,7 +177,6 @@ class migrate_demo_app : public sb7::application
 
 		dir.SetActiveCamera(sceneCam);
 		dir.Enter();
-		mLastTime = 0.0;
 
 		// === ImGui v1.53 init ===
 		// install_callbacks=false — sb7 가 GLFW key/mouseButton 콜백을 이미 소유. 수동 forward.
@@ -194,8 +192,7 @@ class migrate_demo_app : public sb7::application
 
 	void render(double currentTime) override
 	{
-		const float dt = static_cast<float>(currentTime - mLastTime);
-		mLastTime = currentTime;
+		const float dt = static_cast<float>(SJH::DeltaTime(currentTime));
 
 		// macOS Retina 호환 — info.windowWidth/Height (logical) 가 아닌 *physical* 사용.
 		// GLFW 가 내부 cache 한 값 반환이라 매 프레임 호출 비용 미미.
@@ -270,7 +267,7 @@ class migrate_demo_app : public sb7::application
 		mMouse.HandleMove(static_cast<double>(x), static_cast<double>(y));
 	}
 
-	void onResize(int /*logicalW*/, int /*logicalH*/) override
+	void onResize(int logicalW, int logicalH) override
 	{
 		// sb7 는 glfwSetWindowSizeCallback 으로 *logical* size 전달 — macOS Retina 에서
 		// physical framebuffer 와 2배 차이. viewport / FB 는 *physical* 기준이 정통.
@@ -281,7 +278,6 @@ class migrate_demo_app : public sb7::application
 		sb7::application::onResize(w, h);   // base 의 info.windowWidth/Height 도 physical 로 갱신.
 		glViewport(0, 0, w, h);
 		auto &dir = SJH::Scene::Director::Get();
-		// SP-RTOwnership — default backbuffer 는 Application 책임.
 		mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(w, h);
 
 		// 모든 카메라 aspect 일괄 갱신 (Scene + PostFX 5개).
@@ -530,15 +526,16 @@ class migrate_demo_app : public sb7::application
 	SJH::KeyboardInput<MigrateDemo::Controller::CameraController::Action> mKeyboard;
 	SJH::MouseInput mMouse;
 	SJH::SceneRenderer mRenderSys;
-	MigrateDemo::Scene::SceneRefs mRefs;
 	SJH::Scene::Actor *mSceneCameraActor = nullptr;
-	std::unique_ptr<SJH::DefaultRenderTarget> mDefaultTarget;  // SP-RTOwnership — Application owner
+	SJH::RenderTargetUPtr mDefaultTarget; 
 	SJH::FramebufferUPtr mSceneFB;
+	
+	MigrateDemo::Scene::SceneRefs mRefs;
+	
 	std::array<PostFXPass, kPostFXDefs.size()> mPostFX;
 	UIState mUI;
 	ImGuiContext *mImGuiCtx = nullptr;
 	bool mFKeyPrev = false; // F 키 edge detect.
-	double mLastTime = 0.0;
 };
 
 DECLARE_MAIN(migrate_demo_app);

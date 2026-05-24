@@ -37,6 +37,7 @@ namespace SJH
 
         void SetFloat  (Material& mat, const char* name, float v);
         void SetInt    (Material& mat, const char* name, int v);
+        void SetVec2   (Material& mat, const char* name, const vmath::vec2& v);
         void SetVec3   (Material& mat, const char* name, const vmath::vec3& v);
         void SetVec4   (Material& mat, const char* name, const vmath::vec4& v);
         void SetMat4   (Material& mat, const char* name, const vmath::mat4& v);
