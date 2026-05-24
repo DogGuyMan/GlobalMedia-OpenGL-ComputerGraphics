@@ -138,20 +138,21 @@ public:
 
         glUseProgram(mProgram->GetProgramAddr());
 
-        SJH::Uniforms::SetMat4(*mProgram, "u_view", view);
-        SJH::Uniforms::SetMat4(*mProgram, "u_proj", proj);
-        SJH::Uniforms::SetVec3(*mProgram, "u_billboardCenter", vmath::vec3(0.0f, 0.0f, 0.0f));
-        SJH::Uniforms::SetVec2(*mProgram, "u_billboardSize",   vmath::vec2(1.0f, 1.0f));
-        SJH::Uniforms::SetFloat(*mProgram, "u_flipX", 1.0f);
+        // D1 — uModel 이 빌보드 center (Translate) + size (Scale) 흡수.
+        // Actor 부착 전 M1.5 단계라 임시 identity 송신: center=(0,0,0), scale=(1,1) 동치.
+        SJH::Uniforms::SetMat4(*mProgram, "uModel", vmath::mat4::identity());
+        SJH::Uniforms::SetMat4(*mProgram, "uView", view);
+        SJH::Uniforms::SetMat4(*mProgram, "uProj", proj);
+        SJH::Uniforms::SetFloat(*mProgram, "uFlipX", 1.0f);
 
         const vmath::vec4 uvRect = mAtlas.GetUVRect(/*frameIdx=*/0);
-        SJH::Uniforms::SetVec4(*mProgram, "u_uvRect", uvRect);
-        SJH::Uniforms::SetVec4(*mProgram, "u_tint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        SJH::Uniforms::SetVec4(*mProgram, "uUvRect", uvRect);
+        SJH::Uniforms::SetVec4(*mProgram, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
         // === atlas 텍스처 ===
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mAtlas.TextureId());
-        SJH::Uniforms::SetInt(*mProgram, "u_atlas", 0);
+        SJH::Uniforms::SetInt(*mProgram, "uAtlas", 0);
 
         // === draw — Mesh 의 VAO + indexed draw ===
         glBindVertexArray(mPlane->GetVAO());
