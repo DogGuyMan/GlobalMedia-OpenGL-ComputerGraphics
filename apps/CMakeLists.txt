@@ -1,6 +1,6 @@
-# add_subdirectory(_MyApp_)
+add_subdirectory(_MyApp_)
 add_subdirectory(migrate_demo)
 add_subdirectory(box2d_demo)
 add_subdirectory(effekseer_demo)
 add_subdirectory(tweeny_demo)
-add_subdirectory(audio_demo)
+# add_subdirectory(audio_demo)  # 임시 비활성 — apps/audio_demo/CMakeLists.txt 부재 (ImGui 의존 미정착)

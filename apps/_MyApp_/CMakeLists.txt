@@ -7,7 +7,11 @@ get_filename_component(CHAPTER_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 add_executable(${CHAPTER_NAME} main.cpp)
 
 # 라이브러리 추가
-target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps game_deps)
+target_link_libraries(${CHAPTER_NAME} PRIVATE
+    project_deps
+    game_deps
+    SJH::engine          # M1 — SJH::sprite 등 코어 모듈 우산 link
+)
 
 # 인클루드 디렉토리 추가
 target_include_directories(${CHAPTER_NAME} PRIVATE ${CMAKE_CURRENT_DIR})
