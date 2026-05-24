@@ -28,4 +28,5 @@ target_link_libraries(sjhopengl_engine INTERFACE
     SJH::resource_registry
     SJH::scene
     SJH::shader
+    SJH::sprite          # M1 — 13 모듈 (sprite 합류)
 )
