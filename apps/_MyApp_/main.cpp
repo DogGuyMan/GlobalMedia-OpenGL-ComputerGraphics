@@ -10,16 +10,7 @@
 #include <vmath.h>
 #include <spdlog/spdlog.h>
 
-// macOS GLFW chdir workaround (migrate_demo 정통)
-#ifdef __APPLE__
-#include <cstdint>
-#include <libgen.h>
-#include <limits.h>
-#include <mach-o/dyld.h>
-#include <unistd.h>
-#endif
-
-#include "common/common.h"                       // SJH::DeltaTime
+#include "common/common.h"                       // SJH::DeltaTime / SJH::ChdirToExecutableDir
 #include "material/material.h"
 #include "material/material_uniforms.h"          // SJH::Uniforms::Set*(Material&, ...)
 #include "object/mesh.h"
@@ -51,16 +42,8 @@ public:
         static const char title[] = "M1 — Topdown Shooter (Director + SceneRenderer)";
         std::memcpy(info.title, title, sizeof(title));
 
-#ifdef __APPLE__
-        // macOS GLFW 3.0.4 의 chdir 복귀 — resources/ 상대 경로 정합
-        char exePath[PATH_MAX] = {};
-        uint32_t exeSize = static_cast<uint32_t>(sizeof(exePath));
-        if (_NSGetExecutablePath(exePath, &exeSize) == 0) {
-            char exePathCopy[PATH_MAX] = {};
-            std::strncpy(exePathCopy, exePath, PATH_MAX - 1);
-            chdir(dirname(exePathCopy));
-        }
-#endif
+        // macOS GLFW chdir workaround — SJH::common 흡수
+        SJH::ChdirToExecutableDir();
     }
 
     void startup() override

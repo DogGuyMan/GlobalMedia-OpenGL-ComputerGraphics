@@ -82,6 +82,20 @@ namespace SJH
 	constexpr inline float FixedTime() {
 		return 1.0f / 60.0f;
 	}
+
+	/**
+	 * @brief macOS GLFW 3.0.4 의 @c _GLFW_USE_CHDIR 부수효과 (앱 번들 Resources 경로로 CWD 변경) 를
+	 *        실행 파일 디렉토리로 *되돌린다*.
+	 * @details
+	 *  - @c sb7::application::init() override 의 첫 줄에서 호출하는 것이 정통.
+	 *  - @c resources/ 상대 경로 로딩의 *전제 조건* — chdir 안 하면 macOS 에서 GLFW 가 cwd 를
+	 *    번들의 @c Contents/Resources 로 옮긴 상태라 @c resources/shaders/foo.vert 같은 경로
+	 *    해석이 실패한다.
+	 *  - macOS 외 (Linux/Windows) 는 *no-op* — 실행 디렉토리가 이미 cwd.
+	 *  - 본 함수가 macOS 전용 헤더 (@c libgen.h / @c mach-o/dyld.h 등) 흡수 — 호출처는
+	 *    @c "common/common.h" 만 include 하면 됨.
+	 */
+	void ChdirToExecutableDir();
 } // namespace SJH
 
 #endif //__SJH_COMMON_H__

@@ -26,7 +26,7 @@ target_include_directories(${CHAPTER_NAME} PRIVATE
     ${IMGUI_GL3}
 )
 
-target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps game_deps)
+target_link_libraries(${CHAPTER_NAME} PRIVATE project_deps game_deps SJH::common)
 
 # ImGui v1.53 의 imgui.cpp / imgui_demo.cpp 는 sprintf/strcpy/memcpy 등 deprecation
 # 경고가 많아 Debug 의 -Werror 와 충돌. 본 챕터 한정 -Werror 침묵.
