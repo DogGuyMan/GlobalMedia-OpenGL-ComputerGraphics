@@ -27,7 +27,7 @@ namespace TopdownShooter
             info.majorVersion = 4;
             info.minorVersion = 1;
             info.flags.debug = 1;   // sb7 가 core profile + forward compat 는 unconditional 설정 — debug context 만 명시
-            static const char title[] = "M1 - Topdown Shooter (sprite billboard)";
+            static const char title[] = "M1 — Topdown Shooter (sprite billboard)";
             std::memcpy(info.title, title, sizeof(title));
         }
 
@@ -73,11 +73,11 @@ namespace TopdownShooter
                 -0.5f,  0.5f,  0.0f, 0.0f,   // top-left
             };
 
-            glGenVertexArrays(1, &mQuadVAO);
-            glBindVertexArray(mQuadVAO);
+            glGenVertexArrays(1, &mVao);
+            glBindVertexArray(mVao);
 
-            glGenBuffers(1, &mQuadVBO);
-            glBindBuffer(GL_ARRAY_BUFFER, mQuadVBO);
+            glGenBuffers(1, &mVbo);
+            glBindBuffer(GL_ARRAY_BUFFER, mVbo);
             glBufferData(GL_ARRAY_BUFFER, sizeof(quadVerts), quadVerts, GL_STATIC_DRAW);
 
             // location 0 — a_quad (vec2), stride = 4 floats
@@ -89,9 +89,13 @@ namespace TopdownShooter
 
             glBindVertexArray(0);
 
-            // === 4. GL 상태 — 빌보드 alpha-test 는 fragment 내부 discard, blending 불요 ===
+            // === 4. 일회성 GL 상태 ===
             glEnable(GL_DEPTH_TEST);
-            glClearColor(0.10f, 0.10f, 0.12f, 1.0f);
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);   // alpha-test 만 사용 (frag discard)
+            glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+
+            spdlog::info("[M1] startup complete");
         }
 
         void render(double /*currentTime*/) override
@@ -104,12 +108,9 @@ namespace TopdownShooter
             glUseProgram(mProgram->GetProgramAddr());
 
             // === 카메라 — Y축 위, +Z 후방에서 원점 응시 ===
-            const float aspect = (info.windowHeight > 0)
-                                     ? static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight)
-                                     : 1.0f;
-            const vmath::mat4 proj = vmath::perspective(60.0f, aspect, 0.1f, 100.0f);
+            const vmath::mat4 proj = vmath::perspective(45.0f, static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight), 0.1f, 100.0f);
             const vmath::mat4 view = vmath::lookat(
-                vmath::vec3(0.0f, 1.0f, 4.0f),     // eye
+                vmath::vec3(0.0f, 5.0f, 5.0f),     // eye
                 vmath::vec3(0.0f, 0.0f, 0.0f),     // center
                 vmath::vec3(0.0f, 1.0f, 0.0f));    // up
 
@@ -127,15 +128,16 @@ namespace TopdownShooter
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, mAtlas.TextureId());
 
-            glBindVertexArray(mQuadVAO);
+            glBindVertexArray(mVao);
             glDrawArrays(GL_TRIANGLES, 0, 6);
             glBindVertexArray(0);
+            glUseProgram(0);
         }
 
         void shutdown() override
         {
-            if (mQuadVBO) { glDeleteBuffers(1, &mQuadVBO); mQuadVBO = 0; }
-            if (mQuadVAO) { glDeleteVertexArrays(1, &mQuadVAO); mQuadVAO = 0; }
+            if (mVbo) { glDeleteBuffers(1, &mVbo); mVbo = 0; }
+            if (mVao) { glDeleteVertexArrays(1, &mVao); mVao = 0; }
             mProgram.reset();   // SJH::Program::~Program 가 glDeleteProgram
             mAtlas.Release();   // SJH::Texture::~Texture 가 glDeleteTextures
         }
@@ -143,8 +145,8 @@ namespace TopdownShooter
     private:
         SJH::Sprite::UniformAtlas mAtlas;
         SJH::ProgramUPtr          mProgram;
-        GLuint                    mQuadVAO = 0;
-        GLuint                    mQuadVBO = 0;
+        GLuint                    mVao = 0;
+        GLuint                    mVbo = 0;
     };
 
 } // namespace TopdownShooter
