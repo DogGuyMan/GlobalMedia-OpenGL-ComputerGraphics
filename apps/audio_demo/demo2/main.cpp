@@ -1,5 +1,9 @@
-// audio_demo — FMOD Studio + ImGui 파라미터 데모 (single-file chapter).
-// Task 9: Transport(Play/Stop/Pause) + Master 볼륨 컨트롤.
+// audio_demo/demo2 — 사용자 제작 bank 테스팅.
+// 구성:
+//   - Buses    : bus:/BGM Bus, bus:/SFX Bus
+//   - Events   : event:/BGM (loop), event:/Damaged, event:/Slash (one-shot)
+//   - Param    : BGM_STATE (event-instance, Labeled: Title/Combat/Boss),
+//                Health    (global, Continuous 0..1)
 #include <sb7.h>
 
 #include <imgui.h>
@@ -12,9 +16,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <string>
-#include <utility>
-#include <vector>
 
 #ifdef __APPLE__
 #include <libgen.h>      // dirname
@@ -36,47 +37,43 @@ namespace
 			std::exit(1);
 		}
 	}
-	struct ParamCache
-	{
-		std::string name;
-		FMOD_STUDIO_PARAMETER_ID id;
-		enum Kind
-		{
-			Continuous,
-			Labeled,
-			Switch,
-			DiscreteInt
-		};
-		Kind kind;
-		float minValue;
-		float maxValue;
-		std::vector<std::string> labels; // Labeled 일 때만
-		float currentValue;
-	};
 } // namespace
 
-class audio_demo_application : public sb7::application
+class audio_demo2_application : public sb7::application
 {
+	// Core
 	FMOD::Studio::System *mSystem = nullptr;
-	FMOD::Studio::Bank *mMasterBank = nullptr;
-	FMOD::Studio::Bank *mStringsBank = nullptr;
-	FMOD::Studio::Bank *mMusicBank = nullptr;
+	FMOD::Studio::Bank   *mMasterBank  = nullptr;
+	FMOD::Studio::Bank   *mStringsBank = nullptr;
 
-	FMOD::Studio::EventDescription *mEventDesc = nullptr;
-	FMOD::Studio::EventInstance *mInstance = nullptr;
+	// BGM — persistent loop event (Play/Pause/BGM_STATE 조작 대상)
+	FMOD::Studio::EventDescription *mBgmDesc     = nullptr;
+	FMOD::Studio::EventInstance    *mBgmInstance = nullptr;
 
-	std::vector<ParamCache> mParams;
+	// SFX — one-shot 이벤트. description 만 캐시, 인스턴스는 버튼 클릭 시 생성→start→release.
+	FMOD::Studio::EventDescription *mDamagedDesc = nullptr;
+	FMOD::Studio::EventDescription *mSlashDesc   = nullptr;
+
+	// Buses — BGM/SFX 그룹별 볼륨 제어
+	FMOD::Studio::Bus *mBgmBus = nullptr;
+	FMOD::Studio::Bus *mSfxBus = nullptr;
+
+	// ImGui
 	ImGuiContext *mImGuiCtx = nullptr;
-	FMOD::Studio::Bus *mMasterBus = nullptr;
-	float mMasterVolume = 1.0f;
-	bool mPaused = false;
+
+	// UI 상태
+	bool  mBgmPaused   = false;
+	int   mBgmStateIdx = 0;     // 0=Title, 1=Combat, 2=Boss
+	float mHealth      = 1.0f;  // global parameter
+	float mBgmVolume   = 1.0f;
+	float mSfxVolume   = 1.0f;
 
 	void init() override
 	{
 		sb7::application::init();
 		info.majorVersion = 4;
 		info.minorVersion = 1;
-		std::snprintf(info.title, sizeof(info.title), "FMOD Studio + ImGui Audio Demo");
+		std::snprintf(info.title, sizeof(info.title), "FMOD Studio Audio Demo2 — Custom Bank");
 #ifdef __APPLE__
 		// macOS GLFW 3.0.4 는 glfwInit() 시 _GLFW_USE_CHDIR 로 CWD 를
 		// 앱 번들 Resources 경로로 변경한다. bank 상대 경로를 살리기 위해
@@ -92,111 +89,50 @@ class audio_demo_application : public sb7::application
 #endif
 	}
 
+	// One-shot SFX 헬퍼 — create → start → release.
+	// release() 는 인스턴스를 즉시 파괴하지 않고, 재생이 끝나면 FMOD 가 자동 해제 (정통 one-shot 패턴).
+	void play_one_shot(FMOD::Studio::EventDescription *desc, const char *label)
+	{
+		FMOD::Studio::EventInstance *inst = nullptr;
+		ck(desc->createInstance(&inst), "one-shot createInstance");
+		ck(inst->start(),               "one-shot start");
+		ck(inst->release(),             "one-shot release");
+		std::fprintf(stderr, "[demo2] one-shot: %s\n", label);
+	}
+
 	void startup() override
 	{
+		// System
 		ck(FMOD::Studio::System::create(&mSystem), "System::create");
 		ck(mSystem->initialize(512, FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL, nullptr),
-		   "System::initialize");
-		std::fprintf(stderr, "[audio_demo] FMOD Studio system initialized.\n");
+		                                           "System::initialize");
+		std::fprintf(stderr, "[demo2] FMOD Studio system initialized.\n");
+
+		// Banks — 사용자 제작 bank (Master + Strings 2개에 모든 컨텐츠 패킹)
 		ck(mSystem->loadBankFile("resources/banks/Master.bank",
-		                         FMOD_STUDIO_LOAD_BANK_NORMAL, &mMasterBank),
-		   "loadBankFile Master");
+		                          FMOD_STUDIO_LOAD_BANK_NORMAL, &mMasterBank),
+		                                           "loadBankFile Master");
 		ck(mSystem->loadBankFile("resources/banks/Master.strings.bank",
-		                         FMOD_STUDIO_LOAD_BANK_NORMAL, &mStringsBank),
-		   "loadBankFile Strings");
-		ck(mSystem->loadBankFile("resources/banks/Music.bank",
-		                         FMOD_STUDIO_LOAD_BANK_NORMAL, &mMusicBank),
-		   "loadBankFile Music");
-		std::fprintf(stderr, "[audio_demo] Banks loaded (Master + Strings + Music).\n");
+		                          FMOD_STUDIO_LOAD_BANK_NORMAL, &mStringsBank),
+		                                           "loadBankFile Strings");
+		std::fprintf(stderr, "[demo2] Banks loaded.\n");
 
-		// 우선 하드코드 이벤트 시도 — 실패 시 Music.bank 안의 첫 이벤트로 fallback.
-		FMOD_RESULT r = mSystem->getEvent("event:/Music/Level 01", &mEventDesc);
-		if (r != FMOD_OK)
-		{
-			std::fprintf(stderr, "[audio_demo] event:/Music/Level 01 미존재, fallback...\n");
-			int count = 0;
-			ck(mMusicBank->getEventCount(&count), "Bank::getEventCount");
-			if (count == 0)
-			{
-				std::fprintf(stderr, "[FMOD] Music.bank 에 이벤트가 없음.\n");
-				std::exit(1);
-			}
-			std::vector<FMOD::Studio::EventDescription *> events(static_cast<size_t>(count));
-			ck(mMusicBank->getEventList(events.data(), count, nullptr), "Bank::getEventList");
-			mEventDesc = events[0];
-		}
+		// Events — BGM 은 persistent, SFX 는 description 만 (인스턴스는 클릭 시)
+		ck(mSystem->getEvent("event:/BGM",     &mBgmDesc),     "getEvent BGM");
+		ck(mSystem->getEvent("event:/Damaged", &mDamagedDesc), "getEvent Damaged");
+		ck(mSystem->getEvent("event:/Slash",   &mSlashDesc),   "getEvent Slash");
 
-		ck(mEventDesc->createInstance(&mInstance), "EventDescription::createInstance");
-		ck(mInstance->start(), "EventInstance::start");
-		std::fprintf(stderr, "[audio_demo] Event playing.\n");
+		// BGM 인스턴스 생성 + 재생 (loop)
+		ck(mBgmDesc->createInstance(&mBgmInstance), "BGM createInstance");
+		ck(mBgmInstance->start(),                   "BGM start");
+		std::fprintf(stderr, "[demo2] BGM playing.\n");
 
-		int paramCount = 0;
-		ck(mEventDesc->getParameterDescriptionCount(&paramCount),
-		   "getParameterDescriptionCount");
-		for (int i = 0; i < paramCount; ++i)
-		{
-			FMOD_STUDIO_PARAMETER_DESCRIPTION desc{};
-			ck(mEventDesc->getParameterDescriptionByIndex(i, &desc),
-			   "getParameterDescriptionByIndex");
+		// Buses — 공백 포함 이름 ("BGM Bus" / "SFX Bus") 그대로 사용
+		ck(mSystem->getBus("bus:/BGM Bus", &mBgmBus), "getBus BGM Bus");
+		ck(mSystem->getBus("bus:/SFX Bus", &mSfxBus), "getBus SFX Bus");
+		std::fprintf(stderr, "[demo2] Buses ready (BGM Bus + SFX Bus).\n");
 
-			ParamCache p;
-			p.name = desc.name;
-			p.id = desc.id;
-			p.minValue = desc.minimum;
-			p.maxValue = desc.maximum;
-			p.currentValue = desc.defaultvalue;
-
-			const bool labeled = (desc.flags & FMOD_STUDIO_PARAMETER_LABELED) != 0;
-			const bool discrete = (desc.flags & FMOD_STUDIO_PARAMETER_DISCRETE) != 0;
-
-			if (labeled)
-			{
-				p.kind = ParamCache::Labeled;
-				for (int v = static_cast<int>(desc.minimum); v <= static_cast<int>(desc.maximum); ++v)
-				{
-					char buf[128]{};
-					int retrieved = 0;
-					mEventDesc->getParameterLabelByID(desc.id, v, buf, sizeof(buf), &retrieved);
-					p.labels.emplace_back(buf);
-				}
-			}
-			else if (discrete)
-			{
-				p.kind = (desc.minimum == 0.0f && desc.maximum == 1.0f)
-				             ? ParamCache::Switch
-				             : ParamCache::DiscreteInt;
-			}
-			else
-			{
-				p.kind = ParamCache::Continuous;
-			}
-
-			const char *kindStr = "?";
-			switch (p.kind)
-			{
-			case ParamCache::Continuous:
-				kindStr = "Continuous";
-				break;
-			case ParamCache::Labeled:
-				kindStr = "Labeled";
-				break;
-			case ParamCache::Switch:
-				kindStr = "Switch";
-				break;
-			case ParamCache::DiscreteInt:
-				kindStr = "DiscreteInt";
-				break;
-			}
-			std::fprintf(stderr, "[audio_demo] Param[%d] '%s' [%s] %.2f..%.2f default=%.2f\n",
-			             i, p.name.c_str(), kindStr,
-			             p.minValue, p.maxValue, p.currentValue);
-
-			mParams.push_back(std::move(p));
-		}
-		std::fprintf(stderr, "[audio_demo] %d parameters discovered.\n", paramCount);
-
-		ck(mSystem->getBus("bus:/", &mMasterBus), "System::getBus root");
-
+		// ImGui
 		mImGuiCtx = ImGui::CreateContext();
 		ImGui::StyleColorsDark();
 		ImGui_ImplGlfwGL3_Init(window, true);
@@ -213,75 +149,64 @@ class audio_demo_application : public sb7::application
 		glClearBufferfv(GL_COLOR, 0, clearColor);
 
 		ImGui_ImplGlfwGL3_NewFrame();
-		ImGui::Begin("Audio Demo");
-		ImGui::Text("Parameters (%zu discovered)", mParams.size());
-		ImGui::Separator();
+		ImGui::Begin("Audio Demo2 — Custom Bank");
 
-		for (auto &p : mParams)
-		{
-			float v = p.currentValue;
-			bool changed = false;
-			switch (p.kind)
-			{
-			case ParamCache::Continuous:
-				changed = ImGui::SliderFloat(p.name.c_str(), &v, p.minValue, p.maxValue);
-				break;
-			case ParamCache::Labeled: {
-				int idx = static_cast<int>(v);
-				// labels 를 const char* 배열로 변환 (v1.53 Combo 시그니처 호환)
-				std::vector<const char *> labelPtrs;
-				labelPtrs.reserve(p.labels.size());
-				for (auto &s : p.labels)
-					labelPtrs.push_back(s.c_str());
-				changed = ImGui::Combo(p.name.c_str(), &idx,
-				                       labelPtrs.data(), static_cast<int>(labelPtrs.size()));
-				v = static_cast<float>(idx);
-				break;
-			}
-			case ParamCache::Switch: {
-				bool b = v >= 0.5f;
-				changed = ImGui::Checkbox(p.name.c_str(), &b);
-				v = b ? 1.0f : 0.0f;
-				break;
-			}
-			case ParamCache::DiscreteInt: {
-				int iv = static_cast<int>(v);
-				changed = ImGui::SliderInt(p.name.c_str(),
-				                           &iv,
-				                           static_cast<int>(p.minValue),
-				                           static_cast<int>(p.maxValue));
-				v = static_cast<float>(iv);
-				break;
-			}
-			}
-			if (changed)
-			{
-				ck(mInstance->setParameterByID(p.id, v), "setParameterByID");
-				p.currentValue = v;
-			}
-		}
-
-		ImGui::Separator();
-		ImGui::Text("Transport");
+		// 1) BGM Play / Pause
+		ImGui::Text("BGM");
 		if (ImGui::Button("Play"))
 		{
-			ck(mInstance->start(), "EventInstance::start");
+			ck(mBgmInstance->start(), "BGM start");
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Stop"))
+		if (ImGui::Checkbox("Pause", &mBgmPaused))
 		{
-			ck(mInstance->stop(FMOD_STUDIO_STOP_ALLOWFADEOUT), "EventInstance::stop");
+			ck(mBgmInstance->setPaused(mBgmPaused), "BGM setPaused");
 		}
-		ImGui::SameLine();
-		if (ImGui::Checkbox("Pause", &mPaused))
+
+		// 2) BGM_STATE — event-instance labeled (Title/Combat/Boss)
+		static const char *kBgmStateLabels[] = {"Title", "Combat", "Boss"};
+		if (ImGui::Combo("BGM_STATE", &mBgmStateIdx, kBgmStateLabels, 3))
 		{
-			ck(mInstance->setPaused(mPaused), "EventInstance::setPaused");
+			ck(mBgmInstance->setParameterByName("BGM_STATE",
+			                                    static_cast<float>(mBgmStateIdx)),
+			                                    "setParameterByName BGM_STATE");
 		}
 
 		ImGui::Separator();
-		if (ImGui::SliderFloat("Master Volume", &mMasterVolume, 0.0f, 1.0f, "%.2f"))
+
+		// 3) Health — global parameter (System level, 모든 이벤트 공유)
+		ImGui::Text("Global Parameter");
+		if (ImGui::SliderFloat("Health", &mHealth, 0.0f, 1.0f, "%.2f"))
 		{
-			ck(mMasterBus->setVolume(mMasterVolume), "Bus::setVolume");
+			ck(mSystem->setParameterByName("Health", mHealth),
+			                                    "setParameterByName Health");
+		}
+
+		ImGui::Separator();
+
+		// 4) SFX one-shot — 버튼 클릭 시 즉시 create + start + release
+		ImGui::Text("SFX (one-shot)");
+		if (ImGui::Button("Damaged"))
+		{
+			play_one_shot(mDamagedDesc, "Damaged");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Slash"))
+		{
+			play_one_shot(mSlashDesc, "Slash");
+		}
+
+		ImGui::Separator();
+
+		// 5) Bus 볼륨 — BGM Bus / SFX Bus 각각
+		ImGui::Text("Bus Volume");
+		if (ImGui::SliderFloat("BGM Bus", &mBgmVolume, 0.0f, 1.0f, "%.2f"))
+		{
+			ck(mBgmBus->setVolume(mBgmVolume), "BGM Bus setVolume");
+		}
+		if (ImGui::SliderFloat("SFX Bus", &mSfxVolume, 0.0f, 1.0f, "%.2f"))
+		{
+			ck(mSfxBus->setVolume(mSfxVolume), "SFX Bus setVolume");
 		}
 
 		ImGui::End();
@@ -297,29 +222,19 @@ class audio_demo_application : public sb7::application
 			mImGuiCtx = nullptr;
 		}
 
-		if (mInstance)
+		if (mBgmInstance)
 		{
-			mInstance->stop(FMOD_STUDIO_STOP_IMMEDIATE);
-			mInstance->release();
-			mInstance = nullptr;
-			mEventDesc = nullptr;
+			mBgmInstance->stop(FMOD_STUDIO_STOP_IMMEDIATE);
+			mBgmInstance->release();
+			mBgmInstance = nullptr;
 		}
+		// EventDescription 들은 Bank 소유 — 명시적 해제 없이 포인터만 null
+		mBgmDesc     = nullptr;
+		mDamagedDesc = nullptr;
+		mSlashDesc   = nullptr;
 
-		if (mMusicBank)
-		{
-			mMusicBank->unload();
-			mMusicBank = nullptr;
-		}
-		if (mStringsBank)
-		{
-			mStringsBank->unload();
-			mStringsBank = nullptr;
-		}
-		if (mMasterBank)
-		{
-			mMasterBank->unload();
-			mMasterBank = nullptr;
-		}
+		if (mStringsBank) { mStringsBank->unload(); mStringsBank = nullptr; }
+		if (mMasterBank)  { mMasterBank->unload();  mMasterBank  = nullptr; }
 
 		if (mSystem)
 		{
@@ -329,4 +244,4 @@ class audio_demo_application : public sb7::application
 	}
 };
 
-DECLARE_MAIN(audio_demo_application);
+DECLARE_MAIN(audio_demo2_application);
