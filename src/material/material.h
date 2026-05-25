@@ -5,7 +5,6 @@
  * @details
  *  ### 구성 4 요소 (책임 분할)
  *  - `mPassKind` — *어떤 종류의 렌더링* (Pass::Kind, GL state 자동 도출 — SSoT)
- *  - `mProgram` (비소유) — 셰이더 schema 출처 (Observer 등록)
  *  - `Properties` (`MaterialPropertyBlock`) — *셰이더 무관 typed properties*
  *  - `IsInstance` + `OriginalMaterial` — Clone 추적 (Unreal `UMaterialInstanceDynamic::Parent` 정통)
  *
@@ -55,11 +54,8 @@ namespace SJH
 			return MaterialUPtr(new Material());
 		}
 
-		// ── Lifetime (Observer cascade — Program::~Program 가 OnProgramReleased 호출) ──
 		~Material()
 		{
-			if (mProgram)
-				mProgram->UnregisterMaterial(this);
 		}
 
 		Material(const Material &other)
@@ -71,7 +67,6 @@ namespace SJH
 		{
 			if (this != &other)
 			{
-				ReleaseProgram();
 				CopyFrom(other);
 			}
 			return *this;
@@ -79,32 +74,6 @@ namespace SJH
 
 		Material(Material &&) = delete;
 		Material &operator=(Material &&) = delete;
-
-		// ── Program 참조 (Observer 등록) ───────────────────────
-		/// @brief Program 주입. 이전 Program 은 Unregister, 새 Program 에 Register + cache 참조.
-		Material &SetProgram(const Program *program)
-		{
-			if (mProgram == program)
-				abort();
-			ReleaseProgram();
-			mProgram = program;
-			mCache = program ? &program->GetUniformCache() : nullptr;
-			if (mProgram)
-				mProgram->RegisterMaterial(this);
-			return *this;
-		}
-		const Program *GetProgram() const { return mProgram; }
-		const UniformCache *GetCache() const { return mCache; }
-
-		/// @brief Program::~Program cascade 진입점 — Properties bag 은 *유지* (다른 Program 재바인딩 가능).
-		void OnProgramReleased(const Program *releasing)
-		{
-			if (mProgram == releasing)
-			{
-				mProgram = nullptr;
-				mCache = nullptr;
-			}
-		}
 
 		// ── Properties bag (Unity MaterialPropertyBlock 정통) ─
 		/// @brief 외부 접근: `mat.Properties.Floats["..."]`. Setter family (`Uniforms::Set*(Material&, ...)`) 가 store.
@@ -118,10 +87,16 @@ namespace SJH
 			return *this;
 		}
 
-		Pass::Kind GetPass() const { return mPassKind; }
+		Pass::Kind GetPass() const
+		{
+			return mPassKind;
+		}
 
 		/// @brief 자동 도출 queue layer (`Pass::QueueOf(PassKind)` alias).
-		int GetQueueLayer() const { return Pass::QueueOf(mPassKind); }
+		int GetQueueLayer() const
+		{
+			return Pass::QueueOf(mPassKind);
+		}
 
 		// ── Instance metadata (Unreal `UMaterialInstanceDynamic::Parent` 정통, 읽기 전용) ──
 		/// @brief Clone 결과 인스턴스 여부. `Create()` 결과 = false, `Clone()` 결과 = true.
@@ -160,23 +135,9 @@ namespace SJH
 		{
 			Properties = other.Properties; // MaterialPropertyBlock 통째로 복사 (6 typed map 자동)
 			mPassKind = other.mPassKind;   // Pass 의도 — Clone 시 Transparent 유지.
-			mProgram = other.mProgram;
-			mCache = other.mCache;
-			if (mProgram)
-				mProgram->RegisterMaterial(this);
-		}
-
-		void ReleaseProgram()
-		{
-			if (mProgram)
-				mProgram->UnregisterMaterial(this);
-			mProgram = nullptr;
-			mCache = nullptr;
 		}
 
 		Pass::Kind mPassKind = Pass::Kind::Opaque;
-		const Program *mProgram = nullptr;
-		const UniformCache *mCache = nullptr;
 	};
 } // namespace SJH
 

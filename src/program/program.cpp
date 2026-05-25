@@ -1,5 +1,4 @@
 #include "program/program.h"
-#include "material/material.h"   // SP6 Observer — Material::OnProgramReleased cascade
 #include "diagnostics/gl_log.h"
 #include "diagnostics/uniform_diagnostics.h"
 #include <algorithm>
@@ -47,12 +46,6 @@ namespace SJH
 
     Program::~Program()
     {
-        // SP6 Observer cascade — 의존 Material 들에 release 통지.
-        // OnProgramReleased 안에서 Material 이 UnregisterMaterial 호출 가능 -> 복사본 순회.
-        const auto dependents = mDependentMaterials;
-        for (auto* m : dependents)
-            if (m) m->OnProgramReleased(this);
-
         if (mProgramAddr != 0)
         {
             Diagnostics::UniformDiagnostics::Invalidate(mProgramAddr);
@@ -70,21 +63,4 @@ namespace SJH
         return SJH::Diagnostics::GLObjectLog::CheckProgramLink(mProgramAddr);
     }
 
-    void Program::RegisterMaterial(Material* m) const
-    {
-        if (!m) return;
-        // 중복 등록 방지 — Material::SetProgram 이 한 Program 에 두 번 등록 불가.
-        if (std::find(mDependentMaterials.begin(), mDependentMaterials.end(), m)
-            == mDependentMaterials.end())
-        {
-            mDependentMaterials.push_back(m);
-        }
-    }
-
-    void Program::UnregisterMaterial(Material* m) const
-    {
-        mDependentMaterials.erase(
-            std::remove(mDependentMaterials.begin(), mDependentMaterials.end(), m),
-            mDependentMaterials.end());
-    }
 }
