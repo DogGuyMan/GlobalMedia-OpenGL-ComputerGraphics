@@ -28,10 +28,14 @@
 #include "program/program.h"
 #include "program/program_uniforms.h"
 #include "render/mesh_renderer.h"
+#include "render/render_stage.h"
 #include "render/render_target.h"
 #include "render/scene_renderer.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
+#include "scene/camera.h"
+#include "scene/compound_actor.h"
+#include "scene/layer.h"
 #include "scene/scene.h"
 
 #include "client.h"
@@ -138,6 +142,23 @@ class tweeny_demo_app : public sb7::application
 			xform.Scale = vmath::vec3(0.05f, 0.035f, 1.0f);
 		}
 
+		// === SP5 — SceneCamera Actor 도입 (옛 Render(RT, I, I) 우회 청산) ===
+		{
+			int fbW2 = 0, fbH2 = 0;
+			glfwGetFramebufferSize(window, &fbW2, &fbH2);
+			const float aspect = static_cast<float>(fbW2) / static_cast<float>(fbH2);
+
+			auto camActor = SJH::Scene::CreateCameraActor("SceneCamera",
+			    /*fov*/45.0f, aspect, /*near*/0.1f, /*far*/100.0f);
+			camActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 5.0f);
+			auto* cam = camActor->GetComponent<SJH::Scene::Camera>();
+			cam->SetCullingMask(SJH::Scene::Layer::Default);   // 명시 — UI 비트 제외
+			cam->SetTargetFramebuffer(nullptr);                // backbuffer
+			dir.Root().AddChild(std::move(camActor));
+			dir.SetActiveCamera(cam);
+		}
+
+		mStages.push_back(&mRenderSys);
 		dir.Enter();
 	}
 
@@ -149,8 +170,7 @@ class tweeny_demo_app : public sb7::application
 			dtMs = 0;
 
 		SJH::Scene::Director::Get().Update((float)dt);
-		const vmath::mat4 I = vmath::mat4::identity();
-		mRenderSys.Render(*mDefaultTarget, I, I);
+		for (auto* s : mStages) s->Render(*mDefaultTarget);
 	}
 
 	void shutdown() override
@@ -169,10 +189,12 @@ class tweeny_demo_app : public sb7::application
 		sb7::application::onResize(w, h);
 		glViewport(0, 0, w, h);
 		mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(w, h);
+		for (auto* s : mStages) s->OnResize(w, h);   // broadcast
 	}
 
   private:
 	SJH::SceneRenderer mRenderSys;
+	std::vector<SJH::IRenderStage*> mStages;   // 호출 순서, non-owning
 	SJH::MeshUPtr mQuad;
 	SJH::ProgramUPtr mProgram;
 	SJH::RenderTargetUPtr mDefaultTarget;
