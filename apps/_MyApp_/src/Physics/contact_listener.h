@@ -7,7 +7,7 @@ namespace TopdownShooter::Physics
 {
     /// @brief b2World::SetContactListener 대상.
     /// @details BeginContact/EndContact 받고 IsSensor 분기 →
-    ///          양쪽 Actor 의 IPhysicsContactListener Component 에 콜백 전달.
+    ///          양쪽 Actor 의 IContactable Component 에 콜백 전달.
     class PhysicsContactListener : public b2ContactListener
     {
     public:

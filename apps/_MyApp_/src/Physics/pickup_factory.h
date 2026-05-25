@@ -1,7 +1,7 @@
 #ifndef __MYAPP_PHYSICS_PICKUP_FACTORY_H__
 #define __MYAPP_PHYSICS_PICKUP_FACTORY_H__
 
-#include "Physics/contact_interface.h"
+#include "Physics/Components.Interfaces.h"
 #include "Physics/filter.h"
 #include "Physics/physics_body.h"
 #include "scene/actor.h"
@@ -15,7 +15,7 @@ namespace TopdownShooter::Physics
 {
     /// @brief 픽업/감지 영역 — Trigger 이벤트를 로그로 출력 (M3 시각 검증용).
     class PickupTriggerLogger : public SJH::Scene::Component,
-                                public IPhysicsContactListener
+                                public IContactable
     {
     public:
         void OnEnter() override {}
