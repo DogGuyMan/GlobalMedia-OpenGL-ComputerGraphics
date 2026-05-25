@@ -5,7 +5,7 @@
 #include "Entity/Components/MovementComponents.h"
 #include "InputHandler/PlayerController.h"
 #include "input/keyboard_input.h"
-#include "Physics/physics_body.h"
+#include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/physics_movement.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
@@ -107,7 +107,7 @@ namespace TopdownShooter::Entity::Player
 			fd.filter.maskBits     = cfg.physics.maskBits;
 			body->CreateFixture(&fd);
 
-			auto *pb = actor->AddComponent<Physics::PhysicsBodyComponent>();
+			auto *pb = actor->AddComponent<Physics::Components::BoxBody>();
 			pb->SetBody(body);
 			pb->SetSensor(cfg.physics.isSensor);
 

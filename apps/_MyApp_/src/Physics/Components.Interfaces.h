@@ -21,7 +21,7 @@ namespace TopdownShooter::Physics
 	///   - 정적↔정적 충돌은 Box2D 가 이벤트 없음 (Unity "최소 한 쪽 Rigidbody" 규약과 동일)
 	///
 	///   ### isTrigger source-of-truth
-	///   - `PhysicsBodyComponent::IsSensor()` 가 유일 — 본 인터페이스에는 게터를 두지 않음.
+	///   - `Components::Physics::IsSensor()` 가 유일 — 본 인터페이스에는 게터를 두지 않음.
 	class IContactable
 	{
 	  protected:

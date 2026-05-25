@@ -10,7 +10,7 @@ namespace TopdownShooter::Physics
     namespace
     {
         // b2Body::GetUserData().pointer 에 등록된 Actor* 회수.
-        // PhysicsBodyComponent::SetBody 가 reinterpret_cast<uintptr_t>(Actor*) 로 등록.
+        // Components::Physics::SetBody 가 reinterpret_cast<uintptr_t>(Actor*) 로 등록.
         SJH::Scene::Actor* ActorFromBody(b2Body* body)
         {
             if (!body) return nullptr;

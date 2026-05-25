@@ -2,8 +2,8 @@
 #define __MYAPP_PHYSICS_PICKUP_FACTORY_H__
 
 #include "Physics/Components.Interfaces.h"
+#include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/filter.h"
-#include "Physics/physics_body.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <memory>
@@ -58,7 +58,7 @@ namespace TopdownShooter::Physics
         fd.filter.maskBits     = ToBits(PhysicsLayer::Player);
         body->CreateFixture(&fd);
 
-        auto* pb = actor->AddComponent<PhysicsBodyComponent>();
+        auto* pb = actor->AddComponent<Components::BoxBody>();
         pb->SetBody(body);
         pb->SetSensor(true);
 
