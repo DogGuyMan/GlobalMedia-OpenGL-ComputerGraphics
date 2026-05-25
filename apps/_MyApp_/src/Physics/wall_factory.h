@@ -30,8 +30,8 @@ namespace TopdownShooter::Physics
         b2FixtureDef fd;
         fd.shape               = &box;
         fd.isSensor            = false;   // solid — Unity isTrigger OFF
-        fd.filter.categoryBits = Filter::WALL;
-        fd.filter.maskBits     = Filter::WALL_MASK;
+        fd.filter.categoryBits = ToBits(PhysicsLayer::Wall);
+        fd.filter.maskBits     = ToBits(WallMask);
         body->CreateFixture(&fd);
 
         auto* pb = actor->AddComponent<PhysicsBodyComponent>();

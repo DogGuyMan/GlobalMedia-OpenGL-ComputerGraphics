@@ -144,8 +144,8 @@ namespace TopdownShooter
 			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
 			pac.physics.density       = 1.0f;
 			pac.physics.linearDamping = 5.0f;
-			pac.physics.categoryBits  = TopdownShooter::Physics::Filter::PLAYER;
-			pac.physics.maskBits      = TopdownShooter::Physics::Filter::PLAYER_MASK;
+			pac.physics.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
+			pac.physics.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
 
 			auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
 
