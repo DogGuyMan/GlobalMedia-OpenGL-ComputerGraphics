@@ -1,9 +1,11 @@
 #ifndef __SJH_PLAYABLE_COMPOSITE_PLAYABLE_H__
 #define __SJH_PLAYABLE_COMPOSITE_PLAYABLE_H__
 
-#include "playable/playable_base.h"
-#include <memory>
-#include <vector>
+#include "playable/iplayable.h"          // SJH::Playable::IPlayable (children unique_ptr 원소 타입)
+#include "playable/playable_base.h"      // PlayableBase 베이스
+#include <cstddef>                        // std::size_t
+#include <memory>                         // std::unique_ptr
+#include <vector>                         // std::vector
 
 namespace SJH::Playable
 {
