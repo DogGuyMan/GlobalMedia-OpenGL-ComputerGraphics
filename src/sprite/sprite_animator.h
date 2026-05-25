@@ -2,6 +2,7 @@
 #define __SJH_SPRITE_SPRITE_ANIMATOR_H__
 
 #include "scene/actor.h"        // SJH::Scene::Component
+#include "sprite/sprite_component.h" // sibling — frameIdx 기록 대상
 #include "sprite/uniform_atlas.h"
 
 namespace SJH::Sprite
@@ -13,6 +14,8 @@ namespace SJH::Sprite
     ///   - currentFrame = floor(mElapsed * fps) % FrameCount (loop) 또는 clamp (non-loop)
     ///   - default fps = atlas->FrameCount() — *1초에 atlas 전체 사이클*.
     ///     예: 4×4 atlas → 16fps, 2×2 atlas → 4fps. 사용자 명시 가능 (SetFps).
+    ///   - sibling @c SpriteRenderer 가 있으면 Update 끝에 그 @c frameIdx 에 자동 송신
+    ///     (Playable 도입 전 전환 다리 — Playable 정착 후 본 책임 이관).
     ///
     ///   ### 좌하단 순회 보장
     ///   - Image::Load (stb_image) 가 V flip 적용 — GL UV(0,0) = PNG 좌하단
@@ -94,6 +97,13 @@ namespace SJH::Sprite
                     mCurrentFrame = rawFrame;
                 }
             }
+
+            // sibling SpriteRenderer 에 frameIdx 송신 — lazy cache.
+            // null 이면 매 frame 재시도 (component 후행 추가 허용). 한 sprite 단위라 cost 무시.
+            if (!mSibling)
+                mSibling = GetOwner() ? GetOwner()->GetComponent<SpriteRenderer>() : nullptr;
+            if (mSibling)
+                mSibling->frameIdx = mCurrentFrame;
         }
 
         // === Accessors ===
@@ -108,13 +118,15 @@ namespace SJH::Sprite
         }
 
     private:
-        UniformAtlas* mAtlas        = nullptr;
-        float         mFps          = 0.0f;    // 0 = auto (FrameCount)
-        bool          mLoop         = true;
+        UniformAtlas*    mAtlas        = nullptr;
+        float            mFps          = 0.0f;    // 0 = auto (FrameCount)
+        bool             mLoop         = true;
 
-        float         mElapsed      = 0.0f;
-        int           mCurrentFrame = 0;
-        bool          mFinished     = false;
+        float            mElapsed      = 0.0f;
+        int              mCurrentFrame = 0;
+        bool             mFinished     = false;
+
+        SpriteRenderer* mSibling      = nullptr; // 같은 Actor 위 SpriteRenderer — lazy cache
     };
 }
 
