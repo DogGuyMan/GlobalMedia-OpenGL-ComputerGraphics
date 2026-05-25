@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace SJH::Scene { class Actor; class Camera; }
-namespace SJH { class Framebuffer; class Program; class DirLight; class PointLight; class SpotLight; class RenderTarget; }
+namespace SJH { class Program; class DirLight; class PointLight; class SpotLight; class RenderTarget; }
 #include <unordered_set>
 
 namespace SJH
@@ -18,7 +18,7 @@ namespace SJH
     ///   1. Scene::Root() 부터 DFS — 모든 Camera 컴포넌트 수집 (IsActive + IsEnabled)
     ///   2. Camera::GetDepth() 오름차순 
     ///   3. 각 Camera 마다 RenderWithCamera 1패스:
-    ///      - Camera::GetTargetFramebuffer() 가 있으면 해당 FBO, 없으면 default backbuffer
+    ///      - Camera::GetTargetRenderTarget() 가 있으면 해당 RT, 없으면 default backbuffer
     ///      - DeviceContext::BeginFrame(target) + Actor 트리 MeshRenderer 수집 + Queue Flush
     ///
     /// @brief High-level Orchestrator — Unreal `FSceneRenderer` 정통.

@@ -153,7 +153,7 @@ class tweeny_demo_app : public sb7::application
 			camActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 5.0f);
 			auto* cam = camActor->GetComponent<SJH::Scene::Camera>();
 			cam->SetCullingMask(SJH::Scene::Layer::Default);   // 명시 — UI 비트 제외
-			cam->SetTargetFramebuffer(nullptr);                // backbuffer
+			cam->SetTargetRenderTarget(nullptr);               // backbuffer
 			dir.Root().AddChild(std::move(camActor));
 			dir.SetActiveCamera(cam);
 		}

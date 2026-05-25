@@ -110,7 +110,7 @@ namespace TopdownShooter
 			camCtrl->SetMouseInput(&mMouse)
 			    .SetCamera(cam)
 			    .SetUp();
-			cam->SetTargetFramebuffer(nullptr);
+			cam->SetTargetRenderTarget(nullptr);
 
 			mCameraActor = dir.Root().AddChild(std::move(camActor));
 			mCamera = cam;

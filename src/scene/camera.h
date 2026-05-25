@@ -8,7 +8,7 @@
 
 namespace SJH
 {
-	class Framebuffer;
+	class RenderTarget;
 } // namespace SJH
 
 namespace SJH::Scene
@@ -83,15 +83,16 @@ namespace SJH::Scene
 		}
 
 		// ── SP4 multi-pass ─────────────────────────────────────────────────────
-		/// @brief 렌더 대상 FBO 지정 — Unity Camera.targetTexture 정통.
+		/// @brief 렌더 대상 지정 — Unity Camera.targetTexture 정통. 의존 역전 — RenderTarget 추상.
 		/// @details nullptr = default backbuffer. SceneRenderer 이 BeginFrame 시 자동 사용.
-		void SetTargetFramebuffer(Framebuffer *fb)
+		///          Framebuffer(FBO) / DefaultRenderTarget / 미래 ShadowMap/MRT 등 모두 수용.
+		void SetTargetRenderTarget(RenderTarget *rt)
 		{
-			mTargetFB = fb;
+			mTargetRT = rt;
 		}
-		Framebuffer *GetTargetFramebuffer() const
+		RenderTarget *GetTargetRenderTarget() const
 		{
-			return mTargetFB;
+			return mTargetRT;
 		}
 
 		virtual void OnEnter() override
@@ -109,8 +110,8 @@ namespace SJH::Scene
 		/// @details 일반 inverse 아님. scale 1 가정. sb7 vmath 가 inverse 미제공이라 자작.
 		static vmath::mat4 InverseAffine(const vmath::mat4 &m);
 
-		// SP4 multi-pass — 렌더 대상.
-		Framebuffer *mTargetFB = nullptr; // 비소유 — owner 는 App/Chapter (Option C).
+		// SP4 multi-pass — 렌더 대상. 의존 역전 — RenderTarget 추상 (Framebuffer/Default/Shadow 모두 수용).
+		RenderTarget *mTargetRT = nullptr; // 비소유 — owner 는 App/Chapter (Option C).
 
 		// TargetLock 상태 — 비소유 (target Actor 의 lifetime 책임 외부).
 		const Actor *mLockTarget = nullptr;

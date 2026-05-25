@@ -144,7 +144,7 @@ class migrate_demo_app : public sb7::application
 		auto *sceneCam = sceneCamActor->GetComponent<SJH::Scene::Camera>();
 		sceneCam->Depth = 0;
 		sceneCam->CullingMask = SJH::LAYER_SCENE;
-		sceneCam->SetTargetFramebuffer(mSceneFB.get());
+		sceneCam->SetTargetRenderTarget(mSceneFB.get());
 
 		auto *ctrl = sceneCamActor->AddComponent<MigrateDemo::Controller::CameraController>();
 		ctrl->SetKeyboardInput(&mKeyboard)
@@ -280,8 +280,8 @@ class migrate_demo_app : public sb7::application
 				for (auto &child : dir.Root().GetChildren())
 				{
 					auto *cam = child->GetComponent<SJH::Scene::Camera>();
-					if (cam && cam->GetTargetFramebuffer() == oldFB)
-						cam->SetTargetFramebuffer(newSceneFB.get());
+					if (cam && cam->GetTargetRenderTarget() == oldFB)
+						cam->SetTargetRenderTarget(newSceneFB.get());
 				}
 				mSceneFB = std::move(newSceneFB);
 			}
@@ -372,7 +372,7 @@ class migrate_demo_app : public sb7::application
 			cam->Depth = static_cast<int>(i) + 1;
 			cam->CullingMask = layer;
 			// 초기 target — ApplyUIState 가 매 프레임 재배선. 임시로 자기 outputFB 가리킴.
-			cam->SetTargetFramebuffer(outputFB.get());
+			cam->SetTargetRenderTarget(outputFB.get());
 			dir.Root().AddChild(std::move(camActor));
 
 			PostFXPass &p = mPostFX[i];
@@ -499,7 +499,7 @@ class migrate_demo_app : public sb7::application
 			    {input->GetColorAttachment().get(), 0};
 
 			// 카메라 target — 마지막 활성 패스만 backbuffer.
-			p->Camera->SetTargetFramebuffer(isLast ? nullptr : p->OutputFB.get());
+			p->Camera->SetTargetRenderTarget(isLast ? nullptr : p->OutputFB.get());
 		}
 
 		// 5) Clear color — DeviceContext::BeginFrame 의 clear 가 GL state 의 glClearColor 사용.
