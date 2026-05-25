@@ -12,6 +12,7 @@ add_subdirectory(shader)
 add_subdirectory(render)
 add_subdirectory(resource_registry)
 add_subdirectory(input)
+add_subdirectory(playable)
 
 add_library(sjhopengl_engine INTERFACE)
 add_library(SJH::engine ALIAS sjhopengl_engine)
