@@ -2,6 +2,7 @@
 #define __SJH_SCENE_RENDERER_H__
 
 #include "render/mesh_pass_processor.h"
+#include "render/render_stage.h"
 #include <cstdint>
 #include <vmath.h>
 #include <vector>
@@ -22,7 +23,7 @@ namespace SJH
     ///
     /// @brief High-level Orchestrator — Unreal `FSceneRenderer` 정통.
     ///        Actor 트리 traverse -> MeshRenderer 수집 -> DrawCommand -> MeshPassProcessor::Process 위임.
-    class SceneRenderer
+    class SceneRenderer : public IRenderStage
     {
     public:
         /// @brief 씬 트리의 모든 Camera 컴포넌트 수집 -> depth 정렬 -> 직렬 렌더.
@@ -30,7 +31,7 @@ namespace SJH
         ///                      nullptr 일 때 fallback 으로 사용 (SP-RTOwnership — DeviceContext 슬림화).
         /// @details Camera 컴포넌트가 하나도 없으면 spdlog::warn + early return (프레임 skip).
         ///          Unity Camera.depth 정통 — 작은 depth 가 먼저 렌더.
-        void Render(RenderTarget& defaultTarget);
+        void Render(RenderTarget& defaultTarget) override;
 
         /// @brief 명시 view/proj — 단위 테스트 + 디버그용 (CameraComponent 우회).
         /// @details 기존 인터페이스 보존 — CameraComponent 없이 임의 view/proj 직접 주입 가능.
