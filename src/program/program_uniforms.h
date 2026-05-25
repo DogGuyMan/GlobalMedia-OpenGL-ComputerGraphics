@@ -11,6 +11,25 @@
  *  -# **C# extension method 와 동등한 효과** — 클래스 내부를 건드리지 않고 *외부에서*
  *     동작을 덧붙이는 패턴. C++ 에선 *자유 함수 + ADL* 가 그 자연스러운 형태.
  *
+ *  ### DeviceContext 와의 책임 경계 (SP-RenderFacadeBoundary)
+ *  본 namespace 는 *shader uniform 상태* 의 단일 진입점. @c DeviceContext (pipeline
+ *  state facade) **를 의도적으로 우회**한다. 같은 호출 사이트에서 두 책임이 섞이는
+ *  형태 (예: SceneRenderer / MeshPassProcessor) 는 *디자인 의도된 분리* — 안티패턴
+ *  아님. 근거:
+ *    - **OCP** — 새 uniform 타입 추가 시 @c DeviceContext 헤더 변동 0
+ *    - **진단 가시성** — `glUniform*` 직전에 캐시 fallback (`glGetUniformLocation`
+ *      직접 호출, 캐시 mutation 없음) 이 실행 — facade 가 중간에 끼면 이 fallback
+ *      흐름이 가려져 누락 uniform 진단 (warn-once) 추적 곤란
+ *    - **bound state 분리** — @c DeviceContext 는 *어떤 program 이 bound 인가* 만
+ *      알면 충분. 그 program 에 *무슨 값을 넣는가* 는 본 namespace 의 자율 영역.
+ *
+ *  호출자 가이드 — 어떤 경로로 무엇을:
+ *  | 의도 | 경로 |
+ *  |---|---|
+ *  | program 활성화 / VAO·Tex·RT 바인딩 / draw | @c DeviceContext |
+ *  | uniform 값 설정 | 본 namespace (자유 함수) |
+ *  | uniform location 조회 | @c Program::GetLocation 직접 |
+ *
  *  ### 캐시 위치 — Program *내부* 멤버 (SP2 완료)
  *  - 캐시는 @c Program::mUniformCache (private) — @c Program::GetLocation / @c GetType 으로 공개.
  *  - 자유 함수들은 @c Program::GetLocation (const read-only) 경유 — TU-local static 캐시 제거됨.
