@@ -5,26 +5,29 @@
 #include <cstddef>
 #include <vector>
 
-namespace SJH::Scene { class Actor; }
+namespace SJH::Scene { class MeshRenderer; }
 namespace SJH
 {
-    class Program;
-    class Mesh;
-    class Material;
     class DeviceContext;
 
     /// @brief Cocos 식 Layer A — 한 프레임의 정렬 가능한 draw command.
-    /// @details GL state override 필드 *모두 제거*. GL state 는 *오직 Material::PassKind*
-    /// `Pass::DefaultPipelineStateOf(material->GetPass())` 가 매 draw 도출.
+    /// @details
+    ///   ### SSoT — MeshRenderer 단일 의존
+    ///   program/mesh/material/actor 4-필드 직접 보관 폐기. 모두 meshRenderer 경유 접근.
+    ///   접근 경로:
+    ///   - mesh:     `meshRenderer->Mesh`
+    ///   - material: `meshRenderer->Material`
+    ///   - program:  `meshRenderer->Material->GetProgram()`
+    ///   - actor:    `meshRenderer->GetOwner()` (Component 베이스)
+    ///
+    ///   *수집 시점 가변 데이터* (modelMatrix/queueLayer/depth) 만 별도 필드 — per-frame 계산값.
+    ///   GL state 는 `Pass::DefaultPipelineStateOf(material->GetPass())` 도출 (Material 이 SSoT).
     struct DrawCommand
     {
-        const Program*       program     = nullptr;
-        const Mesh*          mesh        = nullptr;
-        const Material*      material    = nullptr;
-        vmath::mat4          modelMatrix = vmath::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
-        int                  queueLayer  = 2000;
-        const Scene::Actor*  actor       = nullptr;   ///< 디버그 추적
-        float                depth       = 0.0f;      ///< view-space z (back-to-front)
+        const Scene::MeshRenderer* meshRenderer = nullptr;             ///< SSoT — program/mesh/material/actor 모두 경유 접근.
+        vmath::mat4                modelMatrix  = vmath::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
+        int                        queueLayer   = 2000;
+        float                      depth        = 0.0f;                ///< view-space z (back-to-front)
     };
 
     /// @brief Low-level Orchestrator — DrawCommand 컬렉션의 *순서 + 조건* 결정 + Applier 들에게 위임.

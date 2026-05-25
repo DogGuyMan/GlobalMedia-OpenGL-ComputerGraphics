@@ -243,19 +243,14 @@ namespace SJH
 					// view-space origin z: (viewMat * model) 의 4번째 열(translation) z 성분.
 					// vmath 는 mat*vec 오버로드 미제공 -> mat4 직접 인덱싱으로 depth 추출.
 					const float depthZ = (viewMat * model)[3][2];
+					// SSoT — DrawCommand 는 MeshRenderer 만 의존. program/mesh/material/actor 는
+					//   MeshPassProcessor::Process 에서 mr 경유로 추출 (Filament/Unreal/Cocos 정통).
+					//   per-frame 가변 데이터 (modelMatrix/queueLayer/depth) 만 별도 보관.
 					DrawCommand cmd;
-					cmd.program = mr->Material->GetProgram();
-					cmd.mesh = mr->Mesh;
-					cmd.material = mr->Material;
+					cmd.meshRenderer = mr;
 					cmd.modelMatrix = model;
-					// Filament/Unreal/Cocos 정통 — 진실의 원천 단일화:
-					//  , Material.GetPass() = "어떤 종류" (Pass::Kind enum, private 캡슐화)
-					//  , Material.GetQueueLayer() = Pass::QueueOf(GetPass()) 도출 (alias)
-					//  , MeshRenderer.QueueOffset = "같은 Material 의 인스턴스 간 미세 순서" (Unity Renderer.sortingOrder)
-					//
-					//  최종 = Material.GetQueueLayer() + mr.QueueOffset.
+					// 최종 queue = Material.GetQueueLayer() + mr.QueueOffset (Unity Renderer.sortingOrder).
 					cmd.queueLayer = mr->Material->GetQueueLayer() + mr->QueueOffset;
-					cmd.actor = &actor;
 					cmd.depth = depthZ;
 					// SP-MaterialSSoT — per-actor GL state override 제거. Material.PassKind 가 SSoT.
 					mProcessor.Submit(cmd);

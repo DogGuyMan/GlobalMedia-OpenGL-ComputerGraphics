@@ -18,13 +18,14 @@
  */
 #include "render/mesh_pass_processor.h"
 #include "render/device_context.h"
+#include "render/mesh_renderer.h"     // DrawCommand 의 meshRenderer 경유 접근 (SSoT).
 #include "render/property_block_setter.h"
 #include "render/pipeline_state_setter.h"
 #include "program/program.h"
 #include "program/program_uniforms.h"
 #include "object/mesh.h"
 #include "material/material.h"
-#include "material/pass.h"   
+#include "material/pass.h"
 #include "common/constants.h"
 #include <algorithm>
 #include <functional>
@@ -68,9 +69,15 @@ namespace SJH
                 if (Pass::IsTransparentQueue(a.queueLayer))
                     return a.depth < b.depth;   // back-to-front
 
-                if (a.program  != b.program)  return std::less<const Program*>{}(a.program, b.program);
-                if (a.material != b.material) return std::less<const Material*>{}(a.material, b.material);
-                return a.depth > b.depth;       // front-to-back 
+                // SSoT — meshRenderer 경유 program/material 추출 (DrawCommand 직접 필드 폐기).
+                const Material* aMat = a.meshRenderer ? a.meshRenderer->Material : nullptr;
+                const Material* bMat = b.meshRenderer ? b.meshRenderer->Material : nullptr;
+                const Program*  aProg = aMat ? aMat->GetProgram() : nullptr;
+                const Program*  bProg = bMat ? bMat->GetProgram() : nullptr;
+
+                if (aProg != bProg) return std::less<const Program*>{}(aProg, bProg);
+                if (aMat  != bMat)  return std::less<const Material*>{}(aMat, bMat);
+                return a.depth > b.depth;       // front-to-back
             });
     }
 
@@ -84,36 +91,41 @@ namespace SJH
 
         for (const auto& cmd : mItems)
         {
-            if (!cmd.program || !cmd.mesh || !cmd.material) continue;
+            // SSoT — meshRenderer 경유 program/mesh/material 추출 (DrawCommand 직접 필드 폐기).
+            if (!cmd.meshRenderer) continue;
+            const Material* material = cmd.meshRenderer->Material;
+            const Mesh*     mesh     = cmd.meshRenderer->Mesh;
+            if (!material || !mesh) continue;
+            const Program*  program  = material->GetProgram();
+            if (!program) continue;
 
             // 결정 1: Program 전환 — view/proj uniform 송신
-            if (cmd.program != lastProg) {
-                rc.UseProgram(*cmd.program);
-                if (cmd.program->GetLocation(Const::UNI_VIEW) >= 0)
-                    Uniforms::SetMat4(*cmd.program, Const::UNI_VIEW, viewMat);
-                if (cmd.program->GetLocation(Const::UNI_PROJ) >= 0)
-                    Uniforms::SetMat4(*cmd.program, Const::UNI_PROJ, projMat);
-                lastProg = cmd.program;
+            if (program != lastProg) {
+                rc.UseProgram(*program);
+                if (program->GetLocation(Const::UNI_VIEW) >= 0)
+                    Uniforms::SetMat4(*program, Const::UNI_VIEW, viewMat);
+                if (program->GetLocation(Const::UNI_PROJ) >= 0)
+                    Uniforms::SetMat4(*program, Const::UNI_PROJ, projMat);
+                lastProg = program;
                 lastMat  = nullptr;   // program 바뀌면 material 재바인딩 강제
             }
 
             // 결정 2: Material 전환 — PropertyBlock -> uniform/texture 송신
-            if (cmd.material != lastMat) {
-                if (const auto* prog = cmd.material->GetProgram())
-                    PropertyBlockSetter::Set(rc, cmd.material->Properties, *prog);
-                lastMat = cmd.material;
+            if (material != lastMat) {
+                PropertyBlockSetter::Set(rc, material->Properties, *program);
+                lastMat = material;
             }
 
-            // 결정 3: PipelineState 적용 
+            // 결정 3: PipelineState 적용
             //   override 합성 없음 — 변형은 Material::Clone() + 별도 인스턴스 사용 (Unreal MID 정통).
-            const Pass::PipelineState passState = Pass::DefaultPipelineStateOf(cmd.material->GetPass());
+            const Pass::PipelineState passState = Pass::DefaultPipelineStateOf(material->GetPass());
             stateSetter.Set(passState);
 
             // 결정 4: model uniform + draw
-            if (cmd.program->GetLocation(Const::UNI_MODEL) >= 0)
-                Uniforms::SetMat4(*cmd.program, Const::UNI_MODEL, cmd.modelMatrix);
-            rc.BindVAO(cmd.mesh->GetVAO());
-            rc.DrawIndexed(cmd.mesh->GetIndexCount());
+            if (program->GetLocation(Const::UNI_MODEL) >= 0)
+                Uniforms::SetMat4(*program, Const::UNI_MODEL, cmd.modelMatrix);
+            rc.BindVAO(mesh->GetVAO());
+            rc.DrawIndexed(mesh->GetIndexCount());
         }
 
         // 다음 패스/단계가 표준 opaque 가정하도록 복원 — Applier 가 라이프사이클 책임 (2-B 채택).
