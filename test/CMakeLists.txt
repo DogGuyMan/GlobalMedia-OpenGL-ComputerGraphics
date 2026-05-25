@@ -12,7 +12,8 @@ include(Catch)
 add_executable(test_common test_common.cpp)
 target_link_libraries(test_common PRIVATE
     Catch2::Catch2WithMain
-    SJH::common               # PUBLIC include = src/ -> "common/common.h" 접근
+    project_deps              # include/ 경로 전파 (vmath.h 가 여기 있음)
+    SJH::common
 )
 target_compile_features(test_common PRIVATE cxx_std_17)
 catch_discover_tests(test_common)

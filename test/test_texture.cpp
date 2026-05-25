@@ -163,11 +163,12 @@ TEST_CASE("Texture::operator= (move) — source 의 핸들이 0 으로 비워져
  * @details 흔한 실수: @c std::unique_ptr<RM>() (default ctor) 으로 빈 포인터를 만들면
  *  반환값은 항상 nullptr -> 모든 호출자에서 즉시 null deref. 본 테스트는 단 한 줄로 그 회귀를 잡음.
  */
-TEST_CASE("ResourceRegistry::Create — 유효한 인스턴스 반환",
+TEST_CASE("ResourceRegistry::Get — 싱글톤 접근 유효",
           "[rm][regression]")
 {
-    auto rm = SJH::ResourceRegistry::Create();
-    REQUIRE(rm != nullptr);
+    auto& rm = SJH::ResourceRegistry::Get();
+    (void)rm;
+    SUCCEED("싱글톤 참조 취득 성공");
 }
 
 TEST_CASE("ResourceRegistry::CreateTexture — 생성 후 FindTexture 가 같은 인스턴스 반환",
@@ -176,20 +177,20 @@ TEST_CASE("ResourceRegistry::CreateTexture — 생성 후 FindTexture 가 같은
     if (!SampleImageAvailable()) SKIP("샘플 이미지 없음");
     SJH::test::GLContextFixture ctx;
 
-    auto rm = SJH::ResourceRegistry::Create();
-    REQUIRE(rm != nullptr);
+    auto& rm = SJH::ResourceRegistry::Get();
+    rm.Clear();
 
     auto image = SJH::Image::Load(kImageName, kSampleImage.string());
     REQUIRE(image != nullptr);
 
-    auto* created = rm->CreateTexture(kImageName, image.get());
+    auto* created = rm.CreateTexture(kImageName, image.get());
     REQUIRE(created != nullptr);
 
     // 같은 키로 CreateTexture 재호출 — 엄격 분리: 실패(nullptr).
-    REQUIRE(rm->CreateTexture(kImageName, image.get()) == nullptr);
+    REQUIRE(rm.CreateTexture(kImageName, image.get()) == nullptr);
 
     // 조회는 FindTexture — 같은 인스턴스.
-    REQUIRE(rm->FindTexture(kImageName) == created);
+    REQUIRE(rm.FindTexture(kImageName) == created);
 }
 
 TEST_CASE("ResourceRegistry::FindTexture — 미생성 미스 / 생성 후 히트",
@@ -198,17 +199,17 @@ TEST_CASE("ResourceRegistry::FindTexture — 미생성 미스 / 생성 후 히�
     if (!SampleImageAvailable()) SKIP("샘플 이미지 없음");
     SJH::test::GLContextFixture ctx;
 
-    auto rm = SJH::ResourceRegistry::Create();
-    REQUIRE(rm != nullptr);
+    auto& rm = SJH::ResourceRegistry::Get();
+    rm.Clear();
 
-    REQUIRE(rm->FindTexture(kImageName) == nullptr);   // 미생성 — 미스
+    REQUIRE(rm.FindTexture(kImageName) == nullptr);   // 미생성 — 미스
 
     auto image = SJH::Image::Load(kImageName, kSampleImage.string());
     REQUIRE(image != nullptr);
-    auto* tex = rm->CreateTexture(kImageName, image.get());
+    auto* tex = rm.CreateTexture(kImageName, image.get());
     REQUIRE(tex != nullptr);
 
-    REQUIRE(rm->FindTexture(kImageName) == tex);        // 생성 후 — 히트
+    REQUIRE(rm.FindTexture(kImageName) == tex);        // 생성 후 — 히트
 }
 
 /**
@@ -225,37 +226,37 @@ TEST_CASE("ResourceRegistry::Clear — 캐시를 비움 (FindTexture 미스로 �
     if (!SampleImageAvailable()) SKIP("샘플 이미지 없음");
     SJH::test::GLContextFixture ctx;
 
-    auto rm = SJH::ResourceRegistry::Create();
-    REQUIRE(rm != nullptr);
+    auto& rm = SJH::ResourceRegistry::Get();
+    rm.Clear();
 
     auto image = SJH::Image::Load(kImageName, kSampleImage.string());
     REQUIRE(image != nullptr);
-    REQUIRE(rm->CreateTexture(kImageName, image.get()) != nullptr);
-    REQUIRE(rm->FindTexture(kImageName) != nullptr);
+    REQUIRE(rm.CreateTexture(kImageName, image.get()) != nullptr);
+    REQUIRE(rm.FindTexture(kImageName) != nullptr);
 
-    rm->Clear();
-    REQUIRE(rm->FindTexture(kImageName) == nullptr);
+    rm.Clear();
+    REQUIRE(rm.FindTexture(kImageName) == nullptr);
 
     // 재생성 가능 — 정상 복귀.
     auto image2 = SJH::Image::Load(kImageName, kSampleImage.string());
     REQUIRE(image2 != nullptr);
-    REQUIRE(rm->CreateTexture(kImageName, image2.get()) != nullptr);
+    REQUIRE(rm.CreateTexture(kImageName, image2.get()) != nullptr);
 }
 
 TEST_CASE("ResourceRegistry::FindModel — 미생성은 미스(nullptr)", "[rm][model]")
 {
-    auto rm = SJH::ResourceRegistry::Create();
-    REQUIRE(rm != nullptr);
-    REQUIRE(rm->FindModel("any_key") == nullptr);
+    auto& rm = SJH::ResourceRegistry::Get();
+    rm.Clear();
+    REQUIRE(rm.FindModel("any_key") == nullptr);
 }
 
 TEST_CASE("ResourceRegistry::CreateModel — 미존재 파일은 nullptr", "[rm][model]")
 {
     SJH::test::GLContextFixture ctx;   // assimp 로드 경로가 GL 텍스처 생성까지 진행
-    auto rm = SJH::ResourceRegistry::Create();
-    REQUIRE(rm != nullptr);
-    REQUIRE(rm->CreateModel("missing", "./__no_such_model__.obj") == nullptr);
-    REQUIRE(rm->FindModel("missing") == nullptr);   // 실패 시 캐시에 안 들어감
+    auto& rm = SJH::ResourceRegistry::Get();
+    rm.Clear();
+    REQUIRE(rm.CreateModel("missing", "./__no_such_model__.obj") == nullptr);
+    REQUIRE(rm.FindModel("missing") == nullptr);   // 실패 시 캐시에 안 들어감
 }
 
 // =====================================================================

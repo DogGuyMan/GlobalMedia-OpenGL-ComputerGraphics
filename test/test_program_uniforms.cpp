@@ -44,7 +44,7 @@ namespace
     }
 }
 
-TEST_CASE("Uniforms::Get — 활성 uniform 의 location 캐싱", "[program_uniforms]")
+TEST_CASE("Uniforms::GetLocation — 활성 uniform 의 location 캐싱", "[program_uniforms]")
 {
     SJH::test::GLContextFixture ctx;
     auto prog = MakeTestProgram();
@@ -53,17 +53,17 @@ TEST_CASE("Uniforms::Get — 활성 uniform 의 location 캐싱", "[program_unif
     SECTION("선언/사용된 uniform 은 location >= 0")
     {
         // 셰이더가 *실제로 사용* 하는 uniform 만 active. 옵티마이저가 미사용은 제거.
-        REQUIRE(SJH::Uniforms::Get(*prog, "uModel")     >= 0);
-        REQUIRE(SJH::Uniforms::Get(*prog, "uTranslate") >= 0);
-        REQUIRE(SJH::Uniforms::Get(*prog, "uColor")     >= 0);
-        REQUIRE(SJH::Uniforms::Get(*prog, "uAlpha")     >= 0);
+        REQUIRE(SJH::Uniforms::GetLocation(*prog, "uModel")     >= 0);
+        REQUIRE(SJH::Uniforms::GetLocation(*prog, "uTranslate") >= 0);
+        REQUIRE(SJH::Uniforms::GetLocation(*prog, "uColor")     >= 0);
+        REQUIRE(SJH::Uniforms::GetLocation(*prog, "uAlpha")     >= 0);
     }
 
     SECTION("미존재 이름은 -1 + 두 번 호출도 안전 (lazy 보강 캐시 + warn-once)")
     {
-        REQUIRE(SJH::Uniforms::Get(*prog, "uNonExistent") == -1);
-        REQUIRE(SJH::Uniforms::Get(*prog, "uNonExistent") == -1);  // 동일 — silent
-        REQUIRE(SJH::Uniforms::Get(*prog, "uAnotherMiss") == -1);  // 다른 이름 — warn
+        REQUIRE(SJH::Uniforms::GetLocation(*prog, "uNonExistent") == -1);
+        REQUIRE(SJH::Uniforms::GetLocation(*prog, "uNonExistent") == -1);  // 동일 — silent
+        REQUIRE(SJH::Uniforms::GetLocation(*prog, "uAnotherMiss") == -1);  // 다른 이름 — warn
     }
 }
 
@@ -94,15 +94,15 @@ TEST_CASE("Uniforms::Set* — setter family 가 crash 없이 GL 호출 위임",
     glUseProgram(0);
 }
 
-TEST_CASE("Uniforms::Get — 같은 이름 반복 호출은 캐시 히트", "[program_uniforms]")
+TEST_CASE("Uniforms::GetLocation — 같은 이름 반복 호출은 캐시 히트", "[program_uniforms]")
 {
     SJH::test::GLContextFixture ctx;
     auto prog = MakeTestProgram();
     REQUIRE(prog != nullptr);
 
-    const GLint loc1 = SJH::Uniforms::Get(*prog, "uModel");
-    const GLint loc2 = SJH::Uniforms::Get(*prog, "uModel");
-    const GLint loc3 = SJH::Uniforms::Get(*prog, "uModel");
+    const GLint loc1 = SJH::Uniforms::GetLocation(*prog, "uModel");
+    const GLint loc2 = SJH::Uniforms::GetLocation(*prog, "uModel");
+    const GLint loc3 = SJH::Uniforms::GetLocation(*prog, "uModel");
 
     REQUIRE(loc1 >= 0);
     REQUIRE(loc1 == loc2);
