@@ -39,7 +39,8 @@ namespace SJH
         ///          호출 전 mEntries 가 비어 있다고 가정 — 재호출 시 Clear() 먼저.
         void Build(const Program& prog);
 
-        /// @brief 캐시 비우기 — Program 해제 시 Material 의 OnProgramReleased 가 호출.
+        /// @brief 캐시 비우기 — 명시 invalidate 가 필요할 때만 (예: 셰이더 재링크).
+        ///        Program 멤버이므로 ~Program 시 자동 destroy — 일반 호출 불요.
         void Clear() { mEntries.clear(); }
 
         /// @brief uniform 이름 -> location. 미존재 시 -1 (호출자가 glGetUniformLocation fallback).

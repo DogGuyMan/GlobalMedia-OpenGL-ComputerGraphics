@@ -5,6 +5,7 @@
  * @details
  *  ### 구성 4 요소 (책임 분할)
  *  - `mPassKind` — *어떤 종류의 렌더링* (Pass::Kind, GL state 자동 도출 — SSoT)
+ *  - `mProgram` (비소유) — 셰이더 schema 출처 + `EagerBuild` 의 검증 기준
  *  - `Properties` (`MaterialPropertyBlock`) — *셰이더 무관 typed properties*
  *  - `IsInstance` + `OriginalMaterial` — Clone 추적 (Unreal `UMaterialInstanceDynamic::Parent` 정통)
  *
@@ -20,6 +21,18 @@
  *  - `ResourceRegistry::CreateMaterialInstanceFrom(key, template)` — *유일한 Clone 호출자*
  *  - `Clone()` 은 **private + friend ResourceRegistry** — 외부 직접 호출 컴파일 차단 (책임 분산 방지)
  *
+ *  ### Lifetime — Program 보다 *먼저* 죽음 보장 (컨벤션)
+ *  Material 은 ResourceRegistry 가 보유. Program 도 ResourceRegistry 위탁 시 (future
+ *  `SP-ProgramRegistry`) destroy 순서가 Material → Program 자동 보장 → `mProgram` raw
+ *  pointer dangling 불가. 현 시점 `tweeny_demo` 의 명시 `mProgram.reset()` 은 *컨벤션 위반*
+ *  으로 같은 SP 에서 제거 예정.
+ *
+ *  ### EagerBuild — Properties ↔ Program schema 동기화 (SetProgram 시점)
+ *  `SetProgram(prog)` 호출 시 `Properties` 의 7 typed map 을 순회하며
+ *  `prog->GetLocation(name) < 0` (active uniform 아님) 인 key 는 **prune** 한다.
+ *  런타임상 `PropertyBlockSetter` 가 cache outer iteration 으로 active uniform 만 송신해
+ *  무해하지만, *오타 조기 발견* + *진단 가시성* 차원에서 사전 정리. stderr 출력.
+ *
  *  자세한 흐름: `EngineAPI.md` §3.7 / §4.3, `architecture.md` §11.3.
  */
 #ifndef __SJH_MATERIAL_H__
@@ -30,6 +43,7 @@
 #include "material/material_property_block.h"
 #include "material/pass.h"
 #include "program/program.h"
+#include <cstdio>
 #include <string>
 #include <unordered_map>
 #include <vmath.h>
@@ -58,22 +72,22 @@ namespace SJH
 		{
 		}
 
-		Material(const Material &other)
-		{
-			CopyFrom(other);
-		}
-
-		Material &operator=(const Material &other)
-		{
-			if (this != &other)
-			{
-				CopyFrom(other);
-			}
-			return *this;
-		}
-
+		Material &operator=(const Material &other) = delete;
 		Material(Material &&) = delete;
 		Material &operator=(Material &&) = delete;
+
+		// ── Program 참조 (Unity Material.shader 정통) ──────────
+		/// @brief Program 주입 + EagerBuild — Properties 가 Program schema 와 사전 동기화.
+		/// @details Lifetime 컨벤션: Program 이 Material 보다 *더 오래* 살아야 함
+		///          (ResourceRegistry 가 둘 다 보유 시 destroy 순서로 자동 보장).
+		Material &SetProgram(const Program *program)
+		{
+			mProgram = program;
+			if (mProgram)
+				EagerBuild();
+			return *this;
+		}
+		const Program *GetProgram() const { return mProgram; }
 
 		// ── Properties bag (Unity MaterialPropertyBlock 정통) ─
 		/// @brief 외부 접근: `mat.Properties.Floats["..."]`. Setter family (`Uniforms::Set*(Material&, ...)`) 가 store.
@@ -118,6 +132,11 @@ namespace SJH
 		}
 
 	  private:
+		Material(const Material &other)
+		{
+			CopyFrom(other);
+		}
+
 		Material() = default;
 
 		/// @brief 공유 템플릿 -> per-use 가변 인스턴스 복제. *private* — SSoT 강제.
@@ -135,9 +154,42 @@ namespace SJH
 		{
 			Properties = other.Properties; // MaterialPropertyBlock 통째로 복사 (6 typed map 자동)
 			mPassKind = other.mPassKind;   // Pass 의도 — Clone 시 Transparent 유지.
+			mProgram = other.mProgram;     // Program 참조 승계 (raw pointer — Program 이 더 오래 사는 컨벤션).
+		}
+
+		/// @brief Properties 의 keys 가 mProgram 의 active uniform 인지 cross-check + prune.
+		/// @details SetProgram 끝에서 1회 호출. 7 typed map 각각 순회 — 없는 키는 erase + stderr warn.
+		///          매 Set 시점 검증이 *완전 막기* 지만 본 작업 범위 밖 (`Properties.Floats["..."] = v`
+		///          직접 접근 패턴 차단 = 큰 API 변경). 현재는 *근사 막기*.
+		void EagerBuild()
+		{
+			auto pruneMap = [this](auto &map, const char *typeName) {
+				for (auto it = map.begin(); it != map.end();)
+				{
+					if (mProgram->GetLocation(it->first.c_str()) < 0)
+					{
+						std::fprintf(stderr,
+						             "[Material::EagerBuild] '%s' (%s) not in shader active uniforms — pruned\n",
+						             it->first.c_str(), typeName);
+						it = map.erase(it);
+					}
+					else
+					{
+						++it;
+					}
+				}
+			};
+			pruneMap(Properties.Floats, "Float");
+			pruneMap(Properties.Ints, "Int");
+			pruneMap(Properties.Vec2s, "Vec2");
+			pruneMap(Properties.Vec3s, "Vec3");
+			pruneMap(Properties.Vec4s, "Vec4");
+			pruneMap(Properties.Mat4s, "Mat4");
+			pruneMap(Properties.Textures, "Texture");
 		}
 
 		Pass::Kind mPassKind = Pass::Kind::Opaque;
+		const Program *mProgram = nullptr; // 비소유 — owner 는 ResourceRegistry (or 데모 임시).
 	};
 } // namespace SJH
 
