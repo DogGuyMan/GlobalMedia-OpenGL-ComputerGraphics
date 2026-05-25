@@ -33,6 +33,6 @@ namespace TopdownShooter::Entity::Components
 			
 		}
 	};
-} // namespace TopdownShooter::Entity::Components
+}; // namespace TopdownShooter::Entity::Components
 
 #endif //_TOPDOWNSHOOTER_ENTITY_COMPONENTS_MOVEMENT__

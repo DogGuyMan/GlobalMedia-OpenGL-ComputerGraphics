@@ -19,10 +19,10 @@ namespace TopdownShooter::Controller
 		mKeyboardInput->BindKey(Action::MoveRight, GLFW_KEY_D);
 
 		// W = 앞 = -Z (OpenGL forward 컨벤션). held handler 가 mMoveSpeed 직접 곱.
-		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mMoveDelta[2] -= mMoveSpeed; });
-		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mMoveDelta[2] += mMoveSpeed; });
-		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mMoveDelta[0] -= mMoveSpeed; });
-		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mMoveDelta[0] += mMoveSpeed; });
+		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue = {0.0f, 0.0f, 1.0f}; });
+		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue ={0.0f, 0.0f, -1.0f}; });
+		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue ={-1.0f, 0.0f, 0.0f}; });
+		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue ={1.0f, 0.0f, 1.0f}; });
 	}
 
 	void PlayerController::UnregisterBindings()
@@ -56,9 +56,10 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
-	PlayerController &PlayerController::SetMoveSpeed(float v)
+	PlayerController &PlayerController::SetPlayerMovement(Entity::Components::Movement* m)
 	{
-		mMoveSpeed = v;
+		if(mMovementPtr == nullptr)
+			mMovementPtr = m;
 		return *this;
 	}
 
@@ -82,18 +83,8 @@ namespace TopdownShooter::Controller
 		(void)dt; // mMoveSpeed 가 *프레임당* — CameraController 와 동일. real dt 적용은 후속.
 		if (!mIsInitialized)
 			return;
-
-		auto *owner = GetOwner();
-		if (!owner)
-			return;
-		auto &tr = owner->GetTransform();
-
-		// 월드 축 기준 누적 — 탑다운 컨벤션 (카메라 회전 무관, X/Z 평면).
-		// mMoveDelta[1] (Y) 은 사용 안 함 — 지면 위 이동만.
-		tr.Translate[0] += mMoveDelta[0];
-		tr.Translate[2] += mMoveDelta[2];
-
+		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]});
 		// 누적값 리셋.
-		mMoveDelta = vmath::vec3(0.0f);
+		mInputValue = vmath::vec3(0.0f);
 	}
 } // namespace TopdownShooter::Controller
