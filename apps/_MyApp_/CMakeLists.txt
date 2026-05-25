@@ -11,12 +11,12 @@ add_subdirectory(src)
 add_executable(${CHAPTER_NAME} main.cpp)
 
 # 라이브러리 추가
+# MyApp::Physics 는 MyApp::Client umbrella 가 이미 포함 — 중복 link 제거 (M3 follow-up).
 target_link_libraries(${CHAPTER_NAME} PRIVATE
     project_deps
     game_deps
     SJH::engine          # M1 — SJH::sprite 등 코어 모듈 우산 link
-    MyApp::Client        # 클라이언트 사이드 스크립트 (Algebraic / Entity / Input)
-    MyApp::Physics       # M3 — Box2D 물리 시스템 (Client 한정)
+    MyApp::Client        # 클라이언트 사이드 스크립트 (Algebraic / Entity / Input / Physics)
 )
 
 # 인클루드 디렉토리 추가
@@ -28,6 +28,13 @@ if(MSVC)
     target_link_options(${CHAPTER_NAME} PRIVATE
         "/SUBSYSTEM:CONSOLE"
         "/ENTRY:WinMainCRTStartup")
+endif()
+
+# Apple ld: SJH::engine umbrella + MyApp::Client sub-modules 의 PUBLIC transitive
+# 다중 경로 (SJH::scene → SJH::object → ...) 로 인한 duplicate library 경고 silencing.
+# 동작 무관 — ld 가 자동 dedup. 향후 link graph 재설계 시 flag 제거 가능.
+if(APPLE)
+    target_link_options(${CHAPTER_NAME} PRIVATE "-Wl,-no_warn_duplicate_libraries")
 endif()
 
 # ______ 리소스/셰이더 복사 (챕터별) ______
