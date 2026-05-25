@@ -119,21 +119,43 @@ namespace TopdownShooter
 			// === Physics 초기화 ===
 			mPhysics.Init();
 
-			// 벽 4개 — 약 10×10 단위 arena
+			// === wall/pickup 시각화 material — simple.vs/fs (MVP + baseColor) 공유 ===
+			auto *solidProg = reg.CreateProgram(
+			    "solid_plane",
+			    "resources/shaders/simple.vs",
+			    "resources/shaders/simple.fs");
+			auto *wallMat = reg.CreateSharedMaterial("solid_wall");
+			wallMat->SetProgram(solidProg);
+			wallMat->SetPass(SJH::Pass::Kind::Opaque);
+			SJH::Uniforms::SetVec4(*wallMat, "baseColor", vmath::vec4(0.55f, 0.55f, 0.60f, 1.0f));
+
+			auto *pickupMat = reg.CreateSharedMaterial("solid_pickup");
+			pickupMat->SetProgram(solidProg);
+			pickupMat->SetPass(SJH::Pass::Kind::Opaque);
+			SJH::Uniforms::SetVec4(*pickupMat, "baseColor", vmath::vec4(1.0f, 0.85f, 0.2f, 1.0f));
+
+			// 벽 4개 — 약 10×10 단위 arena. Mesh::CreatePlane 은 XZ 평면 1×1 → Scale 로 half×2 매칭.
 			const float arena = 10.0f;
 			const float wallH = 0.5f;
-			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
-			    "WallTop",    mPhysics.World(), vmath::vec2(0.0f, +arena), vmath::vec2(arena, wallH)));
-			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
-			    "WallBottom", mPhysics.World(), vmath::vec2(0.0f, -arena), vmath::vec2(arena, wallH)));
-			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
-			    "WallLeft",   mPhysics.World(), vmath::vec2(-arena, 0.0f), vmath::vec2(wallH, arena)));
-			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
-			    "WallRight",  mPhysics.World(), vmath::vec2(+arena, 0.0f), vmath::vec2(wallH, arena)));
+			auto spawnWall = [&](const char *name, vmath::vec2 center, vmath::vec2 half) {
+				auto a = TopdownShooter::Physics::CreateWallActor(name, mPhysics.World(), center, half);
+				a->GetTransform().Scale = vmath::vec3(half[0] * 2.0f, 1.0f, half[1] * 2.0f);
+				a->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), wallMat);
+				dir.Root().AddChild(std::move(a));
+			};
+			spawnWall("WallTop",    vmath::vec2(0.0f,   +arena), vmath::vec2(arena, wallH));
+			spawnWall("WallBottom", vmath::vec2(0.0f,   -arena), vmath::vec2(arena, wallH));
+			spawnWall("WallLeft",   vmath::vec2(-arena, 0.0f),   vmath::vec2(wallH, arena));
+			spawnWall("WallRight",  vmath::vec2(+arena, 0.0f),   vmath::vec2(wallH, arena));
 
 			// Pickup Sensor — (0, +3) 위치. Player 가 W 키로 진입 시 OnTriggerEnter 로그 검증.
-			dir.Root().AddChild(TopdownShooter::Physics::CreatePickupActor(
-			    "PickupTest", mPhysics.World(), vmath::vec2(0.0f, 3.0f), vmath::vec2(0.8f, 0.8f)));
+			{
+				auto p = TopdownShooter::Physics::CreatePickupActor(
+				    "PickupTest", mPhysics.World(), vmath::vec2(0.0f, 3.0f), vmath::vec2(0.8f, 0.8f));
+				p->GetTransform().Scale = vmath::vec3(1.6f, 1.0f, 1.6f);
+				p->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), pickupMat);
+				dir.Root().AddChild(std::move(p));
+			}
 
 			pac.name = "PlayerSprite";
 			pac.life.hp = 100;
