@@ -12,5 +12,5 @@ target_include_directories(sjh_sprite_sequence PUBLIC
 # PUBLIC — 헤더 노출
 target_link_libraries(sjh_sprite_sequence PUBLIC
     SJH::playable            # PlayableBase 베이스 (sprite_sequence_playable.h)
-    SJH::sprite              # SpriteComponent (sprite_sequence_playable.h)
+    SJH::sprite              # SpriteRenderer (sprite_sequence_playable.h)
 )
