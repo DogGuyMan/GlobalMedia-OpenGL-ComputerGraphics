@@ -1,6 +1,7 @@
 add_library(sjhopengl_render STATIC
     device_context.cpp
     render_target.cpp           # vtable home TU — virtual class 의 ODR 보장 (header-only 만으로 부족)
+    render_stage.cpp            # vtable home TU — IRenderStage virtual class (SP5)
     mesh_pass_processor.cpp
     pipeline_state_setter.cpp   # SP-PipelineSetter — GL state machine 분리 (Applier 패턴)
     property_block_setter.cpp   # SP-PropertyBlockSetter — 옛 MaterialApplier rename + 시그니처 정밀화
