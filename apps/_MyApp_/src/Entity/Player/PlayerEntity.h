@@ -5,7 +5,6 @@
 #include "Components/MovementComponents.h"
 #include "Components/WeaponComponents.h"
 #include "InputHandler/PlayerController.h"
-#include "Player/PlayerMovementComponents.h"
 #include "input/mouse_input.h"
 
 namespace TopdownShooter::Entity
@@ -15,7 +14,7 @@ namespace TopdownShooter::Entity
 	                     public IAttackable
 	{
 	  protected:
-		Components::PlayerMovement *mPlaterMovementComponentPtr;
+		Components::Movement *mMovementComponentPtr;
 		Components::Weapon *mWaeponComponentPtr;
 		Controller::PlayerController *mPlayerControllerPtr;
 
@@ -23,9 +22,9 @@ namespace TopdownShooter::Entity
 		SJH::MouseInput mMouse;
 
 	  public:
-		virtual void DoForward(vmath::vec2 dir) = 0;
-		virtual void DoAttack(IAttackable &target) = 0;
-		virtual int GetNormalAtk() const = 0;
+		virtual void DoForward(vmath::vec2 dir, float dt) {mMovementComponentPtr->DoForward(dir, dt);}
+		virtual void DoAttack(IDamageable &target) {target.DoDamaged(GetNormalAtk());}
+		virtual int GetNormalAtk() const { return (int)mWaeponComponentPtr->Damage.GetValue();}
 	};
 }; // namespace TopdownShooter::Entity
 #endif //_TOPDOWNSHOOTER_ENTITY_PLAYER__

@@ -5,7 +5,7 @@
 #include "input/keyboard_input.h"
 #include "scene/actor.h"
 #include <vmath.h>
-#include "Entity/Components/MovementComponents.h"
+#include "Entity/Components/Components.Interfaces.h"
 
 namespace TopdownShooter::Controller
 {
@@ -36,7 +36,8 @@ namespace TopdownShooter::Controller
 		/// @brief 키보드 입력 의존 주입. SetUp() 전에 호출 필수.
 		PlayerController &SetKeyboardInput(SJH::KeyboardInput<Action> *k);
 
-		PlayerController &SetPlayerMovement(Entity::Components::Movement* m);
+		/// @brief IMovable 구현체 (Entity 자체 또는 Movement Component) 주입. SetUp() 전에 호출 필수.
+		PlayerController &SetMovableTarget(Entity::IMovable* target);
 
 		virtual void OnEnter() override;
 		virtual void OnExit() override;

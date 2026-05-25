@@ -18,11 +18,13 @@ namespace TopdownShooter::Controller
 		mKeyboardInput->BindKey(Action::MoveLeft, GLFW_KEY_A);
 		mKeyboardInput->BindKey(Action::MoveRight, GLFW_KEY_D);
 
-		// W = 앞 = -Z (OpenGL forward 컨벤션). held handler 가 mMoveSpeed 직접 곱.
-		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue = {0.0f, 0.0f, 1.0f}; });
-		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue ={0.0f, 0.0f, -1.0f}; });
-		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue ={-1.0f, 0.0f, 0.0f}; });
-		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue ={1.0f, 0.0f, 1.0f}; });
+		// W = 앞 = -Z (OpenGL forward 컨벤션).
+		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
+		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
+		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); });
+		mKeyboardInput->BindHeldHandler(Action::MoveBack,    [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
+		mKeyboardInput->BindHeldHandler(Action::MoveLeft,    [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
+		mKeyboardInput->BindHeldHandler(Action::MoveRight,   [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
 	}
 
 	void PlayerController::UnregisterBindings()
@@ -56,10 +58,11 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
-	PlayerController &PlayerController::SetPlayerMovement(Entity::Components::Movement* m)
+	PlayerController &PlayerController::SetMovableTarget(Entity::IMovable* target)
 	{
+		// 멱등 — 첫 비-null 주입 후 무시.
 		if(mMovementPtr == nullptr)
-			mMovementPtr = m;
+			mMovementPtr = target;
 		return *this;
 	}
 
@@ -80,10 +83,10 @@ namespace TopdownShooter::Controller
 
 	void PlayerController::Update(float dt)
 	{
-		(void)dt; // mMoveSpeed 가 *프레임당* — CameraController 와 동일. real dt 적용은 후속.
 		if (!mIsInitialized)
 			return;
-		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]});
+		// dt 는 Movement::DoForward 가 units/sec → 프레임 변위로 변환 (fps-independent).
+		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
 		// 누적값 리셋.
 		mInputValue = vmath::vec3(0.0f);
 	}

@@ -60,7 +60,7 @@ namespace TopdownShooter::Entity
 		IAttackable(IAttackable &&) = delete;
 		IAttackable operator=(IAttackable &) = delete;
 
-		virtual void DoAttack(IAttackable &target) = 0;
+		virtual void DoAttack(IDamageable &target) = 0;
 		virtual int GetNormalAtk() const = 0;
 		// virtual string GetAttackName() const = 0;
 	};
@@ -77,7 +77,8 @@ namespace TopdownShooter::Entity
 		IMovable(IMovable &&) = delete;
 		IMovable operator=(IMovable &) = delete;
 
-		virtual void DoForward(vmath::vec2 dir) = 0;
+		/// @brief 단위 방향 dir 로 dt 초만큼 이동. 구현체가 *units/sec* 단위 속도 보유 가정.
+		virtual void DoForward(vmath::vec2 dir, float dt) = 0;
 	};
 } // namespace TopdownShooter::Entity
 
