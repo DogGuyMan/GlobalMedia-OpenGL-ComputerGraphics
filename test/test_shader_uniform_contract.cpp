@@ -83,9 +83,9 @@ TEST_CASE("lighting.vs — layout (location 0/1/2) = aPos/aNormal/aTexCoord",
     auto src = LoadFile("shader/lighting.vs");
 
     // mesh.h Vertex { position(vec3) / normal(vec3) / texCoord(vec2) } 와 일치
-    REQUIRE_THAT(src, ContainsSubstring("layout(location = 0) in vec3 aPos"));
-    REQUIRE_THAT(src, ContainsSubstring("layout(location = 1) in vec3 aNormal"));
-    REQUIRE_THAT(src, ContainsSubstring("layout(location = 2) in vec2 aTexCoord"));
+    REQUIRE_THAT(src, ContainsSubstring("layout (location = 0) in vec3 aPos"));
+    REQUIRE_THAT(src, ContainsSubstring("layout (location = 1) in vec3 aNormal"));
+    REQUIRE_THAT(src, ContainsSubstring("layout (location = 2) in vec2 aTexCoord"));
 }
 
 // ──────────────────────────────────────────────────────────────────────────

@@ -15,7 +15,7 @@ TEST_CASE("KeyboardInput press — BindKey+BindPressHandler+Dispatch(PRESS)", "[
 {
     SJH::KeyboardInput<TestAction> kb;
     int jumps = 0;
-    kb.BindKey(GLFW_KEY_SPACE, TestAction::Jump);
+    kb.BindKey(TestAction::Jump, GLFW_KEY_SPACE);
     kb.BindPressHandler(TestAction::Jump, [&] { ++jumps; });
 
     kb.Dispatch(GLFW_KEY_SPACE, GLFW_PRESS);
@@ -26,7 +26,7 @@ TEST_CASE("KeyboardInput release — Dispatch(RELEASE) 가 release 핸들러", "
 {
     SJH::KeyboardInput<TestAction> kb;
     int releases = 0;
-    kb.BindKey(GLFW_KEY_SPACE, TestAction::Jump);
+    kb.BindKey(TestAction::Jump, GLFW_KEY_SPACE);
     kb.BindReleaseHandler(TestAction::Jump, [&] { ++releases; });
 
     kb.Dispatch(GLFW_KEY_SPACE, GLFW_RELEASE);
@@ -37,7 +37,7 @@ TEST_CASE("KeyboardInput 페이즈 격리 — press 만 바인딩 시 RELEASE/RE
 {
     SJH::KeyboardInput<TestAction> kb;
     int presses = 0;
-    kb.BindKey(GLFW_KEY_SPACE, TestAction::Jump);
+    kb.BindKey(TestAction::Jump, GLFW_KEY_SPACE);
     kb.BindPressHandler(TestAction::Jump, [&] { ++presses; });
 
     kb.Dispatch(GLFW_KEY_SPACE, GLFW_RELEASE); // release 핸들러 없음
@@ -52,8 +52,8 @@ TEST_CASE("KeyboardInput 키->액션 해석 — 두 키를 같은 액션에", "[
 {
     SJH::KeyboardInput<TestAction> kb;
     int jumps = 0;
-    kb.BindKey(GLFW_KEY_SPACE, TestAction::Jump);
-    kb.BindKey(GLFW_KEY_W, TestAction::Jump);
+    kb.BindKey(TestAction::Jump, GLFW_KEY_SPACE);
+    kb.BindKey(TestAction::Jump, GLFW_KEY_W);
     kb.BindPressHandler(TestAction::Jump, [&] { ++jumps; });
 
     kb.Dispatch(GLFW_KEY_SPACE, GLFW_PRESS);
@@ -72,7 +72,7 @@ TEST_CASE("KeyboardInput UnbindKey — 해제 후 Dispatch 무동작", "[keyboar
 {
     SJH::KeyboardInput<TestAction> kb;
     int jumps = 0;
-    kb.BindKey(GLFW_KEY_SPACE, TestAction::Jump);
+    kb.BindKey(TestAction::Jump, GLFW_KEY_SPACE);
     kb.BindPressHandler(TestAction::Jump, [&] { ++jumps; });
     kb.UnbindKey(GLFW_KEY_SPACE);
 
