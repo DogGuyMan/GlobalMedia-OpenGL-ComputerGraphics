@@ -78,6 +78,14 @@ namespace SJH::Scene
         template<typename T> void RemoveComponent();
         void RemoveAllComponents();
 
+        /// @brief 모든 Component 에 콜백 fn 적용 — contact listener 의 dynamic_cast dispatch 용.
+        template<typename Fn>
+        void ForEachComponent(Fn&& fn) const
+        {
+            for (auto& [ti, comp] : mComponents)
+                fn(comp.get());
+        }
+
         // === Identity ===
         const std::string& GetName() const { return mName; }
         void SetName(std::string n) { mName = std::move(n); }
