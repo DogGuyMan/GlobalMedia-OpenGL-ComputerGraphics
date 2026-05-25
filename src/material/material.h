@@ -83,11 +83,12 @@ namespace SJH
 		Material &SetProgram(const Program *program)
 		{
 			mProgram = program;
-			if (mProgram)
-				EagerBuild();
 			return *this;
 		}
-		const Program *GetProgram() const { return mProgram; }
+		const Program *GetProgram() const
+		{
+			return mProgram;
+		}
 
 		// ── Properties bag (Unity MaterialPropertyBlock 정통) ─
 		/// @brief 외부 접근: `mat.Properties.Floats["..."]`. Setter family (`Uniforms::Set*(Material&, ...)`) 가 store.
@@ -132,6 +133,7 @@ namespace SJH
 		}
 
 	  private:
+		friend class ResourceRegistry;
 		Material(const Material &other)
 		{
 			CopyFrom(other);
@@ -148,44 +150,12 @@ namespace SJH
 			clone->OriginalMaterial = this;
 			return clone;
 		}
-		friend class ResourceRegistry;
 
 		void CopyFrom(const Material &other)
 		{
 			Properties = other.Properties; // MaterialPropertyBlock 통째로 복사 (6 typed map 자동)
 			mPassKind = other.mPassKind;   // Pass 의도 — Clone 시 Transparent 유지.
 			mProgram = other.mProgram;     // Program 참조 승계 (raw pointer — Program 이 더 오래 사는 컨벤션).
-		}
-
-		/// @brief Properties 의 keys 가 mProgram 의 active uniform 인지 cross-check + prune.
-		/// @details SetProgram 끝에서 1회 호출. 7 typed map 각각 순회 — 없는 키는 erase + stderr warn.
-		///          매 Set 시점 검증이 *완전 막기* 지만 본 작업 범위 밖 (`Properties.Floats["..."] = v`
-		///          직접 접근 패턴 차단 = 큰 API 변경). 현재는 *근사 막기*.
-		void EagerBuild()
-		{
-			auto pruneMap = [this](auto &map, const char *typeName) {
-				for (auto it = map.begin(); it != map.end();)
-				{
-					if (mProgram->GetLocation(it->first.c_str()) < 0)
-					{
-						std::fprintf(stderr,
-						             "[Material::EagerBuild] '%s' (%s) not in shader active uniforms — pruned\n",
-						             it->first.c_str(), typeName);
-						it = map.erase(it);
-					}
-					else
-					{
-						++it;
-					}
-				}
-			};
-			pruneMap(Properties.Floats, "Float");
-			pruneMap(Properties.Ints, "Int");
-			pruneMap(Properties.Vec2s, "Vec2");
-			pruneMap(Properties.Vec3s, "Vec3");
-			pruneMap(Properties.Vec4s, "Vec4");
-			pruneMap(Properties.Mat4s, "Mat4");
-			pruneMap(Properties.Textures, "Texture");
 		}
 
 		Pass::Kind mPassKind = Pass::Kind::Opaque;
