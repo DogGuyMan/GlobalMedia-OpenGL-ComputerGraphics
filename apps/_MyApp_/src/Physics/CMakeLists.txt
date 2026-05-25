@@ -1,6 +1,5 @@
 add_library(myapp_physics STATIC
     physics_system.cpp
-    physics_movement.cpp
     contact_listener.cpp
 )
 add_library(MyApp::Physics ALIAS myapp_physics)
