@@ -1,8 +1,8 @@
 #ifndef __MYAPP_PHYSICS_WALL_FACTORY_H__
 #define __MYAPP_PHYSICS_WALL_FACTORY_H__
 
+#include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/filter.h"
-#include "Physics/physics_body.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <memory>
@@ -11,7 +11,7 @@
 
 namespace TopdownShooter::Physics
 {
-    /// @brief 정적 벽 Actor — b2_staticBody + box shape + PhysicsBodyComponent.
+    /// @brief 정적 벽 Actor — b2_staticBody + box shape + Components::BoxBody.
     /// @param center 벽 중심 (XY 평면)
     /// @param half   half-extents (box 절반 크기)
     inline std::unique_ptr<SJH::Scene::Actor> CreateWallActor(
@@ -34,7 +34,7 @@ namespace TopdownShooter::Physics
         fd.filter.maskBits     = ToBits(WallMask);
         body->CreateFixture(&fd);
 
-        auto* pb = actor->AddComponent<PhysicsBodyComponent>();
+        auto* pb = actor->AddComponent<Components::BoxBody>();
         pb->SetBody(body);
         pb->SetHeightOffset(0.0f);
 

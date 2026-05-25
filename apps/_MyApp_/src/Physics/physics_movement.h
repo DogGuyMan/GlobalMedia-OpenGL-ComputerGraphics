@@ -3,14 +3,14 @@
 
 #include "Algebraic/Stat.h"
 #include "Entity/Components/Components.Interfaces.h"
-#include "Physics/physics_body.h"
+#include "Physics/PhysicsComponent.h"
 #include "scene/actor.h"
 
 namespace TopdownShooter::Physics
 {
     /// @brief Movement 의 PhysicsBody 변형 — DoForward 가 b2Body velocity 갱신.
     /// @details
-    ///   - OnEnter 에서 owner Actor 의 PhysicsBodyComponent 를 lookup.
+    ///   - OnEnter 에서 owner Actor 의 Components::Physics (BoxBody/CircleBody) 를 polymorphic lookup.
     ///   - DoForward(dir, dt): body->SetLinearVelocity(normalize(dir) * speed).
     ///     dt 는 b2World::Step 이 처리 (인터페이스 호환 위해 인자는 유지).
     ///   - 좌표계: dir XZ → Box2D XY (Z → -Y, spec §4.4).
@@ -30,8 +30,7 @@ namespace TopdownShooter::Physics
 
         void OnEnter() override
         {
-            if (auto* owner = GetOwner())
-                mPhysicsBody = owner->GetComponent<PhysicsBodyComponent>();
+            mPhysicsBody = Components::FindPhysics(GetOwner());
         }
 
         void OnExit() override
@@ -56,7 +55,7 @@ namespace TopdownShooter::Physics
 
     private:
         Algebraic::Numeric::Stat mMoveSpeed;
-        PhysicsBodyComponent*    mPhysicsBody = nullptr;
+        Components::Physics*     mPhysicsBody = nullptr;
     };
 }
 

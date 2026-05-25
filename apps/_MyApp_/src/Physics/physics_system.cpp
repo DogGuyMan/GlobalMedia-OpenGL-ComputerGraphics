@@ -1,5 +1,5 @@
 #include "Physics/physics_system.h"
-#include "Physics/physics_body.h"
+#include "Physics/PhysicsComponent.h"
 #include "Physics/contact_listener.h"
 
 #include "scene/actor.h"
@@ -38,10 +38,10 @@ namespace TopdownShooter::Physics
 
     void PhysicsSystem::SyncToTransform(SJH::Scene::Actor& root)
     {
-        // root 부터 재귀 순회 — PhysicsBodyComponent 부착 Actor 의 Transform 갱신.
+        // root 부터 재귀 순회 — Components::Physics (BoxBody/CircleBody) 부착 Actor 의 Transform 갱신.
         auto traverse = [](SJH::Scene::Actor* actor, auto& self) -> void {
             if (!actor) return;
-            auto* pb = actor->GetComponent<PhysicsBodyComponent>();
+            auto* pb = Components::FindPhysics(actor);
             if (pb && pb->GetBody()) {
                 const b2Vec2 p = pb->GetBody()->GetPosition();
                 auto& tr = actor->GetTransform();

@@ -32,7 +32,7 @@ namespace TopdownShooter::Physics
         /// @brief b2World::Step(dt, velocityIters=8, positionIters=3).
         void Step(float dt);
 
-        /// @brief root Actor 부터 재귀 순회 — PhysicsBodyComponent 부착 Actor 의 Transform 갱신.
+        /// @brief root Actor 부터 재귀 순회 — Components::Physics (BoxBody/CircleBody) 부착 Actor 의 Transform 갱신.
         ///        물리 (x, y) → 렌더 (x, heightOffset, -y).
         void SyncToTransform(SJH::Scene::Actor& root);
 
