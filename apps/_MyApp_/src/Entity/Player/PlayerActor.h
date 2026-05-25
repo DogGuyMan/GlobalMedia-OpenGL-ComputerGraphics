@@ -5,9 +5,14 @@
 #include "Entity/Components/MovementComponents.h"
 #include "InputHandler/PlayerController.h"
 #include "input/keyboard_input.h"
+#include "Physics/physics_body.h"
+#include "Physics/physics_movement.h"
 #include "scene/actor.h"
+#include <box2d/box2d.h>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <vmath.h>
 
 namespace TopdownShooter::Entity::Player
 {
@@ -44,9 +49,23 @@ namespace TopdownShooter::Entity::Player
 			SJH::KeyboardInput<Controller::PlayerController::Action> *keyboard = nullptr;
 		};
 
+		struct PhysicsCfg
+		{
+			b2World*    world         = nullptr;
+			vmath::vec2 size          = vmath::vec2(1.0f, 1.0f);
+			vmath::vec2 startPosition = vmath::vec2(0.0f, 0.0f);
+			float       density       = 1.0f;
+			float       friction      = 0.3f;
+			float       linearDamping = 5.0f;
+			uint16_t    categoryBits  = 0;
+			uint16_t    maskBits      = 0;
+			bool        isSensor      = false;
+		};
+
 		LifeCfg       life;
 		MovementCfg   movement;
 		ControllerCfg controller;
+		PhysicsCfg    physics;
 	};
 
 	/// @brief PlayerActor 생성 — Compound Actor 컨벤션 (Actor 비상속) + Component 부착.
@@ -66,14 +85,54 @@ namespace TopdownShooter::Entity::Player
 		auto actor = std::make_unique<SJH::Scene::Actor>(cfg.name);
 
 		actor->AddComponent<Components::Life>(cfg.life.hp);
-		auto *movement = actor->AddComponent<Components::Movement>(cfg.movement.speed);
 
-		if (cfg.controller.keyboard != nullptr)
+		if (cfg.physics.world != nullptr)
 		{
-			auto *controller = actor->AddComponent<Controller::PlayerController>();
-			controller->SetKeyboardInput(cfg.controller.keyboard);
-			controller->SetMovableTarget(movement);
-			controller->SetUp();
+			// Physics body 생성 — b2World 가 lifetime 소유.
+			b2BodyDef bd;
+			bd.type     = b2_dynamicBody;
+			bd.position.Set(cfg.physics.startPosition[0], cfg.physics.startPosition[1]);
+			bd.linearDamping = cfg.physics.linearDamping;
+			b2Body *body = cfg.physics.world->CreateBody(&bd);
+
+			b2PolygonShape box;
+			box.SetAsBox(cfg.physics.size[0] * 0.5f, cfg.physics.size[1] * 0.5f);
+
+			b2FixtureDef fd;
+			fd.shape             = &box;
+			fd.density           = cfg.physics.density;
+			fd.friction          = cfg.physics.friction;
+			fd.isSensor          = cfg.physics.isSensor;
+			fd.filter.categoryBits = cfg.physics.categoryBits;
+			fd.filter.maskBits     = cfg.physics.maskBits;
+			body->CreateFixture(&fd);
+
+			auto *pb = actor->AddComponent<Physics::PhysicsBodyComponent>();
+			pb->SetBody(body);
+			pb->SetSensor(cfg.physics.isSensor);
+
+			auto *pm = actor->AddComponent<Physics::PhysicsMovement>(cfg.movement.speed);
+
+			if (cfg.controller.keyboard != nullptr)
+			{
+				auto *controller = actor->AddComponent<Controller::PlayerController>();
+				controller->SetKeyboardInput(cfg.controller.keyboard);
+				controller->SetMovableTarget(pm);
+				controller->SetUp();
+			}
+		}
+		else
+		{
+			// physics 미사용 — 기존 Movement (Transform 직접 조작).
+			auto *movement = actor->AddComponent<Components::Movement>(cfg.movement.speed);
+
+			if (cfg.controller.keyboard != nullptr)
+			{
+				auto *controller = actor->AddComponent<Controller::PlayerController>();
+				controller->SetKeyboardInput(cfg.controller.keyboard);
+				controller->SetMovableTarget(movement);
+				controller->SetUp();
+			}
 		}
 
 		return actor;

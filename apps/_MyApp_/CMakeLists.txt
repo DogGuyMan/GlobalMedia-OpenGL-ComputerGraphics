@@ -16,6 +16,7 @@ target_link_libraries(${CHAPTER_NAME} PRIVATE
     game_deps
     SJH::engine          # M1 — SJH::sprite 등 코어 모듈 우산 link
     MyApp::Client        # 클라이언트 사이드 스크립트 (Algebraic / Entity / Input)
+    MyApp::Physics       # M3 — Box2D 물리 시스템 (Client 한정)
 )
 
 # 인클루드 디렉토리 추가

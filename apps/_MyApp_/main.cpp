@@ -14,6 +14,10 @@
 #include "Entity/Player/PlayerActor.h"
 #include "InputHandler/PlayerController.h"
 #include "InputHandler/TargetFollowableCameraController.h"
+#include "Physics/filter.h"
+#include "Physics/physics_system.h"
+#include "Physics/pickup_factory.h"
+#include "Physics/wall_factory.h"
 #include "common/common.h"
 #include "material/material.h"
 #include "material/material_uniforms.h"
@@ -112,10 +116,36 @@ namespace TopdownShooter
 			mCamera = cam;
 			dir.SetActiveCamera(cam);
 
+			// === Physics 초기화 ===
+			mPhysics.Init();
+
+			// 벽 4개 — 약 10×10 단위 arena
+			const float arena = 10.0f;
+			const float wallH = 0.5f;
+			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
+			    "WallTop",    mPhysics.World(), vmath::vec2(0.0f, +arena), vmath::vec2(arena, wallH)));
+			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
+			    "WallBottom", mPhysics.World(), vmath::vec2(0.0f, -arena), vmath::vec2(arena, wallH)));
+			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
+			    "WallLeft",   mPhysics.World(), vmath::vec2(-arena, 0.0f), vmath::vec2(wallH, arena)));
+			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
+			    "WallRight",  mPhysics.World(), vmath::vec2(+arena, 0.0f), vmath::vec2(wallH, arena)));
+
+			// Pickup Sensor — (0, +3) 위치. Player 가 W 키로 진입 시 OnTriggerEnter 로그 검증.
+			dir.Root().AddChild(TopdownShooter::Physics::CreatePickupActor(
+			    "PickupTest", mPhysics.World(), vmath::vec2(0.0f, 3.0f), vmath::vec2(0.8f, 0.8f)));
+
 			pac.name = "PlayerSprite";
 			pac.life.hp = 100;
-			pac.movement.speed = 3.0f;          // units/sec (Movement::DoForward 에서 dt 곱 — fps-independent)
+			pac.movement.speed = 3.0f;
 			pac.controller.keyboard = &mKeyboard;
+			pac.physics.world         = &mPhysics.World();
+			pac.physics.size          = vmath::vec2(1.0f, 1.0f);
+			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
+			pac.physics.density       = 1.0f;
+			pac.physics.linearDamping = 5.0f;
+			pac.physics.categoryBits  = TopdownShooter::Physics::Filter::PLAYER;
+			pac.physics.maskBits      = TopdownShooter::Physics::Filter::PLAYER_MASK;
 
 			auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
 
@@ -154,6 +184,9 @@ namespace TopdownShooter
 			mKeyboard.PollHeld(window);
 			SJH::Scene::Director::Get().Update(dt);
 
+			mPhysics.Step(dt);
+			mPhysics.SyncToTransform(SJH::Scene::Director::Get().Root());
+
 			// Animator 가 Update 단계에서 frameIdx 갱신 완료 → Material 의 uUvRect 송신.
 			// (Render 전 단계라 그 프레임에 즉시 반영.)
 			if (mAnimator && mAtlasMaterial)
@@ -174,6 +207,7 @@ namespace TopdownShooter
 			mPlane.reset();
 			mDefaultTarget.reset();
 			mAtlas.Release();
+			mPhysics.Shutdown();
 		}
 
 		void onKey(int key, int action) override
@@ -219,6 +253,7 @@ namespace TopdownShooter
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;
 		TopdownShooter::Entity::Player::PlayerActorConfig pac;
+		TopdownShooter::Physics::PhysicsSystem mPhysics;
 	};
 
 } // namespace TopdownShooter
