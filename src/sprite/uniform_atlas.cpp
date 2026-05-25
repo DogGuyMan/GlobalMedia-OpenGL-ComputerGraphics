@@ -21,52 +21,77 @@ namespace SJH::Sprite
         return vmath::vec4(u, v, du, dv);
     }
 
-    bool UniformAtlas::LoadFromPNG(const char* path, int tilePx)
+    UniformAtlas& UniformAtlas::LoadFromPNG(const char* path)
     {
-        if (!path || tilePx <= 0) {
-            spdlog::error("[UniformAtlas] invalid args: path={}, tilePx={}",
-                           path ? path : "(null)", tilePx);
-            return false;
+        if (!path) {
+            spdlog::error("[UniformAtlas] LoadFromPNG: null path");
+            return *this;
         }
 
         // === 1. PNG 디코드 — SJH::Image 위임 (stbi_load + V축 보정 + RAII) ===
         auto image = SJH::Image::Load(/*image_name=*/path, /*filepath=*/path);
         if (!image) {
             spdlog::error("[UniformAtlas] Image::Load failed: {}", path);
-            return false;
+            return *this;
         }
 
-        const int w = image->GetWidth();
-        const int h = image->GetHeight();
-        if (w % tilePx != 0 || h % tilePx != 0) {
-            spdlog::error("[UniformAtlas] atlas size {}x{} not divisible by tile {}",
-                           w, h, tilePx);
-            return false;
-        }
+        mAtlasWidth  = image->GetWidth();
+        mAtlasHeight = image->GetHeight();
 
-        // === 2. grid metadata ===
-        mAtlasWidth  = w;
-        mAtlasHeight = h;
-        mTileSize    = tilePx;
-        mCols        = w / tilePx;
-        mRows        = h / tilePx;
-
-        // === 3. GL 텍스처 업로드 — SJH::Texture 위임 (glGenTextures + glTexImage2D + RAII) ===
+        // === 2. GL 텍스처 업로드 — SJH::Texture 위임 (glGenTextures + glTexImage2D + RAII) ===
         mTexture = SJH::Texture::CreateTexture(image.get());
         if (!mTexture) {
             spdlog::error("[UniformAtlas] Texture::CreateTexture failed: {}", path);
-            return false;
+            return *this;
         }
 
-        // === 4. 픽셀아트 매개변수 — Texture 의 default (LINEAR_MIPMAP_LINEAR/LINEAR + CLAMP_TO_EDGE)
-        //        에 의존하지 않고 명시 — UniformAtlas 가 Texture 내부 default 와 분리. (Task 4 fixup follow-up) ===
+        // === 3. 픽셀아트 매개변수 — NEAREST + CLAMP_TO_EDGE (인접 tile bleed 방지) ===
         mTexture->Bind();
         mTexture->SetFilter(GL_NEAREST, GL_NEAREST);
-        mTexture->SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);   // 픽셀아트 — 인접 tile bleed 방지
+        mTexture->SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
-        spdlog::info("[UniformAtlas] loaded {} ({}x{}, tile={}, {}x{} grid)",
-                      path, w, h, tilePx, mCols, mRows);
-        return true;
+        spdlog::info("[UniformAtlas] loaded {} ({}x{}) — grid 미설정, SetGrid/SetTileSize 호출 필요",
+                      path, mAtlasWidth, mAtlasHeight);
+        return *this;
+    }
+
+    UniformAtlas& UniformAtlas::SetGrid(int cols, int rows)
+    {
+        if (cols <= 0 || rows <= 0 || mAtlasWidth <= 0 || mAtlasHeight <= 0) {
+            spdlog::error("[UniformAtlas] SetGrid: invalid (cols={}, rows={}, atlas={}x{}) — LoadFromPNG 먼저 호출",
+                           cols, rows, mAtlasWidth, mAtlasHeight);
+            return *this;
+        }
+        if (mAtlasWidth % cols != 0 || mAtlasHeight % rows != 0) {
+            spdlog::error("[UniformAtlas] atlas size {}x{} not divisible by grid {}x{}",
+                           mAtlasWidth, mAtlasHeight, cols, rows);
+            return *this;
+        }
+        mCols     = cols;
+        mRows     = rows;
+        // square tile 가정 — atlasW/cols 와 atlasH/rows 가 같아야 정확. mismatch 시 atlasW/cols 우선.
+        mTileSize = mAtlasWidth / cols;
+        spdlog::info("[UniformAtlas] grid set ({}x{} grid, tile={})", mCols, mRows, mTileSize);
+        return *this;
+    }
+
+    UniformAtlas& UniformAtlas::SetTileSize(int tilePx)
+    {
+        if (tilePx <= 0 || mAtlasWidth <= 0 || mAtlasHeight <= 0) {
+            spdlog::error("[UniformAtlas] SetTileSize: invalid (tilePx={}, atlas={}x{}) — LoadFromPNG 먼저 호출",
+                           tilePx, mAtlasWidth, mAtlasHeight);
+            return *this;
+        }
+        if (mAtlasWidth % tilePx != 0 || mAtlasHeight % tilePx != 0) {
+            spdlog::error("[UniformAtlas] atlas size {}x{} not divisible by tile {}",
+                           mAtlasWidth, mAtlasHeight, tilePx);
+            return *this;
+        }
+        mTileSize = tilePx;
+        mCols     = mAtlasWidth / tilePx;
+        mRows     = mAtlasHeight / tilePx;
+        spdlog::info("[UniformAtlas] tileSize set (tile={}, {}x{} grid)", tilePx, mCols, mRows);
+        return *this;
     }
 
     void UniformAtlas::Release()

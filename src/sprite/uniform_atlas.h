@@ -35,9 +35,31 @@ namespace SJH::Sprite
         UniformAtlas(UniformAtlas&&)                 = default;
         UniformAtlas& operator=(UniformAtlas&&)      = default;
 
-        /// @brief PNG 로드 (Image 위임) + GL_TEXTURE_2D 생성 (Texture 위임) + 픽셀아트 매개변수 (NEAREST).
-        /// @return 성공 시 true. 실패 시 spdlog::error 출력 후 false (mTexture 안 생성).
-        bool LoadFromPNG(const char* path, int tilePx);
+        // === Fluent Builder API — 단계 분리 ===
+        //
+        // 사용 패턴:
+        //   atlas.LoadFromPNG("foo.png").SetGrid(4, 4);    // grid 직접 명시
+        //   atlas.LoadFromPNG("foo.png").SetTileSize(128); // 또는 tilePx 명시 (cols/rows 자동)
+        //   if (!atlas.IsValid()) { /* error */ }
+        //
+        // 책임 분할:
+        //  - LoadFromPNG: PNG 디코드 + GL texture 업로드 + 픽셀아트 매개변수 + atlasW/H 추출
+        //  - SetGrid/SetTileSize: grid metadata 만 (cols/rows/tileSize)
+
+        /// @brief PNG 로드 + GL texture 업로드 + 픽셀아트 (NEAREST + CLAMP). grid 는 미설정.
+        /// @return self (체이닝). 실패 시 spdlog::error + self 반환 (후속 IsValid()=false).
+        UniformAtlas& LoadFromPNG(const char* path);
+
+        /// @brief cols/rows 직접 명시 — tileSize 자동 도출 (atlasW/cols, square tile 가정).
+        /// @details LoadFromPNG 호출 *후* 호출 가정. atlasW/H 가 cols/rows 로 나누어떨어져야 함.
+        UniformAtlas& SetGrid(int cols, int rows);
+
+        /// @brief tilePx 명시 — cols/rows 자동 도출 (atlasW/tilePx, atlasH/tilePx).
+        /// @details LoadFromPNG 호출 *후* 호출 가정. atlasW/H 가 tilePx 로 나누어떨어져야 함.
+        UniformAtlas& SetTileSize(int tilePx);
+
+        /// @brief 모든 단계 (texture + grid) 성공 후 true.
+        bool IsValid() const { return mTexture && mCols > 0 && mRows > 0 && mTileSize > 0; }
 
         /// @brief Texture 명시 해제. 소멸자가 자동 호출하지만 명시 해제 가능.
         void Release();
