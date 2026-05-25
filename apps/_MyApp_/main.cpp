@@ -11,6 +11,7 @@
 #include <spdlog/spdlog.h>
 #include <vmath.h>
 
+#include "Entity/Player/PlayerActor.h"
 #include "InputHandler/PlayerController.h"
 #include "InputHandler/TargetFollowableCameraController.h"
 #include "common/common.h"
@@ -25,6 +26,7 @@
 #include "scene/camera.h"
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
+#include "sprite/sprite_animator.h"
 #include "sprite/uniform_atlas.h"
 
 #include <cstring>
@@ -51,7 +53,10 @@ namespace TopdownShooter
 			auto &reg = SJH::ResourceRegistry::Get();
 			auto &dir = SJH::Scene::Director::Get();
 
-			if (!mAtlas.LoadFromPNG("resources/texture/TestPattern.png", /*tilePx=*/128))
+			// Fluent Builder — PNG 로드 + grid 명시 분리. SetGrid(cols, rows) 또는 SetTileSize(px) 택일.
+			mAtlas.LoadFromPNG("resources/texture/TestPattern.png")
+				.SetGrid(2, 2);
+			if (!mAtlas.IsValid())
 			{
 				spdlog::error("[M1] atlas load failed");
 				return;
@@ -77,6 +82,7 @@ namespace TopdownShooter
 			auto *mat = reg.CreateSharedMaterial("billboard_player");
 			mat->SetProgram(prog);
 			mat->SetPass(SJH::Pass::Kind::AlphaTest);
+			mAtlasMaterial = mat;
 
 			mat->Properties.Textures["uAtlas"] = {mAtlas.GetTexture(), /*unit=*/0};
 
@@ -91,10 +97,10 @@ namespace TopdownShooter
 
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
-			auto camActor                      = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
+			auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
 			camActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
-			camActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
-			auto *cam                          = camActor->GetComponent<SJH::Scene::Camera>();
+			camActor->GetTransform().EulerRot = vmath::vec3(-45.0f, 0.0f, 0.0f);
+			auto *cam = camActor->GetComponent<SJH::Scene::Camera>();
 			// Camera Actor 의 follow 컨트롤러는 sprite 셋업 *후* SetFollowTarget 호출이 필요 — 변수 보관.
 			auto *camCtrl = camActor->AddComponent<Controller::TargetFollowableCameraController>();
 			camCtrl->SetMouseInput(&mMouse)
@@ -103,16 +109,26 @@ namespace TopdownShooter
 			cam->SetTargetFramebuffer(nullptr);
 
 			mCameraActor = dir.Root().AddChild(std::move(camActor));
-			mCamera      = cam;
+			mCamera = cam;
 			dir.SetActiveCamera(cam);
 
-			auto spriteActor                      = std::make_unique<SJH::Scene::Actor>("PlayerSprite");
+			pac.name = "PlayerSprite";
+			pac.life.hp = 100;
+			pac.movement.speed = 3.0f;          // units/sec (Movement::DoForward 에서 dt 곱 — fps-independent)
+			pac.controller.keyboard = &mKeyboard;
+
+			auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
+
 			spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-			spriteActor->GetTransform().Scale     = vmath::vec3(1.0f, 1.0f, 1.0f);
+			spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
 			spriteActor->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), mat);
-			spriteActor->AddComponent<Controller::PlayerController>()
-			    ->SetKeyboardInput(&mKeyboard)
-			    .SetUp();
+
+			// SpriteAnimator — atlas FrameCount 만큼 fps default (4×4 = 16fps, 2×2 = 4fps).
+			// 매 frame uUvRect 갱신은 render() 안에서.
+			mAnimator = spriteActor->AddComponent<SJH::Sprite::SpriteAnimator>();
+			mAnimator->SetFps(4.0f);
+			mAnimator->SetAtlas(&mAtlas);
+
 			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
 
 			// Camera follow target — sprite Actor 가 root 의 child 로 등록된 후.
@@ -137,6 +153,14 @@ namespace TopdownShooter
 
 			mKeyboard.PollHeld(window);
 			SJH::Scene::Director::Get().Update(dt);
+
+			// Animator 가 Update 단계에서 frameIdx 갱신 완료 → Material 의 uUvRect 송신.
+			// (Render 전 단계라 그 프레임에 즉시 반영.)
+			if (mAnimator && mAtlasMaterial)
+			{
+				SJH::Uniforms::SetVec4(*mAtlasMaterial, "uUvRect", mAtlas.GetUVRect(mAnimator->GetCurrentFrame()));
+			}
+
 			mRenderSys.Render(*mDefaultTarget);
 		}
 
@@ -190,8 +214,11 @@ namespace TopdownShooter
 		SJH::Scene::Actor *mCameraActor = nullptr;
 		SJH::Scene::Actor *mSpriteActor = nullptr;
 		SJH::Scene::Camera *mCamera = nullptr;
+		SJH::Sprite::SpriteAnimator *mAnimator = nullptr;   // render() 매 frame uUvRect 갱신용
+		SJH::Material *mAtlasMaterial = nullptr;            // 매 frame uUvRect 갱신 대상
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;
+		TopdownShooter::Entity::Player::PlayerActorConfig pac;
 	};
 
 } // namespace TopdownShooter
