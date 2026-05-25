@@ -1,9 +1,9 @@
 #include "render/scene_renderer.h"
-#include "common/constants.h" // UNI_* / NUM_POINT_LIGHTS — 매직 스트링 차단.
+#include "common/constants.h"
 #include "material/material.h"
-#include "object/light.h" // SP5 — DirLight/PointLight/SpotLight (Scene::Component)
+#include "object/light.h"
 #include "program/program.h"
-#include "program/program_uniforms.h" // SP5 — Uniforms::SetDirLight/SetPointLight/SetSpotLight
+#include "program/program_uniforms.h"
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"
 #include "render/render_target.h"
