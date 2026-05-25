@@ -1,5 +1,4 @@
 #include "render/scene_renderer.h"
-#include "buffer/framebuffer.h"
 #include "common/constants.h" // UNI_* / NUM_POINT_LIGHTS — 매직 스트링 차단.
 #include "material/material.h"
 #include "object/light.h" // SP5 — DirLight/PointLight/SpotLight (Scene::Component)
@@ -57,9 +56,8 @@ namespace SJH
 	{
 		auto &rc = DeviceContext::Get();
 
-		RenderTarget &target = cam.GetTargetFramebuffer()
-		                           ? static_cast<RenderTarget &>(*cam.GetTargetFramebuffer())
-		                           : defaultTarget;
+		RenderTarget &target = cam.GetTargetRenderTarget() ? *cam.GetTargetRenderTarget()
+		                                                    : defaultTarget;
 		rc.BeginFrame(target);
 
 		const auto viewMat = cam.GetViewMatrix();
