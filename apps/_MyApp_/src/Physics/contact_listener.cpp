@@ -1,5 +1,5 @@
 #include "Physics/contact_listener.h"
-#include "Physics/contact_interface.h"
+#include "Physics/Components.Interfaces.h"
 
 #include "scene/actor.h"
 
@@ -20,12 +20,12 @@ namespace TopdownShooter::Physics
 
         enum class Phase { TriggerEnter, TriggerExit, CollisionEnter, CollisionExit };
 
-        // Actor 의 모든 Component 중 IPhysicsContactListener 구현체에 콜백 전달.
+        // Actor 의 모든 Component 중 IContactable 구현체에 콜백 전달.
         void Dispatch(SJH::Scene::Actor* self, SJH::Scene::Actor* other, Phase phase)
         {
             if (!self) return;
             self->ForEachComponent([&](SJH::Scene::Component* c) {
-                if (auto* listener = dynamic_cast<IPhysicsContactListener*>(c)) {
+                if (auto* listener = dynamic_cast<IContactable*>(c)) {
                     switch (phase) {
                     case Phase::TriggerEnter:   listener->OnTriggerEnter(other);   break;
                     case Phase::TriggerExit:    listener->OnTriggerExit(other);    break;

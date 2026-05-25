@@ -31,15 +31,11 @@ namespace TopdownShooter::Physics::Components
 			return *this;
 		};
 
+		bool IsSensor() const { return mIsSensor; }   // isTrigger source-of-truth — PhysicsBodyComponent 와 정합
+
 		virtual void OnEnter() = 0;
 		virtual void OnExit() = 0;
 		virtual void Update(float dt) = 0;
-
-		virtual bool GetIsTrigger() final { return mIsSensor; }   // 단일 source-of-truth
-		virtual void OnTriggerEnter(SJH::Scene::Actor *other) = 0;
-		virtual void OnTriggerExit(SJH::Scene::Actor *other) = 0;
-		virtual void OnCollisionEnter(SJH::Scene::Actor *other) = 0;
-		virtual void OnCollisionExit(SJH::Scene::Actor *other) = 0;
 	};
 }; // namespace TopdownShooter::Physics::Components
 
