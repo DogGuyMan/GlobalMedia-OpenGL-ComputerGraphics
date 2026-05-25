@@ -219,7 +219,7 @@ namespace SJH
 		auto &rc = DeviceContext::Get();
 		rc.BeginFrame(defaultTarget);
 		mProcessor.Clear();
-		CollectFromActor(Scene::Director::Get().Root(), viewMat, ~0u);
+		CollectFromActor(Scene::Director::Get().Root(), viewMat, ~0ull);
 		mProcessor.SortMultiStage();
 		mProcessor.Process(rc, viewMat, projMat);
 	}
