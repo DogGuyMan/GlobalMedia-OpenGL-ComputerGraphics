@@ -31,6 +31,8 @@ target_link_libraries(sjhopengl_engine INTERFACE
     SJH::resource_registry
     SJH::scene
     SJH::shader
-    SJH::sprite          # M1 — 13 모듈 (sprite 합류)
-    SJH::fsm             # M2 — 14 모듈 (fsm 합류)
+    SJH::sprite             # M1 — 13 모듈 (sprite 합류)
+    SJH::fsm                # M2 — 14 모듈 (fsm 합류)
+    SJH::playable           # M3.5 — 15 모듈 (playable 합류)
+    SJH::sprite_sequence    # M3.5 — 16 모듈 (sprite_sequence 합류)
 )
