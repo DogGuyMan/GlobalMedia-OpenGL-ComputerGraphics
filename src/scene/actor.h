@@ -2,6 +2,7 @@
 #define __SJH_SCENE_ACTOR_H__
 
 #include "object/transform.h"
+#include "scene/layer.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -94,8 +95,9 @@ namespace SJH::Scene
         // === Layer (SP4 D-15) ===
         /// @brief Actor 의 가시성 layer (Unity 정통 비트마스크).
         /// @details 기본값 = 1 (비트 0). Camera::cullingMask 와 AND 검사로 SceneRenderer 이 필터.
-        void     SetLayer(uint32_t layer) { mLayer = layer; }
-        uint32_t GetLayer() const         { return mLayer; }
+        void     SetLayer(uint64_t layer) { mLayer = layer; }
+        void     SetLayer(SJH::Scene::Layer l) { mLayer = SJH::Scene::ToBits(l); }
+        uint64_t GetLayer() const         { return mLayer; }
 
         // === Lifecycle ===
         void OnEnter();
@@ -112,7 +114,7 @@ namespace SJH::Scene
         Transform   mTransform;
         bool        mActive  = true;
         bool        mEntered = false;
-        uint32_t    mLayer   = 1u;   // 기본 layer (비트 0) — 모든 Camera 의 기본 mask(~0u) 와 매치.
+        uint64_t    mLayer   = SJH::Scene::ToBits(SJH::Scene::Layer::Default); // SP5 — Layer::Default = 비트 0
     };
 
     // === Template 정의 (ddd 2 차 patch 적용) ===
