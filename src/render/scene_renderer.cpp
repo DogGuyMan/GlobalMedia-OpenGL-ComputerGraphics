@@ -226,14 +226,14 @@ namespace SJH
 
 	void SceneRenderer::CollectFromActor(const Scene::Actor &actor,
 	                                     const vmath::mat4 &viewMat,
-	                                     uint32_t cullingMask)
+	                                     uint64_t cullingMask)
 	{
 		if (!actor.IsActive())
 			return;
 
 		// SP4 D-15: cullingMask 비트 AND 로 actor 의 layer 가 카메라 가시 여부 판정.
 		// 0 이면 본인은 skip — 단 자식은 layer 가 다를 수 있으므로 계속 traverse.
-		const bool visibleToCamera = (cullingMask & actor.GetLayer()) != 0u;
+		const bool visibleToCamera = (cullingMask & actor.GetLayer()) != 0ull;
 
 		if (visibleToCamera)
 		{

@@ -1,8 +1,9 @@
 #ifndef __SJH_SCENE_CAMERA_H__
 #define __SJH_SCENE_CAMERA_H__
 
-#include "scene/actor.h" // Component + Actor::GetWorldMatrix
-#include <cstdint>       // uint32_t for cullingMask (SP4 D-15)
+#include "scene/actor.h"  // Component + Actor::GetWorldMatrix
+#include "scene/layer.h"  // Layer, ToBits (SP5 Task 3)
+#include <cstdint>        // uint64_t for cullingMask (SP5 Task 3)
 #include <vmath.h>
 
 namespace SJH
@@ -37,8 +38,13 @@ namespace SJH::Scene
 		float NearZ = 0.1f;
 		float FarZ = 100.0f;
 
-		int Depth = 0;              // Unity Camera.depth — 작은 값 먼저.
-		uint32_t CullingMask = ~0u; // Unity Camera.cullingMask — 기본 모든 layer.
+		int Depth = 0;                                                // Unity Camera.depth — 작은 값 먼저.
+		uint64_t CullingMask = SJH::Scene::ToBits(SJH::Scene::Layer::All); // Unity Camera.cullingMask — 기본 모든 layer.
+
+		/// @brief 비트마스크 직접 주입 (옛 호환).
+		void SetCullingMask(uint64_t mask)             { CullingMask = mask; }
+		/// @brief type-safe Layer overload (SP5 Task 3).
+		void SetCullingMask(SJH::Scene::Layer l)       { CullingMask = SJH::Scene::ToBits(l); }
 
 		Camera() = default;
 		Camera(float fovYDeg, float aspect, float nearZ, float farZ)

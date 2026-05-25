@@ -41,7 +41,7 @@ namespace SJH
         /// @brief Actor 트리 DFS — MeshRenderer 수집 + Queue 에 Submit.
         /// @param cullingMask Camera::GetCullingMask() — actor.GetLayer() 와 AND 검사로 필터 (SP4 D-15).
         ///        자식 트리는 visibleToCamera 와 무관하게 계속 traverse (자식이 다른 layer 일 수 있음).
-        void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint32_t cullingMask);
+        void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
 
         /// @brief Actor 트리 DFS — IsActive + IsEnabled Camera 컴포넌트를 out 에 수집.
         void CollectCameras(const Scene::Actor& actor, std::vector<Scene::Camera*>& out);
