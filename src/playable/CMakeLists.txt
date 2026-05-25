@@ -2,7 +2,7 @@
 # spec docs/superpowers/specs/2026-05-26-playable-component-interface-design.md
 add_library(sjh_playable STATIC
     playable_base.cpp
-    # composite_playable.cpp 는 Task A.2 에서 추가
+    composite_playable.cpp
 )
 add_library(SJH::playable ALIAS sjh_playable)
 
