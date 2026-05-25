@@ -1,5 +1,9 @@
+#ifndef _TOPDOWNSHOOTER_ENTITY_BASE__
+#define _TOPDOWNSHOOTER_ENTITY_BASE__
+
 #include "Components/Components.Interfaces.h"
 #include "Components/LifeComponents.h"
+#include "Components/MovementComponents.h"
 #include "scene/actor.h"
 #include <string.h>
 
@@ -30,3 +34,5 @@ namespace TopdownShooter::Entity
 		virtual int GetMaxHp() const override {return mLifeComponentPtr->GetMaxHp();}
 	};
 } // namespace TopdownShooter::Entity
+
+#endif//_TOPDOWNSHOOTER_ENTITY_BASE__

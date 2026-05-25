@@ -1,9 +1,11 @@
 #ifndef _TOPDOWNSHOOTER_INPUT_PLAYER_CONTROLLER__
 #define _TOPDOWNSHOOTER_INPUT_PLAYER_CONTROLLER__
 
+#include "Entity/Components/Components.Interfaces.h"
 #include "input/keyboard_input.h"
 #include "scene/actor.h"
 #include <vmath.h>
+#include "Entity/Components/MovementComponents.h"
 
 namespace TopdownShooter::Controller
 {
@@ -34,8 +36,7 @@ namespace TopdownShooter::Controller
 		/// @brief 키보드 입력 의존 주입. SetUp() 전에 호출 필수.
 		PlayerController &SetKeyboardInput(SJH::KeyboardInput<Action> *k);
 
-		/// @brief 이동 속도 (월드 단위/프레임, default 0.05).
-		PlayerController &SetMoveSpeed(float v);
+		PlayerController &SetPlayerMovement(Entity::Components::Movement* m);
 
 		virtual void OnEnter() override;
 		virtual void OnExit() override;
@@ -44,8 +45,9 @@ namespace TopdownShooter::Controller
 	  private:
 		bool mIsInitialized                          = false;
 		SJH::KeyboardInput<Action> *mKeyboardInput   = nullptr;
-		vmath::vec3 mMoveDelta                       = vmath::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset
-		float mMoveSpeed                             = 0.05f;
+		Entity::IMovable* mMovementPtr = nullptr;
+
+		vmath::vec3 mInputValue {0.0f};
 
 		void RegisterBindings();
 		void UnregisterBindings();

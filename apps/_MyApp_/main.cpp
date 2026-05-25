@@ -112,7 +112,6 @@ namespace TopdownShooter
 			spriteActor->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), mat);
 			spriteActor->AddComponent<Controller::PlayerController>()
 			    ->SetKeyboardInput(&mKeyboard)
-			    .SetMoveSpeed(0.05f)
 			    .SetUp();
 			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
 
