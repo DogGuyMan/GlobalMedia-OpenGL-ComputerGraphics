@@ -5,6 +5,21 @@
 > **진행 결과**: `apps/tweeny_demo` 의 SceneRenderer 마이그레이션 (Phase 0~4) 완료
 > **미해결**: 3 개 Future SP 후보 — SP-RenderStage / SP-FramebufferResize / SP-PerRendererProperties
 
+```
+1. N×M 조합 폭발 회피 (가장 큰 동기)
+현재 추상:
+
+RenderTarget — 어디에 그리나 (Default backbuffer / FBO / ...)
+??? — 무엇을 그리나 (Scene / ImGui / Skybox / DebugDraw / PostFX)
+만약 "무엇을" 책임을 RenderTarget 에 박으면:
+
+DefaultSceneRT, DefaultUiRT, FboSceneRT, FboUiRT, FboSkyboxRT, ... → N × M 조합 마다 클래스 폭발
+직교 축으로 분리해야 N + M 으로 끝남:
+
+
+RenderTarget × IRenderStage  =  자유 조합 (덧셈)
+```
+
 ---
 
 ## 0. 컨텍스트

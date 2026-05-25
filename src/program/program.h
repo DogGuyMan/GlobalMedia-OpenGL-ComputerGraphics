@@ -10,7 +10,6 @@
 
 namespace SJH
 {
-    class Material;   // SP6 Observer — Program 이 의존 Material 목록 보유.
 
     CLASS_PTR(Program)
 
@@ -71,16 +70,9 @@ namespace SJH
         /// @brief uniform 이름 -> GL 타입 (GL_FLOAT_MAT4 등). 미캐시 시 0.
         GLenum GetType(const char* name) const { return mUniformCache.GetType(name); }
 
-        /// @brief 내부 UniformCache const reference — Material 이 cache 참조 시 사용 (SP6).
         const UniformCache& GetUniformCache() const { return mUniformCache; }
 
-        // ── SP6 Observer — 의존 Material 의 lifetime 추적 ────────────────────────
-        /// @brief Material 이 SetProgram(this) 시 호출 — 의존 목록에 등록.
-        /// @details ~Program 의 OnProgramReleased cascade 가 *등록된 Material* 들에 통지.
-        void RegisterMaterial(Material* m) const;
 
-        /// @brief Material 이 SetProgram(other) 또는 ~Material 시 호출 — 의존 목록에서 제거.
-        void UnregisterMaterial(Material* m) const;
 
     private:
         Program() = default;
@@ -92,8 +84,6 @@ namespace SJH
         /// @brief SP6 — active uniform name->(location,type) 캐시. Program 이 owner.
         UniformCache mUniformCache;
 
-        /// @brief SP6 Observer — 의존 Material 들. mutable: const 메서드 RegisterMaterial 에서 수정.
-        mutable std::vector<Material*> mDependentMaterials;
     };
 }
 
