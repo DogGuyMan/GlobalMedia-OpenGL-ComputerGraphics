@@ -18,6 +18,7 @@ namespace SJH::Playable
         // === Fluent Builder (Tweeny `*this` + DOTween Append/Insert 정통) ===
         SequencePlayable& Append(std::unique_ptr<IPlayable> child);
         SequencePlayable& Insert(std::size_t pos, std::unique_ptr<IPlayable> child);
+        SequencePlayable& AppendInterval(float seconds);
 
         // 디버그/관찰
         std::size_t Size()   const { return children_.size(); }

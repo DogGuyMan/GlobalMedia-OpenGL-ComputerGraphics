@@ -1,0 +1,47 @@
+#ifndef __TOPDOWNSHOOTER_STAGE_WAVE_CONTROLLER_H__
+#define __TOPDOWNSHOOTER_STAGE_WAVE_CONTROLLER_H__
+
+#include "scene/actor.h"
+#include <vector>
+#include <vmath.h>
+
+class b2World;
+
+namespace TopdownShooter::Stage
+{
+    /// @brief 웨이브 기반 Enemy spawn 관리.
+    /// @details
+    ///   - kSpawnInterval 마다 1마리 spawn (최대 kMaxEnemies 동시 생존).
+    ///   - mEnemies raw ptr 추적 — IsActive()==false 시 전멸 감지.
+    ///   - 전멸 → mWave++ + 다음 웨이브 즉시 개시.
+    class WaveController : public SJH::Scene::Component
+    {
+      public:
+        WaveController(b2World* world, SJH::Scene::Actor* spawnParent,
+                       SJH::Scene::Actor* playerActor, float arenaHalfExtent);
+        ~WaveController() override;
+
+        void OnEnter() override {}
+        void OnExit()  override {}
+        void Update(float dt) override;
+
+      private:
+        void        SpawnEnemy();
+        vmath::vec2 RandomEdgePos() const;
+        int         LiveCount() const;
+
+        b2World*           mWorld;
+        SJH::Scene::Actor* mSpawnParent;
+        SJH::Scene::Actor* mPlayerActor;
+        float              mArenaHalfExtent;
+
+        std::vector<SJH::Scene::Actor*> mEnemies;
+        int   mWave       = 0;
+        float mSpawnTimer = 0.0f;
+
+        static constexpr float kSpawnInterval = 3.0f;
+        static constexpr int   kMaxEnemies    = 5;
+    };
+}
+
+#endif // __TOPDOWNSHOOTER_STAGE_WAVE_CONTROLLER_H__

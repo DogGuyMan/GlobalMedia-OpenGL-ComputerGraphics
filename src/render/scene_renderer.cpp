@@ -1,4 +1,5 @@
 #include "render/scene_renderer.h"
+#include <cassert>
 #include "common/constants.h"
 #include "material/material.h"
 #include "object/light.h"
@@ -16,8 +17,9 @@
 
 namespace SJH
 {
-	void SceneRenderer::Render(RenderTarget &defaultTarget)
+	void SceneRenderer::Render(RenderTarget & /*target*/)
 	{
+		// Phase B: target 미사용 — 모든 Camera 가 자기 FBO 를 보유. IRenderStage 계약 파라미터 유지.
 		// 1. SceneContext 에서 Camera 컬렉션 직접 조회 — DFS 폐기 (Cocos2D `Scene::_cameras` 정통).
 		const auto &cameras = Scene::Director::Get().GetContext().GetCameras();
 		if (cameras.empty())
@@ -31,20 +33,17 @@ namespace SJH
 		for (auto *cam : cameras)
 		{
 			if (cam->IsEnabled())
-				RenderWithCamera(*cam, defaultTarget);
+				RenderWithCamera(*cam);
 		}
 	}
 
-	// std::vector<Scene::Camera *> cameras;
-	// public void AddCamera(Scene::Camera * camera) { cameras.push_back(camera); std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; }); }
-	// public void RemoveCamera(Scene::Camera * camera) { cameras.push_back(camera); std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; }); }
-
-	void SceneRenderer::RenderWithCamera(Scene::Camera &cam, RenderTarget &defaultTarget)
+	void SceneRenderer::RenderWithCamera(Scene::Camera &cam)
 	{
+		// Phase B: 모든 Camera 는 자기 RenderTarget 을 보유 (Camera::SetTargetRenderTarget assert 보장).
+		assert(cam.GetTargetRenderTarget() != nullptr);
 		auto &rc = DeviceContext::Get();
 
-		RenderTarget &target = cam.GetTargetRenderTarget() ? *cam.GetTargetRenderTarget()
-		                                                   : defaultTarget;
+		RenderTarget &target = *cam.GetTargetRenderTarget();
 		rc.BeginFrame(target);
 
 		const auto viewMat = cam.GetViewMatrix();

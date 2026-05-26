@@ -12,22 +12,27 @@
 #include <vmath.h>
 
 #include "Entity/Player/PlayerActor.h"
+#include "Entity/Player/PlayerBehavior.h"
+#include "Entity/Player/BulletSpawnPlayable.h"
+#include "Entity/Bullet/bullet_factory.h"
+#include "Stage/WaveController.h"
 #include "InputHandler/PlayerController.h"
 #include "InputHandler/TargetFollowableCameraController.h"
 #include "Physics/filter.h"
-#include "Audio/FmodPlayable.h"
 #include "Audio/FmodStudioPlayable.h"
 #include "Director.h"
 #include "Tween/TweenPlayable.h"
-#include "VFX/EffekseerPlayable.h"
 #include "playable/composite_playable.h"
 
 #include <tweeny/tweeny.h>
 #include <cmath>
 #include "Stage/StageBuilder.h"
 #include "common/common.h"
+#include "buffer/framebuffer.h"
+#include "object/mesh.h"
 #include "render/render_target.h"
 #include "render/scene_renderer.h"
+#include "render/screen_quad_stage.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
@@ -77,6 +82,29 @@ namespace TopdownShooter
 			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
 
+			// SP-UniversalRenderTarget Phase B — SceneFB: 씬 렌더 대상 FBO. ScreenQuadStage 가 backbuffer 합성.
+			mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
+			if (!mSceneFB)
+			{
+				spdlog::error("[Phase B] SceneFB 생성 실패");
+				return;
+			}
+
+			// ScreenQuadStage 용 passthrough 프로그램 + ScreenQuad 메쉬 등록.
+			auto *passthroughProg = reg.CreateProgram(
+			    "screen_passthrough",
+			    "resources/shaders/passthrough.vs",
+			    "resources/shaders/passthrough.fs");
+			if (!passthroughProg)
+			{
+				spdlog::error("[Phase B] passthrough 셰이더 로드 실패");
+				return;
+			}
+			auto *quadMesh = reg.RegisterMesh("mesh_screen_quad", SJH::Mesh::CreateScreenQuad());
+
+			mScreenQuadStage = std::make_unique<SJH::ScreenQuadStage>(*passthroughProg, *quadMesh);
+			mScreenQuadStage->SetSources({mSceneFB.get()});
+
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
 			auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
@@ -88,7 +116,7 @@ namespace TopdownShooter
 			camCtrl->SetMouseInput(&mMouse)
 			    .SetCamera(cam)
 			    .SetUp();
-			cam->SetTargetRenderTarget(nullptr);
+			cam->SetTargetRenderTarget(mSceneFB.get()); // Phase B: FBO 명시 — nullptr 금지.
 
 			mCameraActor = dir.Root().AddChild(std::move(camActor));
 			mCamera = cam;
@@ -151,18 +179,45 @@ namespace TopdownShooter
 			// per-Update 마다 uUvRect / uTint / uFlipX 도 내부에서 송신 — main render() 무동작.
 			mSprite = spriteActor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
 
-			// SpriteSequencePlayable — M3.5 정착 (SpriteAnimator 폐기). atlas 전체 16-frame 을
-			// 4fps 로 loop sweep. clip 은 main 멤버로 보관 (playable 은 raw ptr 만 보유).
-			mWholeAtlasClip = SJH::SpriteSequence::SpriteFrameClip{
-			    /*startFrame*/ 0,
-			    /*frameCount*/ atlas->FrameCount(),
-			    /*fps*/        4.0f};
+			// SpriteSequencePlayable — M4 다중 클립 (Idle/Move/Attack/Hit).
 			mSpriteSeq = spriteActor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
-			    mSprite, &mWholeAtlasClip);
+			    mSprite, &mClipIdle);
+			mSpriteSeq->RegisterClip(static_cast<int>(Entity::Player::EPlayerClip::Idle),   &mClipIdle)
+			           .RegisterClip(static_cast<int>(Entity::Player::EPlayerClip::Move),   &mClipMove)
+			           .RegisterClip(static_cast<int>(Entity::Player::EPlayerClip::Attack), &mClipAttack)
+			           .RegisterClip(static_cast<int>(Entity::Player::EPlayerClip::Hit),    &mClipHit);
 			mSpriteSeq->SetIsLoop(true);
 			mSpriteSeq->Play();
 
+			// PlayerBehavior — 속도 관찰 + 클립 전환 + Hit/Dash/Die 처리.
+			mPlayerBehavior = spriteActor->AddComponent<Entity::Player::PlayerBehavior>();
+			{
+				auto *physBody = spriteActor->GetComponent<Physics::Components::BoxBody>();
+				mPlayerBehavior->Init(mSpriteSeq, pac.movement.speed);
+				if (physBody) mPlayerBehavior->SetBody(physBody->GetBody());
+			}
+
 			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
+
+			// BulletSpawnPlayable — physWorld 는 Director 소유 → startup() 반환 후에도 안전.
+			auto *physWorldPtr = &phys.World();
+			auto *rootPtr      = &dir.Root();
+			auto bulletFactory = [physWorldPtr](vmath::vec2 pos, vmath::vec2 d) -> std::unique_ptr<SJH::Scene::Actor>
+			{
+				Entity::Bullet::BulletConfig cfg;
+				cfg.world = physWorldPtr;
+				cfg.pos   = pos;
+				cfg.dir   = d;
+				return Entity::Bullet::CreateBulletActor(cfg);
+			};
+			auto *bulletSpawn = mSpriteActor->AddComponent<Entity::Player::BulletSpawnPlayable>(
+			    mPlayerBehavior, rootPtr, std::move(bulletFactory));
+			mPlayerBehavior->SetAttackPlayable(bulletSpawn);
+
+			// WaveController — sceneRoot 직속 Actor 의 컴포넌트.
+			auto *waveActor = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("WaveController"));
+			waveActor->AddComponent<Stage::WaveController>(
+			    physWorldPtr, rootPtr, mSpriteActor, /*arenaHalfExtent=*/10.0f);
 
 			// Camera follow target — sprite Actor 가 root 의 child 로 등록된 후.
 			camCtrl->SetFollowTarget(mSpriteActor)
@@ -194,13 +249,18 @@ namespace TopdownShooter
 			// SpriteRenderer.Update 가 uUvRect / uTint / uFlipX 자동 송신 — main 무동작.
 			mRenderSys.Render(*mDefaultTarget);
 
-			// === M5 — Effekseer 렌더 (SceneRenderer 직후, swap 전) ===
+			// === M5 — Effekseer 렌더: mSceneFB 가 아직 bound 된 상태.
+			// VFX 를 씬 FBO 에 합성 후 ScreenQuadStage 로 백버퍼 출력.
 			if (mCamera)
 			{
 				vmath::mat4 view = mCamera->GetViewMatrix();
 				vmath::mat4 proj = mCamera->GetProjectionMatrix();
 				TopdownShooter::Director::Get().VFX().Draw(&view[0][0], &proj[0][0]);
 			}
+
+			// SP-UniversalRenderTarget Phase B: SceneFB(scene+VFX) → backbuffer 합성.
+			if (mScreenQuadStage)
+				mScreenQuadStage->Render(*mDefaultTarget);
 		}
 
 		void shutdown() override
@@ -209,9 +269,12 @@ namespace TopdownShooter
 			mCamera = nullptr;
 			mCameraActor = nullptr;
 			mSpriteActor = nullptr;
+			mScreenQuadStage.reset(); // ScreenQuadStage 먼저 (mSceneFB 포인터 보유)
+			mSceneFB.reset();
 			mDefaultTarget.reset();
 			mSprite = nullptr;     // 컴포넌트는 spriteActor 가 소유 — Director::Exit 가 정리. atlas 는 ResourceRegistry::Clear 가 담당
-			mSpriteSeq = nullptr;  // 동일 — Director::Exit 가 spriteActor 정리 시 함께 소멸
+			mSpriteSeq      = nullptr;  // 동일 — Director::Exit 가 spriteActor 정리 시 함께 소멸
+			mPlayerBehavior = nullptr;
 			// M5 — Director 가 Physics + VFX + Audio 일괄 정리
 			TopdownShooter::Director::Get().Shutdown();
 		}
@@ -219,6 +282,20 @@ namespace TopdownShooter
 		void onKey(int key, int action) override
 		{
 			mKeyboard.Dispatch(key, action);
+
+			// === M4 — Shift 키: PlayerBehavior::Dash (현재 WASD 방향 기준) ===
+			if ((key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT)
+			    && action == GLFW_PRESS && mPlayerBehavior)
+			{
+				float dx = 0.0f, dz = 0.0f;
+				if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) dz -= 1.0f;
+				if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) dz += 1.0f;
+				if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) dx -= 1.0f;
+				if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) dx += 1.0f;
+				const float len = std::sqrt(dx * dx + dz * dz);
+				if (len > 0.001f)
+					mPlayerBehavior->Dash(vmath::vec2(dx / len, dz / len));
+			}
 
 			// === M5 CO2 — G 키: Parallel( TweenShake ∥ FmodStudio.Damaged ) ===
 			if (key == GLFW_KEY_G && action == GLFW_PRESS)
@@ -250,36 +327,16 @@ namespace TopdownShooter
 			glfwGetCursorPos(window, &x, &y);
 			mMouse.HandleButton(button, action, x, y);
 
-			// === M5 CO1 — 마우스 좌클릭: Sequence( Effekseer.distortion  Parallel( Fmod.Laser ∥ FmodStudio.Slash ) ) ===
-			if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+			// === M4 — 마우스 좌클릭: PlayerBehavior::Attack 디스패치 ===
+			if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && mPlayerBehavior)
 			{
-				auto &reg   = SJH::ResourceRegistry::Get();
-				auto &audio = TopdownShooter::Director::Get().Audio();
-				auto &vfx   = TopdownShooter::Director::Get().VFX();
-
-				auto *shot     = reg.FindSound("shot");
-				auto *muzzle   = reg.FindEffect("muzzle");
-				auto *slashEvt = audio.LoadEvent("event:/Slash");
-
-				if (shot && muzzle && slashEvt)
-				{
-					auto *cActor = SJH::Scene::Director::Get().Root().AddChild(
-					    std::make_unique<SJH::Scene::Actor>("ShotComposite"));
-					auto *seq = cActor->AddComponent<SJH::Playable::SequencePlayable>();
-
-					// 1: muzzle VFX (자연 종료 대기)
-					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
-					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
-					    TopdownShooter::VFX::TrackPolicy::Static));
-
-					// 2: Parallel( Laser.wav ∥ Slash event )
-					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodPlayable>(audio.GetSystem(), shot));
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(slashEvt));
-					seq->Append(std::move(par));
-
-					seq->Play();
-				}
+				int fbW = 0, fbH = 0;
+				glfwGetFramebufferSize(window, &fbW, &fbH);
+				const float ndcX = (2.0f * static_cast<float>(x) / static_cast<float>(fbW)) - 1.0f;
+				const float ndcY = 1.0f - (2.0f * static_cast<float>(y) / static_cast<float>(fbH));
+				const float len  = std::sqrt(ndcX * ndcX + ndcY * ndcY);
+				if (len > 0.001f)
+					mPlayerBehavior->Attack(vmath::vec2(ndcX / len, -ndcY / len));
 			}
 		}
 
@@ -299,16 +356,33 @@ namespace TopdownShooter
 			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(w, h);
 			if (mCamera)
 				mCamera->Aspect = static_cast<float>(w) / static_cast<float>(h);
+
+			// SP-UniversalRenderTarget Phase B: SceneFB + ScreenQuadStage sources 재배선.
+			if (auto newFB = SJH::Framebuffer::Create(w, h))
+			{
+				mSceneFB = std::move(newFB);
+				if (mCamera)
+					mCamera->SetTargetRenderTarget(mSceneFB.get());
+				if (mScreenQuadStage)
+					mScreenQuadStage->SetSources({mSceneFB.get()});
+			}
 		}
 
 	  private:
 		SJH::SceneRenderer mRenderSys;
 		SJH::RenderTargetUPtr mDefaultTarget;
+		SJH::FramebufferUPtr mSceneFB;                              // SP-UniversalRenderTarget: 씬 렌더 FBO
+		std::unique_ptr<SJH::ScreenQuadStage> mScreenQuadStage;    // SP-UniversalRenderTarget: backbuffer 합성
 		SJH::Scene::Actor *mCameraActor = nullptr;
 		SJH::Scene::Actor *mSpriteActor = nullptr;
 		SJH::Scene::Camera *mCamera = nullptr;
-		SJH::SpriteSequence::SpriteSequencePlayable *mSpriteSeq = nullptr;   // Update 마다 mSprite->frameIdx 송신 (M3.5 — SpriteAnimator 후속)
-		SJH::SpriteSequence::SpriteFrameClip          mWholeAtlasClip{};    // atlas 전체 sweep 정의 (mSpriteSeq 가 raw ptr 로 참조 — 멤버 생존 필수)
+		SJH::SpriteSequence::SpriteSequencePlayable *mSpriteSeq = nullptr;
+		// M4 — 4-clip 정의 (mSpriteSeq 가 raw ptr 참조 — 멤버 생존 필수)
+		SJH::SpriteSequence::SpriteFrameClip mClipIdle   {  0, 4,  4.0f };
+		SJH::SpriteSequence::SpriteFrameClip mClipMove   {  4, 4,  8.0f };
+		SJH::SpriteSequence::SpriteFrameClip mClipAttack {  8, 4, 12.0f };
+		SJH::SpriteSequence::SpriteFrameClip mClipHit    { 12, 4, 12.0f };
+		Entity::Player::PlayerBehavior *mPlayerBehavior = nullptr;
 		SJH::Sprite::SpriteRenderer *mSprite = nullptr;     // sprite 데이터 (atlas + frameIdx + tint 등). spriteActor 소유
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;

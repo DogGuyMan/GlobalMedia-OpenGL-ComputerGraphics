@@ -1,8 +1,9 @@
 # Topdown Shooter — 마일스톤 진행 보고서
 
-> **최종 갱신**: 2026-05-26 (M3.5 본격 정착 + Render Phase 1 부수 반영)
+> **최종 갱신**: 2026-05-26 (M4 본격 배선 완료 + IntervalPlayable/AppendInterval T1·T2 엔진 반영)
 > **브랜치**: `game/module/rendertarget`
 > **관련 spec**: [`docs/superpowers/specs/2026-05-24-topdown-shooter-design.md`](../docs/superpowers/specs/2026-05-24-topdown-shooter-design.md) §부록 D
+> **M4 spec** (arch-correction 반영): [`docs/superpowers/specs/2026-05-26-m4-player-behavior-design.md`](../docs/superpowers/specs/2026-05-26-m4-player-behavior-design.md)
 > **FSM 정본 spec** (Stage 4 진화): [`docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md`](../docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md)
 > **IPlayable 정본 spec** (M3.5 신설): [`docs/superpowers/specs/2026-05-26-playable-component-interface-design.md`](../docs/superpowers/specs/2026-05-26-playable-component-interface-design.md)
 > **M3 plan**: [`docs/superpowers/plans/2026-05-25-M3-physics-box2d.md`](../docs/superpowers/plans/2026-05-25-M3-physics-box2d.md)
@@ -15,7 +16,7 @@
 | **M2** Actor+Component+Input+FSM+follow | ✅ P2 정착 (FSM 코어는 Stage 4 진화) | ~90% |
 | **M3** Box2D 물리 (Client 한정) | ✅ **완료 + spec 결정 진화** | 100% |
 | **M3.5** Playable + sprite_sequence | ✅ **코어 모듈 정착** — `SJH::playable` 신설 + `sprite_sequence_playable` 통합 + main.cpp 마이그레이션 (SpriteAnimator 폐기). leaf Playable (Effekseer/FMOD) 은 M5 로 위임 | ~90% |
-| **M4** PlayerStateMachine + 발사 + 적 | 🟡 도메인 선행 + `Entity/State/` `Entity/Monster/` 빈 디렉토리 준비 | ~25% |
+| **M4** PlayerBehavior + 발사 + 적 *(arch-correction: Player FSM 없음)* | 🟡 **본격 배선 완료** — `IntervalPlayable`/`AppendInterval` T1·T2(엔진) ✅ + `SpriteSequencePlayable` multi-clip + `PlayerBehavior`(flat Idle/Move/Attack/Hit/Dash/Die) + Bullet/Enemy 시스템 + main.cpp 완전 배선. **잔여**: 시각 검증 미수행. `PlayerStateMachine` → **arch-correction 폐기** | ~65% |
 | **M5** Effekseer + FMOD + Tweeny Playable | ✅ **완료 (2026-05-26)** — Director (Client 싱글톤) 신설 + AudioSystem/VFXSystem + leaf 4종 (FmodStudio/Fmod/Effekseer/Tween) + Composite (Sequence+Parallel) 통합. Engine 변경: SJH::ResourceRegistry 에 Sound/Effect 추가 + game_deps PUBLIC link (spec §6.1) | 100% |
 | **M6** 시퀀스 빌더 + 사운드 본격 | ❌ 미시작 | 0% |
 | **M7** GameFSM + 보스 + 종료 | 🟡 `Stage/Stage.h` + `Stage/State/StageFSMState.h` 주석 stub | ~3% |
@@ -136,26 +137,30 @@ M3 직후 ~ M3.5 사이 진행된 render 모듈 정비 — spec/마일스톤 외
 
 ---
 
-## M4 — 도메인 선행 (이번 세션)
+## M4 — 본격 배선 완료 (2026-05-26)
 
-PlayerStateMachine + 발사 + 적 *본격 구현 미시작*. 단 *Entity 도메인* 의 선행 작업 완료.
+**arch-correction (D1)**: `PlayerStateMachine` 미도입 → `PlayerBehavior : PlayableBase` flat 메서드로 대체. `SJH::fsm` 은 Enemy/Stage 전용.  
+**정본 spec**: [`docs/superpowers/specs/2026-05-26-m4-player-behavior-design.md`](../docs/superpowers/specs/2026-05-26-m4-player-behavior-design.md) (11 결정)
 
-### 완료 (도메인 선행)
+### 완료
 
-| Commit | 영역 |
-|---|---|
-| `198a311` | Stat Modifier System |
-| `5198096` | 스텟 데이터 연산자 |
-| `5478421` | Movement Input/Logic 분리 |
-| `2eb4150` | `Components.Interfaces.h` (ILivable/IDieable/IDamageable/IAttackable/IMovable) + Life/Movement/Weapon Component + `PlayerEntity` Facade + `PlayerActor` Pattern C factory |
+| 작업 | 위치 | 비고 |
+|---|---|---|
+| **T1** `IntervalPlayable` | `src/playable/interval_playable.{h,cpp}` | ✅ 엔진 코어 leaf — N초 대기 후 `finished_=true`. `elapsed_` 누적은 `PlayableBase::Update` 담당 |
+| **T2** `AppendInterval(float)` | `src/playable/composite_playable.{h,cpp}` | ✅ DOTween 정통 — `return Append(make_unique<IntervalPlayable>(s))`. `CMakeLists.txt` 에 `interval_playable.cpp` 추가 |
+| **T3** `SpriteSequencePlayable` 다중 클립 | `src/sprite/sprite_sequence_playable.{h,cpp}` | `RegisterClip/PlayClip/RegisterOnClipEnter` API |
+| **T4** `PlayerBehavior` Component | `apps/_MyApp_/src/Entity/Player/` | `PlayableBase` 상속, flat Idle/Move/Attack/Hit/Dash/Die |
+| **T5** `BulletSpawnPlayable` | `apps/_MyApp_/src/Entity/` | leaf — OnPlay = bullet spawn + finished_=true |
+| **T6** Bullet Actor + 시스템 | `apps/_MyApp_/src/Entity/` | `BulletLifetime` + `BulletContactHandler` + factory |
+| **T7** Enemy Actor + `SimplePursueAI` | `apps/_MyApp_/src/Entity/Monster/` | FSM 없음, 단일 컴포넌트 추적 AI |
+| **도메인 선행** Stat/Interfaces/Life/Movement/Weapon | `198a311` `5198096` `2eb4150` | M4 본격 전 완료 |
 
-### 남은 (본격 M4)
+**D7 WaveController**: M4 제외 → M6/M7 위임. M4 `startup()` 에서 수동 enemy 1~2 spawn 으로 대체.
 
-- ❌ `PlayerStateMachine` (`unordered_map<TState, unique_ptr<Playable>>` container — Stage 4 FSM 활용)
-- ❌ Idle/Move/Attack/Die State 객체
-- ❌ 마우스 클릭 발사 + Bullet Actor + b2 dynamic body + ray cast
-- ❌ 적 1종 + 간단 AI
-- ❌ Bullet spawn cost 측정 (chrono) → 풀 도입 여부 결정
+### 잔여
+
+- ❌ 시각 검증 미수행 (WASD이동/공격/Dash/피격/적 접촉 확인)
+- ❌ `PlayerStateMachine` → **arch-correction(D1) 으로 설계 폐기** (flat `PlayerBehavior` 가 대체)
 
 ---
 
@@ -225,47 +230,37 @@ spec §4 + 결정 #18 의 원본 의도와 실제 정착 사이의 차이:
 
 ---
 
-## 다음 작업 — M5 leaf Playable (Effekseer + FMOD) 우선 → M4 본격
+## 다음 작업 — M4 시각 검증 → M4 잔여(PlayerStateMachine) → M6
 
-**사용자 결정 (2026-05-26)**: M3.5 코어 정착 → 다음 = M5 Effekseer/FMOD leaf Playable 화. M4 (PlayerStateMachine + 발사 + 적) 는 leaf Playable 도착 후 본격 (state ↔ Playable 매핑이 자연스러워짐).
+**현재 상태 (2026-05-26)**: M5 완료 + M4 본격 배선 완료. Bullet/Enemy/WaveController/PlayerBehavior/multi-clip 모두 구현됨. 빌드 성공 확인.
 
-### M5 — leaf Playable 화 (우선 작업)
+### 즉시 할 것 — 시각 검증
 
-spec [§1.5](../docs/superpowers/specs/2026-05-24-topdown-shooter-design.md) + [IPlayable spec §6.2](../docs/superpowers/specs/2026-05-26-playable-component-interface-design.md) 에 명시 위치 — *Client 거주 (apps/_MyApp_/src/)* + *game_deps 의존*:
+```bash
+cd build_ninja/apps/_MyApp_ && ./_MyApp_
+```
 
-| Task | 산출 위치 | 책임 |
+확인 항목:
+- WASD 이동 → Move 클립 전환, 정지 → Idle 클립 복귀
+- 마우스 좌클릭 → Attack 클립 + 총알 발사 (NDC 방향)
+- Shift → Dash (WASD 방향 기반, 쿨타임 0.8s)
+- 피격(적 접촉) → Hit 클립 → Idle 복귀
+- 웨이브: 3초마다 적 최대 5마리, 전멸 시 Wave++ 로그
+
+### M4 잔여 (선택)
+
+| Task | 우선도 | 위치 |
 |---|---|---|
-| **M5-1** `EffekseerPlayable` | `apps/_MyApp_/src/VFX/effekseer_playable.{h,cpp}` | PlayableBase 상속, Effekseer Manager owner, OnPlay = Effect spawn, OnUpdate = manager.Update(dt), OnStop = handle invalidate, IsFinished = handle invalid 시 true |
-| **M5-2** `FmodPlayable` (Core) | `apps/_MyApp_/src/Audio/fmod_playable.{h,cpp}` | PlayableBase 상속, `FMOD::Sound*` + `FMOD::Channel*` 보유, OnPlay = playSound, OnPause = channel->setPaused(true), OnStop = channel->stop, IsFinished = isPlaying false 시 true |
-| **M5-3** `FmodStudioPlayable` | 동일 디렉토리 | Studio Event (`.bank` 기반), `FMOD::Studio::EventInstance*` 보유 |
-| **M5-4** main.cpp 부착 예 | `apps/_MyApp_/main.cpp` startup | BGM (FmodPlayable + SetIsLoop(true)) + 단발 muzzle (EffekseerPlayable + SequencePlayable.Append) |
-| **M5-5** `TweenPlayable` (선택) | `src/playable/tween_playable.h` 또는 Client | Tweeny `tween<T>` wrap, OnUpdate = tween.step(dt) |
+| `PlayerStateMachine` (Stage 4 FSM + IPlayable 결합) | 선택 — flat PlayerBehavior 로 현재 동작 | `apps/_MyApp_/src/Entity/State/` |
+| Bullet spawn cost (chrono) → 풀 도입 여부 | 낮음 | — |
 
-### M4 — 본격 (M5 후속, *준비된 상태*)
+### M6 — 시퀀스 빌더 + 사운드 본격
 
-도메인 + 디렉토리 준비 완료. M5 leaf Playable 정착 후 진입:
+Attack Playable 체인에 Effekseer muzzle + FMOD Laser 연결. main.cpp 의 G 키 Parallel(TweenShake ∥ FmodStudio.Damaged) 패턴을 PlayerBehavior::Hit 에 연결.
 
-| Task | 위치 |
-|---|---|
-| `PlayerStateMachine` (`unordered_map<TState, unique_ptr<IPlayable>>` — Stage 4 FSM + IPlayable 결합) | `apps/_MyApp_/src/Entity/State/` (빈, 준비) |
-| Idle/Move/Attack/Die State 객체 | 동일 |
-| 마우스 클릭 발사 — `Carrier::Projectile.h` 활성화 | `apps/_MyApp_/src/Carrier/` |
-| Bullet Actor factory — `b2_dynamicBody` + `CircleBody` + `Filter::BulletPlayer` + ray cast | TBD |
-| 적 1종 + 간단 AI | `apps/_MyApp_/src/Entity/Monster/` (빈, 준비) |
-| Bullet spawn cost 측정 (chrono) → 풀 도입 여부 결정 | — |
+### M7 — Stage FSM
 
-### M7 — Stage FSM (직전 진입)
-
-`apps/_MyApp_/src/Stage/State/StageFSMState.h` 가 *주석 처리된 stub* (IFsmState<Stage> 시그니처 의도만 적힘) — *본격 작업 직전*.
-
-### 도메인 사전 완료 (재확인)
-
-| Commit | 영역 |
-|---|---|
-| `198a311` | Stat Modifier System (Algebraic::Numeric::Stat) |
-| `5198096` | 스텟 데이터 연산자 |
-| `2eb4150` | Components.Interfaces.h (ILivable/IDieable/IDamageable/IAttackable/IMovable) + Life/Movement/Weapon Component + PlayerEntity Facade + PlayerActor Pattern C factory |
-| `def527c` (M3) | PlayerActor.h 에 `PhysicsCfg` nested 추가 — physics.world / categoryBits / maskBits 주입 가능 |
+`apps/_MyApp_/src/Stage/State/StageFSMState.h` stub (IFsmState<Stage> 시그니처) → WaveController 와 연결, 시작/진행/클리어/게임오버 상태 구현.
 
 ---
 
@@ -276,3 +271,5 @@ spec [§1.5](../docs/superpowers/specs/2026-05-24-topdown-shooter-design.md) + [
 | 2026-05-25 | 초안 — M1+M2 완료 + M3.5/M4 선행 통합 진행 보고서 + M3 진입 예고 |
 | 2026-05-25 | **M3 완료 반영** — 5 commit 산출 + spec 결정 #18 진화 회고 (PhysicsBodyComponent → Components::Physics + BoxBody/CircleBody) + Carrier::Projectile 스켈레톤 명시 → M4 진행도 15% → 20% |
 | 2026-05-26 | **M3.5 본격 정착 반영** — IPlayable spec (7 결정) + SJH::playable 모듈 신설 + sprite_sequence 통합 + SpriteAnimator → SpriteSequencePlayable 마이그레이션 (8 commits 산출). M3.5 진행도 25% → 90%. **다음 작업 = M5 Effekseer/FMOD leaf Playable** 로 우선순위 전환. Render Phase 1 부수작업 (7 commits) 신설. M7 Stage FSM stub (3%) + M4 디렉토리 준비 (+5%) 추가 |
+| 2026-05-26 | **M4 본격 배선 완료** — SpriteSequencePlayable multi-clip API (RegisterClip/PlayClip) + PlayerBehavior(Idle/Move/Attack/Hit/Dash/Die + 속도 기반 클립 자동 전환) + BulletSpawnPlayable(leaf + factory 델리게이트) + Bullet 시스템(BulletLifetime/ContactHandler/factory) + Enemy 시스템(SimplePursueAI/ContactHandler/factory) + WaveController(3s 스폰/웨이브++) + main.cpp 완전 배선(4-clip RegisterClip/PlayerBehavior Init/BulletSpawn/WaveController/Attack NDC dispatch/Shift Dash). 빌드 성공. M4 진행도 25% → 65%. **잔여**: PlayerStateMachine(선택) + 시각 검증 |
+| 2026-05-26 | **M4 T1·T2 엔진 반영 + arch-correction 문서화** — `IntervalPlayable` (`src/playable/interval_playable.{h,cpp}`) + `SequencePlayable::AppendInterval` 신설. **arch-correction D1**: `PlayerStateMachine` 설계 폐기 (flat `PlayerBehavior` 대체) — EngineAPI.md §3.15 FSM 결합 패턴 갱신. M4 spec 링크 추가 (`2026-05-26-m4-player-behavior-design.md`). M4 상세 섹션 현행화 |

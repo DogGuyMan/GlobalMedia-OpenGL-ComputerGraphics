@@ -3,6 +3,7 @@
 add_library(sjh_playable STATIC
     playable_base.cpp
     composite_playable.cpp
+    interval_playable.cpp
 )
 add_library(SJH::playable ALIAS sjh_playable)
 

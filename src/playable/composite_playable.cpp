@@ -1,4 +1,5 @@
 #include "playable/composite_playable.h"
+#include "playable/interval_playable.h"   // AppendInterval
 #include "playable/iplayable.h"           // SJH::Playable::IPlayable (Append/Insert/Join 시그니처)
 #include "scene/actor.h"                  // SJH::Scene::Component (dynamic_cast 대상)
 #include <cstddef>                        // std::size_t, std::ptrdiff_t
@@ -21,6 +22,11 @@ namespace SJH::Playable
         // size_t  ptrdiff_t 명시 캐스트 — .clangd `-Wconversion` strict 정책 회피
         children_.insert(children_.begin() + static_cast<std::ptrdiff_t>(pos), std::move(child));
         return *this;
+    }
+
+    SequencePlayable& SequencePlayable::AppendInterval(float seconds)
+    {
+        return Append(std::make_unique<IntervalPlayable>(seconds));
     }
 
     void SequencePlayable::OnPlay()

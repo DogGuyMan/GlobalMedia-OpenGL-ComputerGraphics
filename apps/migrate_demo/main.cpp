@@ -17,9 +17,9 @@
  *  - 각 패스: 자기 layer + 자기 camera + 자기 quad + 자기 intermediate FB 보유.
  *  - 매 프레임 활성 패스만 추려 chain 동적 재배선:
  *      input = (첫 패스 ? SceneFB : 이전 활성 패스의 outputFB)
- *      target = (마지막 활성 패스 ? backbuffer : 자기 outputFB)
+ *      target = 자기 outputFB (SP-UniversalRenderTarget Phase B — nullptr 금지)
  *  - ImGui 체크박스로 각 fx 개별 on/off — 끄면 해당 camera/renderer 자동 skip.
- *  - 모두 비활성 시 backbuffer 가 검정 — 의도된 단순화.
+ *  - ScreenQuadStage 가 마지막 활성 패스 OutputFB → backbuffer 합성 (모두 비활성 시 SceneFB 직접).
  *
  *  ### 조작
  *  - WASD/EQ : 이동, 우클릭 드래그 : 시점 회전
@@ -45,11 +45,12 @@
 #include "input/mouse_input.h"
 #include "material/material_uniforms.h"
 #include "object/light.h"
+#include "render/mesh_renderer.h"
 #include "render/scene_renderer.h"
+#include "render/screen_quad_stage.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
-#include "render/mesh_renderer.h"
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
 
@@ -157,6 +158,22 @@ class migrate_demo_app : public sb7::application
 		// === PostFX 5-pass 체인 빌드 (알파벳 순) ===
 		BuildPostFXChain(reg, dir, fbW, fbH, aspect);
 
+		// SP-UniversalRenderTarget Phase B — ScreenQuadStage 초기화.
+		// passthrough.fs 는 postprocess.vs 와 쌍 (uScene sampler 만 읽어 그대로 출력).
+		{
+			constexpr const char *kPassthroughFS = "resources/shader/postprocess/passthrough.fs";
+			auto *passthroughProg = reg.CreateProgram("screen_passthrough", kPostFXVertFile, kPassthroughFS);
+			auto *quadMesh = reg.FindMesh(K::Meshes::ScreenQuad);
+			if (passthroughProg && quadMesh)
+			{
+				mScreenQuadStage = std::make_unique<SJH::ScreenQuadStage>(*passthroughProg, *quadMesh);
+				// 초기 소스: PostFX 모두 비활성 시에도 씬이 보이도록 SceneFB 직접 합성.
+				mScreenQuadStage->SetSources({mSceneFB.get()});
+			}
+			else
+				spdlog::error("[Phase B] ScreenQuadStage passthrough 초기화 실패");
+		}
+
 		dir.Enter();
 
 		// === ImGui v1.53 init ===
@@ -205,9 +222,13 @@ class migrate_demo_app : public sb7::application
 		if (!io.WantCaptureKeyboard)
 			mKeyboard.PollHeld(window);
 
-		// Scene tick + 멀티 카메라 렌더 (SceneFB -> PostFX chain -> backbuffer).
+		// Scene tick + 멀티 카메라 렌더 (SceneFB → PostFX chain → 각 FBO).
 		SJH::Scene::Director::Get().Update(dt);
 		mRenderSys.Render(*mDefaultTarget);
+
+		// SP-UniversalRenderTarget Phase B: 마지막 FBO → backbuffer 합성 (ScreenQuadStage).
+		if (mScreenQuadStage)
+			mScreenQuadStage->Render(*mDefaultTarget);
 
 		// ImGui draws — v1.53 의 io.RenderDrawListsFn 콜백을 통해 자동 (현재 backbuffer 에).
 		ImGui::Render();
@@ -471,8 +492,8 @@ class migrate_demo_app : public sb7::application
 		}
 
 		// 4) PostFX chain 재배선.
-		//    활성 패스만 추려 i 번째 활성 패스의 input = (이전 활성 패스 outputFB) | SceneFB,
-		//    마지막 활성 패스만 backbuffer (nullptr) 로 출력. 비활성은 SetEnabled(false).
+		//    SP-UniversalRenderTarget Phase B: 모든 패스가 자기 OutputFB 로 출력.
+		//    ScreenQuadStage 가 마지막 활성 패스 OutputFB (또는 SceneFB) 를 backbuffer 에 합성.
 		std::vector<PostFXPass *> active;
 		active.reserve(mPostFX.size());
 		for (auto &p : mPostFX)
@@ -486,17 +507,23 @@ class migrate_demo_app : public sb7::application
 		for (std::size_t k = 0; k < active.size(); ++k)
 		{
 			auto *p = active[k];
-			auto *input = (k == 0) ? 
-				mSceneFB.get() : 
+			auto *input = (k == 0) ?
+				mSceneFB.get() :
 				active[k - 1]->OutputFB.get();
-			const bool isLast = (k + 1 == active.size());
 
 			// uScene 재바인딩 — PropertyBlock 에 store 만 (실제 GL bind 는 PropertyBlockSetter::Set 시).
 			p->Material->Properties.Textures[K::PostFXKey::USceneSampler] =
 			    {input->GetColorAttachment().get(), 0};
 
-			// 카메라 target — 마지막 활성 패스만 backbuffer.
-			p->Camera->SetTargetRenderTarget(isLast ? nullptr : p->OutputFB.get());
+			// 카메라 target — 항상 자기 OutputFB (nullptr 금지 — Phase B).
+			p->Camera->SetTargetRenderTarget(p->OutputFB.get());
+		}
+
+		// ScreenQuadStage 소스 업데이트 — 활성 패스 마지막 OutputFB (없으면 SceneFB 직접).
+		if (mScreenQuadStage)
+		{
+			const SJH::Framebuffer *src = active.empty() ? mSceneFB.get() : active.back()->OutputFB.get();
+			mScreenQuadStage->SetSources({src});
 		}
 
 		// 5) Clear color — DeviceContext::BeginFrame 의 clear 가 GL state 의 glClearColor 사용.
@@ -507,8 +534,9 @@ class migrate_demo_app : public sb7::application
 	SJH::MouseInput mMouse;
 	SJH::SceneRenderer mRenderSys;
 	SJH::Scene::Actor *mSceneCameraActor = nullptr;
-	SJH::RenderTargetUPtr mDefaultTarget; 
+	SJH::RenderTargetUPtr mDefaultTarget;
 	SJH::FramebufferUPtr mSceneFB;
+	std::unique_ptr<SJH::ScreenQuadStage> mScreenQuadStage; // SP-UniversalRenderTarget: backbuffer 합성
 	
 	MigrateDemo::Scene::SceneRefs mRefs;
 	
