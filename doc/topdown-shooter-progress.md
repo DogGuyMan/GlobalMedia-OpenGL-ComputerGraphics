@@ -1,9 +1,10 @@
 # Topdown Shooter — 마일스톤 진행 보고서
 
-> **최종 갱신**: 2026-05-25 (M3 완료 반영)
-> **브랜치**: `game/module/sprite`
+> **최종 갱신**: 2026-05-26 (M3.5 본격 정착 + Render Phase 1 부수 반영)
+> **브랜치**: `game/module/rendertarget`
 > **관련 spec**: [`docs/superpowers/specs/2026-05-24-topdown-shooter-design.md`](../docs/superpowers/specs/2026-05-24-topdown-shooter-design.md) §부록 D
 > **FSM 정본 spec** (Stage 4 진화): [`docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md`](../docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md)
+> **IPlayable 정본 spec** (M3.5 신설): [`docs/superpowers/specs/2026-05-26-playable-component-interface-design.md`](../docs/superpowers/specs/2026-05-26-playable-component-interface-design.md)
 > **M3 plan**: [`docs/superpowers/plans/2026-05-25-M3-physics-box2d.md`](../docs/superpowers/plans/2026-05-25-M3-physics-box2d.md)
 
 ## 진행 요약
@@ -13,11 +14,12 @@
 | **M1** 빌드 + Sprite + 빌보드 1장 정적 | ✅ 완료 | 100% |
 | **M2** Actor+Component+Input+FSM+follow | ✅ P2 정착 (FSM 코어는 Stage 4 진화) | ~90% |
 | **M3** Box2D 물리 (Client 한정) | ✅ **완료 + spec 결정 진화** | 100% |
-| **M3.5** Playable + sprite_sequence | 🟡 SpriteAnimator 경량 도입 | ~25% |
-| **M4** PlayerStateMachine + 발사 + 적 | 🟡 도메인 선행 (Stat/Entity Components + Projectile 스켈레톤) | ~20% |
-| **M5** Effekseer + FMOD + Tweeny Playable | ❌ 미시작 | 0% |
+| **M3.5** Playable + sprite_sequence | ✅ **코어 모듈 정착** — `SJH::playable` 신설 + `sprite_sequence_playable` 통합 + main.cpp 마이그레이션 (SpriteAnimator 폐기). leaf Playable (Effekseer/FMOD) 은 M5 로 위임 | ~90% |
+| **M4** PlayerStateMachine + 발사 + 적 | 🟡 도메인 선행 + `Entity/State/` `Entity/Monster/` 빈 디렉토리 준비 | ~25% |
+| **M5** Effekseer + FMOD + Tweeny Playable | ✅ **완료 (2026-05-26)** — Director (Client 싱글톤) 신설 + AudioSystem/VFXSystem + leaf 4종 (FmodStudio/Fmod/Effekseer/Tween) + Composite (Sequence+Parallel) 통합. Engine 변경: SJH::ResourceRegistry 에 Sound/Effect 추가 + game_deps PUBLIC link (spec §6.1) | 100% |
 | **M6** 시퀀스 빌더 + 사운드 본격 | ❌ 미시작 | 0% |
-| **M7** GameFSM + 보스 + 종료 | ❌ 미시작 | 0% |
+| **M7** GameFSM + 보스 + 종료 | 🟡 `Stage/Stage.h` + `Stage/State/StageFSMState.h` 주석 stub | ~3% |
+| **부수** Render Phase 1 — DeviceContext / Material 정비 | ✅ Observer 제거 + EagerBuild + Camera↔RenderTarget 의존 역전 + DrawCommand 통합 | ~70% |
 
 ---
 
@@ -81,19 +83,56 @@ CLAUDE.md 의 `_MyApp_` 가 활성 첫 줄 + M2 P2 완료 명시. ✅
 
 ---
 
-## M3.5 — 경량 도입 (이번 세션)
+## M3.5 — 본격 정착 (2026-05-26)
 
-원본 spec §1.6 의 `SJH::playable` + `SJH::sprite_sequence` 별도 모듈 + Playable 트리 (Composite) 패턴은 *미도입*. 단 *경량 대체* 로 `SpriteAnimator` (자동 wrap-around) 가 `src/sprite/` 안에 직접 도입.
+**정본 spec**: [`docs/superpowers/specs/2026-05-26-playable-component-interface-design.md`](../docs/superpowers/specs/2026-05-26-playable-component-interface-design.md) (7 결정 + Tweeny/DOTween 정통 Builder)
 
-| 항목 | 상태 |
+spec §1.5/§1.6 원안에서 *7 결정 진화* 를 거쳐 최종 정착 — IPlayable pure interface + PlayableBase abstract (Component 다중 상속) + Composite Component (vector<unique_ptr<IPlayable>>) + Fluent Builder (Append/Insert/Join).
+
+### 산출 commits (8건)
+
+| Commit | 영역 |
 |---|---|
-| `SJH::playable` 모듈 (Playable / Sequence / Parallel / PlayerComponent / TickSystem) | ❌ 미시작 |
-| `SJH::sprite_sequence` 모듈 (SpriteFrameClip + SpriteSequencePlayable) | ❌ 미시작 |
-| `SpriteAnimator` (경량, src/sprite/ 내부) | ✅ `c4fd046` |
-| Composite 트리 (Sequence + Parallel chaining) | ❌ — M5/M6 시점 |
-| 단위 테스트 | ❌ |
+| `b383639` | feat(playable): SJH::playable 모듈 신설 — IPlayable + PlayableBase |
+| `76e1b03` | feat(playable): SequencePlayable + ParallelPlayable + fluent Builder |
+| `2eb81d8` | fix(playable): composite_playable strict-include + sign-conversion |
+| `59eefcb` | feat(sprite_sequence): SpriteFrameClip + SpriteSequencePlayable 신설 |
+| `fa02c3b` | fix(sprite_sequence): strict-include 정리 |
+| `ee9b6eb` | build(engine): SJH::engine 우산에 playable 합류 (14 → 15 모듈) — sprite_sequence 는 SJH::sprite 안에 통합 정착 |
+| `620ba4c` | dev: Sprite Renderer (sprite 모듈 내 sprite_sequence 코드 통합) |
+| `f23279b` | dev: sprite playable — **이번 세션 SpriteAnimator → SpriteSequencePlayable main.cpp 마이그레이션 + sprite_animator.h 삭제 + sprite/CMakeLists self-link 정리** |
 
-**Trade-off**: SpriteAnimator 가 *단일 atlas loop/clamp* 만 — 시퀀스 chaining 필요해지면 M3.5 본격 도입. M5/M6 의 Effekseer/FMOD Playable 도입 시 함께 정착 권장.
+### 본 세션 마이그레이션 (f23279b)
+
+| 파일 | 변경 |
+|---|---|
+| `apps/_MyApp_/main.cpp` | include 교체, startup() 의 SpriteAnimator 4줄 → SpriteSequencePlayable 8줄 (SpriteFrameClip{0, atlas->FrameCount(), 4.0f} + SetIsLoop(true).Play()), 멤버 mAnimator → mSpriteSeq + mWholeAtlasClip |
+| `src/sprite/CMakeLists.txt` | self-link `SJH::sprite` 제거 + `SJH::playable` PRIVATE → PUBLIC 승격 (헤더 전파) |
+| `src/sprite/sprite_component.h` | docstring SpriteAnimator → SpriteSequencePlayable + 사용 예 갱신 |
+| `src/sprite/sprite_animator.h` | **삭제** (spec §6.1 폐기 완료) |
+
+빌드 검증: `cmake --build --preset ninja --target _MyApp_` → `[5/6] Linking CXX executable apps/_MyApp_/_MyApp_` 정상.
+
+### 미수행 (M5 로 위임)
+
+- ❌ FmodPlayable leaf (`apps/_MyApp_/src/Audio/fmod_playable.{h,cpp}`) — game_deps 의존 Client 거주
+- ❌ EffekseerPlayable leaf (`apps/_MyApp_/src/VFX/effekseer_playable.{h,cpp}`) — 동일
+- ❌ Composite 트리 시각 검증 (Sequence + Parallel 실제 사용처) — leaf 도착 후 M5/M6
+- ❌ 단위 테스트 — [[no_auto_tests]]
+
+### Render Phase 1 (부수작업, 2026-05-25 ~ 2026-05-26)
+
+M3 직후 ~ M3.5 사이 진행된 render 모듈 정비 — spec/마일스톤 외 사용자 부수 작업. *spec 외* 라 본 보고서 *기록만* (마일스톤 진행도 무관).
+
+| Commit | 영역 |
+|---|---|
+| `fc4ad0a` | refactor(scene/render): Camera 의 RenderTarget 의존 역전 — Framebuffer 직접 의존 제거 |
+| `73ec685` | refactor(render): DrawCommand 를 MeshRenderer 단일 의존으로 통합 — program/mesh/material/actor 직접 필드 제거 |
+| `251277c` | chore(_MyApp_): 빌드 잡음 청소 — physics_movement.cpp empty 삭제 + duplicate library 경고 silencing |
+| `7b95332` | docs(render): DeviceContext / Uniforms / Program 책임 경계 명시 (Phase 1) |
+| `e95be90` | dev: remove observer program - material (Material 의 Program observer 패턴 제거) |
+| `642040b` | fix(material): Program 참조 복구 + EagerBuild 도입 — Observer 제거 후속 |
+| `6c6c243` | dev: material eager delete |
 
 ---
 
@@ -186,7 +225,38 @@ spec §4 + 결정 #18 의 원본 의도와 실제 정착 사이의 차이:
 
 ---
 
-## 다음 작업 — M4 본격 (PlayerStateMachine + 발사 + 적)
+## 다음 작업 — M5 leaf Playable (Effekseer + FMOD) 우선 → M4 본격
+
+**사용자 결정 (2026-05-26)**: M3.5 코어 정착 → 다음 = M5 Effekseer/FMOD leaf Playable 화. M4 (PlayerStateMachine + 발사 + 적) 는 leaf Playable 도착 후 본격 (state ↔ Playable 매핑이 자연스러워짐).
+
+### M5 — leaf Playable 화 (우선 작업)
+
+spec [§1.5](../docs/superpowers/specs/2026-05-24-topdown-shooter-design.md) + [IPlayable spec §6.2](../docs/superpowers/specs/2026-05-26-playable-component-interface-design.md) 에 명시 위치 — *Client 거주 (apps/_MyApp_/src/)* + *game_deps 의존*:
+
+| Task | 산출 위치 | 책임 |
+|---|---|---|
+| **M5-1** `EffekseerPlayable` | `apps/_MyApp_/src/VFX/effekseer_playable.{h,cpp}` | PlayableBase 상속, Effekseer Manager owner, OnPlay = Effect spawn, OnUpdate = manager.Update(dt), OnStop = handle invalidate, IsFinished = handle invalid 시 true |
+| **M5-2** `FmodPlayable` (Core) | `apps/_MyApp_/src/Audio/fmod_playable.{h,cpp}` | PlayableBase 상속, `FMOD::Sound*` + `FMOD::Channel*` 보유, OnPlay = playSound, OnPause = channel->setPaused(true), OnStop = channel->stop, IsFinished = isPlaying false 시 true |
+| **M5-3** `FmodStudioPlayable` | 동일 디렉토리 | Studio Event (`.bank` 기반), `FMOD::Studio::EventInstance*` 보유 |
+| **M5-4** main.cpp 부착 예 | `apps/_MyApp_/main.cpp` startup | BGM (FmodPlayable + SetIsLoop(true)) + 단발 muzzle (EffekseerPlayable + SequencePlayable.Append) |
+| **M5-5** `TweenPlayable` (선택) | `src/playable/tween_playable.h` 또는 Client | Tweeny `tween<T>` wrap, OnUpdate = tween.step(dt) |
+
+### M4 — 본격 (M5 후속, *준비된 상태*)
+
+도메인 + 디렉토리 준비 완료. M5 leaf Playable 정착 후 진입:
+
+| Task | 위치 |
+|---|---|
+| `PlayerStateMachine` (`unordered_map<TState, unique_ptr<IPlayable>>` — Stage 4 FSM + IPlayable 결합) | `apps/_MyApp_/src/Entity/State/` (빈, 준비) |
+| Idle/Move/Attack/Die State 객체 | 동일 |
+| 마우스 클릭 발사 — `Carrier::Projectile.h` 활성화 | `apps/_MyApp_/src/Carrier/` |
+| Bullet Actor factory — `b2_dynamicBody` + `CircleBody` + `Filter::BulletPlayer` + ray cast | TBD |
+| 적 1종 + 간단 AI | `apps/_MyApp_/src/Entity/Monster/` (빈, 준비) |
+| Bullet spawn cost 측정 (chrono) → 풀 도입 여부 결정 | — |
+
+### M7 — Stage FSM (직전 진입)
+
+`apps/_MyApp_/src/Stage/State/StageFSMState.h` 가 *주석 처리된 stub* (IFsmState<Stage> 시그니처 의도만 적힘) — *본격 작업 직전*.
 
 ### 도메인 사전 완료 (재확인)
 
@@ -195,16 +265,7 @@ spec §4 + 결정 #18 의 원본 의도와 실제 정착 사이의 차이:
 | `198a311` | Stat Modifier System (Algebraic::Numeric::Stat) |
 | `5198096` | 스텟 데이터 연산자 |
 | `2eb4150` | Components.Interfaces.h (ILivable/IDieable/IDamageable/IAttackable/IMovable) + Life/Movement/Weapon Component + PlayerEntity Facade + PlayerActor Pattern C factory |
-| **`def527c`** (M3) | PlayerActor.h 에 `PhysicsCfg` nested 추가 — physics.world / categoryBits / maskBits 주입 가능 |
-
-### M4 본격 (남은 작업)
-
-- ❌ `PlayerStateMachine` (`unordered_map<TState, unique_ptr<Playable>>` container — Stage 4 FSM 활용)
-- ❌ Idle/Move/Attack/Die State 객체
-- ❌ 마우스 클릭 발사 — `Carrier::Projectile.h` (이미 스켈레톤 존재: `IContactable` + `IDieable` 상속, OnEnter/Update 빈 구현, OnTriggerEnter 가드만) 활성화
-- ❌ Bullet Actor factory — `b2_dynamicBody` + `Components::CircleBody` + `Filter::BulletPlayer` + ray cast
-- ❌ 적 1종 + 간단 AI (b2_dynamicBody + `Filter::Enemy`)
-- ❌ Bullet spawn cost 측정 (chrono) → 풀 도입 여부 결정
+| `def527c` (M3) | PlayerActor.h 에 `PhysicsCfg` nested 추가 — physics.world / categoryBits / maskBits 주입 가능 |
 
 ---
 
@@ -214,3 +275,4 @@ spec §4 + 결정 #18 의 원본 의도와 실제 정착 사이의 차이:
 |---|---|
 | 2026-05-25 | 초안 — M1+M2 완료 + M3.5/M4 선행 통합 진행 보고서 + M3 진입 예고 |
 | 2026-05-25 | **M3 완료 반영** — 5 commit 산출 + spec 결정 #18 진화 회고 (PhysicsBodyComponent → Components::Physics + BoxBody/CircleBody) + Carrier::Projectile 스켈레톤 명시 → M4 진행도 15% → 20% |
+| 2026-05-26 | **M3.5 본격 정착 반영** — IPlayable spec (7 결정) + SJH::playable 모듈 신설 + sprite_sequence 통합 + SpriteAnimator → SpriteSequencePlayable 마이그레이션 (8 commits 산출). M3.5 진행도 25% → 90%. **다음 작업 = M5 Effekseer/FMOD leaf Playable** 로 우선순위 전환. Render Phase 1 부수작업 (7 commits) 신설. M7 Stage FSM stub (3%) + M4 디렉토리 준비 (+5%) 추가 |

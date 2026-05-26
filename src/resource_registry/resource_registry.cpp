@@ -8,6 +8,7 @@
  *          Image 는 스코프 한정 — GPU 업로드 후 Create* 스택 프레임을 벗어나면 즉시 소멸.
  */
 #include "resource_registry.h"
+#include <fmod/fmod.hpp>      // M5 — CreateSound 의 createSound 호출
 #include <spdlog/spdlog.h>
 
 namespace SJH
@@ -218,6 +219,74 @@ namespace SJH
 		return (it != mAtlas.end()) ? it->second.get() : nullptr;
 	}
 
+	// M5 — FMOD Sound
+	Sound *ResourceRegistry::CreateSound(::FMOD::System *sys, const std::string &key, const std::string &path)
+	{
+		if (!sys)
+		{
+			spdlog::error("[ResourceRegistry::CreateSound] sys=nullptr (key={})", key);
+			return nullptr;
+		}
+		if (mSounds.find(key) != mSounds.end())
+		{
+			spdlog::warn("[ResourceRegistry::CreateSound] key 중복: {}", key);
+			return nullptr;
+		}
+
+		::FMOD::Sound *raw = nullptr;
+		FMOD_RESULT r = sys->createSound(path.c_str(), FMOD_DEFAULT, nullptr, &raw);
+		if (r != FMOD_OK || !raw)
+		{
+			spdlog::error("[ResourceRegistry::CreateSound] createSound 실패 path={} FMOD_RESULT={}", path, int(r));
+			return nullptr;
+		}
+
+		auto sound = std::make_unique<Sound>(raw);
+		Sound *ret = sound.get();
+		mSounds.emplace(key, std::move(sound));
+		return ret;
+	}
+
+	Sound *ResourceRegistry::FindSound(const std::string &key)
+	{
+		auto it = mSounds.find(key);
+		return (it != mSounds.end()) ? it->second.get() : nullptr;
+	}
+
+	// M5 — Effekseer Effect
+	Effect *ResourceRegistry::CreateEffect(::Effekseer::ManagerRef manager, const std::string &key, const char16_t *path)
+	{
+		// ※ Effekseer::RefPtr 은 operator! / operator bool 미지원 — Get() 으로 nullptr 비교
+		if (manager.Get() == nullptr)
+		{
+			spdlog::error("[ResourceRegistry::CreateEffect] manager=null (key={})", key);
+			return nullptr;
+		}
+		if (mEffects.find(key) != mEffects.end())
+		{
+			spdlog::warn("[ResourceRegistry::CreateEffect] key 중복: {}", key);
+			return nullptr;
+		}
+
+		::Effekseer::EffectRef ref = ::Effekseer::Effect::Create(manager, reinterpret_cast<const EFK_CHAR *>(path));
+		if (ref.Get() == nullptr)
+		{
+			spdlog::error("[ResourceRegistry::CreateEffect] Effekseer::Effect::Create 실패 (key={})", key);
+			return nullptr;
+		}
+
+		auto eff = std::make_unique<Effect>(ref);
+		Effect *ret = eff.get();
+		mEffects.emplace(key, std::move(eff));
+		return ret;
+	}
+
+	Effect *ResourceRegistry::FindEffect(const std::string &key)
+	{
+		auto it = mEffects.find(key);
+		return (it != mEffects.end()) ? it->second.get() : nullptr;
+	}
+
 	void ResourceRegistry::Clear()
 	{
 		// * SP-MaterialMetadata — Material 의 OriginalMaterial dangling 차단:
@@ -230,5 +299,7 @@ namespace SJH
 		mMeshes.clear();
 		mFramebuffers.clear();
 		mAtlas.clear();
+		mSounds.clear();    // M5 — Sound dtor 가 FMOD::Sound::release() 호출
+		mEffects.clear();   // M5 — EffectRef shared_ptr 자동 정리
 	}
 } // namespace SJH

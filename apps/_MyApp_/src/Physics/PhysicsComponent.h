@@ -14,8 +14,8 @@ namespace TopdownShooter::Physics::Components
 	///   - 렌더: Transform.Translate = vmath::vec3(x, heightOffset, -y) 3D XZ 평면 (top-down)
 	///
 	///   ### Sensor (Unity Collider.isTrigger 매핑)
-	///   - mIsSensor=true  → b2Fixture::SetSensor(true). 물리 충돌 없음, 이벤트만.
-	///   - mIsSensor=false → b2Fixture::SetSensor(false) (default). 물리 충돌 + 이벤트.
+	///   - mIsSensor=true   b2Fixture::SetSensor(true). 물리 충돌 없음, 이벤트만.
+	///   - mIsSensor=false  b2Fixture::SetSensor(false) (default). 물리 충돌 + 이벤트.
 	///
 	///   ### isTrigger 단일 source-of-truth
 	///   - mIsSensor 가 유일한 진실. 런타임 변경은 SetSensor(bool) 만.

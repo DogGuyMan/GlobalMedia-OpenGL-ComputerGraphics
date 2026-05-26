@@ -7,7 +7,7 @@ namespace SJH::Scene
 {
 	/// @brief Actor 가시성 비트 약속 — Unity LayerMask 정통, FSM uint64 enum 컨벤션과 일관.
 	/// @details Actor.SetLayer(Layer) 의 비트 + Camera.CullingMask 의 AND 검사.
-	///          uint64 → 64 비트 (Unity 32 보다 풍부). FSM StateMachine 의 enum class 비트 패턴과 동일.
+	///          uint64  64 비트 (Unity 32 보다 풍부). FSM StateMachine 의 enum class 비트 패턴과 동일.
 	///          새 비트 추가 시 본 파일에 *모든 비트 자리 검토 후* 진입.
 	enum class Layer : uint64_t
 	{
@@ -32,7 +32,7 @@ namespace SJH::Scene
 		return static_cast<uint64_t>(a) & static_cast<uint64_t>(b);
 	}
 
-	/// @brief Layer → uint64 명시 변환 (호환 호출용).
+	/// @brief Layer  uint64 명시 변환 (호환 호출용).
 	constexpr uint64_t ToBits(Layer l) noexcept { return static_cast<uint64_t>(l); }
 }
 

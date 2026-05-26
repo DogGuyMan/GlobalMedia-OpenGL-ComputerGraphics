@@ -85,7 +85,7 @@ namespace TopdownShooter::Controller
 	{
 		if (!mIsInitialized)
 			return;
-		// dt 는 Movement::DoForward 가 units/sec → 프레임 변위로 변환 (fps-independent).
+		// dt 는 Movement::DoForward 가 units/sec  프레임 변위로 변환 (fps-independent).
 		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
 		// 누적값 리셋.
 		mInputValue = vmath::vec3(0.0f);

@@ -18,7 +18,7 @@ namespace SJH::Playable
     SequencePlayable& SequencePlayable::Insert(std::size_t pos, std::unique_ptr<IPlayable> child)
     {
         if (pos > children_.size()) pos = children_.size();
-        // size_t → ptrdiff_t 명시 캐스트 — .clangd `-Wconversion` strict 정책 회피
+        // size_t  ptrdiff_t 명시 캐스트 — .clangd `-Wconversion` strict 정책 회피
         children_.insert(children_.begin() + static_cast<std::ptrdiff_t>(pos), std::move(child));
         return *this;
     }

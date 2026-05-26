@@ -9,7 +9,7 @@
 namespace SJH::Sprite
 {
 	CLASS_PTR(UniformAtlas)
-	/// @brief frameIdx → atlas UV rect (uMin, vMin, uSize, vSize) 0..1 정규화.
+	/// @brief frameIdx  atlas UV rect (uMin, vMin, uSize, vSize) 0..1 정규화.
 	/// @param frameIdx    0-based frame index (row-major: col = idx % cols, row = idx / cols)
 	/// @param cols        그리드 column 수 (atlas 가로 = cols × tileSize)
 	/// @param tileSize    정사각 tile 한 변 픽셀 수
@@ -20,7 +20,7 @@ namespace SJH::Sprite
 	vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
 	                          int atlasWidth, int atlasHeight);
 
-	/// @brief 등간격 N×M 정사각 그리드 atlas — sprite frame 시퀀스의 1차원 인덱스 → 2D UV rect 변환.
+	/// @brief 등간격 N×M 정사각 그리드 atlas — sprite frame 시퀀스의 1차원 인덱스  2D UV rect 변환.
 	/// @details
 	///   - PNG 한 장에 동일 tile 크기 sprite N×M 행렬로 배치
 	///   - frameIdx 가 row-major (col = idx % cols, row = idx / cols)
@@ -69,7 +69,7 @@ namespace SJH::Sprite
 		/// @brief Texture 명시 해제. 소멸자가 자동 호출하지만 명시 해제 가능.
 		void Release();
 
-		/// @brief frameIdx → atlas UV rect 0..1 정규화. ComputeUVRect 위임.
+		/// @brief frameIdx  atlas UV rect 0..1 정규화. ComputeUVRect 위임.
 		vmath::vec4 GetUVRect(int frameIdx) const;
 
 		/// @brief 등록된 atlas 의 전체 frame 수 (cols × rows).

@@ -45,7 +45,7 @@ namespace TopdownShooter::Physics
             if (pb && pb->GetBody()) {
                 const b2Vec2 p = pb->GetBody()->GetPosition();
                 auto& tr = actor->GetTransform();
-                // 물리 XY → 렌더 XZ (Y 는 height offset).
+                // 물리 XY  렌더 XZ (Y 는 height offset).
                 tr.Translate = vmath::vec3(p.x, pb->GetHeightOffset(), -p.y);
             }
             for (const auto& child : actor->GetChildren())

@@ -13,7 +13,7 @@ namespace TopdownShooter::Physics
     ///   - OnEnter 에서 owner Actor 의 Components::Physics (BoxBody/CircleBody) 를 polymorphic lookup.
     ///   - DoForward(dir, dt): body->SetLinearVelocity(normalize(dir) * speed).
     ///     dt 는 b2World::Step 이 처리 (인터페이스 호환 위해 인자는 유지).
-    ///   - 좌표계: dir XZ → Box2D XY (Z → -Y, spec §4.4).
+    ///   - 좌표계: dir XZ  Box2D XY (Z  -Y, spec §4.4).
     class PhysicsMovement : public SJH::Scene::Component,
                             public Entity::IMovable
     {
@@ -47,7 +47,7 @@ namespace TopdownShooter::Physics
                 mPhysicsBody->GetBody()->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
                 return;
             }
-            // dir XZ → Box2D XY (Z → -Y, spec §4.4)
+            // dir XZ  Box2D XY (Z  -Y, spec §4.4)
             vmath::vec2 n = vmath::normalize(dir);
             const float speed = mMoveSpeed.GetValue();
             mPhysicsBody->GetBody()->SetLinearVelocity(b2Vec2(n[0] * speed, -n[1] * speed));

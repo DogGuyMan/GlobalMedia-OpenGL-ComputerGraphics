@@ -23,7 +23,7 @@
  *
  *  ### Lifetime — Program 보다 *먼저* 죽음 보장 (컨벤션)
  *  Material 은 ResourceRegistry 가 보유. Program 도 ResourceRegistry 위탁 시 (future
- *  `SP-ProgramRegistry`) destroy 순서가 Material → Program 자동 보장 → `mProgram` raw
+ *  `SP-ProgramRegistry`) destroy 순서가 Material  Program 자동 보장  `mProgram` raw
  *  pointer dangling 불가. 현 시점 `tweeny_demo` 의 명시 `mProgram.reset()` 은 *컨벤션 위반*
  *  으로 같은 SP 에서 제거 예정.
  *

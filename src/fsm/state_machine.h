@@ -23,7 +23,7 @@ namespace SJH::FSM
 	/// ### 불변식 (Aggregate Root 책임)
 	/// - I1: current ∈ Registered(states_) ∪ {NONE}
 	/// - I2: TryTransit 성공 ⟺ (current.GetTransitFlag() & target_bit) == target_bit AND target 등록됨
-	/// - I3: 전이 시 항상 OnExit(current) → current = target → OnEnter(current) 순서
+	/// - I3: 전이 시 항상 OnExit(current)  current = target  OnEnter(current) 순서
 	///
 	/// ### 자가 검증
 	/// `RegisterState(unique_ptr<IFsmState>)` 는 *id 매개변수 없음* — state 가 알아서 자기 ID 노출.
@@ -110,7 +110,7 @@ namespace SJH::FSM
 				it->second->OnUpdate(*mOwner, dt);
 		}
 
-	  private:
+	  protected:
 		bool TryTransitImpl(StateU targetBit)
 		{
 			const StateU curr = (StateU)curState;

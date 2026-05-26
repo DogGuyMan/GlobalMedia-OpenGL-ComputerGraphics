@@ -47,7 +47,7 @@ namespace TopdownShooter::Physics
         SJH::Scene::Actor* aA = ActorFromBody(fA->GetBody());
         SJH::Scene::Actor* aB = ActorFromBody(fB->GetBody());
 
-        // 하나라도 sensor → 양쪽 모두 OnTriggerEnter (Unity Collider.isTrigger 정통)
+        // 하나라도 sensor  양쪽 모두 OnTriggerEnter (Unity Collider.isTrigger 정통)
         const bool eitherSensor = fA->IsSensor() || fB->IsSensor();
         const Phase phase = eitherSensor ? Phase::TriggerEnter : Phase::CollisionEnter;
 

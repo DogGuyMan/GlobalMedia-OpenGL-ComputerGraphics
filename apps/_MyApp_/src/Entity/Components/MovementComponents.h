@@ -37,7 +37,7 @@ namespace TopdownShooter::Entity::Components
 			if (dir[0] == 0.0f && dir[1] == 0.0f)
 				return;
 			auto &tr = owner->GetTransform();
-			// mMoveSpeed = units/sec → dt(초) 곱해 *프레임 변위* 산출. fps-independent.
+			// mMoveSpeed = units/sec  dt(초) 곱해 *프레임 변위* 산출. fps-independent.
 			auto displacement = vmath::normalize(dir) * (mMoveSpeed.GetValue() * dt);
 			tr.Translate[0] += displacement[0];
 			tr.Translate[2] += displacement[1];

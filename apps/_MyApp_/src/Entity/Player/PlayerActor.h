@@ -21,7 +21,7 @@ namespace TopdownShooter::Entity::Player
 	///   ### 설계 의도
 	///   - 각 Component 의 생성 인자를 *nested struct* 로 응집 — Component 추가 시 *PlayerActorConfig 의 nested 멤버 추가* 만으로 확장 (OCP).
 	///   - Config 자체는 *Value Object* — 불변 의미. 호출 측이 필드 setter 없이 직접 대입 또는 aggregate init.
-	///   - Component 간 의존 주입 (Controller → Movement) 은 *Factory 함수 안에서 한 자리* 에 wiring.
+	///   - Component 간 의존 주입 (Controller  Movement) 은 *Factory 함수 안에서 한 자리* 에 wiring.
 	///
 	///   ### 사용 예
 	///   @code

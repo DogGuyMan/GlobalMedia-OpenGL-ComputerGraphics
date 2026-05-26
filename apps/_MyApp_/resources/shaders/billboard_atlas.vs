@@ -22,7 +22,7 @@ void main()
         vec3 cameraUp = vec3(uView[0][1], uView[1][1], uView[2][1]);
 
         // === uModel 에서 빌보드 center + size 흡수 ===
-        // center = origin 을 model space → world space 로 변환
+        // center = origin 을 model space  world space 로 변환
         // sx/sy = uModel 의 column 0/1 길이 (Scale.x / Scale.y) — Transform.Scale 이 그대로 반영됨
         vec3 center = (uModel * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
         float sx = length(uModel[0].xyz);

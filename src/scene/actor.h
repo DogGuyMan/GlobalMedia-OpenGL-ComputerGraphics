@@ -72,6 +72,13 @@ namespace SJH::Scene
         // === Components ===
         template<typename T, typename... Args>
         T* AddComponent(Args&&... args);
+        /// @brief T 타입(인터페이스 포함) 컴포넌트 조회. 자식 Actor 는 순회하지 않음.
+        /// @details
+        ///   1단계 — `typeid(T)` 정확 매칭 (O(1)). 구체 클래스 호출의 빠른 경로.
+        ///   2단계 — 1단계 miss 시 mComponents 순회하며 `dynamic_cast<T*>` 시도 (O(N)).
+        ///   인터페이스/base 타입 호출은 항상 2단계로 떨어짐. 동일 인터페이스를 만족하는
+        ///   컴포넌트가 여러 개면 unordered_map 순회 순서대로 *첫 번째* 만 반환 (비결정적).
+        ///   여러 매칭을 모두 얻고 싶다면 @c ForEachComponent + dynamic_cast 사용.
         template<typename T,
                  typename = std::enable_if_t<std::is_base_of_v<Component, T>>>
         T*   GetComponent() const;
@@ -150,8 +157,17 @@ namespace SJH::Scene
     template<typename T, typename>
     T* Actor::GetComponent() const
     {
+        // Fast path — 구체 타입 정확 매칭 (O(1))
         auto it = mComponents.find(typeid(T));
-        return it != mComponents.end() ? static_cast<T*>(it->second.get()) : nullptr;
+        if (it != mComponents.end())
+            return static_cast<T*>(it->second.get());
+
+        // Slow path — 인터페이스/base 매칭 (O(N), 현 Actor 의 컴포넌트만, 자식 미순회)
+        for (auto& [ti, comp] : mComponents)
+            if (auto* p = dynamic_cast<T*>(comp.get()))
+                return p;
+
+        return nullptr;
     }
 
     template<typename T>

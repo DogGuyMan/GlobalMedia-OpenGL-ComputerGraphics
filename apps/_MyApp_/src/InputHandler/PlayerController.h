@@ -9,7 +9,7 @@
 
 namespace TopdownShooter::Controller
 {
-	/// @brief Top-down 게임의 Player 이동 컨트롤러 — WASD → Owner Transform.Translate XZ 이동.
+	/// @brief Top-down 게임의 Player 이동 컨트롤러 — WASD  Owner Transform.Translate XZ 이동.
 	/// @details
 	///   ### 동작 (Compound Actor 컨벤션)
 	///   - 제어 대상은 *Component 의 owner Actor* 의 Transform (sprite Actor).

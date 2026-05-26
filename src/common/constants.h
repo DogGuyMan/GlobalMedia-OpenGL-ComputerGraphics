@@ -196,7 +196,7 @@ namespace SJH::Const
 	inline constexpr auto STR_INDEX_CLOSE                 = "]";
 
 	// 셰이더 schema 와 1:1 — lighting.fs / phong_color.fs / phong_tex.fs 의 `#define`.
-	// 변경 (2026-05-26): NUM_POINT_LIGHTS=2 → MAX_POINT_LIGHTS=16 (이름 정정 + 값) + MAX_SPOT_LIGHTS=16 신설.
+	// 변경 (2026-05-26): NUM_POINT_LIGHTS=2  MAX_POINT_LIGHTS=16 (이름 정정 + 값) + MAX_SPOT_LIGHTS=16 신설.
 	//   NUM_* 은 *고정 개수* 의미로 읽혔으나 실제는 *최대 개수* (런타임 enabled 0~N 가변) — 정확히 MAX_*.
 	inline constexpr int MAX_POINT_LIGHTS = 16;
 	inline constexpr int MAX_SPOT_LIGHTS  = 16;

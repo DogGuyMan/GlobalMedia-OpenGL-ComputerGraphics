@@ -44,40 +44,39 @@ namespace SJH
 		auto &rc = DeviceContext::Get();
 
 		RenderTarget &target = cam.GetTargetRenderTarget() ? *cam.GetTargetRenderTarget()
-		                                                    : defaultTarget;
+		                                                   : defaultTarget;
 		rc.BeginFrame(target);
 
 		const auto viewMat = cam.GetViewMatrix();
 		const auto projMat = cam.GetProjectionMatrix();
 		const auto cullingMask = cam.CullingMask;
+		DirLight *dir;
+		std::vector<PointLight *> points;
+		std::vector<SpotLight *> spots;
 
+		// 카메라 뷰 계산을 위해 position 획득
 		vmath::vec3 viewPos(0.0f, 0.0f, 0.0f);
 		if (auto *camOwner = cam.GetOwner())
 		{
 			const auto camWorld = camOwner->GetWorldMatrix();
 			viewPos = vmath::vec3(camWorld[3][0], camWorld[3][1], camWorld[3][2]);
 		}
-
-		// SceneContext 에서 Light 직접 조회 — CollectLights DFS 폐기.
+		
+		// 라이트 수집
 		auto &ctx = Scene::Director::Get().GetContext();
-
-		DirLight *dir = (ctx.GetDirLight() && ctx.GetDirLight()->IsEnabled())
-		                    ? ctx.GetDirLight()
-		                    : nullptr;
-
-		std::vector<PointLight *> points;
+		dir = (ctx.GetDirLight() && ctx.GetDirLight()->IsEnabled())
+		          ? ctx.GetDirLight()
+		          : nullptr;
 		points.reserve(ctx.GetPointLights().size());
 		for (auto *l : ctx.GetPointLights())
 			if (l->IsEnabled())
 				points.push_back(l);
 
-		std::vector<SpotLight *> spots;
 		spots.reserve(ctx.GetSpotLights().size());
 		for (auto *l : ctx.GetSpotLights())
 			if (l->IsEnabled())
 				spots.push_back(l);
 
-		// Program 컬렉션 — ResourceRegistry::GetAllPrograms() 한 줄 (CollectPrograms DFS 폐기).
 		auto programs = ResourceRegistry::Get().GetAllPrograms();
 
 		SendLightUniforms(programs, dir, points, spots, viewPos);
@@ -94,9 +93,7 @@ namespace SJH
 	                                      const std::vector<SpotLight *> &spots,
 	                                      const vmath::vec3 &viewPos)
 	{
-		// lighting.fs 의 셰이더 컨벤션 매핑 (Const::MAX_POINT_LIGHTS / MAX_SPOT_LIGHTS 와 일치).
-		// 누락 uniform 은 첫 호출 1회 warn (Diagnostics::UniformDiagnostics) — lighting.fs 사용
-		//   안 하는 program (e.g., simple.fs) 은 모든 light uniform 누락 warn 정상.
+
 		if (static_cast<int>(points.size()) > Const::MAX_POINT_LIGHTS)
 			spdlog::warn("SceneRenderer — PointLight {} 개 발견. 셰이더 MAX_POINT_LIGHTS={} 초과분 무시.",
 			             points.size(), Const::MAX_POINT_LIGHTS);

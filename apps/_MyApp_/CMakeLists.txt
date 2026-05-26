@@ -31,7 +31,7 @@ if(MSVC)
 endif()
 
 # Apple ld: SJH::engine umbrella + MyApp::Client sub-modules 의 PUBLIC transitive
-# 다중 경로 (SJH::scene → SJH::object → ...) 로 인한 duplicate library 경고 silencing.
+# 다중 경로 (SJH::scene  SJH::object  ...) 로 인한 duplicate library 경고 silencing.
 # 동작 무관 — ld 가 자동 dedup. 향후 link graph 재설계 시 flag 제거 가능.
 if(APPLE)
     target_link_options(${CHAPTER_NAME} PRIVATE "-Wl,-no_warn_duplicate_libraries")

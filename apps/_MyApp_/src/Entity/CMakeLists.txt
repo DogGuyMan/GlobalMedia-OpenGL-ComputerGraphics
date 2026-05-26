@@ -3,7 +3,7 @@ add_library(myapp_entity STATIC
 )
 add_library(MyApp::Entity ALIAS myapp_entity)
 
-# PUBLIC: src/ 디렉토리 → consumer 가 "Entity/BaseEntity.h" / "Entity/Components/LifeComponents.h"
+# PUBLIC: src/ 디렉토리  consumer 가 "Entity/BaseEntity.h" / "Entity/Components/LifeComponents.h"
 # PRIVATE: 자기 디렉토리 — BaseEntity.h 내부의 "Components/Components.Interfaces.h" 등.
 target_include_directories(myapp_entity
     PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>

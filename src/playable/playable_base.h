@@ -7,7 +7,7 @@
 namespace SJH::Playable
 {
     /// @brief IPlayable + Component 다중 상속 abstract base.
-    ///        공통 상태 (paused_/finished_/elapsed_/isLoop_) + Play/Pause/Stop trivial 구현 + Update→OnUpdate hook.
+    ///        공통 상태 (paused_/finished_/elapsed_/isLoop_) + Play/Pause/Stop trivial 구현 + UpdateOnUpdate hook.
     /// @note  concrete 는 OnUpdate 만 필수 override. OnPlay / OnStop 은 default empty.
     class PlayableBase : public IPlayable, public SJH::Scene::Component
     {

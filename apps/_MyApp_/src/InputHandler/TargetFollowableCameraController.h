@@ -37,7 +37,7 @@ namespace TopdownShooter::Controller
 		/// @brief Follow target Actor 설정. nullptr 이면 Update no-op.
 		TargetFollowableCameraController &SetFollowTarget(SJH::Scene::Actor *t);
 
-		/// @brief Follow 시 target → camera offset (default = vec3(0, 5, 5)).
+		/// @brief Follow 시 target  camera offset (default = vec3(0, 5, 5)).
 		TargetFollowableCameraController &SetFollowOffset(vmath::vec3 offset);
 
 		/// @brief 마우스 감도 (default 0.1).

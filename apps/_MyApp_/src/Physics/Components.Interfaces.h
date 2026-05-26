@@ -16,8 +16,8 @@ namespace TopdownShooter::Physics
 	///   - OnCollisionExit (other) : solid 충돌 종료
 	///
 	///   ### Box2D 디스패치 규약
-	///   - 하나라도 sensor → 양쪽 모두 OnTriggerEnter
-	///   - 둘 다 solid    → 양쪽 모두 OnCollisionEnter
+	///   - 하나라도 sensor  양쪽 모두 OnTriggerEnter
+	///   - 둘 다 solid     양쪽 모두 OnCollisionEnter
 	///   - 정적↔정적 충돌은 Box2D 가 이벤트 없음 (Unity "최소 한 쪽 Rigidbody" 규약과 동일)
 	///
 	///   ### isTrigger source-of-truth

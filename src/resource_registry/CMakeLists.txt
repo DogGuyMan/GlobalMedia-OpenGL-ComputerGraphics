@@ -2,6 +2,8 @@ add_library(sjhopengl_resource_registry STATIC
     resource_registry.cpp
     texture.cpp
     image.cpp
+    sound.cpp                # M5 — FMOD::Sound RAII wrap
+    effect.cpp               # M5 — Effekseer::EffectRef wrap
 )
 add_library(SJH::resource_registry ALIAS sjhopengl_resource_registry)
 
@@ -18,6 +20,7 @@ target_link_libraries(sjhopengl_resource_registry
             SJH::program       # resource_registry.h: CreateProgram/FindProgram 가 Program* 노출
             project_deps
             spdlog
+            game_deps          # M5 — Sound/Effect 헤더가 FMOD/Effekseer 노출 (spec §6.1)
     PRIVATE SJH::diagnostics
 )
 

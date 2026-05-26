@@ -19,7 +19,7 @@ namespace SJH::Sprite
     ///   ### 책임 분할
     ///     - 본 클래스 (MeshRenderer 상속): atlas / frameIdx / tint / flipX / size 데이터
     ///       + 매 Update 마다 uniform (uUvRect / uTint / uFlipX) 자동 송신
-    ///     - SpriteSequencePlayable (sibling): 시간 따라 frameIdx 갱신 → 본 컴포넌트에 기록
+    ///     - SpriteSequencePlayable (sibling): 시간 따라 frameIdx 갱신  본 컴포넌트에 기록
     ///       (M3.5 SpriteAnimator 폐기 — Playable 인터페이스 정통)
     ///
     ///   ### 사용

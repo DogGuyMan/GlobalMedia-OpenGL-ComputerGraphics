@@ -11,7 +11,7 @@
  *
  *  ### 정통 엔진 매핑
  *  - Unity `ScriptableRendererFeature` + `ScriptableRenderPass` (URP 조합)
- *  - Unreal `FSceneRenderer` — tick 마다 순회 → FSceneColorRenderTarget 그림
+ *  - Unreal `FSceneRenderer` — tick 마다 순회  FSceneColorRenderTarget 그림
  *  - DX11/DX12 post-effect chain (per-stage 리소스 할당)
  *  -> Application 다형성 — 데모별로 Stage 수용 조합이 다름.
  */

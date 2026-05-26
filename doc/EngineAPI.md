@@ -22,6 +22,9 @@
    - 3.10 [`SJH::render`](#310-sjhrender)
    - 3.11 [`SJH::input`](#311-sjhinput)
    - 3.12 [`SJH::resource_registry`](#312-sjhresource_registry)
+   - 3.13 [`SJH::sprite`](#313-sjhsprite) *(M1 추가)*
+   - 3.14 [`SJH::fsm`](#314-sjhfsm) *(M2 추가)*
+   - 3.15 [`SJH::playable`](#315-sjhplayable) *(M3.5 추가)*
 4. [컨벤션](#4-컨벤션)
    - 4.1 [Compound Actor](#41-compound-actor)
    - 4.2 [Builder Pattern (Components)](#42-builder-pattern-components)
@@ -95,6 +98,9 @@ flowchart TD
     scene["scene<br/>(Actor / Camera / Compound Actor)"]
     render["render<br/>(SceneRenderer + DeviceContext + MeshPassProcessor)"]
     input["input<br/>(KeyboardInput / MouseInput)"]
+    sprite["sprite<br/>(M1 — UniformAtlas + SpriteRenderer<br/>+ SpriteSequencePlayable + SpriteFrameClip)"]
+    fsm["fsm<br/>(M2 — StateMachine&lt;TState,TOwner&gt;<br/>+ IFsmState&lt;TOwner&gt;)"]
+    playable["playable<br/>(M3.5 — IPlayable + PlayableBase<br/>+ SequencePlayable / ParallelPlayable)"]
 
     common --> diagnostics
     common --> buffer
@@ -114,6 +120,15 @@ flowchart TD
 
     scene --> render
     render --> input
+
+    %% M1~M3.5 신설 모듈
+    scene --> fsm
+    scene --> playable
+    playable --> sprite
+    render --> sprite
+    material --> sprite
+    object --> sprite
+    resource_registry --> sprite
 ```
 
 | 모듈 | 종류 | 책임 (요약) |
@@ -130,7 +145,10 @@ flowchart TD
 | `SJH::render` | STATIC | SceneRenderer + DeviceContext + MeshPassProcessor + **PropertyBlockSetter** (Material->Program 송신) + **PipelineStateSetter** (Pass->GL state 적용) |
 | `SJH::input` | STATIC | `KeyboardInput<TAction>` + `MouseInput` |
 | `SJH::resource_registry` | STATIC | Texture/Material/Model/Program/Mesh 캐시 (싱글톤) |
-| `SJH::engine` | **INTERFACE** | **위 12 모듈 우산** — `target_link_libraries(... PRIVATE SJH::engine)` 한 줄 |
+| `SJH::sprite` *(M1)* | STATIC | 등간격 N×M atlas (`UniformAtlas`) + `SpriteRenderer` (MeshRenderer 상속, billboard 자동) + `SpriteFrameClip` POD + `SpriteSequencePlayable` (PlayableBase 상속, atlas frame index 시퀀스). spec §1.6 의 sprite_sequence 별도 모듈 안 되고 본 모듈 안에 통합 정착 |
+| `SJH::fsm` *(M2)* | STATIC | `StateMachine<TState, TOwner>` (Aggregate Root, Component 상속) + `IFsmState<TOwner>` (State Entity — self-identifying `GetStateFlag`/`GetTransitFlag`). Stage 4 — TTransit template parameter 폐기, 그래프 응집 |
+| `SJH::playable` *(M3.5)* | STATIC | `IPlayable` pure interface (Play/Pause/Stop/GetIsLoop/IsFinished) + `PlayableBase : IPlayable, Component` abstract (다중 상속) + `SequencePlayable` / `ParallelPlayable` Composite (`vector<unique_ptr<IPlayable>>` + DOTween 정통 fluent Builder Append/Insert/Join + 무제한 계층 중첩). game_deps 의존 0 — leaf Playable (FmodPlayable/EffekseerPlayable) 은 *Client 거주* |
+| `SJH::engine` | **INTERFACE** | **위 15 모듈 우산** — `target_link_libraries(... PRIVATE SJH::engine)` 한 줄 |
 
 ---
 
@@ -791,6 +809,247 @@ void   Texture::SetWrap  (GLuint s, GLuint t) const;
 
 ---
 
+### 3.13 `SJH::sprite` *(M1 추가)*
+
+2D 스프라이트 atlas + 빌보드 렌더링 + sprite frame 시퀀스 (Playable 통합). spec [`2026-05-24-topdown-shooter-design.md`](../docs/superpowers/specs/2026-05-24-topdown-shooter-design.md) §1.4 + IPlayable spec §3.4 정착. ※ spec §1.6 의 `SJH::sprite_sequence` 별도 모듈 안 되고 본 모듈 안에 통합 (sprite_sequence_playable + sprite_frame_clip).
+
+#### `UniformAtlas` ([uniform_atlas.h](../src/sprite/uniform_atlas.h)) — N×M 등간격 atlas Fluent Builder
+```cpp
+UniformAtlas& LoadFromPNG(const std::string& path);   // SJH::Image::Load 위임 (stb_image 직접 호출 금지)
+UniformAtlas& SetGrid(int cols, int rows);            // tile 수
+UniformAtlas& SetFilter(GLuint min, GLuint mag);      // 픽셀아트 NEAREST 권장
+int           FrameCount() const;                     // cols * rows
+SJH::Texture* GetTexture() const;
+vmath::vec4   ComputeUVRect(int frameIdx) const;      // 좌하단(0,0)부터 row-major (PNG V-flip 적용)
+```
+
+#### `SpriteRenderer` ([sprite_component.h](../src/sprite/sprite_component.h)) — Unity SpriteRenderer 정통 (MeshRenderer 상속)
+
+`_sprite_plane` / `_sprite_billboard_program` / `_sprite_billboard` / `_sprite_inst_<N>` 자원을 `ResourceRegistry` 에 lazy 자동 해결.
+
+```cpp
+explicit SpriteRenderer(UniformAtlas* atlas = nullptr);
+// public data (POD-ish)
+UniformAtlas* atlas;
+int           frameIdx;
+vmath::vec2   size;     // 월드 단위 (현재 미사용 — Transform.Scale 우선)
+vmath::vec4   tint;
+bool          flipX;
+// per-Update 마다 uniform (uUvRect/uTint/uFlipX) 자동 송신 → main render() 무동작
+```
+
+#### `SpriteFrameClip` POD ([sprite_frame_clip.h](../src/sprite/sprite_frame_clip.h))
+```cpp
+namespace SJH::SpriteSequence {
+    struct SpriteFrameClip {
+        int   startFrame;     // atlas 의 시작 frame index
+        int   frameCount;     // 이 clip 의 frame 수 (1 이상)
+        float fps;            // 초당 frame (0보다 큰 양수)
+        // ※ loop 필드 폐기 — PlayableBase.isLoop_ 가 흡수 (IPlayable spec §1 결정 2)
+    };
+}
+```
+
+#### `SpriteSequencePlayable` ([sprite_sequence_playable.h](../src/sprite/sprite_sequence_playable.h)) — PlayableBase 상속
+```cpp
+class SpriteSequencePlayable : public SJH::Playable::PlayableBase {
+  public:
+    SpriteSequencePlayable(SpriteRenderer* spriteRef, const SpriteFrameClip* clip);
+    // OnUpdate(dt): elapsed_ → frameIdx 계산 + isLoop wrap (loop=true) 또는 finished_=true (clamp)
+    // PlayableBase 가 paused_/finished_/elapsed_/isLoop_ 흡수 — 자기 상태 0
+};
+```
+
+**사용 예** (`_MyApp_` main.cpp — atlas 전체 sweep):
+```cpp
+SJH::SpriteSequence::SpriteFrameClip clip{0, atlas->FrameCount(), 4.0f};
+auto* seq = actor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(spriteRef, &clip);
+seq->SetIsLoop(true);
+seq->Play();
+// 이후 Actor::Update 자동 호출 → frameIdx 자동 진행
+```
+
+※ 과거 `SpriteAnimator` 는 2026-05-26 폐기 — `SpriteSequencePlayable` 가 상위 호환 (clip 의 부분 구간 시퀀스 + Composite 결합 가능).
+
+---
+
+### 3.14 `SJH::fsm` *(M2 추가)*
+
+상태머신 추상 — Stage 4 정착 (TTransit template parameter 폐기, 그래프 응집). 4 엔진 정통 흡수 (Unity StateMachine / Unreal AnimGraph / Godot State / Cocos2d FiniteStateMachine). 정본 spec [`2026-05-25-fsm-object-state-machine-design.md`](../docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md).
+
+#### `IFsmState<TOwner>` ([fsm_state.h](../src/fsm/fsm_state.h)) — State Entity (DDD)
+```cpp
+template <typename TOwner>
+class IFsmState {
+  public:
+    virtual ~IFsmState() = default;
+    virtual uint64_t GetStateFlag()   const = 0;   // 내가 누구 (단일 비트)
+    virtual uint64_t GetTransitFlag() const = 0;   // 내가 갈 수 있는 곳들의 OR (그래프 응집)
+    virtual void OnEnter (TOwner& owner)           = 0;
+    virtual void OnUpdate(TOwner& owner, float dt) = 0;
+    virtual void OnExit  (TOwner& owner)           = 0;
+};
+```
+
+**컨벤션**: `TState` 는 `enum class : uint64_t` 각 enumerator 가 *유일한 비트* (NONE=0 약속). 동일 ID 비트 두 번 등록 시 silently overwrite.
+
+#### `StateMachine<TState, TOwner>` ([state_machine.h](../src/fsm/state_machine.h)) — Aggregate Root, Component 상속
+```cpp
+template <typename TState /* enum class : uint64_t, NONE=0 약속 */, typename TOwner>
+class StateMachine : public SJH::Scene::Component {
+  public:
+    StateMachine(TOwner& owner, TState startup = TState::NONE);
+
+    void   RegisterState(std::unique_ptr<IFsmState<TOwner>> state);   // id 자동 (state->GetStateFlag())
+    bool   TryTransit(TState target);       // 런타임 가드 — (current.GetTransitFlag() & target) 검사
+    void   ForceTransit(TState target);     // 계약 위반 시 std::abort
+    TState State() const;
+
+    // Component override — current state 의 hook 위임
+    void OnEnter() override;            // current.OnEnter(owner)
+    void OnExit()  override;            // current.OnExit(owner)
+    void Update(float dt) override;     // current.OnUpdate(owner, dt)
+};
+```
+
+**불변식 (Aggregate Root 책임)**:
+- **I1**: current ∈ Registered ∪ {NONE}; NONE 에서는 전이 차단
+- **I2**: TryTransit 성공 ⟺ `(current.GetTransitFlag() & target) == target` AND target 등록됨
+- **I3**: 전이 시 항상 `OnExit(current) → current=target → OnEnter(current)` 순서
+
+**M4 PlayerStateMachine 사용 예** (예정):
+```cpp
+enum class PlayerState : uint64_t { NONE=0, Idle=1<<0, Move=1<<1, Attack=1<<2, Die=1<<3 };
+
+class IdleState : public IFsmState<PlayerActor> {
+    uint64_t GetStateFlag()   const override { return (uint64_t)PlayerState::Idle; }
+    uint64_t GetTransitFlag() const override { return (uint64_t)(PlayerState::Move | PlayerState::Attack | PlayerState::Die); }
+    void OnEnter (PlayerActor&) override   { /* idle anim Play */ }
+    void OnUpdate(PlayerActor&, float) override { /* 입력 감지 → TryTransit */ }
+    void OnExit  (PlayerActor&) override   { /* idle anim Stop */ }
+};
+
+auto* fsm = playerActor->AddComponent<StateMachine<PlayerState, PlayerActor>>(*playerActor, PlayerState::Idle);
+fsm->RegisterState(std::make_unique<IdleState>());
+// ... Move/Attack/Die 등록 ...
+```
+
+---
+
+### 3.15 `SJH::playable` *(M3.5 추가)*
+
+시간축 추상화 — Unity Playable + DOTween Sequence 정통. Client 우선 4-method (Play/Pause/Stop/GetIsLoop) + 2급 IsFinished. 정본 spec [`2026-05-26-playable-component-interface-design.md`](../docs/superpowers/specs/2026-05-26-playable-component-interface-design.md) (7 결정).
+
+#### `IPlayable` pure interface ([iplayable.h](../src/playable/iplayable.h)) — 저장소 `I*` 컨벤션 준수
+```cpp
+class IPlayable {
+  protected: IPlayable() = default;
+  public:
+    virtual ~IPlayable() = default;
+    // delete copy/move boilerplate
+
+    // === Client 우선 4-method ===
+    virtual void Play()  = 0;        // 재생 시작 / Pause 후 재개 / Stop 후 첫 프레임부터
+    virtual void Pause() = 0;        // 일시정지 (상태 보존, Play 로 재개)
+    virtual void Stop()  = 0;        // 리셋 후 정지 (재사용 대기, 다음 Play 는 첫 프레임)
+    virtual bool GetIsLoop() const = 0;
+
+    // === 2급 공개 — Composite child 종료 감지 + 외부 despawn ===
+    virtual bool IsFinished() const = 0;
+};
+```
+
+#### `PlayableBase : IPlayable, Component` abstract ([playable_base.h](../src/playable/playable_base.h)) — 다중 상속
+공통 상태 (paused_/finished_/elapsed_/isLoop_) + Play/Pause/Stop trivial impl + Update → OnUpdate hook.
+
+```cpp
+class PlayableBase : public IPlayable, public SJH::Scene::Component {
+  public:
+    // === IPlayable 4-method + IsFinished default impl ===
+    void Play()  override { paused_=false; finished_=false; OnPlay(); }
+    void Pause() override { paused_=true; }
+    void Stop()  override { paused_=false; finished_=false; elapsed_=0; OnStop(); }
+    bool GetIsLoop()  const override { return isLoop_; }
+    bool IsFinished() const override { return finished_; }
+
+    // === IPlayable 외 추가 setter (Builder/세팅 단계 속성) ===
+    void SetIsLoop(bool v) { isLoop_ = v; }
+
+    // === Component override — Update 는 final (파생은 OnUpdate hook) ===
+    void Update(float dt) final {
+        if (!IsEnabled() || paused_ || finished_) return;
+        elapsed_ += dt;
+        OnUpdate(dt);
+    }
+
+  protected:
+    virtual void OnPlay()   {}
+    virtual void OnStop()   {}
+    virtual void OnUpdate(float dt) = 0;   // 유일 필수 hook
+
+    bool paused_, finished_, isLoop_;
+    float elapsed_;
+};
+```
+
+#### `SequencePlayable` / `ParallelPlayable` Composite ([composite_playable.h](../src/playable/composite_playable.h))
+
+DOTween 정통 fluent Builder — derived 타입 `*this` 반환 → 체이닝 + IPlayable 다형으로 무제한 계층 중첩 (*Sequence 안 Parallel 안 Sequence ...*).
+
+```cpp
+class SequencePlayable : public PlayableBase {
+  public:
+    SequencePlayable& Append(std::unique_ptr<IPlayable> child);     // DOTween Append 정통
+    SequencePlayable& Insert(std::size_t pos, std::unique_ptr<IPlayable> child);
+  protected:
+    void OnPlay()   override;     // cursor=0 + children_[0]->Play()
+    void OnStop()   override;     // 모든 children.Stop() + cursor=0 (재귀 reset)
+    void OnUpdate(float dt) override;   // cursor child Update + 종료 시 다음 child + loop=true 시 cursor 0 재시작
+  private:
+    std::vector<std::unique_ptr<IPlayable>> children_;
+    std::size_t cursor_ = 0;
+};
+
+class ParallelPlayable : public PlayableBase {
+  public:
+    ParallelPlayable& Join(std::unique_ptr<IPlayable> child);       // DOTween Join 정통
+  protected:
+    void OnPlay()   override;     // for c in children_ : c->Play()
+    void OnStop()   override;     // for c in children_ : c->Stop() (재귀 reset)
+    void OnUpdate(float dt) override;   // 모든 children Update + 모두 IsFinished 시 자기 finished_=true (loop=true 면 재시작)
+  private:
+    std::vector<std::unique_ptr<IPlayable>> children_;
+};
+```
+
+**사용 — 계층 중첩** (Sequence 안 Parallel 안 leaf):
+```cpp
+auto par = std::make_unique<ParallelPlayable>();
+(*par).Join(std::make_unique<myapp::FmodPlayable>("shot.wav"))
+      .Join(std::make_unique<SpriteSequencePlayable>(spriteRef, &attackClip));
+
+auto root = std::make_unique<SequencePlayable>();
+(*root).Append(std::make_unique<myapp::EffekseerPlayable>(muzzleEffect))
+       .Append(std::move(par))                                     // ← Composite 가 child
+       .Append(std::make_unique<SpriteSequencePlayable>(spriteRef, &idleClip));
+
+auto* mounted = actor->AddComponent(std::move(root));
+mounted->SetIsLoop(false);
+mounted->Play();
+```
+
+**leaf Playable 거주 정책** (spec §1.5):
+- *코어* (`src/playable/`) 는 `game_deps` 의존 0 유지
+- `game_deps` 의존 leaf (Effekseer/FMOD/Tweeny) 는 **Client 거주** — `apps/<chapter>/src/Audio/fmod_playable.{h,cpp}` / `apps/<chapter>/src/VFX/effekseer_playable.{h,cpp}` / `apps/<chapter>/src/Tween/tween_playable.{h,cpp}`
+- M5 도입 예정
+
+**FSM 결합 패턴** (M4 PlayerStateMachine 예정):
+- `unordered_map<TState, unique_ptr<IPlayable>>` container — StateMachine 파생이 직접 보유
+- OnEnter 가 active Play(), OnExit 가 active Stop()
+- Composite (Sequence/Parallel) 도 children 으로 활용
+
+---
+
 ## 4. 컨벤션
 
 ### 4.1 Compound Actor
@@ -1288,6 +1547,9 @@ cmake --build --preset msvc-2022 --target <chapter>
 | SP-Rename | `RenderSystem` -> `SceneRenderer` / `RenderContext` -> `DeviceContext` / `RenderQueue` -> `MeshPassProcessor` 일괄 개명 (DX12 PSO + Vulkan DeviceContext 정통 명명) |
 | SP-RTOwnership | RenderTarget 오너십 3 분할 — *Application* 이 `DefaultRenderTarget` (backbuffer + resize 연계), *ResourceRegistry* 가 `Framebuffer` (FBO/off-screen, `CreateFramebuffer`/`FindFramebuffer`), *DeviceContext* 는 명령 발행자 (오너 아님). `SceneRenderer::Render(defaultTarget)` 인자로 명시 전달 |
 | SP-MaterialSSoT | **Material SSoT 완성** — MeshRenderer 의 Stencil/DepthTest/DepthWrite override 필드 *전부 폐기* (모순 상태 표현 자체 차단). GL state 결정자 = `Material::SetPass(Pass::Kind)` 단일. 변형 사용은 `ResourceRegistry::CreateMaterialInstanceFrom` 으로 별도 인스턴스 생성. `Material::Clone` 은 *private + friend ResourceRegistry* — 외부 직접 호출 컴파일 차단. `Material::IsInstance` + `OriginalMaterial` + `GetRootOriginal` (path-compression cache) Unreal MID 정통 메타. `ResourceRegistry` 가 `CreateSharedMaterial` / `CreateMaterialInstanceFrom` 분리, `Clear()` 가 instance->shared 순서로 dangling 차단 |
+| M1 (2026-05-24) | **`SJH::sprite` 모듈 신설** — 등간격 N×M `UniformAtlas` Fluent Builder (`LoadFromPNG().SetGrid()`) + `SpriteRenderer` (MeshRenderer 상속 billboard + per-instance Material 자동 셋업, `_sprite_*` 공유 자원 lazy 해결) + `SpriteComponent` POD. stb_image 직접 호출 금지 (`SJH::Image::Load` 위임). 모듈 카운트 12 → 13 |
+| M2 (2026-05-25) | **`SJH::fsm` 모듈 신설** — 4 stage 진화 후 `StateMachine<TState, TOwner>` (Aggregate Root + Component 상속) + `IFsmState<TOwner>` (Entity, self-identifying `GetStateFlag`/`GetTransitFlag`) 그래프 응집 패턴 정착. TTransit template parameter 폐기. spec `2026-05-25-fsm-object-state-machine-design.md`. 모듈 카운트 13 → 14 |
+| M3.5 (2026-05-26) | **`SJH::playable` 모듈 신설 + `sprite_sequence` 통합** — IPlayable spec 7 결정 정착. `IPlayable` pure interface + `PlayableBase : IPlayable, Component` abstract (다중 상속) + `SequencePlayable`/`ParallelPlayable` Composite (`vector<unique_ptr<IPlayable>>` + Tweeny/DOTween 정통 fluent Builder Append/Insert/Join + 무제한 계층 중첩). spec §1.6 `SJH::sprite_sequence` 별도 모듈 안 되고 **`SJH::sprite` 안에 통합** (`sprite_sequence_playable` + `sprite_frame_clip`). spec §1.5 `PlayablePlayerComponent` + `PlayableTickSystem` 자유함수 폐기 (Component 시스템이 동일 역할). `SpriteAnimator` 폐기 → `SpriteSequencePlayable` 상위 호환. spec `2026-05-26-playable-component-interface-design.md`. 모듈 카운트 14 → 15 |
 
 ---
 

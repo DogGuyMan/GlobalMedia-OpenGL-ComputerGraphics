@@ -22,16 +22,21 @@
 
 #include "buffer/framebuffer.h"
 #include "common/common.h"
+#include "effect.h"
 #include "image.h"
 #include "material/material.h"
 #include "object/mesh.h"
 #include "object/model.h"
 #include "program/program.h"
+#include "sound.h"
 #include "sprite/uniform_atlas.h"
 #include "texture.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+// fwd — CreateSound 의 FMOD::System*
+namespace FMOD { class System; }
 
 namespace SJH
 {
@@ -131,6 +136,24 @@ namespace SJH
 		/// @brief @p key 로 캐시된 UniformAtlas *조회* (생성 안 함). 없으면 nullptr.
 		Sprite::UniformAtlas *FindUniformAtlas(const std::string &key);
 
+		/// @brief FMOD .wav / .ogg 를 *로드*해 @p key 로 캐시. 이미 있거나 로드 실패 시 nullptr.
+		/// @details
+		///   - @p sys = AudioSystem 의 FMOD::System* (외부 owner — 본 메소드는 ptr 만 사용, 보유 안 함).
+		///   - 내부적으로 sys->createSound(@p path, FMOD_DEFAULT, nullptr, &raw)  SJH::Sound RAII wrap  캐시.
+		Sound *CreateSound(::FMOD::System *sys, const std::string &key, const std::string &path);
+
+		/// @brief @p key 로 캐시된 Sound *조회* (생성 안 함). 없으면 nullptr.
+		Sound *FindSound(const std::string &key);
+
+		/// @brief Effekseer .efk 를 *로드*해 @p key 로 캐시. 이미 있거나 로드 실패 시 nullptr.
+		/// @details
+		///   - @p manager = VFXSystem 의 Effekseer::ManagerRef.
+		///   - @p path = utf-16 (Effekseer 표준). 호출자는 u"resources/vfx/foo.efk" 리터럴 사용.
+		Effect *CreateEffect(::Effekseer::ManagerRef manager, const std::string &key, const char16_t *path);
+
+		/// @brief @p key 로 캐시된 Effect *조회* (생성 안 함). 없으면 nullptr.
+		Effect *FindEffect(const std::string &key);
+
 		/// @brief 보유 모든 자원 일괄 해제 (매니저 인스턴스 자체는 유지).
 		void Clear();
 
@@ -151,6 +174,8 @@ namespace SJH
 		std::unordered_map<std::string, MeshUPtr> mMeshes;
 		std::unordered_map<std::string, FramebufferUPtr> mFramebuffers;
 		std::unordered_map<std::string, Sprite::UniformAtlasUPtr> mAtlas;
+		std::unordered_map<std::string, SoundUPtr> mSounds;     // M5
+		std::unordered_map<std::string, EffectUPtr> mEffects;   // M5
 	};
 } // namespace SJH
 
