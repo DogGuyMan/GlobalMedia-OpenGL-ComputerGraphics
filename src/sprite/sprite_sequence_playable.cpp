@@ -1,6 +1,6 @@
-#include "sprite_sequence/sprite_sequence_playable.h"
-#include "sprite_sequence/sprite_frame_clip.h"   // SJH::SpriteSequence::SpriteFrameClip (ctor 시그니처)
-#include "sprite/sprite_component.h"             // SJH::Sprite::SpriteRenderer (ctor 시그니처)
+#include "sprite_sequence_playable.h"
+#include "sprite_frame_clip.h"   // SJH::SpriteSequence::SpriteFrameClip (ctor 시그니처)
+#include "sprite_component.h"             // SJH::Sprite::SpriteRenderer (ctor 시그니처)
 
 namespace SJH::SpriteSequence
 {

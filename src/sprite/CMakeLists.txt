@@ -3,6 +3,7 @@
 add_library(sjh_sprite STATIC
     uniform_atlas.cpp
     sprite_component.cpp
+    sprite_sequence_playable.cpp
 )
 add_library(SJH::sprite ALIAS sjh_sprite)
 
@@ -12,15 +13,16 @@ target_include_directories(sjh_sprite PUBLIC
 
 # 의존 — PUBLIC: 헤더 노출
 target_link_libraries(sjh_sprite PUBLIC
-    SJH::scene                # SJH::Scene::Component 베이스 (sprite_animator.h)
-    SJH::render               # SJH::Scene::MeshRenderer 베이스 (SpriteRenderer 상속)
-    SJH::material             # SJH::Material / Pass / Uniforms (sprite_component.cpp)
-    SJH::object               # SJH::Mesh::CreatePlane (sprite_component.cpp)
-    SJH::resource_registry    # SJH::Image / SJH::Texture / 공유 자원 lookup
-    project_deps              # gl3w, vmath, OpenGL, 플랫폼 프레임워크
+    SJH::scene # SJH::Scene::Component 베이스 (SpriteRenderer / SpriteSequencePlayable)
+    SJH::render # SJH::Scene::MeshRenderer 베이스 (SpriteRenderer 상속)
+    SJH::material # SJH::Material / Pass / Uniforms (sprite_component.cpp)
+    SJH::object # SJH::Mesh::CreatePlane (sprite_component.cpp)
+    SJH::resource_registry # SJH::Image / SJH::Texture / 공유 자원 lookup
+    SJH::playable # PlayableBase 베이스 — sprite_sequence_playable.h 가 PUBLIC include
+    project_deps # gl3w, vmath, OpenGL, 플랫폼 프레임워크
 )
 
 # PRIVATE: cpp 내부 전용
 target_link_libraries(sjh_sprite PRIVATE
-    spdlog                    # uniform_atlas.cpp / sprite_component.cpp 의 spdlog
+    spdlog # uniform_atlas.cpp / sprite_component.cpp 의 spdlog
 )
