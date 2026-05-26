@@ -19,18 +19,22 @@ namespace SJH::Sprite
     ///   ### 책임 분할
     ///     - 본 클래스 (MeshRenderer 상속): atlas / frameIdx / tint / flipX / size 데이터
     ///       + 매 Update 마다 uniform (uUvRect / uTint / uFlipX) 자동 송신
-    ///     - SpriteAnimator (sibling): 시간 따라 frameIdx 갱신 → 본 컴포넌트에 기록
+    ///     - SpriteSequencePlayable (sibling): 시간 따라 frameIdx 갱신 → 본 컴포넌트에 기록
+    ///       (M3.5 SpriteAnimator 폐기 — Playable 인터페이스 정통)
     ///
     ///   ### 사용
     ///   @code
     ///   auto* spr = actor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
     ///   spr->tint = vmath::vec4(1.0f, 0.5f, 0.5f, 1.0f);
-    ///   // 옵션: SpriteAnimator 부착 시 frameIdx 자동 진행
-    ///   actor->AddComponent<SJH::Sprite::SpriteAnimator>()->SetAtlas(atlas);
+    ///   // 옵션: SpriteSequencePlayable 부착 시 frameIdx 자동 진행
+    ///   SJH::SpriteSequence::SpriteFrameClip clip{0, atlas->FrameCount(), 4.0f};
+    ///   auto* seq = actor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(spr, &clip);
+    ///   seq->SetIsLoop(true);
+    ///   seq->Play();
     ///   @endcode
     ///
     ///   ### 1-frame lag 주의
-    ///   SpriteAnimator.Update 가 본 컴포넌트보다 *나중에* 돌면 uniform 송신은 이전 frameIdx 기반.
+    ///   SpriteSequencePlayable.Update 가 본 컴포넌트보다 *나중에* 돌면 uniform 송신은 이전 frameIdx 기반.
     ///   render() 다음 frame 에 catch-up — 4fps atlas 기준 무시 가능 (1/15 of a tick @ 60fps render).
     class SpriteRenderer : public SJH::Scene::MeshRenderer
     {

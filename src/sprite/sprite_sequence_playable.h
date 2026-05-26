@@ -2,8 +2,8 @@
 #define __SJH_SPRITE_SEQUENCE_SPRITE_SEQUENCE_PLAYABLE_H__
 
 #include "playable/playable_base.h"           // PlayableBase 베이스
-#include "sprite_sequence/sprite_frame_clip.h" // SpriteFrameClip
-#include "sprite/sprite_component.h"          // SJH::Sprite::SpriteRenderer (frameIdx 갱신 대상)
+#include "sprite_frame_clip.h" // SpriteFrameClip
+#include "sprite_component.h"          // SJH::Sprite::SpriteRenderer (frameIdx 갱신 대상)
 
 namespace SJH::SpriteSequence
 {
