@@ -1,5 +1,5 @@
-#ifndef __MYAPP_PHYSICS_WALL_FACTORY_H__
-#define __MYAPP_PHYSICS_WALL_FACTORY_H__
+#ifndef __TOPDOWNSHOOTER_STAGE_FACTORIES_WALL_FACTORY_H__
+#define __TOPDOWNSHOOTER_STAGE_FACTORIES_WALL_FACTORY_H__
 
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/filter.h"
@@ -9,9 +9,11 @@
 #include <string>
 #include <vmath.h>
 
-namespace TopdownShooter::Physics
+namespace TopdownShooter::Stage::Factories
 {
     /// @brief 정적 벽 Actor — b2_staticBody + box shape + Components::BoxBody.
+    /// @param name   Actor 이름
+    /// @param world  b2World (lifetime = PhysicsSystem)
     /// @param center 벽 중심 (XY 평면)
     /// @param half   half-extents (box 절반 크기)
     inline std::unique_ptr<SJH::Scene::Actor> CreateWallActor(
@@ -30,11 +32,11 @@ namespace TopdownShooter::Physics
         b2FixtureDef fd;
         fd.shape               = &box;
         fd.isSensor            = false;   // solid — Unity isTrigger OFF
-        fd.filter.categoryBits = ToBits(PhysicsLayer::Wall);
-        fd.filter.maskBits     = ToBits(WallMask);
+        fd.filter.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Wall);
+        fd.filter.maskBits     = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::WallMask);
         body->CreateFixture(&fd);
 
-        auto* pb = actor->AddComponent<Components::BoxBody>();
+        auto* pb = actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>();
         pb->SetBody(body);
         pb->SetHeightOffset(0.0f);
 
@@ -42,4 +44,4 @@ namespace TopdownShooter::Physics
     }
 }
 
-#endif // __MYAPP_PHYSICS_WALL_FACTORY_H__
+#endif // __TOPDOWNSHOOTER_STAGE_FACTORIES_WALL_FACTORY_H__
