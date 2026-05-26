@@ -137,6 +137,15 @@ namespace SJH
 		return (it != mPrograms.end()) ? it->second.get() : nullptr;
 	}
 
+	std::vector<Program *> ResourceRegistry::GetAllPrograms() const
+	{
+		std::vector<Program *> out;
+		out.reserve(mPrograms.size());
+		for (const auto &[key, prog] : mPrograms)
+			out.push_back(prog.get());
+		return out;
+	}
+
 	Mesh *ResourceRegistry::RegisterMesh(const std::string &key, MeshUPtr mesh)
 	{
 		if (mesh == nullptr)

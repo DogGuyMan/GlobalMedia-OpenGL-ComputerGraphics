@@ -16,8 +16,7 @@
 #include "InputHandler/TargetFollowableCameraController.h"
 #include "Physics/filter.h"
 #include "Physics/physics_system.h"
-#include "Physics/pickup_factory.h"
-#include "Physics/wall_factory.h"
+#include "Stage/StageBuilder.h"
 #include "common/common.h"
 #include "material/material.h"
 #include "material/material_uniforms.h"
@@ -30,8 +29,9 @@
 #include "scene/camera.h"
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
-#include "sprite/sprite_animator.h"
-#include "sprite/uniform_atlas.h"
+#include "sprite/sprite_component.h"
+#include "sprite/sprite_frame_clip.h"
+#include "sprite/sprite_sequence_playable.h"
 
 #include <cstring>
 #include <memory>
@@ -57,42 +57,16 @@ namespace TopdownShooter
 			auto &reg = SJH::ResourceRegistry::Get();
 			auto &dir = SJH::Scene::Director::Get();
 
-			// Fluent Builder — PNG 로드 + grid 명시 분리. SetGrid(cols, rows) 또는 SetTileSize(px) 택일.
-			mAtlas.LoadFromPNG("resources/texture/TestPattern.png")
-				.SetGrid(2, 2);
-			if (!mAtlas.IsValid())
+			// Atlas — registry 가 LoadFromPNG + SetGrid 일괄. SpriteRenderer ctor 에 주입.
+			auto *atlas = reg.CreateUniformAtlas(
+				"test_pattern", 
+				"resources/texture/TestPattern.png",
+				 4, 4);
+			if (!atlas)
 			{
 				spdlog::error("[M1] atlas load failed");
 				return;
 			}
-
-			auto *prog = reg.CreateProgram(
-			    "billboard_atlas",
-			    "resources/shaders/billboard_atlas.vs",
-			    "resources/shaders/billboard_atlas.fs");
-			if (!prog)
-			{
-				spdlog::error("[M1] program create failed");
-				return;
-			}
-
-			mPlane = SJH::Mesh::CreatePlane();
-			if (!mPlane)
-			{
-				spdlog::error("[M1] mesh create failed");
-				return;
-			}
-
-			auto *mat = reg.CreateSharedMaterial("billboard_player");
-			mat->SetProgram(prog);
-			mat->SetPass(SJH::Pass::Kind::AlphaTest);
-			mAtlasMaterial = mat;
-
-			mat->Properties.Textures["uAtlas"] = {mAtlas.GetTexture(), /*unit=*/0};
-
-			SJH::Uniforms::SetVec4(*mat, "uUvRect", mAtlas.GetUVRect(/*frameIdx=*/0));
-			SJH::Uniforms::SetFloat(*mat, "uFlipX", 1.0f);
-			SJH::Uniforms::SetVec4(*mat, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
 			int fbW = 0, fbH = 0;
 			glfwGetFramebufferSize(window, &fbW, &fbH);
@@ -114,72 +88,49 @@ namespace TopdownShooter
 
 			mCameraActor = dir.Root().AddChild(std::move(camActor));
 			mCamera = cam;
-			dir.SetActiveCamera(cam);
 
 			// === Physics 초기화 ===
 			mPhysics.Init();
 
-			// === wall/pickup 시각화 material — simple.vs/fs (MVP + baseColor) 공유 ===
-			auto *solidProg = reg.CreateProgram(
-			    "solid_plane",
-			    "resources/shaders/simple.vs",
-			    "resources/shaders/simple.fs");
-			auto *wallMat = reg.CreateSharedMaterial("solid_wall");
-			wallMat->SetProgram(solidProg);
-			wallMat->SetPass(SJH::Pass::Kind::Opaque);
-			SJH::Uniforms::SetVec4(*wallMat, "baseColor", vmath::vec4(0.55f, 0.55f, 0.60f, 1.0f));
-
-			auto *pickupMat = reg.CreateSharedMaterial("solid_pickup");
-			pickupMat->SetProgram(solidProg);
-			pickupMat->SetPass(SJH::Pass::Kind::Opaque);
-			SJH::Uniforms::SetVec4(*pickupMat, "baseColor", vmath::vec4(1.0f, 0.85f, 0.2f, 1.0f));
-
-			// 벽 4개 — 약 10×10 단위 arena. Mesh::CreatePlane 은 XZ 평면 1×1 → Scale 로 half×2 매칭.
-			const float arena = 10.0f;
-			const float wallH = 0.5f;
-			auto spawnWall = [&](const char *name, vmath::vec2 center, vmath::vec2 half) {
-				auto a = TopdownShooter::Physics::CreateWallActor(name, mPhysics.World(), center, half);
-				a->GetTransform().Scale = vmath::vec3(half[0] * 2.0f, 1.0f, half[1] * 2.0f);
-				a->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), wallMat);
-				dir.Root().AddChild(std::move(a));
-			};
-			spawnWall("WallTop",    vmath::vec2(0.0f,   +arena), vmath::vec2(arena, wallH));
-			spawnWall("WallBottom", vmath::vec2(0.0f,   -arena), vmath::vec2(arena, wallH));
-			spawnWall("WallLeft",   vmath::vec2(-arena, 0.0f),   vmath::vec2(wallH, arena));
-			spawnWall("WallRight",  vmath::vec2(+arena, 0.0f),   vmath::vec2(wallH, arena));
-
-			// Pickup Sensor — (0, +3) 위치. Player 가 W 키로 진입 시 OnTriggerEnter 로그 검증.
-			{
-				auto p = TopdownShooter::Physics::CreatePickupActor(
-				    "PickupTest", mPhysics.World(), vmath::vec2(0.0f, 3.0f), vmath::vec2(0.8f, 0.8f));
-				p->GetTransform().Scale = vmath::vec3(1.6f, 1.0f, 1.6f);
-				p->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), pickupMat);
-				dir.Root().AddChild(std::move(p));
-			}
+			// === Stage 형성 — walls + pickups + StageState Component 가 child/component 인 일반 Actor 반환.
+			//     plane mesh / wallMat / pickupMat / simple.vs/fs Program 은 Stage Builder 가 registry 에 자동 등록.
+			auto stage = TopdownShooter::Stage::CreateStageActor({
+			    /*world=*/    &mPhysics.World(),
+			    /*registry=*/ &reg,
+			});
+			dir.Root().AddChild(std::move(stage));
 
 			pac.name = "PlayerSprite";
 			pac.life.hp = 100;
 			pac.movement.speed = 3.0f;
 			pac.controller.keyboard = &mKeyboard;
-			pac.physics.world         = &mPhysics.World();
-			pac.physics.size          = vmath::vec2(1.0f, 1.0f);
+			pac.physics.world = &mPhysics.World();
+			pac.physics.size = vmath::vec2(1.0f, 1.0f);
 			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
-			pac.physics.density       = 1.0f;
+			pac.physics.density = 1.0f;
 			pac.physics.linearDamping = 5.0f;
-			pac.physics.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
-			pac.physics.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
+			pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
+			pac.physics.maskBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
 
 			auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
 
 			spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
 			spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
-			spriteActor->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), mat);
 
-			// SpriteAnimator — atlas FrameCount 만큼 fps default (4×4 = 16fps, 2×2 = 4fps).
-			// 매 frame uUvRect 갱신은 render() 안에서.
-			mAnimator = spriteActor->AddComponent<SJH::Sprite::SpriteAnimator>();
-			mAnimator->SetFps(4.0f);
-			mAnimator->SetAtlas(&mAtlas);
+			// SpriteRenderer — Unity 정통. MeshRenderer 상속 + billboard plane / material 자동 셋업.
+			// per-Update 마다 uUvRect / uTint / uFlipX 도 내부에서 송신 — main render() 무동작.
+			mSprite = spriteActor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
+
+			// SpriteSequencePlayable — M3.5 정착 (SpriteAnimator 폐기). atlas 전체 16-frame 을
+			// 4fps 로 loop sweep. clip 은 main 멤버로 보관 (playable 은 raw ptr 만 보유).
+			mWholeAtlasClip = SJH::SpriteSequence::SpriteFrameClip{
+			    /*startFrame*/ 0,
+			    /*frameCount*/ atlas->FrameCount(),
+			    /*fps*/        4.0f};
+			mSpriteSeq = spriteActor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
+			    mSprite, &mWholeAtlasClip);
+			mSpriteSeq->SetIsLoop(true);
+			mSpriteSeq->Play();
 
 			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
 
@@ -209,26 +160,19 @@ namespace TopdownShooter
 			mPhysics.Step(dt);
 			mPhysics.SyncToTransform(SJH::Scene::Director::Get().Root());
 
-			// Animator 가 Update 단계에서 frameIdx 갱신 완료 → Material 의 uUvRect 송신.
-			// (Render 전 단계라 그 프레임에 즉시 반영.)
-			if (mAnimator && mAtlasMaterial)
-			{
-				SJH::Uniforms::SetVec4(*mAtlasMaterial, "uUvRect", mAtlas.GetUVRect(mAnimator->GetCurrentFrame()));
-			}
-
+			// SpriteRenderer.Update 가 uUvRect / uTint / uFlipX 자동 송신 — main 무동작.
 			mRenderSys.Render(*mDefaultTarget);
 		}
 
 		void shutdown() override
 		{
-			SJH::Scene::Director::Get().SetActiveCamera(nullptr);
 			SJH::Scene::Director::Get().Exit();
 			mCamera = nullptr;
 			mCameraActor = nullptr;
 			mSpriteActor = nullptr;
-			mPlane.reset();
 			mDefaultTarget.reset();
-			mAtlas.Release();
+			mSprite = nullptr;     // 컴포넌트는 spriteActor 가 소유 — Director::Exit 가 정리. atlas 는 ResourceRegistry::Clear 가 담당
+			mSpriteSeq = nullptr;  // 동일 — Director::Exit 가 spriteActor 정리 시 함께 소멸
 			mPhysics.Shutdown();
 		}
 
@@ -263,15 +207,14 @@ namespace TopdownShooter
 		}
 
 	  private:
-		SJH::Sprite::UniformAtlas mAtlas;
-		SJH::MeshUPtr mPlane;
 		SJH::SceneRenderer mRenderSys;
 		SJH::RenderTargetUPtr mDefaultTarget;
 		SJH::Scene::Actor *mCameraActor = nullptr;
 		SJH::Scene::Actor *mSpriteActor = nullptr;
 		SJH::Scene::Camera *mCamera = nullptr;
-		SJH::Sprite::SpriteAnimator *mAnimator = nullptr;   // render() 매 frame uUvRect 갱신용
-		SJH::Material *mAtlasMaterial = nullptr;            // 매 frame uUvRect 갱신 대상
+		SJH::SpriteSequence::SpriteSequencePlayable *mSpriteSeq = nullptr;   // Update 마다 mSprite->frameIdx 송신 (M3.5 — SpriteAnimator 후속)
+		SJH::SpriteSequence::SpriteFrameClip          mWholeAtlasClip{};    // atlas 전체 sweep 정의 (mSpriteSeq 가 raw ptr 로 참조 — 멤버 생존 필수)
+		SJH::Sprite::SpriteRenderer *mSprite = nullptr;     // sprite 데이터 (atlas + frameIdx + tint 등). spriteActor 소유
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;
 		TopdownShooter::Entity::Player::PlayerActorConfig pac;

@@ -1,9 +1,9 @@
 #ifndef __SJH_SCENE_CAMERA_H__
 #define __SJH_SCENE_CAMERA_H__
 
-#include "scene/actor.h"  // Component + Actor::GetWorldMatrix
-#include "scene/layer.h"  // Layer, ToBits (SP5 Task 3)
-#include <cstdint>        // uint64_t for cullingMask (SP5 Task 3)
+#include "scene/actor.h" // Component + Actor::GetWorldMatrix
+#include "scene/layer.h" // Layer, ToBits (SP5 Task 3)
+#include <cstdint>       // uint64_t for cullingMask (SP5 Task 3)
 #include <vmath.h>
 
 namespace SJH
@@ -38,13 +38,20 @@ namespace SJH::Scene
 		float NearZ = 0.1f;
 		float FarZ = 100.0f;
 
-		int Depth = 0;                                                // Unity Camera.depth — 작은 값 먼저.
+		// SP-SceneContext+ProgramRegistry (2026-05-26) — `int Depth` + `operator<` 폐기.
+		// Camera 정렬은 SceneContext::mCameras 의 등록 순서로 자연 보장 (Cocos2D `addChild` 정통).
 		uint64_t CullingMask = SJH::Scene::ToBits(SJH::Scene::Layer::All); // Unity Camera.cullingMask — 기본 모든 layer.
 
 		/// @brief 비트마스크 직접 주입 (옛 호환).
-		void SetCullingMask(uint64_t mask)             { CullingMask = mask; }
+		void SetCullingMask(uint64_t mask)
+		{
+			CullingMask = mask;
+		}
 		/// @brief type-safe Layer overload (SP5 Task 3).
-		void SetCullingMask(SJH::Scene::Layer l)       { CullingMask = SJH::Scene::ToBits(l); }
+		void SetCullingMask(SJH::Scene::Layer l)
+		{
+			CullingMask = SJH::Scene::ToBits(l);
+		}
 
 		Camera() = default;
 		Camera(float fovYDeg, float aspect, float nearZ, float farZ)
@@ -95,15 +102,16 @@ namespace SJH::Scene
 			return mTargetRT;
 		}
 
-		virtual void OnEnter() override
-		{
-		}
-		virtual void OnExit() override
-		{
-		}
+		// SP-SceneContext+ProgramRegistry (2026-05-26) — Cocos cc::Camera 정통 자동 등록.
+		// OnEnter 에서 Director::GetContext().AddCamera(this), OnExit 에서 Remove.
+		// 매 프레임 Scene DFS 로 Camera 수집하던 SceneRenderer 로직 폐기 — context 가 진실의 원천.
+		virtual void OnEnter() override;
+		virtual void OnExit() override;
 		virtual void Update(float dt) override
 		{
-		}
+		} // Camera 는 매 프레임 작업 없음.
+
+		// SP-SceneContext+ProgramRegistry (2026-05-26) — `operator<` 폐기 (Depth 동반 제거).
 
 	  private:
 		/// @brief affine 4x4 (R|t) 행렬의 역행렬 — 회전 transpose + translate negate.
