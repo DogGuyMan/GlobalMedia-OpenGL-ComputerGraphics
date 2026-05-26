@@ -1,5 +1,5 @@
 add_subdirectory(_MyApp_)
-add_subdirectory(migrate_demo)
+add_subdirectory(migrate_demo)        # SP-SceneContext+ProgramRegistry — Phase 1.5 시각 회귀 대상 (Phong + 5-pass PostFX)
 # add_subdirectory(box2d_demo)
 # add_subdirectory(effekseer_demo)
 # add_subdirectory(tweeny_demo)

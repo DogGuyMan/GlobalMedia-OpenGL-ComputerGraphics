@@ -178,9 +178,7 @@ namespace SJH::Const
 	// lighting builtin (SceneRenderer::SendLightUniforms 가 자동 송신 — 씬 전역).
 	inline constexpr auto UNI_VIEW_POS = "viewPos";
 	inline constexpr auto UNI_DIR_LIGHT = "dirLight";
-	inline constexpr auto UNI_SPOT_LIGHT = "spotLight";
 	inline constexpr auto UNI_DIR_LIGHT_ENABLED = "dirLightEnabled";
-	inline constexpr auto UNI_SPOT_LIGHT_ENABLED = "spotLightEnabled";
 
 	// material / texture builtin (PropertyBlockSetter 가 송신).
 	inline constexpr auto UNI_TEX = "tex";
@@ -191,12 +189,17 @@ namespace SJH::Const
 	inline constexpr auto UNI_MATERIAL_SHININESS = "material.shininess";
 
 	// 배열 uniform — prefix + 인덱스 + STR_INDEX_CLOSE 로 결합. 예: "pointLights[" + "0" + "]".
-	inline constexpr auto UNI_POINT_LIGHTS_PREFIX = "pointLights[";
+	inline constexpr auto UNI_POINT_LIGHTS_PREFIX         = "pointLights[";
 	inline constexpr auto UNI_POINT_LIGHTS_ENABLED_PREFIX = "pointLightsEnabled[";
-	inline constexpr auto STR_INDEX_CLOSE = "]";
+	inline constexpr auto UNI_SPOT_LIGHTS_PREFIX          = "spotLights[";
+	inline constexpr auto UNI_SPOT_LIGHTS_ENABLED_PREFIX  = "spotLightsEnabled[";
+	inline constexpr auto STR_INDEX_CLOSE                 = "]";
 
-	// 셰이더 schema 와 1:1 — phong_tex.fs / lighting.fs 의 `#define NUM_POINT_LIGHTS`.
-	inline constexpr int NUM_POINT_LIGHTS = 2;
+	// 셰이더 schema 와 1:1 — lighting.fs / phong_color.fs / phong_tex.fs 의 `#define`.
+	// 변경 (2026-05-26): NUM_POINT_LIGHTS=2 → MAX_POINT_LIGHTS=16 (이름 정정 + 값) + MAX_SPOT_LIGHTS=16 신설.
+	//   NUM_* 은 *고정 개수* 의미로 읽혔으나 실제는 *최대 개수* (런타임 enabled 0~N 가변) — 정확히 MAX_*.
+	inline constexpr int MAX_POINT_LIGHTS = 16;
+	inline constexpr int MAX_SPOT_LIGHTS  = 16;
 
 	// ─── uniform struct 멤버 suffix (program_uniforms 가 prefix 와 결합) ───
 	inline constexpr auto SFX_DIRECTION = ".direction";
