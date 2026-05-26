@@ -35,6 +35,9 @@ namespace SJH::Scene
 		// Projection 파라미터.
 		bool  IsOrthographic = false;  ///< true 이면 ortho 투영 (Screen Camera 전용)
 		float OrthoSize      = 1.0f;  ///< 반높이 — 가시 범위 [-OrthoSize, OrthoSize]
+		/// RenderWithCamera 진입 시 BeginFrame(clear) 대신 BindTarget+state 만 수행.
+		/// ScreenCamera 전용 — WorldCamera 출력을 보존한 채 합성.
+		bool  NoClear        = false;
 		float FovYDeg = 45.0f;
 		float Aspect = 16.0f / 9.0f;
 		float NearZ = 0.1f;

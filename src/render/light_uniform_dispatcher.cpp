@@ -33,7 +33,7 @@ namespace SJH
 			if (!prog)
 				continue;
 			// Lighting schema sentinel — UNI_VIEW_POS 가 UniformCache 에 없으면
-			// 이 program 은 lighting 미사용 (simple/passthrough/postfx 등) → 송신 통째 skip.
+			// 이 program 은 lighting 미사용 (simple/passthrough/postfx 등) ->송신 통째 skip.
 			// warn-once 노이즈 차단 + glUseProgram 비용 회피.
 			if (prog->GetLocation(Const::UNI_VIEW_POS) < 0)
 				continue;

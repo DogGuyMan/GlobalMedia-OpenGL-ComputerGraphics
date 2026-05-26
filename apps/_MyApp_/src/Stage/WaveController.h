@@ -13,7 +13,7 @@ namespace TopdownShooter::Stage
     /// @details
     ///   - kSpawnInterval 마다 1마리 spawn (최대 kMaxEnemies 동시 생존).
     ///   - mEnemies raw ptr 추적 — IsActive()==false 시 전멸 감지.
-    ///   - 전멸 → mWave++ + 다음 웨이브 즉시 개시.
+    ///   - 전멸 ->mWave++ + 다음 웨이브 즉시 개시.
     class WaveController : public SJH::Scene::Component
     {
       public:

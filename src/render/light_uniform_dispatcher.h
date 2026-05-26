@@ -16,7 +16,7 @@
  *  - Unreal      : FDeferredShadingSceneRenderer 가 FDeferredLightUniformStruct 로 일괄 바인딩
  *  - Cocos2d-x   : Mesh::setLightUniforms 가 씬 순회 후 배열 일괄 송신
  *  - Godot       : RenderingServer 내부가 RID 기반으로 Light 파라미터 일괄 전달
- *  → Light 컴포넌트는 데이터 보유만 — GPU 전송은 외부 시스템(이 클래스)이 전담.
+ *  ->Light 컴포넌트는 데이터 보유만 — GPU 전송은 외부 시스템(이 클래스)이 전담.
  */
 
 #include <vector>

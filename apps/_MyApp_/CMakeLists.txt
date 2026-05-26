@@ -16,7 +16,7 @@ set(IMGUI_SRC
 add_subdirectory(src)
 
 # ImGui 의존 UI 레이어 — client-side compile (SJH::engine 모듈 아님)
-# PostFXDebugLayer.cpp 는 <imgui.h> 가 필요 → executable PRIVATE include path 상속을 위해 직접 추가
+# PostFXDebugLayer.cpp 는 <imgui.h> 가 필요 ->executable PRIVATE include path 상속을 위해 직접 추가
 set(UI_SRC
     src/UI/PostFXDebugLayer.cpp
 )

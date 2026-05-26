@@ -127,7 +127,7 @@ namespace TopdownShooter
 
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
-			// ── World Camera (Perspective) — 3D 월드 → sceneFB ─────────────────────────
+			// ── World Camera (Perspective) — 3D 월드 ->sceneFB ─────────────────────────
 			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, aspect, 0.1f, 100.0f);
 			worldCamActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
 			worldCamActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
@@ -148,11 +148,17 @@ namespace TopdownShooter
 			auto *screenCam     = screenCamActor->GetComponent<SJH::Scene::Camera>();
 			screenCam->IsOrthographic = true;
 			screenCam->OrthoSize      = 1.0f;
+			screenCam->NoClear        = true;  // WorldCamera 출력 보존 — clear 없이 합성
 			screenCam->SetCullingMask(SJH::Scene::Layer::UI | SJH::Scene::Layer::Screen);
 			screenCam->SetTargetRenderTarget(mSceneFB.get());
 
 			// ── PassComponent 체인 (blurring→gamma→invert→sharpening→sobel) ─────────────
 			mRenderSys.SetScreenQuadMesh(quadMesh);
+			{
+				auto *bypassMat = reg.CreateSharedMaterial("mat_bypass_passthrough");
+				bypassMat->SetProgram(passthroughProg);
+				mRenderSys.SetBypassMaterial(bypassMat);
+			}
 			mPassComponents.clear();
 			SJH::Framebuffer *prevFB = mSceneFB.get();
 
@@ -311,7 +317,7 @@ namespace TopdownShooter
 			// 씬 렌더 (SceneFB) + PostFX 체인 (intermediate FBs).
 			mRenderSys.Render(*mDefaultTarget);
 
-			// ScreenQuadStage — PassComponent 마지막 출력 또는 SceneFB fallback → backbuffer.
+			// ScreenQuadStage — PassComponent 마지막 출력 또는 SceneFB fallback ->backbuffer.
 			{
 				auto *out = mRenderSys.GetLastSceneOutput();
 				mScreenQuadStage->SetSources({out ? out : mSceneFB.get()});

@@ -1,6 +1,6 @@
 /**
  * @file screen_quad_stage.cpp
- * @brief ScreenQuadStage — N 개 FBO color attachment → backbuffer 합성 구현.
+ * @brief ScreenQuadStage — N 개 FBO color attachment ->backbuffer 합성 구현.
  */
 #include "render/screen_quad_stage.h"
 #include "buffer/framebuffer.h"
@@ -49,7 +49,7 @@ namespace SJH
 
 		// Effekseer / Box2D 등 서드파티 GL 코드가 이 VAO 가 바인딩된 채로
 		// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, X) 를 호출하면 VAO 의 EBO 참조가
-		// 덮어쓰여 glDrawElements → GL_INVALID_OPERATION 이 발생한다.
+		// 덮어쓰여 glDrawElements ->GL_INVALID_OPERATION 이 발생한다.
 		// 매 프레임 EBO 를 재핀해 원상복구.
 		if (auto ebo = mMesh.GetIndexBuffer())
 			ebo->Bind();

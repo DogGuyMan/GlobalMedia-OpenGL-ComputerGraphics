@@ -66,6 +66,10 @@ namespace SJH
 
         void SetScreenQuadMesh(Mesh *mesh) { mScreenQuadMesh = mesh; }
 
+        /// @brief disabled PassComponent 의 bypass blit 에 사용할 passthrough material.
+        /// @details cmd.passMaterial == nullptr 일 때 이 material 로 inputFB ->outputFB blit.
+        void SetBypassMaterial(Material *mat) { mBypassMat = mat; }
+
         /// @brief 마지막 ScreenQuad(PassComponent) 의 outputFB.
         /// @return nullptr = 이번 프레임 PassComponent 없음 — caller 가 sceneFB fallback.
         const Framebuffer *GetLastOutputFB() const { return mLastOutputFB; }
@@ -83,6 +87,7 @@ namespace SJH
     private:
         std::vector<DrawCommand> mItems;
         Mesh              *mScreenQuadMesh = nullptr;
+        Material          *mBypassMat      = nullptr;
         const Framebuffer *mLastOutputFB   = nullptr;
     };
 }

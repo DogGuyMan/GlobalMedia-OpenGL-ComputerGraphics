@@ -23,7 +23,7 @@ namespace TopdownShooter::Entity::Player
             if (owner)
             {
                 const auto& t = owner->GetTransform().Translate;
-                vmath::vec2 pos(t[0], t[2]);   // XZ 평면 → Box2D XY
+                vmath::vec2 pos(t[0], t[2]);   // XZ 평면 ->Box2D XY
                 vmath::vec2 dir = mBehavior->GetAttackDirection();
                 mSceneRoot->AddChild(mFactory(pos, dir));
             }

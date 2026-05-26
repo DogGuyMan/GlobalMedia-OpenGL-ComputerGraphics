@@ -8,7 +8,7 @@
 #include <vmath.h>
 
 namespace SJH::Scene { class Actor; class Camera; class PassComponent; }
-namespace SJH { class RenderTarget; class Framebuffer; class Mesh; }
+namespace SJH { class RenderTarget; class Framebuffer; class Mesh; class Material; }
 
 namespace SJH
 {
@@ -30,6 +30,9 @@ namespace SJH
 
         /// @brief ScreenQuad mesh 지정 — PassComponent DrawCommand 처리 시 사용.
         void SetScreenQuadMesh(Mesh *mesh);
+
+        /// @brief disabled PassComponent 의 bypass blit material 지정.
+        void SetBypassMaterial(Material *mat);
 
         /// @brief 이번 프레임 PassComponent 체인의 마지막 출력 FB.
         /// @return nullptr = PassComponent 없음 — caller 가 sceneFB fallback.

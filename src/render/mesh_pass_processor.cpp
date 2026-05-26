@@ -96,9 +96,13 @@ namespace SJH
             // ── ScreenQuad (PassComponent) ────────────────────────────────────────
             if (cmd.kind == DrawCommand::Kind::ScreenQuad)
             {
-                if (!cmd.inputFB || !cmd.outputFB || !cmd.passMaterial || !mScreenQuadMesh)
+                if (!cmd.inputFB || !cmd.outputFB || !mScreenQuadMesh)
                     continue;
-                auto *prog = cmd.passMaterial->GetProgram();
+                // passMaterial == nullptr ->disabled 패스 bypass: passthrough blit
+                Material *effectiveMat = cmd.passMaterial ? cmd.passMaterial : mBypassMat;
+                if (!effectiveMat)
+                    continue;
+                auto *prog = effectiveMat->GetProgram();
                 if (!prog)
                     continue;
 
@@ -106,11 +110,11 @@ namespace SJH
                 rc.SetDepthTest(false);
                 rc.SetBlend(false);
 
-                cmd.passMaterial->Properties.Textures["uScene"] = {
+                effectiveMat->Properties.Textures["uScene"] = {
                     cmd.inputFB->GetColorAttachment().get(), 0};
 
                 rc.UseProgram(*prog);
-                PropertyBlockSetter::Set(rc, cmd.passMaterial->Properties, *prog);
+                PropertyBlockSetter::Set(rc, effectiveMat->Properties, *prog);
 
                 rc.BindVAO(mScreenQuadMesh->GetVAO());
                 // VAO 오염 가드 — Effekseer/Box2D 가 EBO 를 덮어쓸 수 있음

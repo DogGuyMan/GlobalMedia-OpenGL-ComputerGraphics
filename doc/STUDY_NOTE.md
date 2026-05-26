@@ -2287,3 +2287,234 @@ assert(fb != nullptr && "ScreenQuadStage: null Framebuffer source");
 2. **서드파티 GL 코드는 VAO 상태를 오염시킬 수 있다** — Effekseer, Box2D, ImGui 등은 자체 GL 리소스를 정리하면서 `glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)` 또는 자신의 EBO 를 바인딩한다. 이때 우리 VAO 가 current binding 이면 오염.
 3. **mesh 생성 후 VAO 는 즉시 언바인딩하라** — `Mesh::Init()` 마지막에 `glBindVertexArray(0)`. 생성 직후 VAO 가 current 인 채로 다른 코드가 실행되는 창(window)을 없애는 것이 근본 대책.
 4. **assert 는 "이 조건이 참이어야 계속" 이다** — `assert(ptr != nullptr)` = "ptr 이 valid 할 때만 통과". `== nullptr` 로 쓰면 정상 케이스에서 abort.
+
+---
+
+# SP-2Camera-PassComponent — 실수 & 주의사항 학습 노트
+
+> commit `57f5779 [refactor] : 2 camera` 도입 후 발견한 두 가지 렌더링 버그.
+> WorldCamera + ScreenCamera 2-카메라 구조 + `PassComponent` PostFX 체인 통합 중 발생.
+
+---
+
+## Bug #1 — ScreenCamera 의 `BeginFrame` 이 WorldCamera 출력을 지워 MeshRenderer 가 사라짐
+
+### 증상
+
+commit `9e82e33 [dev] : Post FX 통합` 에서 정상 동작하던 씬 메쉬 렌더링이 `57f5779` 리팩터 후 전부 사라짐. Effekseer 파티클과 ImGui 는 정상 표시. 즉 **MeshRenderer 경유 DrawCommand 만** 화면에서 지워졌다.
+
+### 근본 원인
+
+2-카메라 구조에서 WorldCamera 와 ScreenCamera 가 **같은 `mSceneFB`** 를 렌더 타겟으로 공유한다 (의도된 설계 — ScreenCamera 가 World 출력 위에 HUD + PassComponent 를 합성).
+
+`SceneRenderer::Render` 는 카메라 목록을 순서대로 순회하며 `RenderWithCamera` 를 호출한다. `RenderWithCamera` 는 내부에서 **무조건** `rc.BeginFrame(*rt)` 를 호출하는데, `BeginFrame` 은:
+
+```cpp
+void DeviceContext::BeginFrame(RenderTarget &target) {
+    BindTarget(target);
+    glClearStencil(0);
+    Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);  // ← 무조건 clear
+    SetDepthTest(true, GL_LESS);
+    SetBlend(true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+```
+
+따라서 렌더 순서는:
+
+```
+[1] WorldCamera  → RenderWithCamera → BeginFrame(mSceneFB) → clear → 3D 씬 그리기   ✓
+[2] ScreenCamera → RenderWithCamera → BeginFrame(mSceneFB) → clear ← 1번 출력을 지움!
+                                                            → HUD/PassComponent 그리기
+```
+
+ScreenCamera 의 `BeginFrame` 이 WorldCamera 가 방금 그린 `mSceneFB` 를 완전히 지워버렸다.
+
+### 잘못 생각했던 해결책
+
+"ScreenCamera 에 별도 FB 를 주면 된다" — **이건 틀렸다**. 설계 의도가 *ScreenCamera 가 `mSceneFB` 를 사용해야* WorldCamera 출력 위에 HUD 가 합성된다. FB 를 바꾸면 합성 자체가 깨진다.
+
+### 올바른 수정 — `Camera::NoClear` 플래그
+
+```cpp
+// src/scene/camera.h 에 추가
+/// RenderWithCamera 진입 시 BeginFrame(clear) 대신 BindTarget+state 만 수행.
+/// ScreenCamera 전용 — WorldCamera 출력을 보존한 채 합성.
+bool NoClear = false;
+```
+
+```cpp
+// src/render/scene_renderer.cpp — RenderWithCamera
+auto &rc = DeviceContext::Get();
+if (cam.NoClear)
+{
+    rc.BindTarget(*rt);      // ← clear 없이 RT 바인딩만
+    rc.SetDepthTest(true);
+    rc.SetBlend(true);
+}
+else
+{
+    rc.BeginFrame(*rt);      // ← 기존 clear 포함 경로
+}
+```
+
+```cpp
+// main.cpp — ScreenCamera 설정
+screenCam->NoClear = true;  // WorldCamera 출력 보존 — clear 없이 합성
+screenCam->SetTargetRenderTarget(mSceneFB.get());
+```
+
+### 핵심 교훈
+
+**여러 카메라가 같은 RT 를 공유할 때, 두 번째 이후 카메라는 "이전 출력을 보존한 채 합성" 모드여야 한다.** Unity 의 경우 Camera Depth + Clear Flags("Don't Clear") 로 동일한 제어를 한다. 이 프로젝트에서는 `NoClear` 플래그가 그 역할을 담당한다.
+
+**`BeginFrame` = "이 RT 를 처음 쓰기 시작하는 카메라" 전용이다.** RT 를 이미 사용 중인 카메라가 추가로 그릴 때는 `BindTarget + state 설정` 만 해야 한다.
+
+---
+
+## Bug #2 — PassComponent 비활성화 시 `mSceneFB` 가 캡처된 것처럼 동결됨
+
+### 증상
+
+ImGui 에서 Gamma PassComponent 의 `Enabled` 를 false 로 끄는 순간, `mSceneFB` 의 최종 출력이 그 프레임에서 **정지 화면처럼 멈춘다**. 다시 true 로 켜면 복귀하지만, 끈 순간의 스냅샷이 유지되어 이후 프레임이 갱신되지 않는다.
+
+### 근본 원인
+
+PassComponent 체인 구조:
+
+```
+mSceneFB → [blurring] → postFXFBs[0] → [gamma] → postFXFBs[1] → [invert] → postFXFBs[2] → ...
+```
+
+각 `PassComponent` 의 `InputFB` / `OutputFB` 는 **`*const` 포인터** 다 — 생성 후 재배선 불가.
+
+```cpp
+class PassComponent : public Component {
+public:
+    SJH::Framebuffer *const InputFB;   // const 포인터 — 재배선 불가
+    SJH::Framebuffer *const OutputFB;
+    bool Enabled = true;
+    // ...
+};
+```
+
+기존 `CollectFromActor` 는 `Enabled == false` 인 PassComponent 를 **아예 submit 하지 않았다**:
+
+```cpp
+// ❌ 기존 코드
+if (pc->Enabled && pc->InputFB && pc->OutputFB && pc->mMaterial)
+{
+    // submit ...
+}
+// Enabled == false 면 이 블록 통째로 skip → outputFB 는 그 프레임에서 갱신 안 됨
+```
+
+Gamma 가 꺼지면 `postFXFBs[1]` 에 아무도 쓰지 않는다. 그러나 Invert 는 여전히 `postFXFBs[1]` 을 `InputFB` 로 읽어 blit 한다. 결과적으로 **지난 프레임에 Gamma 가 마지막으로 쓴 정지 이미지**가 체인 전체로 전파된다.
+
+### 수정 — Bypass-Rewire 패턴
+
+disabled 패스를 건너뛰는 게 아니라, **passthrough blit** 으로 `InputFB → OutputFB` 를 그대로 복사하여 체인 연결을 유지한다.
+
+**① `MeshPassProcessor` 에 bypass material 추가**
+
+```cpp
+// mesh_pass_processor.h
+class MeshPassProcessor {
+public:
+    void SetBypassMaterial(Material *mat) { mBypassMat = mat; }
+    // ...
+private:
+    Material *mBypassMat = nullptr;
+};
+```
+
+**② `Process()` — `passMaterial == nullptr` 이면 bypass material 사용**
+
+```cpp
+// mesh_pass_processor.cpp
+if (cmd.kind == DrawCommand::Kind::ScreenQuad)
+{
+    if (!cmd.inputFB || !cmd.outputFB || !mScreenQuadMesh)
+        continue;
+    // passMaterial == nullptr → disabled 패스 bypass: passthrough blit
+    Material *effectiveMat = cmd.passMaterial ? cmd.passMaterial : mBypassMat;
+    if (!effectiveMat) continue;
+    auto *prog = effectiveMat->GetProgram();
+    if (!prog) continue;
+
+    rc.BeginFrame(*cmd.outputFB);
+    // ...
+    effectiveMat->Properties.Textures["uScene"] = {cmd.inputFB->GetColorAttachment().get(), 0};
+    // ...
+}
+```
+
+**③ `CollectFromActor` — disabled 도 항상 submit, `passMaterial` 로 상태 전달**
+
+```cpp
+// scene_renderer.cpp — CollectFromActor
+if (auto *pc = actor.GetComponent<Scene::PassComponent>())
+{
+    if (pc->InputFB && pc->OutputFB)  // Enabled 체크 제거
+    {
+        DrawCommand cmd;
+        cmd.kind         = DrawCommand::Kind::ScreenQuad;
+        cmd.queueLayer   = pc->QueueOffset;
+        cmd.inputFB      = pc->InputFB;
+        cmd.outputFB     = pc->OutputFB;
+        // nullptr = bypass signal (passthrough blit)
+        cmd.passMaterial = (pc->Enabled && pc->mMaterial) ? pc->mMaterial : nullptr;
+        mProcessor.Submit(cmd);
+    }
+}
+```
+
+**④ main.cpp — bypass material 등록**
+
+```cpp
+mRenderSys.SetScreenQuadMesh(quadMesh);
+{
+    auto *bypassMat = reg.CreateSharedMaterial("mat_bypass_passthrough");
+    bypassMat->SetProgram(passthroughProg);  // 기존 passthrough 셰이더 재사용
+    mRenderSys.SetBypassMaterial(bypassMat);
+}
+```
+
+### 수정 후 동작
+
+```
+Gamma disabled:
+mSceneFB → [blurring] → postFXFBs[0] → [bypass blit] → postFXFBs[1] → [invert] → ...
+                                              ↑ passthrough: 0→1 그대로 복사, 매 프레임 갱신
+```
+
+체인이 끊기지 않고, disabled 패스는 입력을 출력으로 그대로 통과시킨다.
+
+### 핵심 교훈
+
+**PassComponent 의 `*const` 포인터 설계는 "체인 재배선 불가" 를 의미한다.** 이 제약 하에서 패스를 끄는 올바른 방법은 포인터를 바꾸는 게 아니라 **"아무것도 안 하는 passthrough material" 로 교체하는 것** 이다.
+
+**submit 단계에서 `passMaterial = nullptr` 로 신호를 보내고, 처리 단계에서 bypass material 로 fallback** 하는 패턴은 `Enabled` 상태가 DrawCommand 의 *분류자* 로 작동하게 한다. `Process()` 는 `passMaterial` 이 null 인지 아닌지만 보면 되고, `PassComponent` 의 `Enabled` 상태를 직접 알 필요가 없다.
+
+Unity 의 `Material.SetPass(-1)` (패스 없음) / Unreal 의 `NullMaterial` 과 동일한 개념.
+
+---
+
+## 체크리스트 (SP-2Camera-PassComponent)
+
+| # | 항목 | 확인 |
+|---|------|------|
+| 1 | 여러 카메라가 같은 RT 를 공유할 때, 두 번째 이후 카메라는 `NoClear = true` 로 설정했는가? | |
+| 2 | `BeginFrame` 은 RT 를 *처음 쓰는* 카메라에만 사용하는가? | |
+| 3 | PassComponent `*const` 포인터를 런타임에 재배선하려 했다면 설계 오류다 — bypass-rewire 패턴을 쓰는가? | |
+| 4 | disabled PassComponent 도 `DrawCommand` 로 submit 되는가? (`passMaterial = nullptr` 로 bypass 신호 전달) | |
+| 5 | `MeshPassProcessor` 에 `mBypassMat` (passthrough material) 이 등록되어 있는가? | |
+| 6 | startup 에서 `bypassMat->SetProgram(passthroughProg)` 후 `SetBypassMaterial` 을 호출했는가? | |
+
+---
+
+## 핵심 교훈 요약 (SP-2Camera-PassComponent)
+
+1. **다중 카메라가 RT 를 공유할 때는 "clear 모드" 와 "합성 모드" 를 구분하라** — WorldCamera = clear + 그리기, ScreenCamera = 보존(NoClear) + 합성. `BeginFrame` 은 "이 RT 를 처음 쓰는 카메라" 전용.
+2. **`*const` 멤버는 "생성 후 불변" 을 강제한다** — `PassComponent::InputFB/OutputFB` 는 재배선 불가. 동적 변경이 필요하면 DrawCommand 레벨에서 로직을 조합한다 (`passMaterial = nullptr` = bypass 신호).
+3. **체인 구조에서 한 단계를 건너뛰면 하위 단계는 stale 데이터를 읽는다** — disabled 패스도 반드시 `InputFB → OutputFB` 를 갱신해야 체인 전체가 매 프레임 살아있다. "아무것도 안 하는 passthrough blit" 이 그 역할.
+4. **`cmd.passMaterial = nullptr` 을 bypass 신호로 사용하는 패턴은 명확하다** — `Process()` 는 null 여부만 보면 되고, `Enabled` 상태를 직접 참조하지 않아 결합도가 낮다.

@@ -62,13 +62,13 @@ namespace TopdownShooter::Stage
             mSpawnTimer = 0.0f;
         }
 
-        // 전멸 감지 → 다음 웨이브
+        // 전멸 감지 ->다음 웨이브
         if (mWave > 0 && !mEnemies.empty() && LiveCount() == 0)
         {
             ++mWave;
             mEnemies.clear();
             mSpawnTimer = 0.0f;
-            spdlog::info("[Wave] All cleared → Wave {}", mWave);
+            spdlog::info("[Wave] All cleared ->Wave {}", mWave);
         }
 
         mSpawnTimer += dt;

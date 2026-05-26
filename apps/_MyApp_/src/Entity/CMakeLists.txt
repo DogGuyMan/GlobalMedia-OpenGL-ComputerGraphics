@@ -16,7 +16,7 @@ target_include_directories(myapp_entity
 )
 
 # SJH::scene    — Component/Actor 베이스 (헤더 노출)
-# MyApp::Algebraic — LifeComponents.h → Stat
+# MyApp::Algebraic — LifeComponents.h ->Stat
 # SJH::playable  — PlayerBehavior.h / BulletSpawnPlayable.h 헤더 노출
 # SJH::sprite  (PRIVATE) — PlayerBehavior.cpp 가 SpriteSequencePlayable 메서드 호출
 # game_deps    (PRIVATE) — SimplePursueAI.cpp / PlayerBehavior.cpp 가 box2d 헤더 사용

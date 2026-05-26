@@ -44,6 +44,11 @@ namespace SJH
 		mProcessor.SetScreenQuadMesh(mesh);
 	}
 
+	void SceneRenderer::SetBypassMaterial(Material *mat)
+	{
+		mProcessor.SetBypassMaterial(mat);
+	}
+
 	void SceneRenderer::RenderWithCamera(Scene::Camera &cam)
 	{
 		auto *rt = cam.GetTargetRenderTarget();
@@ -55,7 +60,17 @@ namespace SJH
 		}
 
 		auto &rc = DeviceContext::Get();
-		rc.BeginFrame(*rt);
+		// NoClear(ScreenCamera): 이전 카메라 RT 출력 보존 — clear 없이 바인드+state 만.
+		if (cam.NoClear)
+		{
+			rc.BindTarget(*rt);
+			rc.SetDepthTest(true);
+			rc.SetBlend(true);
+		}
+		else
+		{
+			rc.BeginFrame(*rt);
+		}
 
 		const auto viewMat     = cam.GetViewMatrix();
 		const auto projMat     = cam.GetProjectionMatrix();
@@ -120,17 +135,17 @@ namespace SJH
 				}
 			}
 
-			// ScreenQuad — PassComponent 수집
+			// ScreenQuad — PassComponent 수집 (disabled = bypass blit, passMaterial=nullptr)
 			if (auto *pc = actor.GetComponent<Scene::PassComponent>())
 			{
-				if (pc->Enabled && pc->InputFB && pc->OutputFB && pc->mMaterial)
+				if (pc->InputFB && pc->OutputFB)
 				{
 					DrawCommand cmd;
 					cmd.kind         = DrawCommand::Kind::ScreenQuad;
 					cmd.queueLayer   = pc->QueueOffset;
 					cmd.inputFB      = pc->InputFB;
 					cmd.outputFB     = pc->OutputFB;
-					cmd.passMaterial = pc->mMaterial;
+					cmd.passMaterial = (pc->Enabled && pc->mMaterial) ? pc->mMaterial : nullptr;
 					mProcessor.Submit(cmd);
 				}
 			}

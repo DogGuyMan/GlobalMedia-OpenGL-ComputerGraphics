@@ -1,6 +1,6 @@
 /**
  * @file screen_quad_stage.h
- * @brief N 개 FBO color attachment → backbuffer 합성 단계.
+ * @brief N 개 FBO color attachment ->backbuffer 합성 단계.
  *
  * @details
  *  ### 존재 의의
@@ -12,7 +12,7 @@
  *
  *  ### 정통 엔진 매핑
  *  - Unity URP `FinalBlitPass` / `FinalPostProcessPass`
- *  - Unreal `FRCPassPostProcessTonemap` → backbuffer blit
+ *  - Unreal `FRCPassPostProcessTonemap` ->backbuffer blit
  *  - Godot `RenderingServer::canvas_item_add_texture_rect` (2D blit final)
  *  - Cocos `Backend::RenderPipeline` final blit step
  *
