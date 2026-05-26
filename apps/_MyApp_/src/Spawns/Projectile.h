@@ -1,5 +1,5 @@
-#ifndef _TOPDOWNSHOOTER_CARRIER_COMPONENTS__
-#define _TOPDOWNSHOOTER_CARRIER_COMPONENTS__
+#ifndef _TOPDOWNSHOOTER_SPAWN_CARRIER_COMPONENTS__
+#define _TOPDOWNSHOOTER_SPAWN_CARRIER_COMPONENTS__
 #include "Entity/Components/Components.Interfaces.h"
 #include "Physics/Components.Interfaces.h"
 #include "Physics/PhysicsComponent.h"
@@ -12,7 +12,7 @@
 #include <spdlog/spdlog.h>
 #include <vmath.h>
 
-namespace TopdownShooter::Carrier
+namespace TopdownShooter::Spawn::Carrier
 {
 	class Projectile : public SJH::Scene::Component,
 	                   public Physics::IContactable,
@@ -78,5 +78,5 @@ namespace TopdownShooter::Carrier
 			return;
 		}
 	};
-}; // namespace TopdownShooter::Carrier
-#endif //_TOPDOWNSHOOTER_CARRIER_COMPONENTS__
+}; // namespace TopdownShooter::Spawner
+#endif //_TOPDOWNSHOOTER_SPAWN_CARRIER_COMPONENTS__
