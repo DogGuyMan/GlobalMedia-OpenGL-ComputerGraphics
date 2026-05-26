@@ -1,9 +1,6 @@
 #include "render/scene_renderer.h"
-#include "common/constants.h"
 #include "material/material.h"
 #include "object/light.h"
-#include "program/program.h"
-#include "program/program_uniforms.h"
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"
 #include "render/render_target.h"
@@ -16,8 +13,11 @@
 
 namespace SJH
 {
-	void SceneRenderer::Render(RenderTarget &defaultTarget)
+	void SceneRenderer::Render(RenderTarget & /*defaultTarget*/)
 	{
+		// defaultTarget 파라미터는 IRenderStage 인터페이스 준수를 위해 유지 (ScreenQuadStage 등 다른
+		// Stage 는 이 target 을 출력으로 사용). SceneRenderer 는 각 Camera 의 전용 RT 만 사용한다.
+
 		// 1. SceneContext 에서 Camera 컬렉션 직접 조회 — DFS 폐기 (Cocos2D `Scene::_cameras` 정통).
 		const auto &cameras = Scene::Director::Get().GetContext().GetCameras();
 		if (cameras.empty())
@@ -31,7 +31,7 @@ namespace SJH
 		for (auto *cam : cameras)
 		{
 			if (cam->IsEnabled())
-				RenderWithCamera(*cam, defaultTarget);
+				RenderWithCamera(*cam);
 		}
 	}
 
@@ -39,13 +39,18 @@ namespace SJH
 	// public void AddCamera(Scene::Camera * camera) { cameras.push_back(camera); std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; }); }
 	// public void RemoveCamera(Scene::Camera * camera) { cameras.push_back(camera); std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; }); }
 
-	void SceneRenderer::RenderWithCamera(Scene::Camera &cam, RenderTarget &defaultTarget)
+	void SceneRenderer::RenderWithCamera(Scene::Camera &cam)
 	{
-		auto &rc = DeviceContext::Get();
+		auto *rt = cam.GetTargetRenderTarget();
+		if (!rt)
+		{
+			spdlog::warn("SceneRenderer: Camera '{}' 에 RenderTarget 없음 — 프레임 skip.",
+			             cam.GetOwner() ? cam.GetOwner()->GetName() : "?");
+			return;
+		}
 
-		RenderTarget &target = cam.GetTargetRenderTarget() ? *cam.GetTargetRenderTarget()
-		                                                   : defaultTarget;
-		rc.BeginFrame(target);
+		auto &rc = DeviceContext::Get();
+		rc.BeginFrame(*rt);
 
 		const auto viewMat = cam.GetViewMatrix();
 		const auto projMat = cam.GetProjectionMatrix();
@@ -79,90 +84,12 @@ namespace SJH
 
 		auto programs = ResourceRegistry::Get().GetAllPrograms();
 
-		SendLightUniforms(programs, dir, points, spots, viewPos);
+		mDispatcher.Dispatch(programs, dir, points, spots, viewPos);
 
 		mProcessor.Clear();
 		CollectFromActor(Scene::Director::Get().Root(), viewMat, cullingMask);
 		mProcessor.SortMultiStage();
 		mProcessor.Process(rc, viewMat, projMat);
-	}
-
-	void SceneRenderer::SendLightUniforms(const std::vector<Program *> &programs,
-	                                      DirLight *dir,
-	                                      const std::vector<PointLight *> &points,
-	                                      const std::vector<SpotLight *> &spots,
-	                                      const vmath::vec3 &viewPos)
-	{
-
-		if (static_cast<int>(points.size()) > Const::MAX_POINT_LIGHTS)
-			spdlog::warn("SceneRenderer — PointLight {} 개 발견. 셰이더 MAX_POINT_LIGHTS={} 초과분 무시.",
-			             points.size(), Const::MAX_POINT_LIGHTS);
-		if (static_cast<int>(spots.size()) > Const::MAX_SPOT_LIGHTS)
-			spdlog::warn("SceneRenderer — SpotLight {} 개 발견. 셰이더 MAX_SPOT_LIGHTS={} 초과분 무시.",
-			             spots.size(), Const::MAX_SPOT_LIGHTS);
-
-		auto &rc = DeviceContext::Get();
-		for (const auto *prog : programs)
-		{
-			if (!prog)
-				continue;
-			// Lighting schema sentinel — UNI_VIEW_POS 가 program 의 UniformCache 에 없으면
-			//  본 program 은 lighting 미사용 (simple/window/postfx 등) -> 송신 통째 skip.
-			//  -> warn-once 노이즈 차단 + glUseProgram 비용 회피.
-			if (prog->GetLocation(Const::UNI_VIEW_POS) < 0)
-				continue;
-			rc.UseProgram(*prog);
-
-			// viewPos — Phong specular 계산용.
-			Uniforms::SetVec3(*prog, Const::UNI_VIEW_POS, viewPos);
-
-			// DirLight — 1개. 없으면 enabled=0 만 전송 (uniform 0 보장).
-			if (dir)
-			{
-				Uniforms::SetDirLight(*prog, Const::UNI_DIR_LIGHT, *dir, dir->GetWorldDirection());
-				Uniforms::SetInt(*prog, Const::UNI_DIR_LIGHT_ENABLED, 1);
-			}
-			else
-			{
-				Uniforms::SetInt(*prog, Const::UNI_DIR_LIGHT_ENABLED, 0);
-			}
-
-			// PointLights — 최대 MAX_POINT_LIGHTS 개. 초과는 무시. 부족하면 enabled=0 으로 slot 채움.
-			for (std::size_t i = 0; i < static_cast<std::size_t>(Const::MAX_POINT_LIGHTS); ++i)
-			{
-				const std::string idxStr = Const::UNI_POINT_LIGHTS_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
-				const std::string enStr = Const::UNI_POINT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
-				if (i < points.size())
-				{
-					Uniforms::SetPointLight(*prog, idxStr.c_str(), *points[i],
-					                        points[i]->GetWorldPosition());
-					Uniforms::SetInt(*prog, enStr.c_str(), 1);
-				}
-				else
-				{
-					Uniforms::SetInt(*prog, enStr.c_str(), 0);
-				}
-			}
-
-			// SpotLights — 최대 MAX_SPOT_LIGHTS 개. 초과는 무시. 부족하면 enabled=0 으로 slot 채움.
-			// (PointLights 와 완전 동일 패턴 — 셰이더 spotLights[]/spotLightsEnabled[] 배열.)
-			for (std::size_t i = 0; i < static_cast<std::size_t>(Const::MAX_SPOT_LIGHTS); ++i)
-			{
-				const std::string idxStr = Const::UNI_SPOT_LIGHTS_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
-				const std::string enStr = Const::UNI_SPOT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
-				if (i < spots.size())
-				{
-					Uniforms::SetSpotLight(*prog, idxStr.c_str(), *spots[i],
-					                       spots[i]->GetWorldPosition(),
-					                       spots[i]->GetWorldDirection());
-					Uniforms::SetInt(*prog, enStr.c_str(), 1);
-				}
-				else
-				{
-					Uniforms::SetInt(*prog, enStr.c_str(), 0);
-				}
-			}
-		}
 	}
 
 	void SceneRenderer::CollectFromActor(const Scene::Actor &actor,

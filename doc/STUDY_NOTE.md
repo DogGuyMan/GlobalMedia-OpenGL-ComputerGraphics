@@ -2195,3 +2195,95 @@ model->GetMaterial()
 9. **라이브러리 컨벤션은 "표준" 을 가정하지 말고 검증할 것** — vmath 의 `mat * mat` 은 표준 column convention 인데 `vec * mat` 만 row convention 이라 비대칭. "GLSL 처럼 `M * v` 로 쓰면 되겠지" 가 컴파일 에러 + 회전 부호 반전을 동시에 부른다. **CPU 에서 정점 변환은 가능한 한 피하고, 꼭 필요하면 대각 행렬에만 적용 또는 `M.transpose()` 사용**. 더 일반적으로: "내가 쓰는 라이브러리의 operator 정의를 직접 본 적이 없으면 가정하지 말 것".
 10. **텍스처 연결은 3-step** — `glActiveTexture(unit)` -> `glBindTexture(handle)` -> `glUniform1i(sampler, unit)`. 세 단계가 **각각 독립된 GL state** 를 바꾸며, 하나라도 빠지면 조용히 실패. 특히 `glUniform1i` 만으로는 "매핑" 만 설정할 뿐 실제 텍스처가 연결되지 않음. "AddTexture 도 했고 uniform 도 세팅했는데 화면이 검정" 이면 `glBindTexture` 호출 여부부터 의심.
 11. **암묵적 순서 계약은 리팩토링 폭탄** — 두 개 이상의 배열/인덱스가 "같은 순서로 전진해야 성립" 하는 코드는 컴파일러가 강제하지 않아 조용히 깨진다. 순서 의존 코드가 발견되면 **`struct` / `map` / enum 으로 관계를 박제** 하는 것이 안전. 인덱스 기반 암묵 계약 -> 이름 기반 명시 계약으로 이전.
+
+---
+
+# SP-UniversalRenderTarget — 실수 & 주의사항 학습 노트
+
+> FBO 멀티패스 파이프라인 (카메라 → FBO → ScreenQuadStage → backbuffer) 도입 중 발견한 실수.
+
+## Priority 1: glDrawElements → GL_INVALID_OPERATION (0x502)
+
+### 1-1. 서드파티 GL 코드가 바인딩된 VAO 의 EBO 를 덮어쓴다
+
+**증상**: ScreenQuadStage::Render 에서 `glDrawElements` 가 `GL_INVALID_OPERATION (0x502)` 를 반환. VAO id, indexCount, programID 를 로그로 찍으면 전부 유효한데 draw 만 실패.
+
+**핵심 원리**: OpenGL Core Profile 에서 `GL_ELEMENT_ARRAY_BUFFER` 바인딩은 **VAO 상태의 일부**다. 즉, VAO 가 current binding 인 상태에서 `glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, X)` 를 호출하면 그 VAO 의 EBO 참조가 X 로 **덮어쓰여진다**.
+
+```
+glBindVertexArray(1);               ← VAO 1 이 current
+  ...
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); ← VAO 1 의 EBO 참조가 0(없음)으로 바뀜
+  ...
+glBindVertexArray(1);               ← 나중에 복원해도 "덮어쓰인 상태(EBO=0)"가 복원됨
+glDrawElements(...);                ← GL_INVALID_OPERATION — EBO 없음
+```
+
+**발생 경로**: `Mesh::CreateScreenQuad()` 가 VAO 를 생성·설정한 뒤 VAO 가 언바인딩되지 않은 채로 남음. 그 직후 `Effekseer::Init()` / `Box2D::World 생성` 등 서드파티 GL 초기화가 내부에서 `glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ...)` 를 호출 → 현재 VAO(screen quad VAO) 의 EBO 가 오염.
+
+```cpp
+// startup() 내 순서
+reg.RegisterMesh("mesh_screen_quad", Mesh::CreateScreenQuad());
+// ↑ 이 시점 이후에도 screen quad VAO(id=1)가 current binding 으로 남아 있음
+
+Director::Get().Init();  // ← Effekseer/Box2D 초기화 → VAO 1 의 EBO 참조가 덮어쓰여짐
+```
+
+**진단 방법**:
+
+```cpp
+rc.BindVAO(mMesh.GetVAO());
+GLint ebo = 0;
+glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &ebo);
+spdlog::info("EBO_BINDING={}", ebo);  // 0 이면 오염 확정
+```
+
+**fix — 매 프레임 EBO 재핀**:
+
+```cpp
+// ScreenQuadStage::Render 안에서
+rc.BindVAO(mMesh.GetVAO());
+// 서드파티 코드가 EBO 를 덮어쓸 수 있으므로 매 프레임 재핀.
+if (auto ebo = mMesh.GetIndexBuffer())
+    ebo->Bind();
+```
+
+`glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)` 를 현재 VAO 가 바인딩된 채로 호출하면 VAO 의 EBO 참조가 ebo 로 복원된다. 매 프레임 overhead 는 GL 호출 1회 — 무시할 수준.
+
+**장기 대책**: `Mesh::Init()` 마지막에 `glBindVertexArray(0)` 을 추가해 mesh 생성 직후 VAO 를 언바인딩하면, 이후 서드파티 코드가 어떤 EBO 를 바인딩해도 이미 언바인딩된 VAO 에는 영향 없음.
+
+---
+
+### 1-2. `assert(mSources[i] == nullptr)` — assert 방향 반전
+
+```cpp
+// ❌ 소스가 유효할 때 assert 가 fire 됨 (의도 완전 반대)
+assert(mSources[i] == nullptr && "...");
+
+// ✅ 소스가 null 일 때 abort 해야 함
+assert(fb != nullptr && "ScreenQuadStage: null Framebuffer source");
+```
+
+**핵심**: assert 는 "이 조건이 **참이어야 정상**" 이다. "null 이어서는 안 된다" 는 `!= nullptr` 로 써야 한다.
+
+**판별법**: assert 메시지가 "... 는 null 이어서는 안 된다" 인데 조건이 `== nullptr` 이면 즉시 의심.
+
+---
+
+## 체크리스트 (SP-UniversalRenderTarget)
+
+| # | 항목 | 확인 |
+|---|------|------|
+| 1 | 서드파티 GL 라이브러리(`Effekseer`, `Box2D`, ImGui 등) 초기화 전에 우리 VAO 가 언바인딩되어 있는가? | |
+| 2 | `glDrawElements` 실패 시 `GL_ELEMENT_ARRAY_BUFFER_BINDING` 을 쿼리해서 EBO 가 0 인지 확인했는가? | |
+| 3 | FBO 를 소스로 쓰는 draw stage 에서 `BindVAO` 직후 `GetIndexBuffer()->Bind()` 로 EBO 를 재핀하는가? | |
+| 4 | assert 조건이 "이 값이 **유효해야** 계속 실행" 방향인가? (null 금지 = `!= nullptr`) | |
+
+---
+
+## 핵심 교훈 요약 (SP-UniversalRenderTarget)
+
+1. **`GL_ELEMENT_ARRAY_BUFFER` 는 VAO 상태다** — VAO 바인딩 중 EBO 를 교체하면 VAO 자체가 변경된다. `glBindVertexArray` 복원은 "마지막으로 기록된 상태" 를 복원할 뿐, 원래 EBO 를 마법처럼 복원하지 않는다.
+2. **서드파티 GL 코드는 VAO 상태를 오염시킬 수 있다** — Effekseer, Box2D, ImGui 등은 자체 GL 리소스를 정리하면서 `glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)` 또는 자신의 EBO 를 바인딩한다. 이때 우리 VAO 가 current binding 이면 오염.
+3. **mesh 생성 후 VAO 는 즉시 언바인딩하라** — `Mesh::Init()` 마지막에 `glBindVertexArray(0)`. 생성 직후 VAO 가 current 인 채로 다른 코드가 실행되는 창(window)을 없애는 것이 근본 대책.
+4. **assert 는 "이 조건이 참이어야 계속" 이다** — `assert(ptr != nullptr)` = "ptr 이 valid 할 때만 통과". `== nullptr` 로 쓰면 정상 케이스에서 abort.

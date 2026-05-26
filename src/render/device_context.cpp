@@ -12,7 +12,6 @@ namespace SJH
 {
 	DeviceContext &DeviceContext::Get()
 	{
-		// C++11+ 정적 지역 변수 초기화는 스레드 안전.
 		static DeviceContext instance;
 		return instance;
 	}

@@ -6,7 +6,8 @@ add_library(sjhopengl_render STATIC
     pipeline_state_setter.cpp   # SP-PipelineSetter — GL state machine 분리 (Applier 패턴)
     property_block_setter.cpp   # SP-PropertyBlockSetter — 옛 MaterialApplier rename + 시그니처 정밀화
     scene_renderer.cpp
-    # screen_quad_stage.cpp       # SP-UniversalRenderTarget Phase A — N FBO → backbuffer 합성
+    light_uniform_dispatcher.cpp  # Phase 2 — SendLightUniforms SceneRenderer 에서 분리
+    screen_quad_stage.cpp         # SP-UniversalRenderTarget Phase A — N FBO → backbuffer 합성
 )
 add_library(SJH::render ALIAS sjhopengl_render)
 

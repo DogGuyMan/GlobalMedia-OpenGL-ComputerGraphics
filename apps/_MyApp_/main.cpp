@@ -25,9 +25,12 @@
 #include <tweeny/tweeny.h>
 #include <cmath>
 #include "Stage/StageBuilder.h"
+#include "buffer/framebuffer.h"
 #include "common/common.h"
+#include "object/mesh.h"
 #include "render/render_target.h"
 #include "render/scene_renderer.h"
+#include "render/screen_quad_stage.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
@@ -76,6 +79,16 @@ namespace TopdownShooter
 			glfwGetFramebufferSize(window, &fbW, &fbH);
 			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
+			mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
+
+			// Step 4-b: ScreenQuadStage — passthrough 셰이더 + ScreenQuad 메쉬 등록
+			auto *passthroughProg = reg.CreateProgram(
+			    "screen_passthrough",
+			    "resources/shaders/passthrough.vs",
+			    "resources/shaders/passthrough.fs");
+			auto *quadMesh = reg.RegisterMesh("mesh_screen_quad", SJH::Mesh::CreateScreenQuad());
+			mScreenQuadStage = std::make_unique<SJH::ScreenQuadStage>(*passthroughProg, *quadMesh);
+			mScreenQuadStage->SetSources({mSceneFB.get()});
 
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
@@ -88,7 +101,7 @@ namespace TopdownShooter
 			camCtrl->SetMouseInput(&mMouse)
 			    .SetCamera(cam)
 			    .SetUp();
-			cam->SetTargetRenderTarget(nullptr);
+			cam->SetTargetRenderTarget(mSceneFB.get()); // Step 3: Camera → FBO (backbuffer 직접 출력 차단)
 
 			mCameraActor = dir.Root().AddChild(std::move(camActor));
 			mCamera = cam;
@@ -182,6 +195,9 @@ namespace TopdownShooter
 				mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
 				if (mCamera)
 					mCamera->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
+				mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
+				if (mScreenQuadStage)
+					mScreenQuadStage->SetSources({mSceneFB.get()});
 			}
 
 			mKeyboard.PollHeld(window);
@@ -193,6 +209,7 @@ namespace TopdownShooter
 
 			// SpriteRenderer.Update 가 uUvRect / uTint / uFlipX 자동 송신 — main 무동작.
 			mRenderSys.Render(*mDefaultTarget);
+			mScreenQuadStage->Render(*mDefaultTarget);
 
 			// === M5 — Effekseer 렌더 (SceneRenderer 직후, swap 전) ===
 			if (mCamera)
@@ -304,6 +321,8 @@ namespace TopdownShooter
 	  private:
 		SJH::SceneRenderer mRenderSys;
 		SJH::RenderTargetUPtr mDefaultTarget;
+		SJH::FramebufferUPtr mSceneFB;
+		std::unique_ptr<SJH::ScreenQuadStage> mScreenQuadStage;
 		SJH::Scene::Actor *mCameraActor = nullptr;
 		SJH::Scene::Actor *mSpriteActor = nullptr;
 		SJH::Scene::Camera *mCamera = nullptr;
