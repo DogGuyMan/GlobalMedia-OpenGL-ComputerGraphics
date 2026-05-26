@@ -30,13 +30,16 @@ namespace SJH
 		}
 
 		// 2. Unity Camera.depth 정렬 — 작은 값 먼저.
-		std::sort(cameras.begin(), cameras.end(),
-		                 [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; });
+		std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; });
 
 		// 3. 각 Camera 마다 1패스 실행 — target FB / view / proj 자동.
 		for (auto *cam : cameras)
 			RenderWithCamera(*cam, defaultTarget);
 	}
+
+	// std::vector<Scene::Camera *> cameras;
+	// public void AddCamera(Scene::Camera * camera) { cameras.push_back(camera); std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; }); }
+	// public void RemoveCamera(Scene::Camera * camera) { cameras.push_back(camera); std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; }); }
 
 	void SceneRenderer::CollectCameras(const Scene::Actor &actor,
 	                                   std::vector<Scene::Camera *> &out)
@@ -73,13 +76,13 @@ namespace SJH
 
 		DirLight *dir = nullptr;
 		std::vector<PointLight *> points;
-		SpotLight *spot = nullptr;
-		CollectLights(Scene::Director::Get().Root(), dir, points, spot);
+		std::vector<SpotLight *> spots;
+		CollectLights(Scene::Director::Get().Root(), dir, points, spots);
 
 		std::unordered_set<const Program *> programs;
 		CollectPrograms(Scene::Director::Get().Root(), programs);
 
-		SendLightUniforms(programs, dir, points, spot, viewPos);
+		SendLightUniforms(programs, dir, points, spots, viewPos);
 
 		mProcessor.Clear();
 		CollectFromActor(Scene::Director::Get().Root(), viewMat, cullingMask);
@@ -90,7 +93,7 @@ namespace SJH
 	void SceneRenderer::CollectLights(const Scene::Actor &actor,
 	                                  DirLight *&outDir,
 	                                  std::vector<PointLight *> &outPoints,
-	                                  SpotLight *&outSpot)
+	                                  std::vector<SpotLight *> &outSpots)
 	{
 		if (!actor.IsActive())
 			return;
@@ -113,16 +116,11 @@ namespace SJH
 		if (auto *l = actor.GetComponent<SpotLight>())
 		{
 			if (l->IsEnabled())
-			{
-				if (outSpot == nullptr)
-					outSpot = l;
-				else
-					spdlog::warn("SceneRenderer::CollectLights — SpotLight 중복 발견. 첫 1개만 사용.");
-			}
+				outSpots.push_back(l);
 		}
 
 		for (const auto &child : actor.GetChildren())
-			CollectLights(*child, outDir, outPoints, outSpot);
+			CollectLights(*child, outDir, outPoints, outSpots);
 	}
 
 	void SceneRenderer::CollectPrograms(const Scene::Actor &actor,
@@ -144,15 +142,18 @@ namespace SJH
 	void SceneRenderer::SendLightUniforms(const std::unordered_set<const Program *> &programs,
 	                                      DirLight *dir,
 	                                      const std::vector<PointLight *> &points,
-	                                      SpotLight *spot,
+	                                      const std::vector<SpotLight *> &spots,
 	                                      const vmath::vec3 &viewPos)
 	{
-		// lighting.fs 의 셰이더 컨벤션 매핑 (Const::NUM_POINT_LIGHTS 와 일치).
+		// lighting.fs 의 셰이더 컨벤션 매핑 (Const::MAX_POINT_LIGHTS / MAX_SPOT_LIGHTS 와 일치).
 		// 누락 uniform 은 첫 호출 1회 warn (Diagnostics::UniformDiagnostics) — lighting.fs 사용
 		//   안 하는 program (e.g., simple.fs) 은 모든 light uniform 누락 warn 정상.
-		if (static_cast<int>(points.size()) > Const::NUM_POINT_LIGHTS)
-			spdlog::warn("SceneRenderer — PointLight {} 개 발견. 셰이더 NUM_POINT_LIGHTS={} 초과분 무시.",
-			             points.size(), Const::NUM_POINT_LIGHTS);
+		if (static_cast<int>(points.size()) > Const::MAX_POINT_LIGHTS)
+			spdlog::warn("SceneRenderer — PointLight {} 개 발견. 셰이더 MAX_POINT_LIGHTS={} 초과분 무시.",
+			             points.size(), Const::MAX_POINT_LIGHTS);
+		if (static_cast<int>(spots.size()) > Const::MAX_SPOT_LIGHTS)
+			spdlog::warn("SceneRenderer — SpotLight {} 개 발견. 셰이더 MAX_SPOT_LIGHTS={} 초과분 무시.",
+			             spots.size(), Const::MAX_SPOT_LIGHTS);
 
 		auto &rc = DeviceContext::Get();
 		for (const auto *prog : programs)
@@ -180,8 +181,8 @@ namespace SJH
 				Uniforms::SetInt(*prog, Const::UNI_DIR_LIGHT_ENABLED, 0);
 			}
 
-			// PointLights — 최대 NUM_POINT_LIGHTS 개. 초과는 무시. 부족하면 enabled=0 으로 slot 채움.
-			for (std::size_t i = 0; i < static_cast<std::size_t>(Const::NUM_POINT_LIGHTS); ++i)
+			// PointLights — 최대 MAX_POINT_LIGHTS 개. 초과는 무시. 부족하면 enabled=0 으로 slot 채움.
+			for (std::size_t i = 0; i < static_cast<std::size_t>(Const::MAX_POINT_LIGHTS); ++i)
 			{
 				const std::string idxStr = Const::UNI_POINT_LIGHTS_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
 				const std::string enStr = Const::UNI_POINT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
@@ -197,16 +198,23 @@ namespace SJH
 				}
 			}
 
-			// SpotLight — 1개.
-			if (spot)
+			// SpotLights — 최대 MAX_SPOT_LIGHTS 개. 초과는 무시. 부족하면 enabled=0 으로 slot 채움.
+			// (PointLights 와 완전 동일 패턴 — 셰이더 spotLights[]/spotLightsEnabled[] 배열.)
+			for (std::size_t i = 0; i < static_cast<std::size_t>(Const::MAX_SPOT_LIGHTS); ++i)
 			{
-				Uniforms::SetSpotLight(*prog, "spotLight", *spot,
-				                       spot->GetWorldPosition(), spot->GetWorldDirection());
-				Uniforms::SetInt(*prog, "spotLightEnabled", 1);
-			}
-			else
-			{
-				Uniforms::SetInt(*prog, "spotLightEnabled", 0);
+				const std::string idxStr = Const::UNI_SPOT_LIGHTS_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
+				const std::string enStr = Const::UNI_SPOT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
+				if (i < spots.size())
+				{
+					Uniforms::SetSpotLight(*prog, idxStr.c_str(), *spots[i],
+					                       spots[i]->GetWorldPosition(),
+					                       spots[i]->GetWorldDirection());
+					Uniforms::SetInt(*prog, enStr.c_str(), 1);
+				}
+				else
+				{
+					Uniforms::SetInt(*prog, enStr.c_str(), 0);
+				}
 			}
 		}
 	}

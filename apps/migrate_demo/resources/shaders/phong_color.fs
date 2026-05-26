@@ -45,15 +45,16 @@ struct SpotLight {
         vec3 specular;
 };
 
-#define NUM_POINT_LIGHTS 2
+#define MAX_POINT_LIGHTS 16
+#define MAX_SPOT_LIGHTS  16
 
-uniform DirLight dirLight;
-uniform PointLight pointLights[NUM_POINT_LIGHTS];
-uniform SpotLight spotLight;
+uniform DirLight   dirLight;
+uniform PointLight pointLights[MAX_POINT_LIGHTS];
+uniform SpotLight  spotLights      [MAX_SPOT_LIGHTS];
 
 uniform int dirLightEnabled;
-uniform int pointLightsEnabled[NUM_POINT_LIGHTS];
-uniform int spotLightEnabled;
+uniform int pointLightsEnabled[MAX_POINT_LIGHTS];
+uniform int spotLightsEnabled[MAX_SPOT_LIGHTS];
 
 uniform vec3 viewPos;
 
@@ -131,13 +132,15 @@ void main()
         if (dirLightEnabled != 0)
                 result += CalcDirLight(dirLight, pixelNorm, viewDir);
 
-        for (int i = 0; i < NUM_POINT_LIGHTS; ++i) {
+        for (int i = 0; i < MAX_POINT_LIGHTS; ++i) {
                 if (pointLightsEnabled[i] != 0)
                         result += CalcPointLight(pointLights[i], pixelNorm, viewDir);
         }
 
-        if (spotLightEnabled != 0)
-                result += CalcSpotLight(spotLight, pixelNorm, viewDir);
+        for (int i = 0; i < MAX_SPOT_LIGHTS; ++i) {
+                if (spotLightsEnabled[i] != 0)
+                        result += CalcSpotLight(spotLights[i], pixelNorm, viewDir);
+        }
 
         fragColor = vec4(result, 1.0);
 }
