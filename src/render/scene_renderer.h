@@ -38,6 +38,9 @@ namespace SJH
         void Render(RenderTarget& defaultTarget,
                     const vmath::mat4& viewMat, const vmath::mat4& projMat);
 
+	// 상시 Camera를 찾는것은 이상하다 RenderTarget Plane을 가지고 있음.
+	// Light 는 어떤 관점으로 바라봐야 하지?
+
     private:
         /// @brief Actor 트리 DFS — MeshRenderer 수집 + Queue 에 Submit.
         /// @param cullingMask Camera::GetCullingMask() — actor.GetLayer() 와 AND 검사로 필터 (SP4 D-15).
@@ -51,12 +54,12 @@ namespace SJH
         void RenderWithCamera(Scene::Camera& cam, RenderTarget& defaultTarget);
 
         /// @brief Actor 트리 DFS — DirLight/PointLight/SpotLight 컴포넌트 수집 (SP5).
-        /// @details DirLight 첫 1개, PointLight 모두 (셰이더 #define NUM_POINT_LIGHTS 2 와 매칭),
-        ///          SpotLight 첫 1개. 초과 발견 시 spdlog::warn + 첫 N 만 사용.
+        /// @details DirLight 첫 1개, PointLight/SpotLight 는 모두 수집 (셰이더 MAX_POINT_LIGHTS/MAX_SPOT_LIGHTS=16 와 매칭).
+        ///          DirLight 중복은 첫 1개만 사용 + warn. PointLight/SpotLight 초과는 SendLightUniforms 에서 warn + 무시.
         void CollectLights(const Scene::Actor& actor,
                            DirLight*& outDir,
                            std::vector<PointLight*>& outPoints,
-                           SpotLight*& outSpot);
+                           std::vector<SpotLight*>& outSpots);
 
         /// @brief Actor 트리 DFS — MeshRenderer 의 Material 의 Program 을 unique set 으로 수집 (SP5).
         /// @details Light uniform 을 어떤 program 에 송신할지 — 씬 안에 등장한 모든 program.
@@ -64,12 +67,12 @@ namespace SJH
                              std::unordered_set<const Program*>& out);
 
         /// @brief 활성 Light 들을 모든 program 에 송신 (SP5).
-        /// @details lighting.fs 의 uniform 명 (dirLight / pointLights[i] / spotLight + *Enabled int)
+        /// @details lighting.fs 의 uniform 명 (dirLight / pointLights[i] / spotLights[i] + *Enabled int)
         ///          에 1:1 매핑. cam.GetEye() 가 viewPos uniform.
         void SendLightUniforms(const std::unordered_set<const Program*>& programs,
                                DirLight* dir,
                                const std::vector<PointLight*>& points,
-                               SpotLight* spot,
+                               const std::vector<SpotLight*>& spots,
                                const vmath::vec3& viewPos);
 
         MeshPassProcessor mProcessor;
