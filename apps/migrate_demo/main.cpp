@@ -142,7 +142,6 @@ class migrate_demo_app : public sb7::application
 		sceneCamActor->GetTransform().EulerRot = vmath::vec3(-20.0f, 0.0f, 0.0f);
 
 		auto *sceneCam = sceneCamActor->GetComponent<SJH::Scene::Camera>();
-		sceneCam->Depth = 0;
 		sceneCam->CullingMask = SJH::LAYER_SCENE;
 		sceneCam->SetTargetRenderTarget(mSceneFB.get());
 
@@ -158,7 +157,6 @@ class migrate_demo_app : public sb7::application
 		// === PostFX 5-pass 체인 빌드 (알파벳 순) ===
 		BuildPostFXChain(reg, dir, fbW, fbH, aspect);
 
-		dir.SetActiveCamera(sceneCam);
 		dir.Enter();
 
 		// === ImGui v1.53 init ===
@@ -369,7 +367,6 @@ class migrate_demo_app : public sb7::application
 			camActor->SetLayer(layer);
 			auto *cam = camActor->AddComponent<SJH::Scene::Camera>(
 			    45.0f, aspect, 0.1f, 100.0f);
-			cam->Depth = static_cast<int>(i) + 1;
 			cam->CullingMask = layer;
 			// 초기 target — ApplyUIState 가 매 프레임 재배선. 임시로 자기 outputFB 가리킴.
 			cam->SetTargetRenderTarget(outputFB.get());

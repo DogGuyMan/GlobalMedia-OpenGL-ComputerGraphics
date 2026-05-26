@@ -72,15 +72,13 @@ namespace SJH
 		/// @brief Owner Actor 의 worldMatrix forward(+Z) 컬럼 정규화. Owner 없을 때 (-Z) fallback.
 		vmath::vec3 GetWorldDirection() const;
 
-		virtual void OnEnter() override {
-			
-		}
-		virtual void OnExit() override {
-			
-		}
-		virtual void Update(float dt) override {
-			
-		}
+		// SP-SceneContext+ProgramRegistry (2026-05-26) — Cocos cc::Light 정통 자동 등록.
+		// OnEnter 에서 Director::GetContext().AddLight(this), OnExit 에서 Remove.
+		virtual void OnEnter() override;
+		virtual void OnExit() override;
+		virtual void Update(float dt) override
+		{
+		} // Light 는 매 프레임 작업 없음 (worldPos/Dir 은 GetWorldXxx 매 호출 도출).
 	};
 
 	/**
@@ -113,15 +111,12 @@ namespace SJH
 		/// @brief Owner Actor 의 worldMatrix translate column. Owner 없을 때 원점.
 		vmath::vec3 GetWorldPosition() const;
 
-		virtual void OnEnter() override {
-			
-		}
-		virtual void OnExit() override {
-			
-		}
-		virtual void Update(float dt) override {
-			
-		}
+		// SP-SceneContext+ProgramRegistry (2026-05-26) — Cocos cc::Light 정통 자동 등록.
+		virtual void OnEnter() override;
+		virtual void OnExit() override;
+		virtual void Update(float dt) override
+		{
+		} // Light 는 매 프레임 작업 없음.
 	};
 
 	/// @brief 스포트라이트 — 위치 + 콘 축 방향 + inner/outer 컷오프 + 거리 감쇠 + Phong 3항.
@@ -150,15 +145,12 @@ namespace SJH
 		vmath::vec3 GetWorldPosition() const;
 		vmath::vec3 GetWorldDirection() const;
 
-		virtual void OnEnter() override {
-			
-		}
-		virtual void OnExit() override {
-			
-		}
-		virtual void Update(float dt) override {
-			
-		}
+		// SP-SceneContext+ProgramRegistry (2026-05-26) — Cocos cc::Light 정통 자동 등록.
+		virtual void OnEnter() override;
+		virtual void OnExit() override;
+		virtual void Update(float dt) override
+		{
+		} // Light 는 매 프레임 작업 없음.
 	};
 
 	/**

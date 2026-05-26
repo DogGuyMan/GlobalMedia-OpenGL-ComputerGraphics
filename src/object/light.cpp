@@ -6,7 +6,8 @@
  *          (헤더는 actor.h 의 Component base 만 사용 — inline).
  */
 #include "object/light.h"
-#include "scene/actor.h"   // Actor::GetWorldMatrix definition
+#include "scene/actor.h" // Actor::GetWorldMatrix definition
+#include "scene/scene.h" // SP-SceneContext+ProgramRegistry — Director::Get().GetContext() 접근.
 
 namespace SJH
 {
@@ -53,5 +54,38 @@ namespace SJH
             return vmath::normalize(forward);
         }
         return vmath::vec3(0.0f, 0.0f, -1.0f);
+    }
+
+    // ── SP-SceneContext+ProgramRegistry (2026-05-26) — Component lifecycle hook ──────
+    // 광원이 Actor 트리에 부착되면 자동으로 SceneContext 에 등록 (Cocos2D `addChild` 정통).
+    // SceneContext::AddLight 가 DirLight/PointLight/SpotLight 각각 오버로드 — this 그대로 전달.
+    void DirLight::OnEnter()
+    {
+        Scene::Director::Get().GetContext().AddLight(this);
+    }
+
+    void DirLight::OnExit()
+    {
+        Scene::Director::Get().GetContext().RemoveLight(this);
+    }
+
+    void PointLight::OnEnter()
+    {
+        Scene::Director::Get().GetContext().AddLight(this);
+    }
+
+    void PointLight::OnExit()
+    {
+        Scene::Director::Get().GetContext().RemoveLight(this);
+    }
+
+    void SpotLight::OnEnter()
+    {
+        Scene::Director::Get().GetContext().AddLight(this);
+    }
+
+    void SpotLight::OnExit()
+    {
+        Scene::Director::Get().GetContext().RemoveLight(this);
     }
 }

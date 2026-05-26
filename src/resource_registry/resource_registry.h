@@ -31,6 +31,7 @@
 #include "texture.h"
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace SJH
 {
@@ -92,6 +93,13 @@ namespace SJH
 
 		/// @brief @p key 로 캐시된 Program *조회* (생성 안 함). 없으면 nullptr.
 		Program *FindProgram(const std::string &key);
+
+		/// @brief 캐시된 모든 Program 의 raw 포인터 벡터 반환 (호출 시점 스냅샷).
+		/// @details mPrograms map 순회로 매 호출 vector 생성. mPrograms.size() 가 보통 1~10 이라
+		///          비용 무시. SceneRenderer 가 프레임당 1회 호출해 Light uniform 송신 대상 program 집합 획득
+		///          (CollectPrograms DFS 폐기 — SP-SceneContext+ProgramRegistry).
+		/// @return raw 포인터 vector — owner 는 ResourceRegistry (라이프타임 보장).
+		std::vector<Program *> GetAllPrograms() const;
 
 		/// @brief 외부에서 만든 Mesh 의 소유권을 이전해 @p key 로 캐시.
 		/// @details Mesh 는 factory 가 여러 종류 (`CreateBox` / `CreatePlane` / 향후 더) — registry 가

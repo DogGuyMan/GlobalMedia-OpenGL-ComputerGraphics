@@ -7,53 +7,37 @@
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"
 #include "render/render_target.h"
+#include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
-#include <algorithm>
 #include <spdlog/spdlog.h>
-#include <unordered_set>
 #include <vector>
 
 namespace SJH
 {
 	void SceneRenderer::Render(RenderTarget &defaultTarget)
 	{
-		// 1. Actor 트리 DFS 로 모든 Camera 컴포넌트 수집.
-		std::vector<Scene::Camera *> cameras;
-		CollectCameras(Scene::Director::Get().Root(), cameras);
-
+		// 1. SceneContext 에서 Camera 컬렉션 직접 조회 — DFS 폐기 (Cocos2D `Scene::_cameras` 정통).
+		const auto &cameras = Scene::Director::Get().GetContext().GetCameras();
 		if (cameras.empty())
 		{
-			spdlog::warn("SceneRenderer::Render — 씬 트리에 Camera 컴포넌트 없음. 프레임 skip.");
+			spdlog::warn("SceneRenderer::Render — SceneContext 에 Camera 0 — 프레임 skip.");
 			return;
 		}
 
-		// 2. Unity Camera.depth 정렬 — 작은 값 먼저.
-		std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; });
-
-		// 3. 각 Camera 마다 1패스 실행 — target FB / view / proj 자동.
+		// 2. addCamera 호출 순서 그대로 렌더 (Cocos2D `addChild` 정통). std::sort 폐기.
+		//    render-time IsEnabled filter (Component::SetEnabled(false) 가 SceneContext 에 영향 X).
 		for (auto *cam : cameras)
-			RenderWithCamera(*cam, defaultTarget);
+		{
+			if (cam->IsEnabled())
+				RenderWithCamera(*cam, defaultTarget);
+		}
 	}
 
 	// std::vector<Scene::Camera *> cameras;
 	// public void AddCamera(Scene::Camera * camera) { cameras.push_back(camera); std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; }); }
 	// public void RemoveCamera(Scene::Camera * camera) { cameras.push_back(camera); std::sort(cameras.begin(), cameras.end(), [](Scene::Camera *a, Scene::Camera *b) { return a->Depth < b->Depth; }); }
-
-	void SceneRenderer::CollectCameras(const Scene::Actor &actor,
-	                                   std::vector<Scene::Camera *> &out)
-	{
-		if (!actor.IsActive())
-			return;
-
-		if (auto *cam = actor.GetComponent<Scene::Camera>())
-			if (cam->IsEnabled())
-				out.push_back(cam);
-
-		for (const auto &child : actor.GetChildren())
-			CollectCameras(*child, out);
-	}
 
 	void SceneRenderer::RenderWithCamera(Scene::Camera &cam, RenderTarget &defaultTarget)
 	{
@@ -74,13 +58,27 @@ namespace SJH
 			viewPos = vmath::vec3(camWorld[3][0], camWorld[3][1], camWorld[3][2]);
 		}
 
-		DirLight *dir = nullptr;
-		std::vector<PointLight *> points;
-		std::vector<SpotLight *> spots;
-		CollectLights(Scene::Director::Get().Root(), dir, points, spots);
+		// SceneContext 에서 Light 직접 조회 — CollectLights DFS 폐기.
+		auto &ctx = Scene::Director::Get().GetContext();
 
-		std::unordered_set<const Program *> programs;
-		CollectPrograms(Scene::Director::Get().Root(), programs);
+		DirLight *dir = (ctx.GetDirLight() && ctx.GetDirLight()->IsEnabled())
+		                    ? ctx.GetDirLight()
+		                    : nullptr;
+
+		std::vector<PointLight *> points;
+		points.reserve(ctx.GetPointLights().size());
+		for (auto *l : ctx.GetPointLights())
+			if (l->IsEnabled())
+				points.push_back(l);
+
+		std::vector<SpotLight *> spots;
+		spots.reserve(ctx.GetSpotLights().size());
+		for (auto *l : ctx.GetSpotLights())
+			if (l->IsEnabled())
+				spots.push_back(l);
+
+		// Program 컬렉션 — ResourceRegistry::GetAllPrograms() 한 줄 (CollectPrograms DFS 폐기).
+		auto programs = ResourceRegistry::Get().GetAllPrograms();
 
 		SendLightUniforms(programs, dir, points, spots, viewPos);
 
@@ -90,56 +88,7 @@ namespace SJH
 		mProcessor.Process(rc, viewMat, projMat);
 	}
 
-	void SceneRenderer::CollectLights(const Scene::Actor &actor,
-	                                  DirLight *&outDir,
-	                                  std::vector<PointLight *> &outPoints,
-	                                  std::vector<SpotLight *> &outSpots)
-	{
-		if (!actor.IsActive())
-			return;
-
-		if (auto *l = actor.GetComponent<DirLight>())
-		{
-			if (l->IsEnabled())
-			{
-				if (outDir == nullptr)
-					outDir = l;
-				else
-					spdlog::warn("SceneRenderer::CollectLights — DirLight 중복 발견. 첫 1개만 사용.");
-			}
-		}
-		if (auto *l = actor.GetComponent<PointLight>())
-		{
-			if (l->IsEnabled())
-				outPoints.push_back(l);
-		}
-		if (auto *l = actor.GetComponent<SpotLight>())
-		{
-			if (l->IsEnabled())
-				outSpots.push_back(l);
-		}
-
-		for (const auto &child : actor.GetChildren())
-			CollectLights(*child, outDir, outPoints, outSpots);
-	}
-
-	void SceneRenderer::CollectPrograms(const Scene::Actor &actor,
-	                                    std::unordered_set<const Program *> &out)
-	{
-		if (!actor.IsActive())
-			return;
-
-		if (auto *mr = actor.GetComponent<Scene::MeshRenderer>())
-		{
-			if (mr->IsEnabled() && mr->Material && mr->Material->GetProgram())
-				out.insert(mr->Material->GetProgram());
-		}
-
-		for (const auto &child : actor.GetChildren())
-			CollectPrograms(*child, out);
-	}
-
-	void SceneRenderer::SendLightUniforms(const std::unordered_set<const Program *> &programs,
+	void SceneRenderer::SendLightUniforms(const std::vector<Program *> &programs,
 	                                      DirLight *dir,
 	                                      const std::vector<PointLight *> &points,
 	                                      const std::vector<SpotLight *> &spots,
@@ -217,17 +166,6 @@ namespace SJH
 				}
 			}
 		}
-	}
-
-	void SceneRenderer::Render(RenderTarget &defaultTarget,
-	                           const vmath::mat4 &viewMat, const vmath::mat4 &projMat)
-	{
-		auto &rc = DeviceContext::Get();
-		rc.BeginFrame(defaultTarget);
-		mProcessor.Clear();
-		CollectFromActor(Scene::Director::Get().Root(), viewMat, ~0ull);
-		mProcessor.SortMultiStage();
-		mProcessor.Process(rc, viewMat, projMat);
 	}
 
 	void SceneRenderer::CollectFromActor(const Scene::Actor &actor,

@@ -1,5 +1,6 @@
 #include "scene/camera.h"
 #include "scene/actor.h"
+#include "scene/scene.h" // SP-SceneContext+ProgramRegistry — Director::Get().GetContext() 접근.
 #include <cassert>
 #include <vmath.h>
 
@@ -28,6 +29,19 @@ namespace SJH::Scene
 	vmath::mat4 Camera::GetProjectionMatrix() const
 	{
 		return vmath::perspective(FovYDeg, Aspect, NearZ, FarZ);
+	}
+
+	// SP-SceneContext+ProgramRegistry (2026-05-26) — Component lifecycle hook.
+	// Actor 가 씬에 부착될 때 자동으로 SceneContext 에 등록 (Cocos2D `addChild` 정통).
+	// 매 프레임 Scene DFS 로 Camera 를 수집하던 SceneRenderer 폐기.
+	void Camera::OnEnter()
+	{
+		Director::Get().GetContext().AddCamera(this);
+	}
+
+	void Camera::OnExit()
+	{
+		Director::Get().GetContext().RemoveCamera(this);
 	}
 
 	// CLAUDE_ASSIST
