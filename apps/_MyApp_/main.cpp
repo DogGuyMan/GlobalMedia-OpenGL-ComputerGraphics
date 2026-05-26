@@ -11,6 +11,10 @@
 #include <spdlog/spdlog.h>
 #include <vmath.h>
 
+// ImGui v1.53 — client-side (Core Module 아님). memory: imgui_v1_53_glfw_compat
+#include <imgui.h>
+#include <imgui_impl_glfw_gl3.h>
+
 #include "Entity/Player/PlayerActor.h"
 #include "InputHandler/PlayerController.h"
 #include "InputHandler/TargetFollowableCameraController.h"
@@ -28,6 +32,10 @@
 #include "buffer/framebuffer.h"
 #include "common/common.h"
 #include "object/mesh.h"
+#include "render/postfx_pass.h"
+#include "UI/ExitButtonLayer.h"
+#include "UI/ImGuiLayerStack.h"
+#include "UI/PostFXDebugLayer.h"
 #include "render/render_target.h"
 #include "render/scene_renderer.h"
 #include "render/screen_quad_stage.h"
@@ -40,11 +48,31 @@
 #include "sprite/sprite_frame_clip.h"
 #include "sprite/sprite_sequence_playable.h"
 
+#include <array>
 #include <cstring>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace TopdownShooter
 {
+	namespace
+	{
+		struct PostFXDef
+		{
+			const char *Name;
+			const char *FragFile;
+		};
+		// 체인 인덱스 = 실행 순서 (doc/design/PostFX.md §3.1).
+		constexpr std::array<PostFXDef, 5> kPostFXDefs = {{
+		    {"blurring",   "resources/shader/postprocess/blurring.fs"},
+		    {"gamma",      "resources/shader/postprocess/gamma.fs"},
+		    {"invert",     "resources/shader/postprocess/invert.fs"},
+		    {"sharpening", "resources/shader/postprocess/sharpening.fs"},
+		    {"sobel",      "resources/shader/postprocess/sobel.fs"},
+		}};
+		constexpr const char *kPostFXVertFile = "resources/shader/postprocess/postprocess.vs";
+	} // namespace
 
 	class game_application : public sb7::application
 	{
@@ -64,11 +92,11 @@ namespace TopdownShooter
 			auto &reg = SJH::ResourceRegistry::Get();
 			auto &dir = SJH::Scene::Director::Get();
 
-			// Atlas — registry 가 LoadFromPNG + SetGrid 일괄. SpriteRenderer ctor 에 주입.
+			// Atlas — registry 가 LoadFromPNG + SetGrid 일괄.
 			auto *atlas = reg.CreateUniformAtlas(
-				"test_pattern", 
-				"resources/texture/TestPattern.png",
-				 4, 4);
+			    "test_pattern",
+			    "resources/texture/TestPattern.png",
+			    4, 4);
 			if (!atlas)
 			{
 				spdlog::error("[M1] atlas load failed");
@@ -79,9 +107,9 @@ namespace TopdownShooter
 			glfwGetFramebufferSize(window, &fbW, &fbH);
 			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
-			mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
+			mSceneFB       = SJH::Framebuffer::Create(fbW, fbH);
 
-			// Step 4-b: ScreenQuadStage — passthrough 셰이더 + ScreenQuad 메쉬 등록
+			// ScreenQuadStage — passthrough 셰이더 + ScreenQuad 메쉬 등록
 			auto *passthroughProg = reg.CreateProgram(
 			    "screen_passthrough",
 			    "resources/shaders/passthrough.vs",
@@ -90,21 +118,30 @@ namespace TopdownShooter
 			mScreenQuadStage = std::make_unique<SJH::ScreenQuadStage>(*passthroughProg, *quadMesh);
 			mScreenQuadStage->SetSources({mSceneFB.get()});
 
+			// PostFX 5-pass 체인 (doc/design/PostFX.md — Ordered Pass List)
+			BuildPostFXChain(reg, quadMesh, fbW, fbH);
+
+			// Exit 텍스처 — ImGui ImageButton 에 사용
+			{
+				auto img  = SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png");
+				if (img)
+					mExitTex = reg.CreateTexture("exit_texture", img.get());
+			}
+
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
 			auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
 			camActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
-			camActor->GetTransform().EulerRot = vmath::vec3(-45.0f, 0.0f, 0.0f);
+			camActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
 			auto *cam = camActor->GetComponent<SJH::Scene::Camera>();
-			// Camera Actor 의 follow 컨트롤러는 sprite 셋업 *후* SetFollowTarget 호출이 필요 — 변수 보관.
 			auto *camCtrl = camActor->AddComponent<Controller::TargetFollowableCameraController>();
 			camCtrl->SetMouseInput(&mMouse)
 			    .SetCamera(cam)
 			    .SetUp();
-			cam->SetTargetRenderTarget(mSceneFB.get()); // Step 3: Camera → FBO (backbuffer 직접 출력 차단)
+			cam->SetTargetRenderTarget(mSceneFB.get());
 
 			mCameraActor = dir.Root().AddChild(std::move(camActor));
-			mCamera = cam;
+			mCamera      = cam;
 
 			// === M5 — Director 가 Audio + VFX + Physics 일괄 초기화 ===
 			TopdownShooter::Director::Get().Init();
@@ -113,75 +150,75 @@ namespace TopdownShooter
 			// === M5 T3 — BGM (FMOD Studio) ===
 			{
 				auto &audio = TopdownShooter::Director::Get().Audio();
-				audio.LoadBank("resources/banks/Master.strings.bank");   // strings 먼저 (event 이름 lookup 위해)
+				audio.LoadBank("resources/banks/Master.strings.bank");
 				audio.LoadBank("resources/banks/Master.bank");
 
 				auto *bgmEvent = audio.LoadEvent("event:/BGM");
 				if (bgmEvent)
 				{
 					auto *bgmActor = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("BgmActor"));
-					auto *bgm = bgmActor->AddComponent<TopdownShooter::Audio::FmodStudioPlayable>(bgmEvent);
+					auto *bgm      = bgmActor->AddComponent<TopdownShooter::Audio::FmodStudioPlayable>(bgmEvent);
 					bgm->SetIsLoop(true);
 					bgm->Play();
 				}
 
-				// === M5 T1 — Shot SFX 로드 (마우스 클릭 시 재생) ===
 				reg.CreateSound(audio.GetSystem(), "shot", "resources/audio/Laser.wav");
 			}
 
-			// === M5 T2 — Muzzle VFX 로드 (마우스 클릭 시 spawn) ===
+			// === M5 T2 — Muzzle VFX ===
 			{
 				auto mgr = TopdownShooter::Director::Get().VFX().GetManager();
 				reg.CreateEffect(mgr, "muzzle", u"resources/vfx/distortion.efk");
 			}
 
-			// === Stage 형성 — walls + pickups + StageState Component 가 child/component 인 일반 Actor 반환.
-			//     plane mesh / wallMat / pickupMat / simple.vs/fs Program 은 Stage Builder 가 registry 에 자동 등록.
 			auto stage = TopdownShooter::Stage::CreateStageActor({
-			    /*world=*/    &phys.World(),
-			    /*registry=*/ &reg,
+			    &phys.World(),
+			    &reg,
 			});
 			dir.Root().AddChild(std::move(stage));
 
-			pac.name = "PlayerSprite";
-			pac.life.hp = 100;
-			pac.movement.speed = 3.0f;
-			pac.controller.keyboard = &mKeyboard;
-			pac.physics.world = &phys.World();
-			pac.physics.size = vmath::vec2(1.0f, 1.0f);
-			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
-			pac.physics.density = 1.0f;
-			pac.physics.linearDamping = 5.0f;
-			pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
-			pac.physics.maskBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
+			pac.name                        = "PlayerSprite";
+			pac.life.hp                     = 100;
+			pac.movement.speed              = 3.0f;
+			pac.controller.keyboard         = &mKeyboard;
+			pac.physics.world               = &phys.World();
+			pac.physics.size                = vmath::vec2(1.0f, 1.0f);
+			pac.physics.startPosition       = vmath::vec2(0.0f, 0.0f);
+			pac.physics.density             = 1.0f;
+			pac.physics.linearDamping       = 5.0f;
+			pac.physics.categoryBits        = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
+			pac.physics.maskBits            = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
 
 			auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
-
 			spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-			spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
+			spriteActor->GetTransform().Scale     = vmath::vec3(1.0f, 1.0f, 1.0f);
 
-			// SpriteRenderer — Unity 정통. MeshRenderer 상속 + billboard plane / material 자동 셋업.
-			// per-Update 마다 uUvRect / uTint / uFlipX 도 내부에서 송신 — main render() 무동작.
 			mSprite = spriteActor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
 
-			// SpriteSequencePlayable — M3.5 정착 (SpriteAnimator 폐기). atlas 전체 16-frame 을
-			// 4fps 로 loop sweep. clip 은 main 멤버로 보관 (playable 은 raw ptr 만 보유).
-			mWholeAtlasClip = SJH::SpriteSequence::SpriteFrameClip{
-			    /*startFrame*/ 0,
-			    /*frameCount*/ atlas->FrameCount(),
-			    /*fps*/        4.0f};
-			mSpriteSeq = spriteActor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
+			mWholeAtlasClip = SJH::SpriteSequence::SpriteFrameClip{0, atlas->FrameCount(), 4.0f};
+			mSpriteSeq      = spriteActor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
 			    mSprite, &mWholeAtlasClip);
 			mSpriteSeq->SetIsLoop(true);
 			mSpriteSeq->Play();
 
 			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
 
-			// Camera follow target — sprite Actor 가 root 의 child 로 등록된 후.
 			camCtrl->SetFollowTarget(mSpriteActor)
 			    .SetFollowOffset(vmath::vec3(0.0f, 5.0f, 5.0f));
 
 			dir.Enter();
+
+			// === ImGui v1.53 init (install_callbacks=false — sb7 가 GLFW 콜백 소유) ===
+			mImGuiCtx = ImGui::CreateContext();
+			ImGui::StyleColorsDark();
+			ImGui_ImplGlfwGL3_Init(window, /*install_callbacks=*/false);
+			glfwSetScrollCallback(window, ImGui_ImplGlfwGL3_ScrollCallback);
+			glfwSetCharCallback(window, ImGui_ImplGlfwGL3_CharCallback);
+
+			// ImGui 레이어 등록 — Game(항상) / Editor(F1 토글)
+			mImGuiStack.Push(std::make_unique<UI::ExitButtonLayer>(window, mExitTex));
+			mImGuiStack.Push(std::make_unique<UI::PostFXDebugLayer>(
+			    mRenderSys, mPostFXPasses, mCachedQuadMesh, mGamma));
 		}
 
 		void render(double currentTime) override
@@ -196,45 +233,66 @@ namespace TopdownShooter
 				if (mCamera)
 					mCamera->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 				mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
-				if (mScreenQuadStage)
-					mScreenQuadStage->SetSources({mSceneFB.get()});
+				if (mCamera)
+					mCamera->SetTargetRenderTarget(mSceneFB.get());
 			}
 
+			// ImGui NewFrame 우선 — io.WantCaptureMouse/Keyboard 가 입력 디스패치에 영향.
+			ImGui_ImplGlfwGL3_NewFrame();
+
 			mKeyboard.PollHeld(window);
-			// M5 — Director::Update 가 Audio + VFX + Physics.Step 일괄.
 			TopdownShooter::Director::Get().Update(dt);
 			SJH::Scene::Director::Get().Update(dt);
-
 			TopdownShooter::Director::Get().Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
 
-			// SpriteRenderer.Update 가 uUvRect / uTint / uFlipX 자동 송신 — main 무동작.
+			// 씬 렌더 (SceneFB) + PostFX 체인 (intermediate FBs).
 			mRenderSys.Render(*mDefaultTarget);
-			mScreenQuadStage->Render(*mDefaultTarget);
 
-			// === M5 — Effekseer 렌더 (SceneRenderer 직후, swap 전) ===
+			// ScreenQuadStage — PostFX 마지막 활성 출력 또는 SceneFB fallback → backbuffer.
+			{
+				auto *fxOut = mRenderSys.GetActiveFXOutput();
+				mScreenQuadStage->SetSources({fxOut ? fxOut : mSceneFB.get()});
+				mScreenQuadStage->Render(*mDefaultTarget);
+			}
+
+			// === M5 — Effekseer 렌더 (backbuffer 합성 후, swap 전) ===
 			if (mCamera)
 			{
 				vmath::mat4 view = mCamera->GetViewMatrix();
 				vmath::mat4 proj = mCamera->GetProjectionMatrix();
 				TopdownShooter::Director::Get().VFX().Draw(&view[0][0], &proj[0][0]);
 			}
+
+			// ImGui 창 빌드 + 렌더 (항상 최상위).
+			mImGuiStack.RenderAll(mShowEditor);
+			ImGui::Render();
 		}
 
 		void shutdown() override
 		{
+			ImGui_ImplGlfwGL3_Shutdown();
+			ImGui::DestroyContext(mImGuiCtx);
+			mImGuiCtx = nullptr;
+
 			SJH::Scene::Director::Get().Exit();
-			mCamera = nullptr;
-			mCameraActor = nullptr;
-			mSpriteActor = nullptr;
+			mCamera       = nullptr;
+			mCameraActor  = nullptr;
+			mSpriteActor  = nullptr;
 			mDefaultTarget.reset();
-			mSprite = nullptr;     // 컴포넌트는 spriteActor 가 소유 — Director::Exit 가 정리. atlas 는 ResourceRegistry::Clear 가 담당
-			mSpriteSeq = nullptr;  // 동일 — Director::Exit 가 spriteActor 정리 시 함께 소멸
-			// M5 — Director 가 Physics + VFX + Audio 일괄 정리
+			mSprite    = nullptr;
+			mSpriteSeq = nullptr;
 			TopdownShooter::Director::Get().Shutdown();
 		}
 
 		void onKey(int key, int action) override
 		{
+			ImGui_ImplGlfwGL3_KeyCallback(window, key, /*scancode*/ 0, action, /*mods*/ 0);
+			if (ImGui::GetIO().WantCaptureKeyboard)
+				return;
+
+			if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
+				mShowEditor = !mShowEditor;
+
 			mKeyboard.Dispatch(key, action);
 
 			// === M5 CO2 — G 키: Parallel( TweenShake ∥ FmodStudio.Damaged ) ===
@@ -263,6 +321,10 @@ namespace TopdownShooter
 
 		void onMouseButton(int button, int action) override
 		{
+			ImGui_ImplGlfwGL3_MouseButtonCallback(window, button, action, /*mods*/ 0);
+			if (ImGui::GetIO().WantCaptureMouse)
+				return;
+
 			double x = 0.0, y = 0.0;
 			glfwGetCursorPos(window, &x, &y);
 			mMouse.HandleButton(button, action, x, y);
@@ -284,12 +346,10 @@ namespace TopdownShooter
 					    std::make_unique<SJH::Scene::Actor>("ShotComposite"));
 					auto *seq = cActor->AddComponent<SJH::Playable::SequencePlayable>();
 
-					// 1: muzzle VFX (자연 종료 대기)
 					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
 					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
 					    TopdownShooter::VFX::TrackPolicy::Static));
 
-					// 2: Parallel( Laser.wav ∥ Slash event )
 					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
 					par->Join(std::make_unique<TopdownShooter::Audio::FmodPlayable>(audio.GetSystem(), shot));
 					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(slashEvt));
@@ -302,6 +362,9 @@ namespace TopdownShooter
 
 		void onMouseMove(int x, int y) override
 		{
+			// ImGui v1.53 은 NewFrame 시 직접 glfwGetCursorPos 폴링 — forward 불필요.
+			if (ImGui::GetIO().WantCaptureMouse)
+				return;
 			mMouse.HandleMove(static_cast<double>(x), static_cast<double>(y));
 		}
 
@@ -319,20 +382,73 @@ namespace TopdownShooter
 		}
 
 	  private:
-		SJH::SceneRenderer mRenderSys;
-		SJH::RenderTargetUPtr mDefaultTarget;
-		SJH::FramebufferUPtr mSceneFB;
+		// ── PostFX chain 빌드 (doc/design/PostFX.md Stage A+B) ────────────────────
+		void BuildPostFXChain(SJH::ResourceRegistry &reg, SJH::Mesh *quadMesh, int width, int height)
+		{
+			mPostFXPasses.clear();
+			for (std::size_t i = 0; i < kPostFXDefs.size(); ++i)
+			{
+				const auto &def  = kPostFXDefs[i];
+				const auto  progKey = std::string("postfx_") + def.Name;
+				const auto  matKey  = std::string("mat_postfx_") + def.Name;
+
+				auto *prog = reg.CreateProgram(progKey, kPostFXVertFile, def.FragFile);
+				if (!prog)
+				{
+					spdlog::error("[PostFX] 셰이더 로드 실패: {}", def.FragFile);
+					continue;
+				}
+				auto *mat = reg.CreateSharedMaterial(matKey);
+				mat->SetProgram(prog);
+				if (std::string(def.Name) == "gamma")
+					mat->Properties.Floats["gamma"] = mGamma;
+
+				mPostFXFBs[i] = SJH::Framebuffer::Create(width, height);
+				if (!mPostFXFBs[i])
+				{
+					spdlog::error("[PostFX] FB 생성 실패: {}", def.Name);
+					continue;
+				}
+
+				SJH::PostFXPass pass;
+				pass.Name     = def.Name;
+				pass.Material = mat;
+				pass.OutputFB = mPostFXFBs[i].get();
+				pass.Enabled  = true;
+				mPostFXPasses.push_back(std::move(pass));
+			}
+			mRenderSys.SetPostFXChain(mPostFXPasses, quadMesh);
+			mCachedQuadMesh = quadMesh;
+		}
+
+		// ── 멤버 ────────────────────────────────────────────────────────────────────
+		SJH::SceneRenderer              mRenderSys;
+		SJH::RenderTargetUPtr           mDefaultTarget;
+		SJH::FramebufferUPtr            mSceneFB;
 		std::unique_ptr<SJH::ScreenQuadStage> mScreenQuadStage;
-		SJH::Scene::Actor *mCameraActor = nullptr;
-		SJH::Scene::Actor *mSpriteActor = nullptr;
-		SJH::Scene::Camera *mCamera = nullptr;
-		SJH::SpriteSequence::SpriteSequencePlayable *mSpriteSeq = nullptr;   // Update 마다 mSprite->frameIdx 송신 (M3.5 — SpriteAnimator 후속)
-		SJH::SpriteSequence::SpriteFrameClip          mWholeAtlasClip{};    // atlas 전체 sweep 정의 (mSpriteSeq 가 raw ptr 로 참조 — 멤버 생존 필수)
-		SJH::Sprite::SpriteRenderer *mSprite = nullptr;     // sprite 데이터 (atlas + frameIdx + tint 등). spriteActor 소유
+
+		// PostFX — doc/design/PostFX.md Ordered Pass List
+		std::array<SJH::FramebufferUPtr, 5> mPostFXFBs;
+		std::vector<SJH::PostFXPass>        mPostFXPasses;
+		SJH::Mesh                          *mCachedQuadMesh = nullptr;
+		float                               mGamma          = 1.0f;
+
+		// ImGui
+		ImGuiContext          *mImGuiCtx   = nullptr;
+		const SJH::Texture    *mExitTex    = nullptr;
+		UI::ImGuiLayerStack    mImGuiStack;
+		bool                   mShowEditor = true;
+
+		// 씬 오브젝트
+		SJH::Scene::Actor                              *mCameraActor  = nullptr;
+		SJH::Scene::Actor                              *mSpriteActor  = nullptr;
+		SJH::Scene::Camera                             *mCamera       = nullptr;
+		SJH::SpriteSequence::SpriteSequencePlayable    *mSpriteSeq    = nullptr;
+		SJH::SpriteSequence::SpriteFrameClip            mWholeAtlasClip{};
+		SJH::Sprite::SpriteRenderer                    *mSprite       = nullptr;
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
-		SJH::MouseInput mMouse;
+		SJH::MouseInput                                  mMouse;
 		TopdownShooter::Entity::Player::PlayerActorConfig pac;
-		// M5 — mPhysics 폐기. TopdownShooter::Director::Get().Physics() 가 그 자리.
 	};
 
 } // namespace TopdownShooter
