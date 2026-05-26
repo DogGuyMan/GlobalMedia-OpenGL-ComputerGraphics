@@ -33,6 +33,8 @@ namespace SJH::Scene
 	{
 	  public:
 		// Projection 파라미터.
+		bool  IsOrthographic = false;  ///< true 이면 ortho 투영 (Screen Camera 전용)
+		float OrthoSize      = 1.0f;  ///< 반높이 — 가시 범위 [-OrthoSize, OrthoSize]
 		float FovYDeg = 45.0f;
 		float Aspect = 16.0f / 9.0f;
 		float NearZ = 0.1f;

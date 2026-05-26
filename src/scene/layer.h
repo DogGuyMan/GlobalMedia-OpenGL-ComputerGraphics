@@ -16,6 +16,7 @@ namespace SJH::Scene
 		Enemy     = 1ull << 2,   ///< 4  — 미래 게임 로직 (예약)
 		UI        = 1ull << 3,   ///< 8  — 본 SP 가 자리 정의 (미래 UI Camera 진입자가 사용)
 		DebugDraw = 1ull << 4,   ///< 16 — 미래 DebugDrawStage (예약)
+		Screen    = 1ull << 5,   ///< 32 — PassComponent Actor 전용 (ScreenCamera 전용 레이어)
 
 		All       = ~0ull,       ///< Camera 기본 mask — 모든 layer 매치
 	};

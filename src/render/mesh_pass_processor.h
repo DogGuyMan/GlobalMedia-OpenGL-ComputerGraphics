@@ -9,6 +9,9 @@ namespace SJH::Scene { class MeshRenderer; }
 namespace SJH
 {
     class DeviceContext;
+    class Framebuffer;
+    class Material;
+    class Mesh;
 
     /// @brief Cocos 식 Layer A — 한 프레임의 정렬 가능한 draw command.
     /// @details
@@ -24,10 +27,21 @@ namespace SJH
     ///   GL state 는 `Pass::DefaultPipelineStateOf(material->GetPass())` 도출 (Material 이 SSoT).
     struct DrawCommand
     {
-        const Scene::MeshRenderer* meshRenderer = nullptr;             ///< SSoT — program/mesh/material/actor 모두 경유 접근.
-        vmath::mat4                modelMatrix  = vmath::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
-        int                        queueLayer   = 2000;
-        float                      depth        = 0.0f;                ///< view-space z (back-to-front)
+        enum class Kind { WorldMesh, ScreenQuad };
+
+        // 공통
+        Kind  kind       = Kind::WorldMesh;
+        int   queueLayer = 2000;
+        float depth      = 0.0f;  ///< view-space z (back-to-front)
+
+        // WorldMesh 전용
+        const Scene::MeshRenderer *meshRenderer = nullptr;  ///< SSoT — program/mesh/material/actor 경유
+        vmath::mat4                modelMatrix  = vmath::mat4::identity();
+
+        // ScreenQuad 전용 (PassComponent)
+        Framebuffer *inputFB      = nullptr;  ///< 읽기 소스 — uScene 바인딩
+        Framebuffer *outputFB     = nullptr;  ///< 쓰기 대상 + activeFB 갱신
+        Material    *passMaterial = nullptr;  ///< ScreenQuad 셰이더
     };
 
     /// @brief Low-level Orchestrator — DrawCommand 컬렉션의 *순서 + 조건* 결정 + Applier 들에게 위임.
@@ -43,8 +57,18 @@ namespace SJH
     {
     public:
         void Submit(const DrawCommand& cmd) { mItems.push_back(cmd); }
-        void Clear()                        { mItems.clear(); }
-        std::size_t Size() const            { return mItems.size(); }
+        void Clear()
+        {
+            mItems.clear();
+            mLastOutputFB = nullptr;  // 프레임마다 리셋
+        }
+        std::size_t Size() const { return mItems.size(); }
+
+        void SetScreenQuadMesh(Mesh *mesh) { mScreenQuadMesh = mesh; }
+
+        /// @brief 마지막 ScreenQuad(PassComponent) 의 outputFB.
+        /// @return nullptr = 이번 프레임 PassComponent 없음 — caller 가 sceneFB fallback.
+        const Framebuffer *GetLastOutputFB() const { return mLastOutputFB; }
 
         /// @brief Multi-stage sort: queueLayer -> program -> material -> depth (back-to-front).
         void SortMultiStage();
@@ -58,6 +82,8 @@ namespace SJH
 
     private:
         std::vector<DrawCommand> mItems;
+        Mesh              *mScreenQuadMesh = nullptr;
+        const Framebuffer *mLastOutputFB   = nullptr;
     };
 }
 

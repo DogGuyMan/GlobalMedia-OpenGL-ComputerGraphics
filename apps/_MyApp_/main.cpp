@@ -32,7 +32,7 @@
 #include "buffer/framebuffer.h"
 #include "common/common.h"
 #include "object/mesh.h"
-#include "render/postfx_pass.h"
+#include "render/pass_component.h"
 #include "UI/ExitButtonLayer.h"
 #include "UI/ImGuiLayerStack.h"
 #include "UI/PostFXDebugLayer.h"
@@ -118,30 +118,83 @@ namespace TopdownShooter
 			mScreenQuadStage = std::make_unique<SJH::ScreenQuadStage>(*passthroughProg, *quadMesh);
 			mScreenQuadStage->SetSources({mSceneFB.get()});
 
-			// PostFX 5-pass 체인 (doc/design/PostFX.md — Ordered Pass List)
-			BuildPostFXChain(reg, quadMesh, fbW, fbH);
-
 			// Exit 텍스처 — ImGui ImageButton 에 사용
 			{
-				auto img  = SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png");
+				auto img = SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png");
 				if (img)
 					mExitTex = reg.CreateTexture("exit_texture", img.get());
 			}
 
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
-			auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
-			camActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
-			camActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
-			auto *cam = camActor->GetComponent<SJH::Scene::Camera>();
-			auto *camCtrl = camActor->AddComponent<Controller::TargetFollowableCameraController>();
-			camCtrl->SetMouseInput(&mMouse)
-			    .SetCamera(cam)
-			    .SetUp();
-			cam->SetTargetRenderTarget(mSceneFB.get());
+			// ── World Camera (Perspective) — 3D 월드 → sceneFB ─────────────────────────
+			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, aspect, 0.1f, 100.0f);
+			worldCamActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
+			worldCamActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
+			auto *worldCam = worldCamActor->GetComponent<SJH::Scene::Camera>();
+			auto *camCtrl  = worldCamActor->AddComponent<Controller::TargetFollowableCameraController>();
+			camCtrl->SetMouseInput(&mMouse).SetCamera(worldCam).SetUp();
+			worldCam->SetCullingMask(SJH::Scene::Layer::Default |
+			                         SJH::Scene::Layer::Player  |
+			                         SJH::Scene::Layer::Enemy   |
+			                         SJH::Scene::Layer::DebugDraw);
+			worldCam->SetTargetRenderTarget(mSceneFB.get());
+			mCameraActor = dir.Root().AddChild(std::move(worldCamActor));
+			mCamera      = worldCam;
 
-			mCameraActor = dir.Root().AddChild(std::move(camActor));
-			mCamera      = cam;
+			// ── Screen Camera (Orthographic) — HUD + PassComponent 체인 ────────────────
+			// 초기 activeFB = sceneFB (World Camera 출력 공유) — HUD 가 씬에 직접 합성.
+			auto screenCamActor = SJH::Scene::CreateCameraActor("ScreenCamera", 45.0f, aspect, -1.0f, 1.0f);
+			auto *screenCam     = screenCamActor->GetComponent<SJH::Scene::Camera>();
+			screenCam->IsOrthographic = true;
+			screenCam->OrthoSize      = 1.0f;
+			screenCam->SetCullingMask(SJH::Scene::Layer::UI | SJH::Scene::Layer::Screen);
+			screenCam->SetTargetRenderTarget(mSceneFB.get());
+
+			// ── PassComponent 체인 (blurring→gamma→invert→sharpening→sobel) ─────────────
+			mRenderSys.SetScreenQuadMesh(quadMesh);
+			mPassComponents.clear();
+			SJH::Framebuffer *prevFB = mSceneFB.get();
+
+			for (std::size_t i = 0; i < kPostFXDefs.size(); ++i)
+			{
+				const auto &def     = kPostFXDefs[i];
+				const auto  progKey = std::string("postfx_") + def.Name;
+				const auto  matKey  = std::string("mat_pass_") + def.Name;
+
+				auto *prog = reg.CreateProgram(progKey, kPostFXVertFile, def.FragFile);
+				if (!prog)
+				{
+					spdlog::error("[PassComponent] 셰이더 로드 실패: {}", def.FragFile);
+					continue;
+				}
+
+				auto *mat = reg.CreateSharedMaterial(matKey);
+				mat->SetProgram(prog);
+				if (std::string(def.Name) == "gamma")
+					mat->Properties.Floats["gamma"] = mGamma;
+
+				mPostFXFBs[i] = SJH::Framebuffer::Create(fbW, fbH);
+				if (!mPostFXFBs[i])
+				{
+					spdlog::error("[PassComponent] FB 생성 실패: {}", def.Name);
+					continue;
+				}
+
+				auto passActor = std::make_unique<SJH::Scene::Actor>(std::string("PassActor_") + def.Name);
+				passActor->SetLayer(SJH::Scene::Layer::Screen);
+
+				auto *pc = passActor->AddComponent<SJH::Scene::PassComponent>(
+				    prevFB, mPostFXFBs[i].get(), mat);
+				mPassComponents.push_back(pc);
+
+				prevFB = mPostFXFBs[i].get();
+
+				screenCamActor->AddChild(std::move(passActor));
+			}
+
+			mScreenCamActor = dir.Root().AddChild(std::move(screenCamActor));
+			mScreenCam      = screenCam;
 
 			// === M5 — Director 가 Audio + VFX + Physics 일괄 초기화 ===
 			TopdownShooter::Director::Get().Init();
@@ -217,8 +270,14 @@ namespace TopdownShooter
 
 			// ImGui 레이어 등록 — Game(항상) / Editor(F1 토글)
 			mImGuiStack.Push(std::make_unique<UI::ExitButtonLayer>(window, mExitTex));
+			std::vector<UI::PassDebugEntry> debugEntries;
+			for (std::size_t i = 0; i < kPostFXDefs.size(); ++i)
+			{
+				if (i < mPassComponents.size())
+					debugEntries.push_back({kPostFXDefs[i].Name, mPassComponents[i]});
+			}
 			mImGuiStack.Push(std::make_unique<UI::PostFXDebugLayer>(
-			    mRenderSys, mPostFXPasses, mCachedQuadMesh, mGamma));
+			    std::move(debugEntries), mGamma));
 		}
 
 		void render(double currentTime) override
@@ -232,9 +291,13 @@ namespace TopdownShooter
 				mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
 				if (mCamera)
 					mCamera->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
+				if (mScreenCam)
+					mScreenCam->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 				mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
 				if (mCamera)
 					mCamera->SetTargetRenderTarget(mSceneFB.get());
+				if (mScreenCam)
+					mScreenCam->SetTargetRenderTarget(mSceneFB.get());
 			}
 
 			// ImGui NewFrame 우선 — io.WantCaptureMouse/Keyboard 가 입력 디스패치에 영향.
@@ -248,10 +311,10 @@ namespace TopdownShooter
 			// 씬 렌더 (SceneFB) + PostFX 체인 (intermediate FBs).
 			mRenderSys.Render(*mDefaultTarget);
 
-			// ScreenQuadStage — PostFX 마지막 활성 출력 또는 SceneFB fallback → backbuffer.
+			// ScreenQuadStage — PassComponent 마지막 출력 또는 SceneFB fallback → backbuffer.
 			{
-				auto *fxOut = mRenderSys.GetActiveFXOutput();
-				mScreenQuadStage->SetSources({fxOut ? fxOut : mSceneFB.get()});
+				auto *out = mRenderSys.GetLastSceneOutput();
+				mScreenQuadStage->SetSources({out ? out : mSceneFB.get()});
 				mScreenQuadStage->Render(*mDefaultTarget);
 			}
 
@@ -275,8 +338,11 @@ namespace TopdownShooter
 			mImGuiCtx = nullptr;
 
 			SJH::Scene::Director::Get().Exit();
-			mCamera       = nullptr;
-			mCameraActor  = nullptr;
+			mCamera         = nullptr;
+			mCameraActor    = nullptr;
+			mScreenCam      = nullptr;
+			mScreenCamActor = nullptr;
+			mPassComponents.clear();
 			mSpriteActor  = nullptr;
 			mDefaultTarget.reset();
 			mSprite    = nullptr;
@@ -379,59 +445,21 @@ namespace TopdownShooter
 			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(w, h);
 			if (mCamera)
 				mCamera->Aspect = static_cast<float>(w) / static_cast<float>(h);
+			if (mScreenCam)
+				mScreenCam->Aspect = static_cast<float>(w) / static_cast<float>(h);
 		}
 
 	  private:
-		// ── PostFX chain 빌드 (doc/design/PostFX.md Stage A+B) ────────────────────
-		void BuildPostFXChain(SJH::ResourceRegistry &reg, SJH::Mesh *quadMesh, int width, int height)
-		{
-			mPostFXPasses.clear();
-			for (std::size_t i = 0; i < kPostFXDefs.size(); ++i)
-			{
-				const auto &def  = kPostFXDefs[i];
-				const auto  progKey = std::string("postfx_") + def.Name;
-				const auto  matKey  = std::string("mat_postfx_") + def.Name;
-
-				auto *prog = reg.CreateProgram(progKey, kPostFXVertFile, def.FragFile);
-				if (!prog)
-				{
-					spdlog::error("[PostFX] 셰이더 로드 실패: {}", def.FragFile);
-					continue;
-				}
-				auto *mat = reg.CreateSharedMaterial(matKey);
-				mat->SetProgram(prog);
-				if (std::string(def.Name) == "gamma")
-					mat->Properties.Floats["gamma"] = mGamma;
-
-				mPostFXFBs[i] = SJH::Framebuffer::Create(width, height);
-				if (!mPostFXFBs[i])
-				{
-					spdlog::error("[PostFX] FB 생성 실패: {}", def.Name);
-					continue;
-				}
-
-				SJH::PostFXPass pass;
-				pass.Name     = def.Name;
-				pass.Material = mat;
-				pass.OutputFB = mPostFXFBs[i].get();
-				pass.Enabled  = true;
-				mPostFXPasses.push_back(std::move(pass));
-			}
-			mRenderSys.SetPostFXChain(mPostFXPasses, quadMesh);
-			mCachedQuadMesh = quadMesh;
-		}
-
 		// ── 멤버 ────────────────────────────────────────────────────────────────────
 		SJH::SceneRenderer              mRenderSys;
 		SJH::RenderTargetUPtr           mDefaultTarget;
 		SJH::FramebufferUPtr            mSceneFB;
 		std::unique_ptr<SJH::ScreenQuadStage> mScreenQuadStage;
 
-		// PostFX — doc/design/PostFX.md Ordered Pass List
-		std::array<SJH::FramebufferUPtr, 5> mPostFXFBs;
-		std::vector<SJH::PostFXPass>        mPostFXPasses;
-		SJH::Mesh                          *mCachedQuadMesh = nullptr;
-		float                               mGamma          = 1.0f;
+		// PassComponent 체인 FBs + 포인터 목록
+		std::array<SJH::FramebufferUPtr, 5>      mPostFXFBs;
+		std::vector<SJH::Scene::PassComponent *> mPassComponents;
+		float                                    mGamma = 1.0f;
 
 		// ImGui
 		ImGuiContext          *mImGuiCtx   = nullptr;
@@ -440,9 +468,11 @@ namespace TopdownShooter
 		bool                   mShowEditor = true;
 
 		// 씬 오브젝트
-		SJH::Scene::Actor                              *mCameraActor  = nullptr;
-		SJH::Scene::Actor                              *mSpriteActor  = nullptr;
-		SJH::Scene::Camera                             *mCamera       = nullptr;
+		SJH::Scene::Actor                              *mCameraActor      = nullptr;
+		SJH::Scene::Actor                              *mScreenCamActor   = nullptr;
+		SJH::Scene::Actor                              *mSpriteActor      = nullptr;
+		SJH::Scene::Camera                             *mCamera           = nullptr;
+		SJH::Scene::Camera                             *mScreenCam        = nullptr;
 		SJH::SpriteSequence::SpriteSequencePlayable    *mSpriteSeq    = nullptr;
 		SJH::SpriteSequence::SpriteFrameClip            mWholeAtlasClip{};
 		SJH::Sprite::SpriteRenderer                    *mSprite       = nullptr;

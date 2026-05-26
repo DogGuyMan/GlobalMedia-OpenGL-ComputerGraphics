@@ -17,6 +17,7 @@
  *  Process 본문 = *순서 + 조건 결정* 만 (Orchestrator 정통 — Unreal `FMeshPassProcessor`).
  */
 #include "render/mesh_pass_processor.h"
+#include <vmath.h>
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"     // DrawCommand 의 meshRenderer 경유 접근 (SSoT).
 #include "render/property_block_setter.h"
@@ -27,6 +28,7 @@
 #include "material/material.h"
 #include "material/pass.h"
 #include "common/constants.h"
+#include "buffer/framebuffer.h"
 #include <algorithm>
 #include <functional>
 
@@ -87,10 +89,44 @@ namespace SJH
     {
         const Program*       lastProg = nullptr;
         const Material*      lastMat  = nullptr;
-        PipelineStateSetter  stateSetter;  // * GL state machine 의 단일 owner — Process 내 한정.
+        PipelineStateSetter  stateSetter;
 
         for (const auto& cmd : mItems)
         {
+            // ── ScreenQuad (PassComponent) ────────────────────────────────────────
+            if (cmd.kind == DrawCommand::Kind::ScreenQuad)
+            {
+                if (!cmd.inputFB || !cmd.outputFB || !cmd.passMaterial || !mScreenQuadMesh)
+                    continue;
+                auto *prog = cmd.passMaterial->GetProgram();
+                if (!prog)
+                    continue;
+
+                rc.BeginFrame(*cmd.outputFB);
+                rc.SetDepthTest(false);
+                rc.SetBlend(false);
+
+                cmd.passMaterial->Properties.Textures["uScene"] = {
+                    cmd.inputFB->GetColorAttachment().get(), 0};
+
+                rc.UseProgram(*prog);
+                PropertyBlockSetter::Set(rc, cmd.passMaterial->Properties, *prog);
+
+                rc.BindVAO(mScreenQuadMesh->GetVAO());
+                // VAO 오염 가드 — Effekseer/Box2D 가 EBO 를 덮어쓸 수 있음
+                if (auto ebo = mScreenQuadMesh->GetIndexBuffer())
+                    ebo->Bind();
+                rc.DrawIndexed(mScreenQuadMesh->GetIndexCount());
+
+                rc.SetDepthTest(true);
+                mLastOutputFB = cmd.outputFB;
+                // FB 전환 후 program/material 상태 초기화 — 다음 WorldMesh 가 재바인딩
+                lastProg = nullptr;
+                lastMat  = nullptr;
+                continue;
+            }
+
+            // ── WorldMesh ─────────────────────────────────────────────────────────
             // SSoT — meshRenderer 경유 program/mesh/material 추출 (DrawCommand 직접 필드 폐기).
             if (!cmd.meshRenderer) continue;
             const Material* material = cmd.meshRenderer->Material;

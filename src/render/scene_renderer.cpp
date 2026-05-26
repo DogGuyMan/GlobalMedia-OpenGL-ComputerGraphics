@@ -1,24 +1,27 @@
 #include "render/scene_renderer.h"
-#include "buffer/framebuffer.h"
+#include "render/mesh_pass_processor.h"
+#include "render/pass_component.h"
+#include <vmath.h>
+#include <cstdint>
+#include <vector>
 #include "material/material.h"
 #include "object/light.h"
 #include "object/mesh.h"
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"
-#include "render/property_block_setter.h"
 #include "render/render_target.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
 #include <spdlog/spdlog.h>
-#include <utility>
-#include <vector>
 
 namespace SJH
 {
 	void SceneRenderer::Render(RenderTarget & /*defaultTarget*/)
 	{
+		mLastSceneOutput = nullptr;
+
 		// defaultTarget 파라미터는 IRenderStage 인터페이스 준수를 위해 유지 (ScreenQuadStage 등 다른
 		// Stage 는 이 target 을 출력으로 사용). SceneRenderer 는 각 Camera 의 전용 RT 만 사용한다.
 
@@ -27,7 +30,6 @@ namespace SJH
 		if (cameras.empty())
 		{
 			spdlog::warn("SceneRenderer::Render — SceneContext 에 Camera 0 — 프레임 skip.");
-			mLastActiveFXOutput = nullptr;
 			return;
 		}
 
@@ -35,75 +37,11 @@ namespace SJH
 		for (auto *cam : cameras)
 			if (cam->IsEnabled())
 				RenderWithCamera(*cam);
-
-		// 3. PostFX 체인 — 씬 카메라 렌더 직후 (doc/design/PostFX.md §3.2).
-		//    첫 번째 활성 Camera 의 RT(Framebuffer) 를 SceneInput 으로 삼는다.
-		mLastActiveFXOutput = nullptr;
-		if (!mPostFXChain.empty() && mQuadMesh)
-		{
-			for (auto *cam : cameras)
-			{
-				if (!cam->IsEnabled()) continue;
-				if (auto *fb = dynamic_cast<Framebuffer *>(cam->GetTargetRenderTarget()))
-				{
-					RunPostFXChain(*fb);
-					break;
-				}
-			}
-		}
 	}
 
-	void SceneRenderer::SetPostFXChain(std::vector<PostFXPass> chain, Mesh *quadMesh)
+	void SceneRenderer::SetScreenQuadMesh(Mesh *mesh)
 	{
-		mPostFXChain = std::move(chain);
-		mQuadMesh    = quadMesh;
-		mLastActiveFXOutput = nullptr;
-	}
-
-	void SceneRenderer::ClearPostFXChain()
-	{
-		mPostFXChain.clear();
-		mQuadMesh           = nullptr;
-		mLastActiveFXOutput = nullptr;
-	}
-
-	void SceneRenderer::RunPostFXChain(const Framebuffer &sceneInput)
-	{
-		mLastActiveFXOutput     = nullptr;
-		const Framebuffer *inputFB = &sceneInput;
-		auto              &rc      = DeviceContext::Get();
-
-		for (auto &pass : mPostFXChain)
-		{
-			if (!pass.Enabled || !pass.OutputFB || !pass.Material)
-				continue;
-			auto *prog = pass.Material->GetProgram();
-			if (!prog)
-				continue;
-
-			rc.BeginFrame(*pass.OutputFB);
-			rc.SetDepthTest(false);
-			rc.SetBlend(false);
-
-			// 입력 텍스처 바인딩 — MaterialPropertyBlock.Textures["uScene"] 에 저장.
-			// PropertyBlockSetter::Set 이 매 프레임 sampler unit 0 에 바인드.
-			pass.Material->Properties.Textures["uScene"] = {
-			    inputFB->GetColorAttachment().get(), 0};
-
-			rc.UseProgram(*prog);
-			PropertyBlockSetter::Set(rc, pass.Material->Properties, *prog);
-
-			rc.BindVAO(mQuadMesh->GetVAO());
-			// VAO 오염 가드 — Effekseer/Box2D 가 EBO 를 덮어쓸 수 있음 (memory: vao_ebo_thirdparty_corruption).
-			if (auto ebo = mQuadMesh->GetIndexBuffer())
-				ebo->Bind();
-			rc.DrawIndexed(mQuadMesh->GetIndexCount());
-
-			rc.SetDepthTest(true);
-
-			inputFB             = pass.OutputFB;
-			mLastActiveFXOutput = pass.OutputFB;
-		}
+		mProcessor.SetScreenQuadMesh(mesh);
 	}
 
 	void SceneRenderer::RenderWithCamera(Scene::Camera &cam)
@@ -152,6 +90,8 @@ namespace SJH
 		CollectFromActor(Scene::Director::Get().Root(), viewMat, cullingMask);
 		mProcessor.SortMultiStage();
 		mProcessor.Process(rc, viewMat, projMat);
+		if (auto *lastFB = mProcessor.GetLastOutputFB())
+			mLastSceneOutput = lastFB;
 	}
 
 	void SceneRenderer::CollectFromActor(const Scene::Actor &actor,
@@ -176,6 +116,21 @@ namespace SJH
 					cmd.modelMatrix  = model;
 					cmd.queueLayer   = mr->Material->GetQueueLayer() + mr->QueueOffset;
 					cmd.depth        = depthZ;
+					mProcessor.Submit(cmd);
+				}
+			}
+
+			// ScreenQuad — PassComponent 수집
+			if (auto *pc = actor.GetComponent<Scene::PassComponent>())
+			{
+				if (pc->Enabled && pc->InputFB && pc->OutputFB && pc->mMaterial)
+				{
+					DrawCommand cmd;
+					cmd.kind         = DrawCommand::Kind::ScreenQuad;
+					cmd.queueLayer   = pc->QueueOffset;
+					cmd.inputFB      = pc->InputFB;
+					cmd.outputFB     = pc->OutputFB;
+					cmd.passMaterial = pc->mMaterial;
 					mProcessor.Submit(cmd);
 				}
 			}

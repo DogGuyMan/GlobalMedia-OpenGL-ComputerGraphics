@@ -1,40 +1,36 @@
 #include "UI/PostFXDebugLayer.h"
 #include "material/material.h"
-#include "render/scene_renderer.h"
 #include <imgui.h>
+#include <utility>
+#include <vector>
 
 namespace TopdownShooter::UI
 {
-	PostFXDebugLayer::PostFXDebugLayer(SJH::SceneRenderer          &renderer,
-	                                   std::vector<SJH::PostFXPass> &passes,
-	                                   SJH::Mesh                   *&quadMesh,
-	                                   float                        &gamma)
-	    : mRenderer(renderer), mPasses(passes), mQuadMesh(quadMesh), mGamma(gamma)
+	PostFXDebugLayer::PostFXDebugLayer(std::vector<PassDebugEntry> passes, float &gamma)
+	    : mPasses(std::move(passes)), mGamma(gamma)
 	{
 	}
 
 	void PostFXDebugLayer::OnBuildUI()
 	{
 		ImGui::Begin("PostFX Debug");
-		bool chainDirty = false;
 
-		for (auto &pass : mPasses)
+		for (auto &entry : mPasses)
 		{
-			if (ImGui::Checkbox(pass.Name.c_str(), &pass.Enabled))
-				chainDirty = true;
+			if (!entry.Component)
+				continue;
 
-			if (pass.Name == "gamma" && pass.Enabled)
+			ImGui::Checkbox(entry.Name.c_str(), &entry.Component->Enabled);
+
+			if (entry.Name == "gamma" && entry.Component->Enabled)
 			{
 				if (ImGui::SliderFloat("gamma##val", &mGamma, 0.1f, 2.5f))
 				{
-					if (pass.Material)
-						pass.Material->Properties.Floats["gamma"] = mGamma;
+					if (entry.Component->mMaterial)
+						entry.Component->mMaterial->Properties.Floats["gamma"] = mGamma;
 				}
 			}
 		}
-
-		if (chainDirty && mQuadMesh)
-			mRenderer.SetPostFXChain(mPasses, mQuadMesh);
 
 		ImGui::End();
 	}

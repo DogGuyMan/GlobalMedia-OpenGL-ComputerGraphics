@@ -28,6 +28,24 @@ namespace SJH::Scene
 
 	vmath::mat4 Camera::GetProjectionMatrix() const
 	{
+		if (IsOrthographic)
+		{
+			// vmath::ortho 는 m[3][2] 부호 버그 (sb7 미수정 정책) — OpenGL 표준 spec 으로 직접 구현 (column-major)
+			const float l = -OrthoSize * Aspect;
+			const float r =  OrthoSize * Aspect;
+			const float b = -OrthoSize;
+			const float t =  OrthoSize;
+			const float n =  NearZ;
+			const float f =  FarZ;
+			vmath::mat4 m = vmath::mat4::identity();
+			m[0][0] =  2.0f / (r - l);
+			m[1][1] =  2.0f / (t - b);
+			m[2][2] = -2.0f / (f - n);
+			m[3][0] = -(r + l) / (r - l);
+			m[3][1] = -(t + b) / (t - b);
+			m[3][2] = -(f + n) / (f - n);
+			return m;
+		}
 		return vmath::perspective(FovYDeg, Aspect, NearZ, FarZ);
 	}
 
