@@ -26,10 +26,11 @@ namespace SJH
     {
     public:
         /// @brief SceneContext 의 Camera 컬렉션을 순회하며 직렬 렌더.
-        /// @param target IRenderStage 계약 파라미터 — Phase B 이후 미사용 (모든 Camera 가 자기 FBO 보유).
+        /// @param defaultTarget Application 이 보유한 window backbuffer — Camera 의 targetFramebuffer 가
+        ///                      nullptr 일 때 fallback 으로 사용 (SP-RTOwnership — DeviceContext 슬림화).
         /// @details Camera 컴포넌트가 하나도 없으면 spdlog::warn + early return (프레임 skip).
-        ///          addCamera 호출 순서대로 렌더 — Cocos2D `addChild` 정통.
-        void Render(RenderTarget& target) override;
+        ///          addCamera 호출 순서대로 렌더 — Cocos2D `addChild` 정통 (std::sort 폐기, Camera::Depth 폐기와 동반).
+        void Render(RenderTarget& defaultTarget) override;
 
 	// 상시 Camera를 찾는것은 이상하다 RenderTarget Plane을 가지고 있음.
 	// Light 는 어떤 관점으로 바라봐야 하지?
@@ -40,9 +41,8 @@ namespace SJH
         ///        자식 트리는 visibleToCamera 와 무관하게 계속 traverse (자식이 다른 layer 일 수 있음).
         void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
 
-        /// @brief 단일 Camera 1패스 — cam.GetTargetRenderTarget() 바인딩 + Actor 수집 + Light uniform 송신 + Queue flush.
-        /// @note cam.GetTargetRenderTarget() 이 nullptr 이면 assert (Phase B: Camera 강제 non-null).
-        void RenderWithCamera(Scene::Camera& cam);
+        /// @brief 단일 Camera 1패스 — target FB 바인딩 + Actor 수집 + Light uniform 송신 + Queue flush.
+        void RenderWithCamera(Scene::Camera& cam, RenderTarget& defaultTarget);
 
         /// @brief 활성 Light 들을 모든 program 에 송신 (SP5).
         /// @details lighting.fs 의 uniform 명 (dirLight / pointLights[i] / spotLights[i] + *Enabled int)

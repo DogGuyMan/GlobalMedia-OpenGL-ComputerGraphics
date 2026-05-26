@@ -3,7 +3,6 @@
 
 #include "scene/actor.h" // Component + Actor::GetWorldMatrix
 #include "scene/layer.h" // Layer, ToBits (SP5 Task 3)
-#include <cassert>
 #include <cstdint>       // uint64_t for cullingMask (SP5 Task 3)
 #include <vmath.h>
 
@@ -92,12 +91,10 @@ namespace SJH::Scene
 
 		// ── SP4 multi-pass ─────────────────────────────────────────────────────
 		/// @brief 렌더 대상 지정 — Unity Camera.targetTexture 정통. 의존 역전 — RenderTarget 추상.
-		/// @details SP-UniversalRenderTarget Phase B: nullptr 금지 — 모든 Camera 는 명시 RenderTarget 을 보유.
-		///          DefaultRenderTarget(backbuffer) 직접 사용 금지 — ScreenQuadStage 경유 합성이 정통.
-		///          Framebuffer(FBO) / (미래) ShadowMap/MRT 등 모두 수용.
+		/// @details nullptr = default backbuffer. SceneRenderer 이 BeginFrame 시 자동 사용.
+		///          Framebuffer(FBO) / DefaultRenderTarget / 미래 ShadowMap/MRT 등 모두 수용.
 		void SetTargetRenderTarget(RenderTarget *rt)
 		{
-			assert(rt != nullptr && "Camera::SetTargetRenderTarget — nullptr 금지. ScreenQuadStage 로 backbuffer 합성 필요.");
 			mTargetRT = rt;
 		}
 		RenderTarget *GetTargetRenderTarget() const
