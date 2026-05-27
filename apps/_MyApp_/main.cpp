@@ -1,6 +1,6 @@
 /**
  * @file main.cpp
- * @brief M1 컨벤션 정착 — Director + SceneRenderer + Material + MeshRenderer 패턴.
+ * @brief M1 컨벤션 정착 — Manager + SceneRenderer + Material + MeshRenderer 패턴.
  *        직접 GL 호출 제거 (migrate_demo / tweeny_demo 정통).
  *        TestPattern frame 0 빌보드 1장 정적 표시.
  */
@@ -17,7 +17,7 @@
 
 #include "Audio/FmodPlayable.h"
 #include "Audio/FmodStudioPlayable.h"
-#include "Director.h"
+#include "Manager.h"
 #include "Entity/Player/PlayerActor.h"
 #include "InputHandler/PlayerController.h"
 #include "InputHandler/TargetFollowableCameraController.h"
@@ -218,13 +218,13 @@ namespace TopdownShooter
 			    mStages.begin(),
 			    std::make_unique<SJH::CameraStage>(&mRenderSys, mCamera));
 
-			// === M5 — Director 가 Audio + VFX + Physics 일괄 초기화 ===
-			TopdownShooter::Director::Get().Init();
-			auto &phys = TopdownShooter::Director::Get().Physics();
+			// === M5 — Manager 가 Audio + VFX + Physics 일괄 초기화 ===
+			TopdownShooter::Manager::Get().Init();
+			auto &phys = TopdownShooter::Manager::Get().Physics();
 
 			// === M5 T3 — BGM (FMOD Studio) ===
 			{
-				auto &audio = TopdownShooter::Director::Get().Audio();
+				auto &audio = TopdownShooter::Manager::Get().Audio();
 				audio.LoadBank("resources/banks/Master.strings.bank");
 				audio.LoadBank("resources/banks/Master.bank");
 
@@ -242,7 +242,7 @@ namespace TopdownShooter
 
 			// === M5 T2 — Muzzle VFX ===
 			{
-				auto mgr = TopdownShooter::Director::Get().VFX().GetManager();
+				auto mgr = TopdownShooter::Manager::Get().VFX().GetManager();
 				reg.CreateEffect(mgr, "muzzle", u"resources/vfx/distortion.efk");
 			}
 
@@ -326,9 +326,9 @@ namespace TopdownShooter
 			ImGui_ImplGlfwGL3_NewFrame();
 
 			mKeyboard.PollHeld(window);
-			TopdownShooter::Director::Get().Update(dt);
+			TopdownShooter::Manager::Get().Update(dt);
 			SJH::Scene::Director::Get().Update(dt);
-			TopdownShooter::Director::Get().Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
+			TopdownShooter::Manager::Get().Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
 
 			// ── stages 컬렉션 순회 — World → Screen → ScreenQuad ─────────────────
 			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).
@@ -344,7 +344,7 @@ namespace TopdownShooter
 			{
 				vmath::mat4 view = mCamera->GetViewMatrix();
 				vmath::mat4 proj = mCamera->GetProjectionMatrix();
-				TopdownShooter::Director::Get().VFX().Draw(&view[0][0], &proj[0][0]);
+				TopdownShooter::Manager::Get().VFX().Draw(&view[0][0], &proj[0][0]);
 			}
 
 			// ImGui 창 빌드 + 렌더 (항상 최상위).
@@ -369,7 +369,7 @@ namespace TopdownShooter
 			mDefaultTarget.reset();
 			mSprite = nullptr;
 			mSpriteSeq = nullptr;
-			TopdownShooter::Director::Get().Shutdown();
+			TopdownShooter::Manager::Get().Shutdown();
 		}
 
 		void onKey(int key, int action) override
@@ -388,7 +388,7 @@ namespace TopdownShooter
 			// === M5 CO2 — G 키: Parallel( TweenShake ∥ FmodStudio.Damaged ) ===
 			if (key == GLFW_KEY_G && action == GLFW_PRESS)
 			{
-				auto &audio = TopdownShooter::Director::Get().Audio();
+				auto &audio = TopdownShooter::Manager::Get().Audio();
 				auto *damagedEvt = audio.LoadEvent("event:/Damaged");
 
 				auto *dActor = SJH::Scene::Director::Get().Root().AddChild(
@@ -424,8 +424,8 @@ namespace TopdownShooter
 			if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
 			{
 				auto &reg = SJH::ResourceRegistry::Get();
-				auto &audio = TopdownShooter::Director::Get().Audio();
-				auto &vfx = TopdownShooter::Director::Get().VFX();
+				auto &audio = TopdownShooter::Manager::Get().Audio();
+				auto &vfx = TopdownShooter::Manager::Get().VFX();
 
 				auto *shot = reg.FindSound("shot");
 				auto *muzzle = reg.FindEffect("muzzle");
