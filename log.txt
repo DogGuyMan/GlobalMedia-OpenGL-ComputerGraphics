@@ -1,0 +1,223 @@
+-- The C compiler identification is AppleClang 21.0.0.21000099
+-- The CXX compiler identification is AppleClang 21.0.0.21000099
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found OpenGL: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework
+-- Configuring done (0.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/build_ninja
+[1/96] Building CXX object src/shader/CMakeFiles/sjhopengl_shader.dir/shader.cpp.o
+[2/96] Building CXX object src/program/CMakeFiles/sjhopengl_program.dir/program.cpp.o
+[3/96] Building CXX object src/program/CMakeFiles/sjhopengl_program.dir/program_uniforms.cpp.o
+[4/96] Building CXX object src/diagnostics/CMakeFiles/sjhopengl_diagnostics.dir/gl_state_log.cpp.o
+[5/96] Building CXX object src/diagnostics/CMakeFiles/sjhopengl_diagnostics.dir/gl_state_fields.cpp.o
+[6/96] Building CXX object src/material/CMakeFiles/sjhopengl_material.dir/material_uniforms.cpp.o
+[7/96] Building CXX object src/common/CMakeFiles/sjhopengl_common.dir/common.cpp.o
+[8/96] Building CXX object src/diagnostics/CMakeFiles/sjhopengl_diagnostics.dir/uniform_diagnostics.cpp.o
+[9/96] Linking CXX static library src/common/libsjhopengl_common.a
+[10/96] Building CXX object src/program/CMakeFiles/sjhopengl_program.dir/uniform_cache.cpp.o
+[11/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/render_stage.cpp.o
+[12/96] Building CXX object src/diagnostics/CMakeFiles/sjhopengl_diagnostics.dir/gl_log.cpp.o
+[13/96] Building CXX object src/resource_registry/CMakeFiles/sjhopengl_resource_registry.dir/sound.cpp.o
+[14/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/pipeline_state_setter.cpp.o
+[15/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/render_target.cpp.o
+[16/96] Building CXX object src/diagnostics/CMakeFiles/sjhopengl_diagnostics.dir/gl_validate.cpp.o
+[17/96] Linking CXX static library src/diagnostics/libsjhopengl_diagnostics.a
+[18/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/device_context.cpp.o
+[19/96] Linking CXX static library src/shader/libsjhopengl_shader.a
+[20/96] Linking CXX static library src/material/libsjhopengl_material.a
+[21/96] Building CXX object src/resource_registry/CMakeFiles/sjhopengl_resource_registry.dir/image.cpp.o
+[22/96] Linking CXX static library src/program/libsjhopengl_program.a
+[23/96] Building CXX object src/resource_registry/CMakeFiles/sjhopengl_resource_registry.dir/effect.cpp.o
+[24/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/property_block_setter.cpp.o
+[25/96] Building CXX object src/resource_registry/CMakeFiles/sjhopengl_resource_registry.dir/texture.cpp.o
+[26/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/light_uniform_dispatcher.cpp.o
+[27/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/mesh_pass_processor.cpp.o
+[28/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/screen_quad_stage.cpp.o
+[29/96] Building CXX object src/scene/CMakeFiles/sjhopengl_scene.dir/actor.cpp.o
+[30/96] Building CXX object src/scene/CMakeFiles/sjhopengl_scene.dir/scene.cpp.o
+[31/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/camera_stage.cpp.o
+[32/96] Building CXX object src/object/CMakeFiles/sjhopengl_object.dir/mesh.cpp.o
+[33/96] Building CXX object src/layout/CMakeFiles/sjhopengl_layout.dir/vertex_layout.cpp.o
+[34/96] Building CXX object src/scene/CMakeFiles/sjhopengl_scene.dir/camera.cpp.o
+[35/96] Building CXX object src/scene/CMakeFiles/sjhopengl_scene.dir/scene_context.cpp.o
+[36/96] Building CXX object src/resource_registry/CMakeFiles/sjhopengl_resource_registry.dir/resource_registry.cpp.o
+[37/96] Building CXX object src/scene/CMakeFiles/sjhopengl_scene.dir/compound_actor.cpp.o
+[38/96] Building CXX object src/render/CMakeFiles/sjhopengl_render.dir/scene_renderer.cpp.o
+[39/96] Linking CXX static library src/resource_registry/libsjhopengl_resource_registry.a
+ranlib: warning: 'libsjhopengl_resource_registry.a(effect.cpp.o)' has no symbols
+ranlib: warning: 'libsjhopengl_resource_registry.a(effect.cpp.o)' has no symbols
+[40/96] Linking CXX static library src/render/libsjhopengl_render.a
+ranlib: warning: 'libsjhopengl_render.a(render_stage.cpp.o)' has no symbols
+ranlib: warning: 'libsjhopengl_render.a(render_stage.cpp.o)' has no symbols
+[41/96] Building CXX object src/scene/CMakeFiles/sjhopengl_scene.dir/model_spawner.cpp.o
+[42/96] Linking CXX static library src/scene/libsjhopengl_scene.a
+[43/96] Building CXX object src/buffer/CMakeFiles/sjhopengl_buffer.dir/buffer.cpp.o
+[44/96] Linking CXX static library src/layout/libsjhopengl_layout.a
+[45/96] Building CXX object src/object/CMakeFiles/sjhopengl_object.dir/geometry.cpp.o
+[46/96] Building CXX object src/object/CMakeFiles/sjhopengl_object.dir/light.cpp.o
+[47/96] Building CXX object apps/_MyApp_/src/Entity/CMakeFiles/myapp_entity.dir/BaseEntity.cpp.o
+[48/96] Building CXX object src/playable/CMakeFiles/sjh_playable.dir/playable_base.cpp.o
+[49/96] Building CXX object src/playable/CMakeFiles/sjh_playable.dir/interval_playable.cpp.o
+[50/96] Building CXX object src/playable/CMakeFiles/sjh_playable.dir/composite_playable.cpp.o
+[51/96] Building CXX object src/buffer/CMakeFiles/sjhopengl_buffer.dir/framebuffer.cpp.o
+[52/96] Building CXX object src/object/CMakeFiles/sjhopengl_object.dir/model.cpp.o
+[53/96] Linking CXX static library src/object/libsjhopengl_object.a
+[54/96] Building CXX object src/sprite/CMakeFiles/sjh_sprite.dir/uniform_atlas.cpp.o
+[55/96] Building CXX object src/sprite/CMakeFiles/sjh_sprite.dir/sprite_sequence_playable.cpp.o
+[56/96] Linking CXX static library src/buffer/libsjhopengl_buffer.a
+[57/96] Building CXX object apps/_MyApp_/src/Algebraic/CMakeFiles/myapp_algebraic.dir/Stat.cpp.o
+[58/96] Building CXX object apps/_MyApp_/src/Entity/CMakeFiles/myapp_entity.dir/Player/BulletSpawnPlayable.cpp.o
+[59/96] Linking CXX static library src/playable/libsjh_playable.a
+[60/96] Linking CXX static library apps/_MyApp_/src/Algebraic/libmyapp_algebraic.a
+[61/96] Building CXX object apps/_MyApp_/src/Entity/CMakeFiles/myapp_entity.dir/Player/PlayerBehavior.cpp.o
+[62/96] Building CXX object apps/_MyApp_/src/Entity/CMakeFiles/myapp_entity.dir/Bullet/BulletContactHandler.cpp.o
+[63/96] Building CXX object apps/_MyApp_/src/Entity/CMakeFiles/myapp_entity.dir/Enemy/SimplePursueAI.cpp.o
+[64/96] Building CXX object apps/_MyApp_/src/Entity/CMakeFiles/myapp_entity.dir/Enemy/EnemyContactHandler.cpp.o
+[65/96] Building CXX object src/input/CMakeFiles/sjhopengl_input.dir/mouse_input.cpp.o
+[66/96] Linking CXX static library src/input/libsjhopengl_input.a
+[67/96] Building CXX object apps/_MyApp_/src/Physics/CMakeFiles/myapp_physics.dir/contact_listener.cpp.o
+[68/96] Building CXX object apps/_MyApp_/src/Physics/CMakeFiles/myapp_physics.dir/physics_system.cpp.o
+[69/96] Building CXX object apps/_MyApp_/src/Audio/CMakeFiles/myapp_audio.dir/AudioSystem.cpp.o
+[70/96] Building CXX object src/sprite/CMakeFiles/sjh_sprite.dir/sprite_component.cpp.o
+[71/96] Building CXX object apps/_MyApp_/src/Audio/CMakeFiles/myapp_audio.dir/FmodStudioPlayable.cpp.o
+[72/96] Building CXX object apps/_MyApp_/src/Audio/CMakeFiles/myapp_audio.dir/FmodPlayable.cpp.o
+[73/96] Linking CXX static library src/sprite/libsjh_sprite.a
+[74/96] Linking CXX static library apps/_MyApp_/src/Entity/libmyapp_entity.a
+ranlib: warning: 'libmyapp_entity.a(BaseEntity.cpp.o)' has no symbols
+ranlib: warning: 'libmyapp_entity.a(BaseEntity.cpp.o)' has no symbols
+[75/96] Linking CXX static library apps/_MyApp_/src/Physics/libmyapp_physics.a
+[76/96] Linking CXX static library apps/_MyApp_/src/Audio/libmyapp_audio.a
+[77/96] Building CXX object apps/_MyApp_/src/VFX/CMakeFiles/myapp_vfx.dir/VFXSystem.cpp.o
+[78/96] Building CXX object apps/_MyApp_/src/VFX/CMakeFiles/myapp_vfx.dir/EffekseerPlayable.cpp.o
+[79/96] Building CXX object apps/_MyApp_/src/CMakeFiles/myapp_manager.dir/Manager.cpp.o
+[80/96] Linking CXX static library apps/_MyApp_/src/VFX/libmyapp_vfx.a
+[81/96] Building CXX object apps/_MyApp_/CMakeFiles/_MyApp_.dir/__/__/extern/imgui/imgui_demo.cpp.o
+[82/96] Building CXX object apps/_MyApp_/CMakeFiles/_MyApp_.dir/__/__/extern/imgui/imgui_draw.cpp.o
+In file included from /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:18:
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_internal.h:365:62: warning: first argument in call to 'memset' is a pointer to non-trivially copyable type 'ImGuiTextEditState' [-Wnontrivial-memcall]
+  365 |     ImGuiTextEditState()                            { memset(this, 0, sizeof(*this)); }
+      |                                                              ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_internal.h:365:62: note: explicitly cast the pointer to silence this warning
+  365 |     ImGuiTextEditState()                            { memset(this, 0, sizeof(*this)); }
+      |                                                              ^
+      |                                                              (void*)
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:336:28: warning: first argument in call to 'memset' is a pointer to non-trivially copyable type 'value_type' (aka 'ImDrawChannel') [-Wnontrivial-memcall]
+  336 |         if (i == 0) memset(&_Channels[0], 0, sizeof(_Channels[0]));  // channel 0 is a copy of CmdBuffer/IdxBuffer, don't destruct again
+      |                            ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:336:28: note: explicitly cast the pointer to silence this warning
+  336 |         if (i == 0) memset(&_Channels[0], 0, sizeof(_Channels[0]));  // channel 0 is a copy of CmdBuffer/IdxBuffer, don't destruct again
+      |                            ^
+      |                            (void*)
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:469:12: warning: first argument in call to 'memset' is a pointer to non-trivially copyable type 'value_type' (aka 'ImDrawChannel') [-Wnontrivial-memcall]
+  469 |     memset(&_Channels[0], 0, sizeof(ImDrawChannel));
+      |            ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:469:12: note: explicitly cast the pointer to silence this warning
+  469 |     memset(&_Channels[0], 0, sizeof(ImDrawChannel));
+      |            ^
+      |            (void*)
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:529:12: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'ImVector<ImDrawCmd>' [-Wnontrivial-memcall]
+  529 |     memcpy(&_Channels.Data[_ChannelsCurrent].CmdBuffer, &CmdBuffer, sizeof(CmdBuffer)); // copy 12 bytes, four times
+      |            ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:529:12: note: explicitly cast the pointer to silence this warning
+  529 |     memcpy(&_Channels.Data[_ChannelsCurrent].CmdBuffer, &CmdBuffer, sizeof(CmdBuffer)); // copy 12 bytes, four times
+      |            ^
+      |            (void*)
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:530:12: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'ImVector<ImDrawIdx>' (aka 'ImVector<unsigned short>') [-Wnontrivial-memcall]
+  530 |     memcpy(&_Channels.Data[_ChannelsCurrent].IdxBuffer, &IdxBuffer, sizeof(IdxBuffer));
+      |            ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:530:12: note: explicitly cast the pointer to silence this warning
+  530 |     memcpy(&_Channels.Data[_ChannelsCurrent].IdxBuffer, &IdxBuffer, sizeof(IdxBuffer));
+      |            ^
+      |            (void*)
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:532:12: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'ImVector<ImDrawCmd>' [-Wnontrivial-memcall]
+  532 |     memcpy(&CmdBuffer, &_Channels.Data[_ChannelsCurrent].CmdBuffer, sizeof(CmdBuffer));
+      |            ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:532:12: note: explicitly cast the pointer to silence this warning
+  532 |     memcpy(&CmdBuffer, &_Channels.Data[_ChannelsCurrent].CmdBuffer, sizeof(CmdBuffer));
+      |            ^
+      |            (void*)
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:533:12: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'ImVector<ImDrawIdx>' (aka 'ImVector<unsigned short>') [-Wnontrivial-memcall]
+  533 |     memcpy(&IdxBuffer, &_Channels.Data[_ChannelsCurrent].IdxBuffer, sizeof(IdxBuffer));
+      |            ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:533:12: note: explicitly cast the pointer to silence this warning
+  533 |     memcpy(&IdxBuffer, &_Channels.Data[_ChannelsCurrent].IdxBuffer, sizeof(IdxBuffer));
+      |            ^
+      |            (void*)
+In file included from /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:16:
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.h:1054:20: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'ImDrawChannel' [-Wnontrivial-memcall]
+ 1054 |             memcpy(new_data, Data, (size_t)Size * sizeof(T));
+      |                    ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.h:1046:92: note: in instantiation of member function 'ImVector<ImDrawChannel>::reserve' requested here
+ 1046 |     inline void                 resize(int new_size)            { if (new_size > Capacity) reserve(_grow_capacity(new_size)); Size = new_size; }
+      |                                                                                            ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_draw.cpp:463:19: note: in instantiation of member function 'ImVector<ImDrawChannel>::resize' requested here
+  463 |         _Channels.resize(channels_count);
+      |                   ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.h:1054:20: note: explicitly cast the pointer to silence this warning
+ 1054 |             memcpy(new_data, Data, (size_t)Size * sizeof(T));
+      |                    ^
+      |                    (void*)
+8 warnings generated.
+[83/96] Building CXX object apps/_MyApp_/src/InputHandler/CMakeFiles/myapp_input_handler.dir/CameraController.cpp.o
+[84/96] Building CXX object apps/_MyApp_/CMakeFiles/_MyApp_.dir/__/__/extern/imgui/examples/opengl3_example/imgui_impl_glfw_gl3.cpp.o
+[85/96] Building CXX object apps/_MyApp_/src/InputHandler/CMakeFiles/myapp_input_handler.dir/TargetFollowableCameraController.cpp.o
+[86/96] Building CXX object apps/_MyApp_/src/Stage/CMakeFiles/myapp_stage.dir/Components/PickupTriggerLogger.cpp.o
+[87/96] Linking CXX static library apps/_MyApp_/src/libmyapp_manager.a
+[88/96] Building CXX object apps/_MyApp_/src/InputHandler/CMakeFiles/myapp_input_handler.dir/PlayerController.cpp.o
+[89/96] Linking CXX static library apps/_MyApp_/src/InputHandler/libmyapp_input_handler.a
+[90/96] Building CXX object apps/_MyApp_/src/Stage/CMakeFiles/myapp_stage.dir/WaveController.cpp.o
+[91/96] Building CXX object apps/_MyApp_/CMakeFiles/_MyApp_.dir/__/__/extern/imgui/imgui.cpp.o
+In file included from /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.cpp:590:
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_internal.h:365:62: warning: first argument in call to 'memset' is a pointer to non-trivially copyable type 'ImGuiTextEditState' [-Wnontrivial-memcall]
+  365 |     ImGuiTextEditState()                            { memset(this, 0, sizeof(*this)); }
+      |                                                              ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui_internal.h:365:62: note: explicitly cast the pointer to silence this warning
+  365 |     ImGuiTextEditState()                            { memset(this, 0, sizeof(*this)); }
+      |                                                              ^
+      |                                                              (void*)
+In file included from /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.cpp:588:
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.h:1054:20: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'ImGuiColumnsSet' [-Wnontrivial-memcall]
+ 1054 |             memcpy(new_data, Data, (size_t)Size * sizeof(T));
+      |                    ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.h:1060:89: note: in instantiation of member function 'ImVector<ImGuiColumnsSet>::reserve' requested here
+ 1060 |     inline void                 push_back(const value_type& v)  { if (Size == Capacity) reserve(_grow_capacity(Size + 1)); Data[Size++] = v; }
+      |                                                                                         ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.cpp:10980:28: note: in instantiation of member function 'ImVector<ImGuiColumnsSet>::push_back' requested here
+ 10980 |     window->ColumnsStorage.push_back(ImGuiColumnsSet());
+       |                            ^
+/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern/imgui/imgui.h:1054:20: note: explicitly cast the pointer to silence this warning
+ 1054 |             memcpy(new_data, Data, (size_t)Size * sizeof(T));
+      |                    ^
+      |                    (void*)
+2 warnings generated.
+[92/96] Building CXX object apps/_MyApp_/src/Stage/CMakeFiles/myapp_stage.dir/StageBuilder.cpp.o
+[93/96] Building CXX object apps/_MyApp_/CMakeFiles/_MyApp_.dir/src/UI/PostFXDebugLayer.cpp.o
+[94/96] Linking CXX static library apps/_MyApp_/src/Stage/libmyapp_stage.a
+[95/96] Building CXX object apps/_MyApp_/CMakeFiles/_MyApp_.dir/main.cpp.o
+In file included from /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/apps/_MyApp_/main.cpp:23:
+In file included from /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/apps/_MyApp_/src/Algebraic/../Manager.h:6:
+In file included from /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/apps/_MyApp_/src/Algebraic/../VFX/VFXSystem.h:5:
+In file included from /Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/include/Effekseer/EffekseerRendererGL.h:48:
+/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/OpenGL.framework/Headers/gl3.h:15:2: warning: gl.h and gl3.h are both included.  Compiler will not invoke errors if using removed OpenGL functionality. [-W#warnings]
+   15 | #warning gl.h and gl3.h are both included.  Compiler will not invoke errors if using removed OpenGL functionality.
+      |  ^
+1 warning generated.
+[96/96] Linking CXX executable apps/_MyApp_/_MyApp_; _MyApp_ 빌드 후 리소스를 build 디렉터리에 복사
+---------일반 실행 (_MyApp_)---------
+[2026-05-27 21:56:37.516] [info] [AudioSystem] init OK (Studio + Core)
+[2026-05-27 21:56:37.607] [info] [VFXSystem] init OK (max=8000)
+[2026-05-27 21:56:37.607] [info] [Physics] b2World 생성 (gravity=0) + ContactListener 설치
+[2026-05-27 21:56:37.607] [info] [Director] init OK (Audio + VFX + Physics)
+[2026-05-27 21:56:37.657] [info] [AudioSystem::LoadBank] OK resources/banks/Master.strings.bank
+[2026-05-27 21:56:37.700] [info] [AudioSystem::LoadBank] OK resources/banks/Master.bank
+[2026-05-27 21:56:37.707] [info] [UniformAtlas] loaded resources/texture/TestPattern.png (512x512) — grid 미설정, SetGrid/SetTileSize 호출 필요
+[2026-05-27 21:56:37.707] [info] [UniformAtlas] grid set (4x4 grid, tile=128)
