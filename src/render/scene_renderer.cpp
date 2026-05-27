@@ -60,7 +60,10 @@ namespace SJH
 		}
 
 		auto &rc = DeviceContext::Get();
-		// NoClear(ScreenCamera): 이전 카메라 RT 출력 보존 — clear 없이 바인드+state 만.
+		
+		/*
+		* AI를 통한 디버깅
+		*/
 		if (cam.NoClear)
 		{
 			rc.BindTarget(*rt);

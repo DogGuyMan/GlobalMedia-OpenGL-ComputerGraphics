@@ -18,6 +18,7 @@ if(NOT MSVC) # GCC/Clang 전용
         # sb7 외부 헤더의 #warning (gl.h + gl3.h 동시 포함)을 에러로 처리하지 않음
         $<$<CONFIG:Debug>:-Wno-pessimizing-move>
         $<$<CONFIG:Debug>:-Wno-error=pessimizing-move>
+        $<$<CONFIG:Debug>:-Wno-error=deprecated-declarations>
         "$<$<CONFIG:Debug>:-Wno-error=#warnings>"
     )
 else() # MSVC 전용 옵션

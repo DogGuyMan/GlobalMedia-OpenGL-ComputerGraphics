@@ -15,27 +15,26 @@
 #include <imgui.h>
 #include <imgui_impl_glfw_gl3.h>
 
+#include "Audio/FmodPlayable.h"
+#include "Audio/FmodStudioPlayable.h"
+#include "Director.h"
 #include "Entity/Player/PlayerActor.h"
 #include "InputHandler/PlayerController.h"
 #include "InputHandler/TargetFollowableCameraController.h"
 #include "Physics/filter.h"
-#include "Audio/FmodPlayable.h"
-#include "Audio/FmodStudioPlayable.h"
-#include "Director.h"
 #include "Tween/TweenPlayable.h"
 #include "VFX/EffekseerPlayable.h"
 #include "playable/composite_playable.h"
 
-#include <tweeny/tweeny.h>
-#include <cmath>
 #include "Stage/StageBuilder.h"
-#include "buffer/framebuffer.h"
-#include "common/common.h"
-#include "object/mesh.h"
-#include "render/pass_component.h"
 #include "UI/ExitButtonLayer.h"
 #include "UI/ImGuiLayerStack.h"
 #include "UI/PostFXDebugLayer.h"
+#include "buffer/framebuffer.h"
+#include "common/common.h"
+#include "object/mesh.h"
+#include "render/camera_stage.h"
+#include "render/pass_component.h"
 #include "render/render_target.h"
 #include "render/scene_renderer.h"
 #include "render/screen_quad_stage.h"
@@ -47,11 +46,14 @@
 #include "sprite/sprite_component.h"
 #include "sprite/sprite_frame_clip.h"
 #include "sprite/sprite_sequence_playable.h"
+#include <cmath>
+#include <tweeny/tweeny.h>
 
 #include <array>
 #include <cstring>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace TopdownShooter
@@ -65,11 +67,11 @@ namespace TopdownShooter
 		};
 		// 체인 인덱스 = 실행 순서 (doc/design/PostFX.md §3.1).
 		constexpr std::array<PostFXDef, 5> kPostFXDefs = {{
-		    {"blurring",   "resources/shader/postprocess/blurring.fs"},
-		    {"gamma",      "resources/shader/postprocess/gamma.fs"},
-		    {"invert",     "resources/shader/postprocess/invert.fs"},
+		    {"blurring", "resources/shader/postprocess/blurring.fs"},
+		    {"gamma", "resources/shader/postprocess/gamma.fs"},
+		    {"invert", "resources/shader/postprocess/invert.fs"},
 		    {"sharpening", "resources/shader/postprocess/sharpening.fs"},
-		    {"sobel",      "resources/shader/postprocess/sobel.fs"},
+		    {"sobel", "resources/shader/postprocess/sobel.fs"},
 		}};
 		constexpr const char *kPostFXVertFile = "resources/shader/postprocess/postprocess.vs";
 	} // namespace
@@ -89,6 +91,14 @@ namespace TopdownShooter
 
 		void startup() override
 		{
+			int fbW = 0, fbH = 0;
+			glfwGetFramebufferSize(window, &fbW, &fbH);
+			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
+			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+
+			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
+			mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
+
 			auto &reg = SJH::ResourceRegistry::Get();
 			auto &dir = SJH::Scene::Director::Get();
 
@@ -102,12 +112,8 @@ namespace TopdownShooter
 				spdlog::error("[M1] atlas load failed");
 				return;
 			}
-
-			int fbW = 0, fbH = 0;
-			glfwGetFramebufferSize(window, &fbW, &fbH);
-			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
-			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
-			mSceneFB       = SJH::Framebuffer::Create(fbW, fbH);
+			const auto *exitTex = reg.CreateTexture("exit_texture",
+				 SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png").get());
 
 			// ScreenQuadStage — passthrough 셰이더 + ScreenQuad 메쉬 등록
 			auto *passthroughProg = reg.CreateProgram(
@@ -115,40 +121,37 @@ namespace TopdownShooter
 			    "resources/shaders/passthrough.vs",
 			    "resources/shaders/passthrough.fs");
 			auto *quadMesh = reg.RegisterMesh("mesh_screen_quad", SJH::Mesh::CreateScreenQuad());
-			mScreenQuadStage = std::make_unique<SJH::ScreenQuadStage>(*passthroughProg, *quadMesh);
-			mScreenQuadStage->SetSources({mSceneFB.get()});
-
-			// Exit 텍스처 — ImGui ImageButton 에 사용
-			{
-				auto img = SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png");
-				if (img)
-					mExitTex = reg.CreateTexture("exit_texture", img.get());
-			}
-
-			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+			// ── ScreenQuadStage 생성 — 소유권 stages 컬렉션으로 이전 ──────────────
+			// 이 시점에 카메라 멤버 (mCamera/mScreenCam) 는 아직 valid 아님 (line 143 / 203 에서 대입).
+			// 그래서 ScreenQuadStage 만 먼저 mStages 에 push, 카메라 stages 는 Step 4 에서
+			// *앞에* insert 하여 최종 [worldCam, screenCam, ScreenQuadStage] 순서 정착.
+			auto screenQuadOwned = std::make_unique<SJH::ScreenQuadStage>(*passthroughProg, *quadMesh);
+			screenQuadOwned->SetSources({mSceneFB.get()}); // 초기 sources — sceneFB fallback
+			mScreenQuadStagePtr = screenQuadOwned.get();   // raw 캐시 — render() 의 SetSources 갱신용 // ! ??? 필요한 것 맞나?
+			mStages.push_back(std::move(screenQuadOwned));
 
 			// ── World Camera (Perspective) — 3D 월드 ->sceneFB ─────────────────────────
 			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, aspect, 0.1f, 100.0f);
 			worldCamActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
-			worldCamActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
+			worldCamActor->GetTransform().EulerRot = vmath::vec3(-45.0f, 0.0f, 0.0f);
 			auto *worldCam = worldCamActor->GetComponent<SJH::Scene::Camera>();
-			auto *camCtrl  = worldCamActor->AddComponent<Controller::TargetFollowableCameraController>();
+			auto *camCtrl = worldCamActor->AddComponent<Controller::TargetFollowableCameraController>();
 			camCtrl->SetMouseInput(&mMouse).SetCamera(worldCam).SetUp();
 			worldCam->SetCullingMask(SJH::Scene::Layer::Default |
-			                         SJH::Scene::Layer::Player  |
-			                         SJH::Scene::Layer::Enemy   |
+			                         SJH::Scene::Layer::Player |
+			                         SJH::Scene::Layer::Enemy |
 			                         SJH::Scene::Layer::DebugDraw);
 			worldCam->SetTargetRenderTarget(mSceneFB.get());
 			mCameraActor = dir.Root().AddChild(std::move(worldCamActor));
-			mCamera      = worldCam;
+			mCamera = worldCam;
 
 			// ── Screen Camera (Orthographic) — HUD + PassComponent 체인 ────────────────
 			// 초기 activeFB = sceneFB (World Camera 출력 공유) — HUD 가 씬에 직접 합성.
 			auto screenCamActor = SJH::Scene::CreateCameraActor("ScreenCamera", 45.0f, aspect, -1.0f, 1.0f);
-			auto *screenCam     = screenCamActor->GetComponent<SJH::Scene::Camera>();
+			auto *screenCam = screenCamActor->GetComponent<SJH::Scene::Camera>();
 			screenCam->IsOrthographic = true;
-			screenCam->OrthoSize      = 1.0f;
-			screenCam->NoClear        = true;  // WorldCamera 출력 보존 — clear 없이 합성
+			screenCam->OrthoSize = 1.0f;
+			screenCam->NoClear = true; // WorldCamera 출력 보존 — clear 없이 합성
 			screenCam->SetCullingMask(SJH::Scene::Layer::UI | SJH::Scene::Layer::Screen);
 			screenCam->SetTargetRenderTarget(mSceneFB.get());
 
@@ -164,9 +167,9 @@ namespace TopdownShooter
 
 			for (std::size_t i = 0; i < kPostFXDefs.size(); ++i)
 			{
-				const auto &def     = kPostFXDefs[i];
-				const auto  progKey = std::string("postfx_") + def.Name;
-				const auto  matKey  = std::string("mat_pass_") + def.Name;
+				const auto &def = kPostFXDefs[i];
+				const auto progKey = std::string("postfx_") + def.Name;
+				const auto matKey = std::string("mat_pass_") + def.Name;
 
 				auto *prog = reg.CreateProgram(progKey, kPostFXVertFile, def.FragFile);
 				if (!prog)
@@ -200,7 +203,20 @@ namespace TopdownShooter
 			}
 
 			mScreenCamActor = dir.Root().AddChild(std::move(screenCamActor));
-			mScreenCam      = screenCam;
+			mScreenCam = screenCam;
+
+			// ── stages 컬렉션 — World → Screen → ScreenQuad 순 (SP-RenderStage) ─
+			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
+			// 카메라 stages 를 *ScreenQuadStage 앞* 에 insert — 최종 순서:
+			//   [0] worldCam → sceneFB 에 WorldMesh
+			//   [1] screenCam → PassComponent 체인 (NoClear)
+			//   [2] ScreenQuadStage → backbuffer 합성
+			mStages.insert(
+			    mStages.begin(),
+			    std::make_unique<SJH::CameraStage>(&mRenderSys, mScreenCam));
+			mStages.insert(
+			    mStages.begin(),
+			    std::make_unique<SJH::CameraStage>(&mRenderSys, mCamera));
 
 			// === M5 — Director 가 Audio + VFX + Physics 일괄 초기화 ===
 			TopdownShooter::Director::Get().Init();
@@ -216,7 +232,7 @@ namespace TopdownShooter
 				if (bgmEvent)
 				{
 					auto *bgmActor = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("BgmActor"));
-					auto *bgm      = bgmActor->AddComponent<TopdownShooter::Audio::FmodStudioPlayable>(bgmEvent);
+					auto *bgm = bgmActor->AddComponent<TopdownShooter::Audio::FmodStudioPlayable>(bgmEvent);
 					bgm->SetIsLoop(true);
 					bgm->Play();
 				}
@@ -236,26 +252,26 @@ namespace TopdownShooter
 			});
 			dir.Root().AddChild(std::move(stage));
 
-			pac.name                        = "PlayerSprite";
-			pac.life.hp                     = 100;
-			pac.movement.speed              = 3.0f;
-			pac.controller.keyboard         = &mKeyboard;
-			pac.physics.world               = &phys.World();
-			pac.physics.size                = vmath::vec2(1.0f, 1.0f);
-			pac.physics.startPosition       = vmath::vec2(0.0f, 0.0f);
-			pac.physics.density             = 1.0f;
-			pac.physics.linearDamping       = 5.0f;
-			pac.physics.categoryBits        = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
-			pac.physics.maskBits            = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
+			pac.name = "PlayerSprite";
+			pac.life.hp = 100;
+			pac.movement.speed = 3.0f;
+			pac.controller.keyboard = &mKeyboard;
+			pac.physics.world = &phys.World();
+			pac.physics.size = vmath::vec2(1.0f, 1.0f);
+			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
+			pac.physics.density = 1.0f;
+			pac.physics.linearDamping = 5.0f;
+			pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
+			pac.physics.maskBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
 
 			auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
 			spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-			spriteActor->GetTransform().Scale     = vmath::vec3(1.0f, 1.0f, 1.0f);
+			spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
 
 			mSprite = spriteActor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
 
 			mWholeAtlasClip = SJH::SpriteSequence::SpriteFrameClip{0, atlas->FrameCount(), 4.0f};
-			mSpriteSeq      = spriteActor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
+			mSpriteSeq = spriteActor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
 			    mSprite, &mWholeAtlasClip);
 			mSpriteSeq->SetIsLoop(true);
 			mSpriteSeq->Play();
@@ -275,7 +291,7 @@ namespace TopdownShooter
 			glfwSetCharCallback(window, ImGui_ImplGlfwGL3_CharCallback);
 
 			// ImGui 레이어 등록 — Game(항상) / Editor(F1 토글)
-			mImGuiStack.Push(std::make_unique<UI::ExitButtonLayer>(window, mExitTex));
+			mImGuiStack.Push(std::make_unique<UI::ExitButtonLayer>(window, exitTex));
 			std::vector<UI::PassDebugEntry> debugEntries;
 			for (std::size_t i = 0; i < kPostFXDefs.size(); ++i)
 			{
@@ -314,15 +330,14 @@ namespace TopdownShooter
 			SJH::Scene::Director::Get().Update(dt);
 			TopdownShooter::Director::Get().Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
 
-			// 씬 렌더 (SceneFB) + PostFX 체인 (intermediate FBs).
-			mRenderSys.Render(*mDefaultTarget);
-
-			// ScreenQuadStage — PassComponent 마지막 출력 또는 SceneFB fallback ->backbuffer.
+			// ── stages 컬렉션 순회 — World → Screen → ScreenQuad ─────────────────
+			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).
 			{
 				auto *out = mRenderSys.GetLastSceneOutput();
-				mScreenQuadStage->SetSources({out ? out : mSceneFB.get()});
-				mScreenQuadStage->Render(*mDefaultTarget);
+				mScreenQuadStagePtr->SetSources({out ? out : mSceneFB.get()}); // ! ??? 필요한 것 맞나?
 			}
+			for (auto &s : mStages)
+				s->Render(*mDefaultTarget);
 
 			// === M5 — Effekseer 렌더 (backbuffer 합성 후, swap 전) ===
 			if (mCamera)
@@ -344,14 +359,15 @@ namespace TopdownShooter
 			mImGuiCtx = nullptr;
 
 			SJH::Scene::Director::Get().Exit();
-			mCamera         = nullptr;
-			mCameraActor    = nullptr;
-			mScreenCam      = nullptr;
+			mCamera = nullptr;
+			mCameraActor = nullptr;
+			mScreenCam = nullptr;
 			mScreenCamActor = nullptr;
 			mPassComponents.clear();
-			mSpriteActor  = nullptr;
+			mSpriteActor = nullptr;
+			mStages.clear();
 			mDefaultTarget.reset();
-			mSprite    = nullptr;
+			mSprite = nullptr;
 			mSpriteSeq = nullptr;
 			TopdownShooter::Director::Get().Shutdown();
 		}
@@ -362,11 +378,13 @@ namespace TopdownShooter
 			if (ImGui::GetIO().WantCaptureKeyboard)
 				return;
 
+			// 리펙토링 대상
 			if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
 				mShowEditor = !mShowEditor;
 
 			mKeyboard.Dispatch(key, action);
 
+			// 리펙토링 대상
 			// === M5 CO2 — G 키: Parallel( TweenShake ∥ FmodStudio.Damaged ) ===
 			if (key == GLFW_KEY_G && action == GLFW_PRESS)
 			{
@@ -401,15 +419,16 @@ namespace TopdownShooter
 			glfwGetCursorPos(window, &x, &y);
 			mMouse.HandleButton(button, action, x, y);
 
+			// 리펙토링 대상
 			// === M5 CO1 — 마우스 좌클릭: Sequence( Effekseer.distortion  Parallel( Fmod.Laser ∥ FmodStudio.Slash ) ) ===
 			if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
 			{
-				auto &reg   = SJH::ResourceRegistry::Get();
+				auto &reg = SJH::ResourceRegistry::Get();
 				auto &audio = TopdownShooter::Director::Get().Audio();
-				auto &vfx   = TopdownShooter::Director::Get().VFX();
+				auto &vfx = TopdownShooter::Director::Get().VFX();
 
-				auto *shot     = reg.FindSound("shot");
-				auto *muzzle   = reg.FindEffect("muzzle");
+				auto *shot = reg.FindSound("shot");
+				auto *muzzle = reg.FindEffect("muzzle");
 				auto *slashEvt = audio.LoadEvent("event:/Slash");
 
 				if (shot && muzzle && slashEvt)
@@ -457,33 +476,35 @@ namespace TopdownShooter
 
 	  private:
 		// ── 멤버 ────────────────────────────────────────────────────────────────────
-		SJH::SceneRenderer              mRenderSys;
-		SJH::RenderTargetUPtr           mDefaultTarget;
-		SJH::FramebufferUPtr            mSceneFB;
-		std::unique_ptr<SJH::ScreenQuadStage> mScreenQuadStage;
+		SJH::SceneRenderer mRenderSys;
+		SJH::RenderTargetUPtr mDefaultTarget;
+		SJH::FramebufferUPtr mSceneFB;
+
+		// SP-RenderStage 완성 — Application 이 stages 컬렉션을 명시 순서로 순회.
+		std::vector<std::unique_ptr<SJH::IRenderStage>> mStages;
+		SJH::ScreenQuadStage *mScreenQuadStagePtr = nullptr; // 비소유 raw — owner = mStages // ! ??? 필요한 것 맞나?
 
 		// PassComponent 체인 FBs + 포인터 목록
-		std::array<SJH::FramebufferUPtr, 5>      mPostFXFBs;
+		std::array<SJH::FramebufferUPtr, 5> mPostFXFBs;
 		std::vector<SJH::Scene::PassComponent *> mPassComponents;
-		float                                    mGamma = 1.0f;
+		float mGamma = 1.0f;
 
 		// ImGui
-		ImGuiContext          *mImGuiCtx   = nullptr;
-		const SJH::Texture    *mExitTex    = nullptr;
-		UI::ImGuiLayerStack    mImGuiStack;
-		bool                   mShowEditor = true;
+		ImGuiContext *mImGuiCtx = nullptr;
+		UI::ImGuiLayerStack mImGuiStack;
+		bool mShowEditor = true;
 
 		// 씬 오브젝트
-		SJH::Scene::Actor                              *mCameraActor      = nullptr;
-		SJH::Scene::Actor                              *mScreenCamActor   = nullptr;
-		SJH::Scene::Actor                              *mSpriteActor      = nullptr;
-		SJH::Scene::Camera                             *mCamera           = nullptr;
-		SJH::Scene::Camera                             *mScreenCam        = nullptr;
-		SJH::SpriteSequence::SpriteSequencePlayable    *mSpriteSeq    = nullptr;
-		SJH::SpriteSequence::SpriteFrameClip            mWholeAtlasClip{};
-		SJH::Sprite::SpriteRenderer                    *mSprite       = nullptr;
+		SJH::Scene::Actor *mCameraActor = nullptr;
+		SJH::Scene::Actor *mScreenCamActor = nullptr;
+		SJH::Scene::Actor *mSpriteActor = nullptr;
+		SJH::Scene::Camera *mCamera = nullptr;
+		SJH::Scene::Camera *mScreenCam = nullptr;
+		SJH::SpriteSequence::SpriteSequencePlayable *mSpriteSeq = nullptr;
+		SJH::SpriteSequence::SpriteFrameClip mWholeAtlasClip{};
+		SJH::Sprite::SpriteRenderer *mSprite = nullptr;
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
-		SJH::MouseInput                                  mMouse;
+		SJH::MouseInput mMouse;
 		TopdownShooter::Entity::Player::PlayerActorConfig pac;
 	};
 

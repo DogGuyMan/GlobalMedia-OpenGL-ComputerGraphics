@@ -26,6 +26,8 @@ namespace SJH
     public:
         /// @brief SceneContext 의 Camera 컬렉션을 순회하며 직렬 렌더 후 PostFX 체인 실행.
         /// @param defaultTarget IRenderStage 인터페이스 준수용 — 내부에서는 Camera 및 PostFX 전용 RT 사용.
+        /// @deprecated Use CameraStage + IRenderStage stages 컬렉션 — Application 이 출차 책임 (4-엔진 정통).
+        [[deprecated("Use CameraStage + IRenderStage stages 컬렉션 — Application 이 출차 책임 (4-엔진 정통)")]]
         void Render(RenderTarget& defaultTarget) override;
 
         /// @brief ScreenQuad mesh 지정 — PassComponent DrawCommand 처리 시 사용.
@@ -38,9 +40,13 @@ namespace SJH
         /// @return nullptr = PassComponent 없음 — caller 가 sceneFB fallback.
         const Framebuffer *GetLastSceneOutput() const { return mLastSceneOutput; }
 
+        /// @brief 명시된 단일 Camera 에 대해 1패스 렌더 — CameraStage 가 위임 호출.
+        /// @details SceneContext.GetCameras() 자동 순회를 우회하는 외부 진입점.
+        ///          Camera::GetTargetRenderTarget() nullptr 이면 warn+skip.
+        void RenderWithCamera(Scene::Camera& cam);
+
     private:
         void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
-        void RenderWithCamera(Scene::Camera& cam);
 
         MeshPassProcessor      mProcessor;
         LightUniformDispatcher mDispatcher;

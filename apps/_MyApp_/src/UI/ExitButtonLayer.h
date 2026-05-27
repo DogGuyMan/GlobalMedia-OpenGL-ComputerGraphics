@@ -2,13 +2,9 @@
 #define __MYAPP_EXIT_BUTTON_LAYER_H__
 
 #include "UI/IImGuiLayer.h"
+#include "resource_registry/texture.h"
 #include <GLFW/glfw3.h>
 #include <imgui.h>
-
-namespace SJH
-{
-class Texture;
-}
 
 namespace TopdownShooter::UI
 {

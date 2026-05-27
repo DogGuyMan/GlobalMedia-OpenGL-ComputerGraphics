@@ -8,6 +8,7 @@ add_library(sjhopengl_render STATIC
     scene_renderer.cpp
     light_uniform_dispatcher.cpp  # Phase 2 — SendLightUniforms SceneRenderer 에서 분리
     screen_quad_stage.cpp         # SP-UniversalRenderTarget Phase A — N FBO ->backbuffer 합성
+    camera_stage.cpp              # SP-RenderStage 완성 — 단일 Camera 를 IRenderStage 로 wrap
 )
 add_library(SJH::render ALIAS sjhopengl_render)
 
