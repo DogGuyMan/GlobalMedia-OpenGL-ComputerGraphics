@@ -48,14 +48,16 @@ namespace SJH::Scene
 		uint64_t CullingMask = SJH::Scene::ToBits(SJH::Scene::Layer::All); // Unity Camera.cullingMask — 기본 모든 layer.
 
 		/// @brief 비트마스크 직접 주입 (옛 호환).
-		void SetCullingMask(uint64_t mask)
+		Camera& SetCullingMask(uint64_t mask)
 		{
 			CullingMask = mask;
+			return *this;
 		}
 		/// @brief type-safe Layer overload (SP5 Task 3).
-		void SetCullingMask(SJH::Scene::Layer l)
+		Camera& SetCullingMask(SJH::Scene::Layer l)
 		{
 			CullingMask = SJH::Scene::ToBits(l);
+			return *this;
 		}
 
 		Camera() = default;

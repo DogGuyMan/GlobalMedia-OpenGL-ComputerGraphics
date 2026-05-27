@@ -32,6 +32,7 @@ namespace SJH
         vmath::vec3 EulerRot  = vmath::vec3(0.0f, 0.0f, 0.0f); ///< 오일러 회전각 (degree, XYZ 순서).
         vmath::vec3 Scale     = vmath::vec3(1.0f, 1.0f, 1.0f); ///< 스케일 팩터.
 
+
         /**
          * @brief 로컬 모델 행렬 산출 — T,Rz,Ry,Rx,S 순서.
          * @return 부모를 고려하지 않은 로컬 변환 행렬.
@@ -87,6 +88,18 @@ namespace SJH
         vmath::vec3 GetLeft() const { return -GetRight(); }
         vmath::vec3 GetDown() const { return -GetUp(); }
         vmath::vec3 GetBack() const { return -GetForward(); }
+
+	Transform& SetTransformWithVectors(
+		vmath::vec3 translate = vmath::vec3(0.0f, 0.0f, 0.0f),
+		vmath::vec3 rotate = vmath::vec3(0.0f, 0.0f, 0.0f),
+		vmath::vec3 scal = vmath::vec3(1.0f, 1.0f, 1.0f)
+	)
+	{
+		Translate = translate;
+		EulerRot = rotate;
+		Scale = scal;
+		return *this;	
+	}
     };
 
     /// @brief UV 좌표계 변환 (오프셋 + 스케일 + 회전) 경량 구조체.

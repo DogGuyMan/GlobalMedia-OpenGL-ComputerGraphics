@@ -8,14 +8,14 @@ add_subdirectory(VFX)
 add_subdirectory(Tween)
 
 # M5 CL3 — Director 싱글톤 (Audio + VFX + Physics 집계)
-add_library(myapp_director STATIC
-    Director.cpp
+add_library(myapp_manager STATIC
+    Manager.cpp
 )
-add_library(MyApp::Director ALIAS myapp_director)
-target_include_directories(myapp_director
+add_library(MyApp::Manager ALIAS myapp_manager)
+target_include_directories(myapp_manager
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
-target_link_libraries(myapp_director
+target_link_libraries(myapp_manager
     PUBLIC
         MyApp::Audio
         MyApp::VFX
@@ -23,7 +23,7 @@ target_link_libraries(myapp_director
     PRIVATE
         spdlog
 )
-target_compile_features(myapp_director PUBLIC cxx_std_17)
+target_compile_features(myapp_manager PUBLIC cxx_std_17)
 
 # 우산 INTERFACE — 클라이언트 스크립트 전체 묶음
 add_library(myapp_client INTERFACE)
@@ -38,5 +38,5 @@ target_link_libraries(myapp_client INTERFACE
     MyApp::Audio
     MyApp::VFX
     MyApp::Tween
-    MyApp::Director  # M5 CL3 — Audio+VFX+Physics 집계 싱글톤
+    MyApp::Manager  # M5 CL3 — Audio+VFX+Physics 집계 싱글톤
 )
