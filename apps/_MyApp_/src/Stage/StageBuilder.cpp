@@ -9,11 +9,13 @@
 #include "program/program.h"
 #include "render/mesh_renderer.h"
 #include "resource_registry/resource_registry.h"
+#include "scene/model_spawner.h"
 #include "scene/actor.h"
 
 #include <box2d/box2d.h>
 #include <cassert>
 #include <string>
+#include <vmath.h>
 
 namespace TopdownShooter::Stage
 {
@@ -26,6 +28,8 @@ namespace TopdownShooter::Stage
         constexpr const char* kPickupMatKey = "stage_pickup";
         constexpr const char* kVS           = "resources/shaders/simple.vs";
         constexpr const char* kFS           = "resources/shaders/simple.fs";
+        constexpr const char* kPcbKey       = "stage_pcb";
+        constexpr const char* kPcbModelPath = "resources/model/pcb.fbx";
 
         SJH::Mesh* EnsurePlane(SJH::ResourceRegistry& reg)
         {
@@ -53,6 +57,13 @@ namespace TopdownShooter::Stage
             SJH::Uniforms::SetVec4(*mat, "baseColor", baseColor);
             return mat;
         }
+
+        SJH::Model* EnsurePcbModel(SJH::ResourceRegistry& reg)
+        {
+            if (auto* existing = reg.FindModel(kPcbKey))
+                return existing;
+            return reg.CreateModel(kPcbKey, kPcbModelPath);
+        }
     } // namespace
 
     std::unique_ptr<SJH::Scene::Actor> CreateStageActor(const StageConfig& cfg)
@@ -63,12 +74,25 @@ namespace TopdownShooter::Stage
         auto& reg = *cfg.registry;
 
         // 1) 공유 자원 등록 — idempotent (이미 있으면 Find 로 재사용)
-        SJH::Mesh*     plane     = EnsurePlane(reg);
+        // SJH::Mesh*     plane     = EnsurePlane(reg);
         SJH::Program*  solidProg = EnsureProgram(reg);
-        SJH::Material* wallMat   = EnsureMaterial(reg, kWallMatKey, solidProg,
-                                                   vmath::vec4(0.55f, 0.55f, 0.60f, 1.0f));
-        SJH::Material* pickupMat = EnsureMaterial(reg, kPickupMatKey, solidProg,
-                                                   vmath::vec4(1.0f, 0.85f, 0.2f, 1.0f));
+        // SJH::Material* wallMat   = EnsureMaterial(reg, kWallMatKey, solidProg,
+        //                                            vmath::vec4(0.55f, 0.55f, 0.60f, 1.0f));
+        // SJH::Material* pickupMat = EnsureMaterial(reg, kPickupMatKey, solidProg,
+        //                                            vmath::vec4(1.0f, 0.85f, 0.2f, 1.0f));
+
+        // PCB 모델 자원 등록 및 캐싱
+        SJH::Model* pcbModel = EnsurePcbModel(reg);
+        
+        // Assimp 로 로드된 모델의 머티리얼에 셰이더(Program) 주입 (model.h 주석 가이드 반영)
+        for (int i = 0; i < pcbModel->GetMaterialCount(); ++i)
+        {
+            if (SJH::Material* mat = pcbModel->GetMaterial(i))
+            {
+                if (mat->GetProgram() == nullptr)
+                    mat->SetProgram(solidProg); // 단순 셰이더 임시 주입 (필요시 텍스처 전용 셰이더로 교체)
+            }
+        }
 
         // 2) Stage Actor + StageState Component
         auto stage = std::make_unique<SJH::Scene::Actor>("MainStage");
@@ -81,7 +105,6 @@ namespace TopdownShooter::Stage
         auto spawnWall = [&](const char* name, vmath::vec2 center, vmath::vec2 half) {
             auto a = Factories::CreateWallActor(name, *cfg.world, center, half);
             a->GetTransform().Scale = vmath::vec3(half[0] * 2.0f, 1.0f, half[1] * 2.0f);
-            a->AddComponent<SJH::Scene::MeshRenderer>(plane, wallMat);
             stage->AddChild(std::move(a));
         };
         spawnWall("WallTop",    vmath::vec2(0.0f, +arena), vmath::vec2(arena, wallH));
@@ -96,9 +119,21 @@ namespace TopdownShooter::Stage
             auto name = std::string("PickupTest") + std::to_string(i);
             auto p = Factories::CreatePickupActor(std::move(name), *cfg.world, pos, vmath::vec2(0.8f, 0.8f));
             p->GetTransform().Scale = vmath::vec3(1.6f, 1.0f, 1.6f);
-            p->AddComponent<SJH::Scene::MeshRenderer>(plane, pickupMat);
+        //     p->AddComponent<SJH::Scene::MeshRenderer>(plane, pickupMat);
             stage->AddChild(std::move(p));
         }
+
+        // 5) PCB 모델 Actor 추가
+        auto pcbActor = std::make_unique<SJH::Scene::Actor>("PcbActor");
+        pcbActor->GetTransform().SetTransformWithVectors(
+		vmath::vec3(0.0, -1.75, 0.0),
+		vmath::vec3(90.0, 0.0, 0),
+		vmath::vec3(0.75, 0.75, 0.75)
+	);
+
+        // ModelSpawner 유틸리티를 사용해 모델의 모든 RenderUnit을 자식 Actor로 펼침
+        SJH::Scene::ModelSpawner::SpawnEntities(*pcbActor, *pcbModel);
+        stage->AddChild(std::move(pcbActor));
 
         return stage;
     }

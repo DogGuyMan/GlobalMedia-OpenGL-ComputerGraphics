@@ -81,9 +81,12 @@ namespace TopdownShooter
 		    //      "./resources/shader/postprocess/blurring.fs"
 		    // },
 
-		    {"gamma",
+		    {"fog",
 		     "./resources/shader/postprocess/postprocess.vs",
-		     "./resources/shader/postprocess/gamma.fs"}
+		     "./resources/shaders/postprocess/fog.fs"}
+		//     {"gamma",
+		//      "./resources/shader/postprocess/postprocess.vs",
+		//      "./resources/shader/postprocess/gamma.fs"}
 
 		    //     {"invert",
 		    // 	"./resources/shader/postprocess/postprocess.vs",
@@ -158,6 +161,7 @@ namespace TopdownShooter
 			})));
 
 			WramupPlayer(reg, dir, phys);
+			WarmupSkybox(reg, dir);
 			WarmupImgui(reg);
 
 			dir.Enter();
@@ -190,6 +194,16 @@ namespace TopdownShooter
 			TopdownShooter::Manager::Get().Update(dt);
 			SJH::Scene::Director::Get().Update(dt);
 			TopdownShooter::Manager::Get().Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
+
+			// 스카이박스 시간(u_time) 및 위치 동기화
+			if (mSkyboxMat)
+			{
+				mSkyboxMat->Properties.Floats["u_time"] = static_cast<float>(currentTime);
+			}
+			if (mSkyboxActor && mCamera && mCamera->GetOwner())
+			{
+				mSkyboxActor->GetTransform().Translate = mCamera->GetOwner()->GetTransform().Translate;
+			}
 
 			// ── stages 컬렉션 순회 — World → Screen → ScreenQuad ─────────────────
 			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).
@@ -349,6 +363,8 @@ namespace TopdownShooter
 		bool mShowEditor = true;
 
 		// 씬 오브젝트
+		SJH::Scene::Actor *mSkyboxActor = nullptr;
+		SJH::Material *mSkyboxMat = nullptr;
 		SJH::Scene::Actor *mSpriteActor = nullptr;
 		SJH::Scene::Camera *mCamera = nullptr;
 		SJH::Scene::Camera *mScreenCamera = nullptr;
@@ -551,7 +567,33 @@ namespace TopdownShooter
 			mSpriteSeq->Play();
 
 			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
-			mCamera->GetOwner()->GetComponent<Controller::TargetFollowableCameraController>()->SetFollowTarget(mSpriteActor).SetFollowOffset(vmath::vec3(0.0f, 5.0f, 5.0f));
+			mCamera->GetOwner()->GetComponent<Controller::TargetFollowableCameraController>()
+				->SetFollowTarget(mSpriteActor)
+				.SetFollowOffset(vmath::vec3(0.0f, 10.0f, 10.0f));
+		}
+
+		void WarmupSkybox(SJH::ResourceRegistry &reg, SJH::Scene::Director &dir)
+		{
+			auto *skyboxProg = reg.CreateProgram(
+			    "matrix_skybox",
+			    "resources/shaders/matrix_skybox.vs",
+			    "resources/shaders/matrix_skybox.fs");
+
+			auto *charsTex = reg.CreateTexture("chars", SJH::Image::Load("chars", "resources/texture/characters.png").get());
+			auto *noiseTex = reg.CreateTexture("noise_tex", SJH::Image::Load("noise_tex", "resources/texture/matrix_noise.png").get());
+
+			mSkyboxMat = reg.CreateSharedMaterial("mat_matrix_skybox");
+			mSkyboxMat->SetProgram(skyboxProg);
+			mSkyboxMat->Properties.Textures["chars"] = { charsTex };
+			mSkyboxMat->Properties.Textures["noise_tex"] = { noiseTex };
+			mSkyboxMat->Properties.Floats["u_time"] = 0.0f;
+
+			auto *skyboxMesh = reg.RegisterMesh("mesh_skybox", SJH::Mesh::CreateBox());
+			auto skyboxActor = std::make_unique<SJH::Scene::Actor>("MatrixSkybox");
+			// 스카이박스 모델이 카메라 클리핑 범위를 벗어나지 않고 렌더링되게 넉넉한 크기로 스케일 조정
+			skyboxActor->GetTransform().Scale = vmath::vec3(50.0f, 50.0f, 50.0f);
+			skyboxActor->AddComponent<SJH::Scene::MeshRenderer>(skyboxMesh, mSkyboxMat);
+			mSkyboxActor = dir.Root().AddChild(std::move(skyboxActor));
 		}
 
 		void WarmupImgui(SJH::ResourceRegistry &reg)
