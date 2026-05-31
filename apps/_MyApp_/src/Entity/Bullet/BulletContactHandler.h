@@ -3,6 +3,9 @@
 
 #include "Physics/Components.Interfaces.h"
 #include "scene/actor.h"
+#include <functional>
+#include <utility>
+#include <vmath.h>
 
 namespace TopdownShooter::Entity::Bullet
 {
@@ -23,12 +26,17 @@ namespace TopdownShooter::Entity::Bullet
         void OnCollisionEnter(SJH::Scene::Actor* other) override;
         void OnTriggerEnter  (SJH::Scene::Actor* other) override;
 
+        /// @brief 명중 시 임팩트 FX delegate (충돌 위치 전달). Entity→Spawns 의존 회피 (BulletFactory 정통).
+        using HitFx = std::function<void(const vmath::vec3&)>;
+        void SetOnHitFx(HitFx fx) { mOnHitFx = std::move(fx); }
+
       private:
         void HandleHit(SJH::Scene::Actor* other);
 
         int  mDamage         = 10;
         bool mAlive          = true;
         bool mPendingDisable = false;
+        HitFx mOnHitFx;
     };
 }
 

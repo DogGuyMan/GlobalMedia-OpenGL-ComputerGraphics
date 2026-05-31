@@ -115,12 +115,7 @@ namespace TopdownShooter::Controller
 		auto &tr = owner->GetTransform();
 
 		const auto &targetTr = mFollowTarget->GetTransform();
-		spdlog::info("tr.Translate Before {}, {}, {}", tr.Translate[0], tr.Translate[1], tr.Translate[2]);
-		spdlog::info("mFollowOffset {}, {}, {}", mFollowOffset[0], mFollowOffset[1], mFollowOffset[2]);
-		spdlog::info("mFollowTarget->GetTransform() {}, {}, {}", targetTr.Translate[0], targetTr.Translate[1], targetTr.Translate[2]);
 		// target 위치 + offset 으로 카메라 위치 갱신.
 		tr.Translate         = targetTr.Translate + mFollowOffset;
-
-		spdlog::info("tr.Translate After {}, {}, {}", tr.Translate[0], tr.Translate[1], tr.Translate[2]);
 	}
 } // namespace TopdownShooter::Controller

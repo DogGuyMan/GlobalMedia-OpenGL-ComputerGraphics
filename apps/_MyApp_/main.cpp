@@ -69,6 +69,46 @@ namespace TopdownShooter
 {
 	namespace
 	{
+		// sb7 vmath 는 일반 역행렬 미제공(camera.h 명시) + Camera::InverseAffine 은 affine 전용.
+		// perspective projection(비-affine, w≠1) 역행렬 → cofactor 기반 4x4 일반 inverse (MESA gluInvertMatrix 정통).
+		// vmath 는 column-major(m[col][row]) — flat 배열도 column-major(m[c*4+r])로 변환.
+		vmath::mat4 Mat4Inverse(const vmath::mat4 &src)
+		{
+			float m[16];
+			for (int c = 0; c < 4; ++c)
+				for (int r = 0; r < 4; ++r)
+					m[c * 4 + r] = src[c][r];
+
+			float inv[16];
+			inv[0]  =  m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
+			inv[4]  = -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15] - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
+			inv[8]  =  m[4]*m[9]*m[15] - m[4]*m[11]*m[13] - m[8]*m[5]*m[15] + m[8]*m[7]*m[13] + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
+			inv[12] = -m[4]*m[9]*m[14] + m[4]*m[10]*m[13] + m[8]*m[5]*m[14] - m[8]*m[6]*m[13] - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
+			inv[1]  = -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15] - m[9]*m[3]*m[14] - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
+			inv[5]  =  m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15] + m[8]*m[3]*m[14] + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
+			inv[9]  = -m[0]*m[9]*m[15] + m[0]*m[11]*m[13] + m[8]*m[1]*m[15] - m[8]*m[3]*m[13] - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
+			inv[13] =  m[0]*m[9]*m[14] - m[0]*m[10]*m[13] - m[8]*m[1]*m[14] + m[8]*m[2]*m[13] + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
+			inv[2]  =  m[1]*m[6]*m[15] - m[1]*m[7]*m[14] - m[5]*m[2]*m[15] + m[5]*m[3]*m[14] + m[13]*m[2]*m[7] - m[13]*m[3]*m[6];
+			inv[6]  = -m[0]*m[6]*m[15] + m[0]*m[7]*m[14] + m[4]*m[2]*m[15] - m[4]*m[3]*m[14] - m[12]*m[2]*m[7] + m[12]*m[3]*m[6];
+			inv[10] =  m[0]*m[5]*m[15] - m[0]*m[7]*m[13] - m[4]*m[1]*m[15] + m[4]*m[3]*m[13] + m[12]*m[1]*m[7] - m[12]*m[3]*m[5];
+			inv[14] = -m[0]*m[5]*m[14] + m[0]*m[6]*m[13] + m[4]*m[1]*m[14] - m[4]*m[2]*m[13] - m[12]*m[1]*m[6] + m[12]*m[2]*m[5];
+			inv[3]  = -m[1]*m[6]*m[11] + m[1]*m[7]*m[10] + m[5]*m[2]*m[11] - m[5]*m[3]*m[10] - m[9]*m[2]*m[7] + m[9]*m[3]*m[6];
+			inv[7]  =  m[0]*m[6]*m[11] - m[0]*m[7]*m[10] - m[4]*m[2]*m[11] + m[4]*m[3]*m[10] + m[8]*m[2]*m[7] - m[8]*m[3]*m[6];
+			inv[11] = -m[0]*m[5]*m[11] + m[0]*m[7]*m[9] + m[4]*m[1]*m[11] - m[4]*m[3]*m[9] - m[8]*m[1]*m[7] + m[8]*m[3]*m[5];
+			inv[15] =  m[0]*m[5]*m[10] - m[0]*m[6]*m[9] - m[4]*m[1]*m[10] + m[4]*m[2]*m[9] + m[8]*m[1]*m[6] - m[8]*m[2]*m[5];
+
+			float det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
+			if (det == 0.0f)
+				return vmath::mat4::identity(); // 특이행렬 가드.
+			float invDet = 1.0f / det;
+
+			vmath::mat4 out;
+			for (int c = 0; c < 4; ++c)
+				for (int r = 0; r < 4; ++r)
+					out[c][r] = inv[c * 4 + r] * invDet;
+			return out;
+		}
+
 		struct ProgramConfig
 		{
 			const char *Name;
@@ -92,7 +132,7 @@ namespace TopdownShooter
 		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
 		    {"sobel",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs",      {}},
 		    {"fog",        "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/fog.fs",
-		     {{"uFogDensity", 0.05f}, {"uFogStart", 0.0f}, {"uFogEnd", 1.0f}}},
+		     {{"uFogDensity", 0.05f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
 		    {"bloom",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/bloom.fs",
 		     {{"uBloomThreshold", 0.7f}, {"uBloomSpread", 1.5f}, {"uBloomIntensity", 1.0f}}},
 		};
@@ -125,7 +165,7 @@ namespace TopdownShooter
 			auto &vfxs = TopdownShooter::Manager::Get().VFX();
 
 			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fb.Width, fb.Height);
-			mSceneFB       = SJH::Framebuffer::Create(fb.Width, fb.Height);
+			mSceneFB       = SJH::Framebuffer::CreateWithDepthTexture(fb.Width, fb.Height);
 
 			// A3 — RenderPipeline 셋업 + ScreenQuadStage 받아 mStages push.
 			SJH::Render::DefaultPipelineConfig pipelineCfg{
@@ -151,18 +191,13 @@ namespace TopdownShooter
 			mPostFXFBs      = std::move(chain.Framebuffers);
 			mPassComponents = std::move(chain.PassComponents);
 
-			// fog 의 non-float 초기값 명시 set (PostFXStageConfig.InitFloats 는 Floats 만 지원).
-			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
+			// fog 의 non-float 초기값 + uDepth 바인딩 (PostFXStageConfig.InitFloats 는 Floats 만 지원).
+			if (auto *fogMat = FindFogMaterial())
 			{
-				if (!mPassComponents[i] || !mPassComponents[i]->mMaterial)
-					continue;
-				if (POSTFX_PROGRAM_CONFIGS[i].Name == "fog")
-				{
-					auto &props = mPassComponents[i]->mMaterial->Properties;
-					props.Vec3s["uFogColor"] = vmath::vec3(0.5f, 0.6f, 0.7f);
-					props.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
-				}
+				fogMat->Properties.Vec3s["uFogColor"] = vmath::vec3(0.5f, 0.6f, 0.7f);
+				fogMat->Properties.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
 			}
+			RebindFogUniforms(); // uDepth = sceneFB depth 텍스처 (unit 1).
 
 			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
 			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
@@ -228,6 +263,7 @@ namespace TopdownShooter
 					mCamera->SetTargetRenderTarget(mSceneFB.get());
 				if (mScreenCamera)
 					mScreenCamera->SetTargetRenderTarget(mSceneFB.get());
+				RebindFogUniforms(); // resize 후 fog uDepth 방어 재바인딩 (in-place 라 no-op이나 의미 보존, D2).
 			}
 
 			// ImGui NewFrame 우선 — io.WantCaptureMouse/Keyboard 가 입력 디스패치에 영향.
@@ -246,6 +282,11 @@ namespace TopdownShooter
 			{
 				mSkyboxMat->Properties.Floats["u_time"] = static_cast<float>(currentTime);
 			}
+
+			// fog — WorldCamera projection 역행렬 송신 (Properties.Mat4s 자동 송신, D4).
+			if (auto *fogMat = FindFogMaterial(); fogMat && mCamera)
+				fogMat->Properties.Mat4s["uInverseProjection"] =
+				    Mat4Inverse(mCamera->GetProjectionMatrix());
 
 			// ── stages 컬렉션 순회 — World → Screen → ScreenQuad ─────────────────
 			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).
@@ -360,6 +401,26 @@ namespace TopdownShooter
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;
 
+		// fog PassComponent 의 Material 탐색 — POSTFX_PROGRAM_CONFIGS 와 mPassComponents 인덱스 정합.
+		// (PostFXStageConfig::Name 은 std::string → operator==("fog") 는 정상 문자열 비교.)
+		SJH::Material *FindFogMaterial()
+		{
+			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
+				if (mPassComponents[i] && POSTFX_PROGRAM_CONFIGS[i].Name == "fog")
+					return mPassComponents[i]->mMaterial;
+			return nullptr;
+		}
+
+		// fog material 의 uDepth 를 현재 mSceneFB 의 depth 텍스처(unit 1)로 (재)바인딩.
+		// startup + resize 직후 호출 — sceneFB 재생성 시 dangling 방지 (D2).
+		void RebindFogUniforms()
+		{
+			auto *fogMat = FindFogMaterial();
+			if (!fogMat || !mSceneFB || !mSceneFB->GetDepthAttachment())
+				return;
+			fogMat->Properties.Textures["uDepth"] = {mSceneFB->GetDepthAttachment().get(), 1}; // unit 1 (uScene=0).
+		}
+
 		SJH::Scene::Camera *CreateAndRegisterWorldCamera()
 		{
 			int fbW = 0, fbH = 0;
@@ -418,6 +479,7 @@ namespace TopdownShooter
 			pac.movement.speed = 3.0f;
 			pac.controller.keyboard = &mKeyboard;
 			pac.controller.mouse    = &mMouse;
+			pac.controller.camera   = mCamera;   // 좌클릭 마우스→Ground raycast 용 (World 카메라)
 			// 좌클릭 — M5 CO1: Sequence( Effekseer.distortion → Parallel( Fmod.Laser ∥ FmodStudio.Slash ) ).
 			// 의존은 전부 싱글턴이라 캡처 없는 자기완결 람다 (PlayerController 는 audio/vfx 를 모름).
 			pac.controller.onFire = [] {

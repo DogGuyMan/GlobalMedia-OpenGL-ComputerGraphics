@@ -50,6 +50,7 @@ namespace TopdownShooter::Entity::Player
 		{
 			SJH::KeyboardInput<Controller::PlayerController::Action> *keyboard = nullptr;
 			SJH::MouseInput      *mouse    = nullptr;   // 좌클릭 Fire 바인딩용 (선택)
+			SJH::Scene::Camera   *camera   = nullptr;   // 좌클릭 마우스→Ground raycast 용 (선택)
 			std::function<void()> onFire;               // 좌클릭 콜백 (선택)
 			std::function<void()> onDamage;             // G키 콜백 (선택)
 		};
@@ -123,6 +124,7 @@ namespace TopdownShooter::Entity::Player
 				auto *controller = actor->AddComponent<Controller::PlayerController>();
 				controller->SetKeyboardInput(cfg.controller.keyboard);
 				controller->SetMouseInput(cfg.controller.mouse);
+				controller->SetWorldCamera(cfg.controller.camera);
 				controller->SetMovableTarget(pm);
 				controller->SetFireCallback(cfg.controller.onFire);
 				controller->SetDamageCallback(cfg.controller.onDamage);
@@ -139,6 +141,7 @@ namespace TopdownShooter::Entity::Player
 				auto *controller = actor->AddComponent<Controller::PlayerController>();
 				controller->SetKeyboardInput(cfg.controller.keyboard);
 				controller->SetMouseInput(cfg.controller.mouse);
+				controller->SetWorldCamera(cfg.controller.camera);
 				controller->SetMovableTarget(movement);
 				controller->SetFireCallback(cfg.controller.onFire);
 				controller->SetDamageCallback(cfg.controller.onDamage);

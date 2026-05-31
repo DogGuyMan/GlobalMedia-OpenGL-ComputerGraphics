@@ -5,6 +5,7 @@ add_library(myapp_entity STATIC
     Bullet/BulletContactHandler.cpp
     Enemy/SimplePursueAI.cpp
     Enemy/EnemyContactHandler.cpp
+    Enemy/EnemyDeathHandler.cpp
 )
 add_library(MyApp::Entity ALIAS myapp_entity)
 

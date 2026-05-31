@@ -3,6 +3,7 @@
 
 #include "Entity/Components/LifeComponents.h"
 #include "Entity/Enemy/EnemyContactHandler.h"
+#include "Entity/Enemy/EnemyDeathHandler.h"
 #include "Entity/Enemy/SimplePursueAI.h"
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/filter.h"
@@ -21,6 +22,7 @@ namespace TopdownShooter::Entity::Enemy
         int   hp     = 30;
         float speed  = 2.0f;
         int   damage = 10;
+        EnemyDeathHandler::DeathFx onDeathFx; // 사망 시 FX (외부 주입 — WaveController/main 에서 SpawnEnemyDeathFX 바인딩)
     };
 
     inline std::unique_ptr<SJH::Scene::Actor> CreateEnemyActor(const EnemyConfig& cfg)
@@ -50,6 +52,8 @@ namespace TopdownShooter::Entity::Enemy
         actor->AddComponent<Components::Life>(cfg.hp);
         actor->AddComponent<SimplePursueAI>(cfg.playerTarget, body, cfg.speed);
         actor->AddComponent<EnemyContactHandler>(cfg.damage);
+        if (cfg.onDeathFx)
+            actor->AddComponent<EnemyDeathHandler>(cfg.onDeathFx);
 
         return actor;
     }

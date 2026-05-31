@@ -9,6 +9,11 @@
 #include <vmath.h>
 #include "Entity/Components/Components.Interfaces.h"
 
+namespace SJH::Scene
+{
+	class Camera; // 마우스→Ground raycast 용 (포인터 멤버 — 전방 선언으로 충분)
+}
+
 namespace TopdownShooter::Controller
 {
 	/// @brief Top-down 게임의 Player 이동 컨트롤러 — WASD  Owner Transform.Translate XZ 이동.
@@ -45,6 +50,9 @@ namespace TopdownShooter::Controller
 		/// @brief 마우스 입력 의존 주입 (선택적 — 좌클릭 Fire 바인딩용). SetUp() 전에 호출 필수.
 		PlayerController &SetMouseInput(SJH::MouseInput *m);
 
+		/// @brief World 카메라 주입 (선택적 — 좌클릭 시 마우스→Ground raycast 용). 미주입이면 raycast 생략.
+		PlayerController &SetWorldCamera(SJH::Scene::Camera *cam);
+
 		/// @brief 좌클릭 시 실행할 콜백 (Shot Composite 등). 미주입이면 좌클릭 무시.
 		PlayerController &SetFireCallback(std::function<void()> cb);
 
@@ -59,6 +67,7 @@ namespace TopdownShooter::Controller
 		bool mIsInitialized                          = false;
 		SJH::KeyboardInput<Action> *mKeyboardInput   = nullptr;
 		SJH::MouseInput *mMouseInput                 = nullptr;
+		SJH::Scene::Camera *mCamera                  = nullptr; // 마우스→Ground raycast 용 (비소유)
 		Entity::IMovable* mMovementPtr = nullptr;
 
 		std::function<void()> mFireCallback;   // 좌클릭
@@ -68,6 +77,11 @@ namespace TopdownShooter::Controller
 
 		void RegisterBindings();
 		void UnregisterBindings();
+
+		// [TEST] 마우스 클릭 화면좌표 → 카메라 ray → y=0 평면 교차 → Ground 월드 좌표.
+		//        결과를 로그 + 그 위치에 노란 박스 MeshRenderer Actor 스폰 (raycast 시각 검증).
+		void TestPickGroundAndSpawnMarker();
+		void SpawnGroundMarker(const vmath::vec3 &worldPos);
 	};
 } // namespace TopdownShooter::Controller
 
