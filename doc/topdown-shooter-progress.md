@@ -1,7 +1,7 @@
 # Topdown Shooter — 마일스톤 진행 보고서
 
-> **최종 갱신**: 2026-05-26 (M4 본격 배선 완료 + IntervalPlayable/AppendInterval T1·T2 엔진 반영)
-> **브랜치**: `game/module/rendertarget`
+> **최종 갱신**: 2026-05-31 (M5 위임항목 완료 반영 + Render Pipeline 대거 정착 — Stage Builder / SceneContext / RenderStage / 2-Camera PassComponent / ImGui 분리 / UniversalRT / Director→Manager rename / main 분할 / ParticleStage)
+> **브랜치**: `game/module/ingame/temp` (이전 `game/module/rendertarget` 에서 이동)
 > **관련 spec**: [`docs/superpowers/specs/2026-05-24-topdown-shooter-design.md`](../docs/superpowers/specs/2026-05-24-topdown-shooter-design.md) §부록 D
 > **M4 spec** (arch-correction 반영): [`docs/superpowers/specs/2026-05-26-m4-player-behavior-design.md`](../docs/superpowers/specs/2026-05-26-m4-player-behavior-design.md)
 > **FSM 정본 spec** (Stage 4 진화): [`docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md`](../docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md)
@@ -21,6 +21,9 @@
 | **M6** 시퀀스 빌더 + 사운드 본격 | ❌ 미시작 | 0% |
 | **M7** GameFSM + 보스 + 종료 | 🟡 `Stage/Stage.h` + `Stage/State/StageFSMState.h` 주석 stub | ~3% |
 | **부수** Render Phase 1 — DeviceContext / Material 정비 | ✅ Observer 제거 + EagerBuild + Camera↔RenderTarget 의존 역전 + DrawCommand 통합 | ~70% |
+| **부수** Stage Builder 리팩토링 | ✅ **완료** (`537a323`) — `CreateStageActor` Builder + `StageConfig` + `Stage/Factories/`(Physics→이동) + `StageStateComponent` + WaveController 합류. spec [`2026-05-26-stage-builder-refactor`](../docs/superpowers/specs/2026-05-26-stage-builder-refactor-design.md) | 100% |
+| **부수** Render Pipeline SP 시리즈 (SceneContext / RenderStage / 2-Camera PassComponent / ImGui 분리 / UniversalRT) | ✅ **대거 정착** (2026-05-27~31, 아래 §Render Pipeline 정착 참조). ⚠ `SP-UniversalRenderTarget`(`eb85809`) 은 spec/plan 부재 | ~90% |
+| **부수** Director→Manager rename + main.cpp 분할 + ParticleStage | 🟡 rename/분할 ✅. **ParticleStage 클래스 커밋(`592e99b`) 됐으나 mStages 미배선** (main.cpp 에서 `VFX().Draw()` 직접 호출 잔존) | ~80% |
 
 ---
 
@@ -114,12 +117,14 @@ spec §1.5/§1.6 원안에서 *7 결정 진화* 를 거쳐 최종 정착 — IPl
 
 빌드 검증: `cmake --build --preset ninja --target _MyApp_` → `[5/6] Linking CXX executable apps/_MyApp_/_MyApp_` 정상.
 
-### 미수행 (M5 로 위임)
+### M5 로 위임했던 항목 — ✅ M5 에서 완료 (2026-05-26)
 
-- ❌ FmodPlayable leaf (`apps/_MyApp_/src/Audio/fmod_playable.{h,cpp}`) — game_deps 의존 Client 거주
-- ❌ EffekseerPlayable leaf (`apps/_MyApp_/src/VFX/effekseer_playable.{h,cpp}`) — 동일
-- ❌ Composite 트리 시각 검증 (Sequence + Parallel 실제 사용처) — leaf 도착 후 M5/M6
-- ❌ 단위 테스트 — [[no_auto_tests]]
+> 아래는 M3.5 시점에 "M5 로 위임" 한 항목. **모두 M5 leaf-playables 작업에서 완료됨** — 본 섹션의 과거 ❌ 표기를 갱신 (2026-05-31). 플랜: [`docs/superpowers/plans/2026-05-26-m5-leaf-playables.md`](../docs/superpowers/plans/2026-05-26-m5-leaf-playables.md) (spec [`2026-05-26-m5-leaf-playables-design.md`](../docs/superpowers/specs/2026-05-26-m5-leaf-playables-design.md)).
+
+- ✅ FmodPlayable leaf — `apps/_MyApp_/src/Audio/FmodPlayable.{h,cpp}` (M5 Task 6 rename + 활성화). FmodStudioPlayable 동반.
+- ✅ EffekseerPlayable leaf — `apps/_MyApp_/src/VFX/EffekseerPlayable.{h,cpp}` (M5 Task 6 + TrackPolicy enum).
+- ✅ Composite 트리 시각 검증 — M5 Task 15~16 Sequence/Parallel 시나리오 부착 (TweenPlayable leaf 도 동반 도입).
+- ❌ 단위 테스트 — [[no_auto_tests]] 정책상 의도적 제외 (변경 없음 — M5 Task 5 는 *기존* 테스트 빌드 영향 검증만).
 
 ### Render Phase 1 (부수작업, 2026-05-25 ~ 2026-05-26)
 
@@ -161,6 +166,40 @@ M3 직후 ~ M3.5 사이 진행된 render 모듈 정비 — spec/마일스톤 외
 
 - ❌ 시각 검증 미수행 (WASD이동/공격/Dash/피격/적 접촉 확인)
 - ❌ `PlayerStateMachine` → **arch-correction(D1) 으로 설계 폐기** (flat `PlayerBehavior` 가 대체)
+
+---
+
+## Render Pipeline 정착 (2026-05-27 ~ 2026-05-31) — 대거 미반영 작업
+
+> 2026-05-26 ~ 2026-05-31 사이 *렌더 파이프라인 재설계* 가 집중 진행됐으나 본 진행 보고서에 누락되어 있었음. 아래는 commit 기준 역추적 정리. (브랜치도 이 기간에 `game/module/rendertarget` → `game/module/ingame/temp` 로 이동.)
+
+### 정착 commit chain (신→구)
+
+| Commit | 작업 | 대응 spec | 상태 |
+|---|---|---|---|
+| `592e99b` | **ParticleStage 신규** (Effekseer→sceneFB 합성 stage) | [`2026-05-27-particle-stage`](../docs/superpowers/specs/2026-05-27-particle-stage-design.md) | 🟡 **클래스만** — `apps/_MyApp_/src/VFX/ParticleStage.{h,cpp}` 커밋됨. **그러나 main.cpp `mStages` 미배선** — `VFX().Draw()` 가 stages 순회 *밖* 에서 직접 호출 잔존 → 파티클 PostFX 미적용 (spec 동기 미해소) |
+| `0dc43c6` | 리소스 정리 | — | ✅ |
+| `614b366` | main.cpp 분할 | — | ✅ |
+| `2af7efb` `4ebd2dd` | **Client `Director` → `Manager` rename** | — (M5 spec §6.2 의 `TopdownShooter::Director` 를 `Manager` 로 변경) | ✅ — `apps/_MyApp_/src/Manager.{h,cpp}`. **주의: 헤더 가드(`_TOPDOWNSHOOTER_DIRECTOR_H__`)·주석·spec·메모리·EngineAPI 가 아직 `Director` 로 기재 — 용어 불일치** |
+| `cd8af99` | RenderState 리팩토링 | — | ✅ |
+| `7874127` | bypass postfx | [`2026-05-27-pass-component-2camera`](../docs/superpowers/specs/2026-05-27-pass-component-2camera-design.md) | ✅ disabled PassComponent bypass blit |
+| `57f5779` | **2-Camera 분리** (World Perspective + Screen Ortho) | 동상 | ✅ (버그 회고: `doc/design/GammaStucked.md`) |
+| `9e82e33` | **Post FX 통합** (PassComponent + ScreenQuadStage) | 동상 | ✅ — `src/render/pass_component.h`(header-only) + `screen_quad_stage.{h,cpp}` + `mesh_pass_processor` 분기. `PostFXPass`/`SetPostFXChain` 폐기 (메모리 [[pass_component_postfx_pattern]]) |
+| `7bdd30a` | **Editor GUI & Game GUI 분리** | plan [`2026-05-27-imgui-layer-separation`](../docs/superpowers/plans/2026-05-27-imgui-layer-separation.md) | ✅ — `apps/_MyApp_/src/UI/` (PostFXDebugLayer 등) |
+| `5f1541c` | **Render Stage 리팩토링** (CameraStage 정착) | [`2026-05-27-sp-renderstage-camera-stage`](../docs/superpowers/specs/2026-05-27-sp-renderstage-camera-stage-design.md) | ✅ — `src/render/camera_stage.{h,cpp}` + `render_stage.{h,cpp}` + `IRenderStage` mStages 패턴 |
+| `2924263` | 테스트용 벙커 | — | ✅ |
+| `eb85809` | **SP-UniversalRenderTarget Phase A+B** | ⚠ **spec/plan 부재** | ✅ 코드 정착. Camera RT non-null 강제 + ScreenQuadStage 흐름 (SP-SceneContext spec §12 의 후속 SP 후보였으나 spec 없이 구현됨) |
+| `c0e9922` | 컨벤션 | — | ✅ |
+| `537a323` | **스테이지 구성** (Stage Builder) | [`2026-05-26-stage-builder-refactor`](../docs/superpowers/specs/2026-05-26-stage-builder-refactor-design.md) | ✅ — `Stage/StageBuilder.{h,cpp}` + `StageConfig.h` + `Stage/Factories/{wall,pickup}_factory.h` (Physics/→이동) + `Stage/Components/StageStateComponent.h` + `WaveController.{h,cpp}` + `Stage/State/` stub 3종 |
+| `7d5dd2e` `57e6580` | **SceneContext + ResourceRegistry::GetAllPrograms() + MAX_*_LIGHTS=16** | [`2026-05-26-sp-scenecontext`](../docs/superpowers/specs/2026-05-26-sp-scenecontext-design.md) | ✅ — 해당 spec §13 변경 기록에 구현 완료 명시됨 |
+
+### 발견된 갱신/정합성 갭
+
+1. **ParticleStage 미배선** — 클래스는 있으나 `mStages` 컬렉션에 insert 되지 않음. spec [`2026-05-27-particle-stage`](../docs/superpowers/specs/2026-05-27-particle-stage-design.md) §4.5 의 (b) insert + (c) 기존 `VFX().Draw()` 삭제가 *미수행*. **다음 작업 1순위**.
+2. **`SP-UniversalRenderTarget` spec 부재** — `eb85809` 가 spec/plan 없이 구현됨. 사후 spec 작성 권장 (Camera RT non-null + ScreenQuadStage compositor 정통).
+3. **`Director` → `Manager` 용어 불일치** — Client 싱글톤이 rename 됐으나 모든 spec / `MEMORY.md` / `EngineAPI.md` / `.claude/CLAUDE.md` + `Manager.h` 헤더 가드가 여전히 `Director` 로 기재. 문서 일괄 정정 필요.
+4. **Entity 디렉토리 명** — spec(M4) 은 `Entity/Monster/` 였으나 실제는 `Entity/Enemy/`. spec/CLAUDE.md 표기와 코드 불일치.
+5. **`Entity/State/` 부재** — arch-correction D1 로 `PlayerStateMachine` 폐기됐으므로 *의도된 부재* (정합).
 
 ---
 
@@ -230,9 +269,13 @@ spec §4 + 결정 #18 의 원본 의도와 실제 정착 사이의 차이:
 
 ---
 
-## 다음 작업 — M4 시각 검증 → M4 잔여(PlayerStateMachine) → M6
+## 다음 작업 — ParticleStage 배선 → M4 시각 검증 → 문서 정합 → M6
 
-**현재 상태 (2026-05-26)**: M5 완료 + M4 본격 배선 완료. Bullet/Enemy/WaveController/PlayerBehavior/multi-clip 모두 구현됨. 빌드 성공 확인.
+**현재 상태 (2026-05-31)**: M5 완료 + M4 본격 배선 완료 + Render Pipeline 대거 정착. Bullet/Enemy/WaveController/PlayerBehavior/multi-clip + 2-Camera PostFX + ImGui 분리 + Stage Builder 모두 구현됨.
+
+### 즉시 할 것 0순위 — ParticleStage 배선 마무리
+
+`apps/_MyApp_/main.cpp` 의 `mStages` 에 `ParticleStage` 를 worldCam stage 와 screenCam stage *사이* 에 insert + 기존 `VFX().Draw()` 직접 호출(line 222 부근) 삭제 (spec [`2026-05-27-particle-stage`](../docs/superpowers/specs/2026-05-27-particle-stage-design.md) §4.5). 현재 파티클이 PostFX 체인을 건너뛰는 상태 (gamma/sobel/invert 미적용).
 
 ### 즉시 할 것 — 시각 검증
 
@@ -273,3 +316,4 @@ Attack Playable 체인에 Effekseer muzzle + FMOD Laser 연결. main.cpp 의 G �
 | 2026-05-26 | **M3.5 본격 정착 반영** — IPlayable spec (7 결정) + SJH::playable 모듈 신설 + sprite_sequence 통합 + SpriteAnimator → SpriteSequencePlayable 마이그레이션 (8 commits 산출). M3.5 진행도 25% → 90%. **다음 작업 = M5 Effekseer/FMOD leaf Playable** 로 우선순위 전환. Render Phase 1 부수작업 (7 commits) 신설. M7 Stage FSM stub (3%) + M4 디렉토리 준비 (+5%) 추가 |
 | 2026-05-26 | **M4 본격 배선 완료** — SpriteSequencePlayable multi-clip API (RegisterClip/PlayClip) + PlayerBehavior(Idle/Move/Attack/Hit/Dash/Die + 속도 기반 클립 자동 전환) + BulletSpawnPlayable(leaf + factory 델리게이트) + Bullet 시스템(BulletLifetime/ContactHandler/factory) + Enemy 시스템(SimplePursueAI/ContactHandler/factory) + WaveController(3s 스폰/웨이브++) + main.cpp 완전 배선(4-clip RegisterClip/PlayerBehavior Init/BulletSpawn/WaveController/Attack NDC dispatch/Shift Dash). 빌드 성공. M4 진행도 25% → 65%. **잔여**: PlayerStateMachine(선택) + 시각 검증 |
 | 2026-05-26 | **M4 T1·T2 엔진 반영 + arch-correction 문서화** — `IntervalPlayable` (`src/playable/interval_playable.{h,cpp}`) + `SequencePlayable::AppendInterval` 신설. **arch-correction D1**: `PlayerStateMachine` 설계 폐기 (flat `PlayerBehavior` 대체) — EngineAPI.md §3.15 FSM 결합 패턴 갱신. M4 spec 링크 추가 (`2026-05-26-m4-player-behavior-design.md`). M4 상세 섹션 현행화 |
+| 2026-05-31 | **M5 위임항목 완료 반영 + Render Pipeline 대거 정착 반영 (장기 미갱신 복구)** — (1) M3.5 "미수행 (M5 로 위임)" 섹션의 stale ❌ 3종(FmodPlayable/EffekseerPlayable/Composite 시각검증)을 M5 완료(✅)로 정정 — M5 plan `2026-05-26-m5-leaf-playables.md` Task 6/15~16 대응. (2) 2026-05-26~31 의 13 commit 역추적 §"Render Pipeline 정착" 신설: Stage Builder(`537a323`) / SceneContext+GetAllPrograms(`7d5dd2e`·`57e6580`) / SP-UniversalRenderTarget(`eb85809`, spec 부재) / RenderStage CameraStage(`5f1541c`) / ImGui 분리(`7bdd30a`) / 2-Camera PassComponent PostFX(`9e82e33`·`57f5779`·`7874127`·`cd8af99`) / Director→Manager rename(`2af7efb`) / main 분할(`614b366`) / ParticleStage(`592e99b`, 미배선). 진행 요약표 3행 추가 + 다음작업 0순위(ParticleStage 배선) 신설 + 브랜치명 `game/module/ingame/temp` 정정. **정합성 갭 5종 명시**. ⚠ 직전 멀티-Edit 지연으로 손상됐던 파일을 `git checkout HEAD` 로 복구 후 순차 재적용 |

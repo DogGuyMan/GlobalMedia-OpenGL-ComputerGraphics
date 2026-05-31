@@ -7,6 +7,7 @@
 add_library(myapp_vfx STATIC
     VFXSystem.cpp             # M5 CL2 — Effekseer Manager+Renderer owner
     EffekseerPlayable.cpp
+    ParticleStage.cpp         # SP-ParticleStage — Effekseer→sceneFB 합성 stage
 )
 add_library(MyApp::VFX ALIAS myapp_vfx)
 
@@ -17,9 +18,11 @@ target_include_directories(myapp_vfx
 target_link_libraries(myapp_vfx
     PUBLIC
         SJH::playable   # PlayableBase 베이스 (헤더 노출)
+        SJH::render     # IRenderStage 헤더 노출 (ParticleStage.h 의 #include)
         project_deps    # vmath / GL
         game_deps       # Effekseer + EffekseerRendererGL 헤더 + lib 자동 link
     PRIVATE
+        SJH::scene      # Scene::Camera — ParticleStage.cpp 만 include, 헤더는 forward decl
         spdlog
 )
 

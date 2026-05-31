@@ -24,6 +24,7 @@
 #include "Physics/filter.h"
 #include "Tween/TweenPlayable.h"
 #include "VFX/EffekseerPlayable.h"
+#include "VFX/ParticleStage.h"
 #include "playable/composite_playable.h"
 
 #include "Stage/StageBuilder.h"
@@ -74,34 +75,14 @@ namespace TopdownShooter
 		    "./resources/shaders/passthrough.vs",
 		    "./resources/shaders/passthrough.fs"};
 
+		// 체인 인덱스 = 실행 순서. 모든 PostFX 단계가 동일 postprocess.vs 공유.
+		// 실제 디렉토리 = resources/shaders/postprocess/ (shaders 복수).
 		const std::vector<ProgramConfig> POSTFX_PROGRAM_CONFIGS = {
-		    // 	{
-		    //     {"blurring",
-		    // 	"./resources/shader/postprocess/postprocess.vs",
-		    //      "./resources/shader/postprocess/blurring.fs"
-		    // },
-
-		    {"fog",
-		     "./resources/shader/postprocess/postprocess.vs",
-		     "./resources/shaders/postprocess/fog.fs"}
-		//     {"gamma",
-		//      "./resources/shader/postprocess/postprocess.vs",
-		//      "./resources/shader/postprocess/gamma.fs"}
-
-		    //     {"invert",
-		    // 	"./resources/shader/postprocess/postprocess.vs",
-		    //      "./resources/shader/postprocess/invert.fs"
-		    // },
-
-		    //     {"sharpening",
-		    // 	"./resources/shader/postprocess/postprocess.vs",
-		    //      "./resources/shader/postprocess/sharpening.fs"
-		    // },
-
-		    //     {"sobel",
-		    // 	"./resources/shader/postprocess/postprocess.vs",
-		    //      "./resources/shader/postprocess/sobel.fs"
-		    // },}
+		    {"blurring", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/blurring.fs"},
+		    {"gamma", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/gamma.fs"},
+		    {"invert", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs"},
+		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs"},
+		    {"sobel", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs"},
 		};
 	} // namespace
 
@@ -139,18 +120,30 @@ namespace TopdownShooter
 			mScreenCamera = CreateAndRegisterScreenCamera();
 			WarmupPassRenderer(reg, POSTFX_PROGRAM_CONFIGS);
 
-			// ── stages 컬렉션 — World → Screen → ScreenQuad 순 (SP-RenderStage) ─
+			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
 			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
-			// 카메라 stages 를 *ScreenQuadStage 앞* 에 insert — 최종 순서:
-			//   [0] worldCam → sceneFB 에 WorldMesh
-			//   [1] screenCam → PassComponent 체인 (NoClear)
-			//   [2] ScreenQuadStage → backbuffer 합성
+			// 카메라 stages 를 *ScreenQuadStage 앞* 에 insert + ParticleStage 는
+			// 아래 별도 블록에서 begin()+1 위치에 삽입 — 최종 순서:
+			//   [0] worldCam      → sceneFB clear + 3D WorldMesh
+			//   [1] ParticleStage → sceneFB (NoClear) + Effekseer 합성   (※ 아래 블록)
+			//   [2] screenCam     → PassComponent 체인 (NoClear)
+			//   [3] ScreenQuadStage → backbuffer 합성
 			mStages.insert(
 			    mStages.begin(),
 			    std::make_unique<SJH::CameraStage>(&Manager::Get().SceneRenderer(), mScreenCamera));
 			mStages.insert(
 			    mStages.begin(),
 			    std::make_unique<SJH::CameraStage>(&Manager::Get().SceneRenderer(), mCamera));
+
+			// ── ParticleStage insert — Manager.Init() 직후 (VFXSystem 사용 가능 시점) ──
+			//    위치: stages.begin() + 1 (worldCam 뒤, screenCam 앞)
+			//    최종 stages: [worldCam, ParticleStage, screenCam, ScreenQuadStage]
+			//    spec D-5 — Manager.Init() 흐름 보존을 위해 카메라 stages insert 와 분리.
+			//               (spec 원문 식별자: "Director.Init() 흐름 보존" — Manager rename 이전 용어)
+			mStages.insert(
+			    mStages.begin() + 1,
+			    std::make_unique<TopdownShooter::VFX::ParticleStage>(
+			        &TopdownShooter::Manager::Get().VFX(), mCamera));
 
 			WramupFMOD(dir, reg, Manager::Get().Audio());
 			reg.CreateEffect(vfxs.GetManager(), "muzzle", u"resources/vfx/distortion.efk");
@@ -213,14 +206,6 @@ namespace TopdownShooter
 			}
 			for (auto &s : mStages)
 				s->Render(*mDefaultTarget);
-
-			// === M5 — Effekseer 렌더 (backbuffer 합성 후, swap 전) ===
-			if (mCamera)
-			{
-				vmath::mat4 view = mCamera->GetViewMatrix();
-				vmath::mat4 proj = mCamera->GetProjectionMatrix();
-				TopdownShooter::Manager::Get().VFX().Draw(&view[0][0], &proj[0][0]);
-			}
 
 			// ImGui 창 빌드 + 렌더 (항상 최상위).
 			mImGuiStack.RenderAll(mShowEditor);
@@ -355,7 +340,8 @@ namespace TopdownShooter
 
 		SJH::FramebufferUPtr mSceneFB;
 		std::array<SJH::FramebufferUPtr, 5> mPostFXFBs;
-		// float mGamma = 1.0f;
+		std::vector<SJH::Scene::PassComponent *> mPassComponents; // PostFXDebug ImGui 패널이 토글 대상 참조 — 비소유 raw
+		float mGamma = 1.0f;
 
 		// ImGui
 		ImGuiContext *mImGuiCtx = nullptr;
@@ -488,6 +474,7 @@ namespace TopdownShooter
 			glfwGetFramebufferSize(window, &fbW, &fbH);
 			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 
+			mPassComponents.clear();
 			SJH::Framebuffer *prevFB = mSceneFB.get();
 			for (std::size_t i = 0; i < program_configs.size(); ++i)
 			{
@@ -508,7 +495,7 @@ namespace TopdownShooter
 				auto *mat = reg.CreateSharedMaterial(matKey);
 				mat->SetProgram(prog);
 				if (std::string(def.Name) == "gamma")
-					mat->Properties.Floats["gamma"] = 1.0;
+					mat->Properties.Floats["gamma"] = mGamma;
 
 				mPostFXFBs[i] = SJH::Framebuffer::Create(fbW, fbH);
 				if (!mPostFXFBs[i])
@@ -519,8 +506,9 @@ namespace TopdownShooter
 
 				auto passActor = std::make_unique<SJH::Scene::Actor>(std::string("PassActor_") + def.Name);
 				passActor->SetLayer(SJH::Scene::Layer::Screen);
-				passActor->AddComponent<SJH::Scene::PassComponent>(
+				auto *pc = passActor->AddComponent<SJH::Scene::PassComponent>(
 				    prevFB, mPostFXFBs[i].get(), mat);
+				mPassComponents.push_back(pc); // PostFXDebug ImGui 패널이 토글 대상 참조
 
 				prevFB = mPostFXFBs[i].get();
 
@@ -598,16 +586,29 @@ namespace TopdownShooter
 
 		void WarmupImgui(SJH::ResourceRegistry &reg)
 		{
-			// === ImGui v1.53 init (install_callbacks=false — sb7 가 GLFW 콜백 소유) === // !!
-			mImGuiCtx = ImGui::CreateContext();                              // !!
-			ImGui::StyleColorsDark();                                        // !!
-			ImGui_ImplGlfwGL3_Init(window, /*install_callbacks=*/false);     // !!
-			glfwSetScrollCallback(window, ImGui_ImplGlfwGL3_ScrollCallback); // !!
-			glfwSetCharCallback(window, ImGui_ImplGlfwGL3_CharCallback);     // !!
+			// === ImGui v1.53 init (install_callbacks=false — sb7 가 GLFW 콜백 소유) ===
+			mImGuiCtx = ImGui::CreateContext();
+			ImGui::StyleColorsDark();
+			ImGui_ImplGlfwGL3_Init(window, /*install_callbacks=*/false);
+			glfwSetScrollCallback(window, ImGui_ImplGlfwGL3_ScrollCallback);
+			glfwSetCharCallback(window, ImGui_ImplGlfwGL3_CharCallback);
 
-			// ImGui 레이어 등록 — Game(항상) / Editor(F1 토글) // !!
-			const auto *exitTex = reg.CreateTexture("exit_texture",                                                                // !!
-			                                        SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png").get()); // !!
+			// ExitButton 텍스처 — Game UI Layer
+			const auto *exitTex = reg.CreateTexture(
+			    "exit_texture",
+			    SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png").get());
+
+			// ImGui 레이어 등록 — Game(항상) / Editor(F1 토글)
+			mImGuiStack.Push(std::make_unique<UI::ExitButtonLayer>(window, exitTex));
+
+			std::vector<UI::PassDebugEntry> debugEntries;
+			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size(); ++i)
+			{
+				if (i < mPassComponents.size())
+					debugEntries.push_back({POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
+			}
+			mImGuiStack.Push(std::make_unique<UI::PostFXDebugLayer>(
+			    std::move(debugEntries), mGamma));
 		}
 	};
 
