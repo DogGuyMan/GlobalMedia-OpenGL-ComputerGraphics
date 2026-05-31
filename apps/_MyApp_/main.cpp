@@ -27,6 +27,9 @@
 #include "VFX/ParticleStage.h"
 #include "playable/composite_playable.h"
 
+#include "Spawns/OneShotSweeper.h"
+#include "Spawns/SequenceContext.h"
+
 #include "Stage/StageBuilder.h"
 #include "UI/ExitButtonLayer.h"
 #include "UI/ImGuiLayerStack.h"
@@ -193,6 +196,8 @@ namespace TopdownShooter
 			    &reg,
 			})));
 
+			mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("FxRoot"));
+
 			WramupPlayer(reg, dir, phys);
 			WarmupSkybox(reg, dir);
 			WarmupLighting(dir);
@@ -262,6 +267,7 @@ namespace TopdownShooter
 			mCamera = nullptr;
 			mScreenCamera = nullptr;
 			mSpriteActor = nullptr;
+			mFxRoot = nullptr;
 			mStages.clear();
 			mDefaultTarget.reset();
 			mSprite = nullptr;
@@ -392,6 +398,7 @@ namespace TopdownShooter
 		SJH::Scene::Actor *mSkyboxActor = nullptr;
 		SJH::Material *mSkyboxMat = nullptr;
 		SJH::Scene::Actor *mSpriteActor = nullptr;
+		SJH::Scene::Actor *mFxRoot = nullptr; // 단발 시퀀스 전용 부모 (sweep 대상)
 		SJH::Scene::Camera *mCamera = nullptr;
 		SJH::Scene::Camera *mScreenCamera = nullptr;
 		SJH::SpriteSequence::SpriteSequencePlayable *mSpriteSeq = nullptr;
