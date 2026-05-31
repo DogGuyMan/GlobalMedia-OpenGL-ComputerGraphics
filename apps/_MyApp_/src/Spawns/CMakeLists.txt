@@ -1,5 +1,6 @@
 add_library(myapp_spawns STATIC
     OneShotSweeper.cpp
+    AudioInstance.cpp
 )
 add_library(MyApp::Spawns ALIAS myapp_spawns)
 

@@ -225,8 +225,11 @@ namespace TopdownShooter
 			ImGui_ImplGlfwGL3_NewFrame();
 
 			mKeyboard.PollHeld(window);
+			if (mCamera && mCamera->GetOwner())
+				TopdownShooter::Manager::Get().Audio().SetListener(mCamera->GetOwner()->GetTransform().Translate);
 			TopdownShooter::Manager::Get().Update(dt);
 			SJH::Scene::Director::Get().Update(dt);
+			if (mFxRoot) TopdownShooter::Spawns::SweepFinishedChildren(*mFxRoot);
 			TopdownShooter::Manager::Get().Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
 
 			// 스카이박스 시간(u_time) 동기화 — 위치는 셰이더가 view 이동 제거로 자동 처리.

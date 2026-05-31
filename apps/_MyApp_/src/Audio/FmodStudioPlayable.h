@@ -2,6 +2,8 @@
 #define _TOPDOWNSHOOTER_AUDIO_FMODSTUDIOPLAYABLE_H__
 
 #include "playable/playable_base.h"
+#include <optional>
+#include <vmath.h>
 
 namespace FMOD::Studio { class EventDescription; class EventInstance; }
 
@@ -14,7 +16,8 @@ namespace TopdownShooter::Audio
 	class FmodStudioPlayable : public SJH::Playable::PlayableBase
 	{
 	  public:
-		explicit FmodStudioPlayable(::FMOD::Studio::EventDescription *desc);
+		explicit FmodStudioPlayable(::FMOD::Studio::EventDescription *desc,
+		                            std::optional<vmath::vec3> worldPos = std::nullopt);
 		~FmodStudioPlayable() override;
 
 		void Pause() override;
@@ -27,6 +30,7 @@ namespace TopdownShooter::Audio
 	  private:
 		::FMOD::Studio::EventDescription *mDesc     = nullptr;
 		::FMOD::Studio::EventInstance    *mInstance = nullptr;
+		std::optional<vmath::vec3>        mWorldPos;
 	};
 }
 

@@ -1,8 +1,11 @@
 #include "AudioSystem.h"
 
+#include <fmod/fmod_common.h>
 #include <fmod/fmod.hpp>
 #include <fmod/fmod_studio.hpp>
 #include <spdlog/spdlog.h>
+#include <string>
+#include <vmath.h>
 
 namespace TopdownShooter::Audio
 {
@@ -75,5 +78,24 @@ namespace TopdownShooter::Audio
 		}
 		mEventCache[eventPath] = desc;
 		return desc;
+	}
+
+	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
+	{
+		FMOD_3D_ATTRIBUTES attr = {};
+		attr.position = {pos[0], pos[1], pos[2]};
+		attr.velocity = {0.0f, 0.0f, 0.0f};
+		attr.forward  = {forward[0], forward[1], forward[2]};
+		attr.up       = {up[0], up[1], up[2]};
+		if (mStudioSystem) mStudioSystem->setListenerAttributes(0, &attr);
+
+		if (mSystem)
+		{
+			FMOD_VECTOR p = {pos[0], pos[1], pos[2]};
+			FMOD_VECTOR v = {0.0f, 0.0f, 0.0f};
+			FMOD_VECTOR f = {forward[0], forward[1], forward[2]};
+			FMOD_VECTOR u = {up[0], up[1], up[2]};
+			mSystem->set3DListenerAttributes(0, &p, &v, &f, &u);
+		}
 	}
 }

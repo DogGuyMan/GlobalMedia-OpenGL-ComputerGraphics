@@ -25,6 +25,8 @@ namespace TopdownShooter::Entity
 		virtual void DoForward(vmath::vec2 dir, float dt) {mMovementComponentPtr->DoForward(dir, dt);}
 		virtual void DoAttack(IDamageable &target) {target.DoDamaged(GetNormalAtk());}
 		virtual int GetNormalAtk() const { return (int)mWaeponComponentPtr->Damage.GetValue();}
+		Components::Movement& GetMovemenet() const {return *mMovementComponentPtr;}
+		Components::Weapon& GetWeapon() const {return *mWaeponComponentPtr;}
 	};
 }; // namespace TopdownShooter::Entity
 #endif //_TOPDOWNSHOOTER_ENTITY_PLAYER__
