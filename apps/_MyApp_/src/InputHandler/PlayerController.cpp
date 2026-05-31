@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 #include <cassert>
 #include <spdlog/spdlog.h>
+#include <utility>
 #include <vmath.h>
 
 namespace TopdownShooter::Controller
@@ -25,6 +26,14 @@ namespace TopdownShooter::Controller
 		mKeyboardInput->BindHeldHandler(Action::MoveBack,    [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
 		mKeyboardInput->BindHeldHandler(Action::MoveLeft,    [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
 		mKeyboardInput->BindHeldHandler(Action::MoveRight,   [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
+
+		// G키 (이산 press) — Damage Composite 트리거. 콜백은 호출 시점 null-check.
+		mKeyboardInput->BindKey(Action::Damage, GLFW_KEY_G);
+		mKeyboardInput->BindPressHandler(Action::Damage, [this] { if (mDamageCallback) mDamageCallback(); });
+
+		// 좌클릭 (이산 press) — Shot Composite 트리거. MouseInput 미주입이면 바인딩 생략.
+		if (mMouseInput)
+			mMouseInput->BindButtonPressHandler(GLFW_MOUSE_BUTTON_LEFT, [this] { if (mFireCallback) mFireCallback(); });
 	}
 
 	void PlayerController::UnregisterBindings()
@@ -36,6 +45,10 @@ namespace TopdownShooter::Controller
 		mKeyboardInput->UnbindKey(GLFW_KEY_S);
 		mKeyboardInput->UnbindKey(GLFW_KEY_A);
 		mKeyboardInput->UnbindKey(GLFW_KEY_D);
+		mKeyboardInput->UnbindKey(GLFW_KEY_G);
+
+		if (mMouseInput)
+			mMouseInput->UnbindButtonPress(GLFW_MOUSE_BUTTON_LEFT);
 	}
 
 	bool PlayerController::SetUp()
@@ -63,6 +76,26 @@ namespace TopdownShooter::Controller
 		// 멱등 — 첫 비-null 주입 후 무시.
 		if(mMovementPtr == nullptr)
 			mMovementPtr = target;
+		return *this;
+	}
+
+	PlayerController &PlayerController::SetMouseInput(SJH::MouseInput *m)
+	{
+		// 멱등 — 첫 비-null 주입 후 무시. RegisterBindings 가 좌클릭 바인딩 시점에 참조.
+		if (mMouseInput == nullptr)
+			mMouseInput = m;
+		return *this;
+	}
+
+	PlayerController &PlayerController::SetFireCallback(std::function<void()> cb)
+	{
+		mFireCallback = std::move(cb);
+		return *this;
+	}
+
+	PlayerController &PlayerController::SetDamageCallback(std::function<void()> cb)
+	{
+		mDamageCallback = std::move(cb);
 		return *this;
 	}
 

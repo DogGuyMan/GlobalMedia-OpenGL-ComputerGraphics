@@ -7,6 +7,7 @@
 
 #include <GLFW/glfw3.h>
 #include <functional>
+#include <unordered_map>
 
 namespace SJH
 {
@@ -22,7 +23,13 @@ namespace SJH
         void BindLookHandler(std::function<void(double dx, double dy)> handler);
 	void UnbindLook();
 
+        /// @brief 버튼이 *눌리는 순간* 1회 실행할 핸들러 (이산, button down). KeyboardInput::BindPressHandler 대칭.
+        void BindButtonPressHandler(int button, std::function<void()> handler);
+        /// @brief @p button 의 press 핸들러 제거.
+        void UnbindButtonPress(int button);
+
         /// @brief GLFW mouse-button 콜백 위임 — 드래그 버튼 press 시 시작, release 시 종료.
+        ///        + 등록된 버튼의 press 핸들러를 디스패치 (드래그 처리와 독립).
         void HandleButton(int button, int action, double x, double y);
         /// @brief GLFW cursor-pos 콜백 위임 — 드래그 중이면 delta 산출 후 look 핸들러 호출.
         void HandleMove(double x, double y);
@@ -34,6 +41,7 @@ namespace SJH
 
     private:
         std::function<void(double, double)> mLookHandler;
+        std::unordered_map<int, std::function<void()>> mButtonPressHandlers;
         bool   mIsDragging = false;
         double mLastX = 0.0;
         double mLastY = 0.0;

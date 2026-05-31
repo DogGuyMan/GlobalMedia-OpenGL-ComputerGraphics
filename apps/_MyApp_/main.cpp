@@ -282,35 +282,13 @@ namespace TopdownShooter
 			if (ImGui::GetIO().WantCaptureKeyboard)
 				return;
 
-			// 리펙토링 대상
+			// F1 — 에디터 토글 (디버그 UI, 플레이어 입력과 무관 → application 잔류).
 			if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
 				mShowEditor = !mShowEditor;
 
+			// 게임플레이 키(WASD held + G Damage)는 PlayerController 가 바인딩 — Dispatch 로 위임.
+			// (G Damage Composite 로직은 WramupPlayer 의 onDamage 콜백으로 이동.)
 			mKeyboard.Dispatch(key, action);
-
-			// 리펙토링 대상
-			// === M5 CO2 — G 키: Parallel( TweenShake ∥ FmodStudio.Damaged ) ===
-			if (key == GLFW_KEY_G && action == GLFW_PRESS)
-			{
-				auto &audio = TopdownShooter::Manager::Get().Audio();
-				auto *damagedEvt = audio.LoadEvent("event:/Damaged");
-
-				auto *dActor = SJH::Scene::Director::Get().Root().AddChild(
-				    std::make_unique<SJH::Scene::Actor>("DamageComposite"));
-				auto *par = dActor->AddComponent<SJH::Playable::ParallelPlayable>();
-
-				auto tween = tweeny::from(0.0f).to(1.0f).during(100).via(tweeny::easing::sinusoidalInOut);
-				par->Join(std::make_unique<TopdownShooter::Tween::TweenPlayable<float>>(
-				    std::move(tween),
-				    [](float v) {
-					    float offset = std::sin(v * 8.0f * 3.14159f) * 5.0f;
-					    spdlog::info("[shake] v={:.3f} offset={:.3f}", v, offset);
-				    }));
-				if (damagedEvt)
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(damagedEvt));
-
-				par->Play();
-			}
 		}
 
 		void onMouseButton(int button, int action) override
@@ -319,40 +297,11 @@ namespace TopdownShooter
 			if (ImGui::GetIO().WantCaptureMouse)
 				return;
 
+			// 좌클릭(Shot Composite)은 MouseInput → PlayerController fire 콜백이 디스패치.
+			// (콜백 로직은 WramupPlayer 의 onFire 로 이동.) 여기선 raw 버튼만 MouseInput 에 전달.
 			double x = 0.0, y = 0.0;
 			glfwGetCursorPos(window, &x, &y);
 			mMouse.HandleButton(button, action, x, y);
-
-			// 리펙토링 대상
-			// === M5 CO1 — 마우스 좌클릭: Sequence( Effekseer.distortion  Parallel( Fmod.Laser ∥ FmodStudio.Slash ) ) ===
-			if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-			{
-				auto &reg = SJH::ResourceRegistry::Get();
-				auto &audio = TopdownShooter::Manager::Get().Audio();
-				auto &vfx = TopdownShooter::Manager::Get().VFX();
-
-				auto *shot = reg.FindSound("shot");
-				auto *muzzle = reg.FindEffect("muzzle");
-				auto *slashEvt = audio.LoadEvent("event:/Slash");
-
-				if (shot && muzzle && slashEvt)
-				{
-					auto *cActor = SJH::Scene::Director::Get().Root().AddChild(
-					    std::make_unique<SJH::Scene::Actor>("ShotComposite"));
-					auto *seq = cActor->AddComponent<SJH::Playable::SequencePlayable>();
-
-					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
-					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
-					    TopdownShooter::VFX::TrackPolicy::Static));
-
-					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodPlayable>(audio.GetSystem(), shot));
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(slashEvt));
-					seq->Append(std::move(par));
-
-					seq->Play();
-				}
-			}
 		}
 
 		void onMouseMove(int x, int y) override
@@ -465,6 +414,57 @@ namespace TopdownShooter
 			pac.life.hp = 100;
 			pac.movement.speed = 3.0f;
 			pac.controller.keyboard = &mKeyboard;
+			pac.controller.mouse    = &mMouse;
+			// 좌클릭 — M5 CO1: Sequence( Effekseer.distortion → Parallel( Fmod.Laser ∥ FmodStudio.Slash ) ).
+			// 의존은 전부 싱글턴이라 캡처 없는 자기완결 람다 (PlayerController 는 audio/vfx 를 모름).
+			pac.controller.onFire = [] {
+				auto &reg = SJH::ResourceRegistry::Get();
+				auto &audio = TopdownShooter::Manager::Get().Audio();
+				auto &vfx = TopdownShooter::Manager::Get().VFX();
+
+				auto *shot = reg.FindSound("shot");
+				auto *muzzle = reg.FindEffect("muzzle");
+				auto *slashEvt = audio.LoadEvent("event:/Slash");
+
+				if (shot && muzzle && slashEvt)
+				{
+					auto *cActor = SJH::Scene::Director::Get().Root().AddChild(
+					    std::make_unique<SJH::Scene::Actor>("ShotComposite"));
+					auto *seq = cActor->AddComponent<SJH::Playable::SequencePlayable>();
+
+					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
+					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
+					    TopdownShooter::VFX::TrackPolicy::Static));
+
+					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
+					par->Join(std::make_unique<TopdownShooter::Audio::FmodPlayable>(audio.GetSystem(), shot));
+					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(slashEvt));
+					seq->Append(std::move(par));
+
+					seq->Play();
+				}
+			};
+			// G키 — M5 CO2: Parallel( TweenShake ∥ FmodStudio.Damaged ).
+			pac.controller.onDamage = [] {
+				auto &audio = TopdownShooter::Manager::Get().Audio();
+				auto *damagedEvt = audio.LoadEvent("event:/Damaged");
+
+				auto *dActor = SJH::Scene::Director::Get().Root().AddChild(
+				    std::make_unique<SJH::Scene::Actor>("DamageComposite"));
+				auto *par = dActor->AddComponent<SJH::Playable::ParallelPlayable>();
+
+				auto tween = tweeny::from(0.0f).to(1.0f).during(100).via(tweeny::easing::sinusoidalInOut);
+				par->Join(std::make_unique<TopdownShooter::Tween::TweenPlayable<float>>(
+				    std::move(tween),
+				    [](float v) {
+					    float offset = std::sin(v * 8.0f * 3.14159f) * 5.0f;
+					    spdlog::info("[shake] v={:.3f} offset={:.3f}", v, offset);
+				    }));
+				if (damagedEvt)
+					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(damagedEvt));
+
+				par->Play();
+			};
 			pac.physics.world = &phys.World();
 			pac.physics.size = vmath::vec2(1.0f, 1.0f);
 			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);

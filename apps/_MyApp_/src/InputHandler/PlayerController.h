@@ -3,7 +3,9 @@
 
 #include "Entity/Components/Components.Interfaces.h"
 #include "input/keyboard_input.h"
+#include "input/mouse_input.h"
 #include "scene/actor.h"
+#include <functional>
 #include <vmath.h>
 #include "Entity/Components/Components.Interfaces.h"
 
@@ -24,6 +26,7 @@ namespace TopdownShooter::Controller
 			MoveBack,        // S
 			MoveLeft,        // A
 			MoveRight,       // D
+			Damage,          // G (이산 press — Damage Composite 트리거)
 		};
 
 		PlayerController()                                    = default;
@@ -39,6 +42,15 @@ namespace TopdownShooter::Controller
 		/// @brief IMovable 구현체 (Entity 자체 또는 Movement Component) 주입. SetUp() 전에 호출 필수.
 		PlayerController &SetMovableTarget(Entity::IMovable* target);
 
+		/// @brief 마우스 입력 의존 주입 (선택적 — 좌클릭 Fire 바인딩용). SetUp() 전에 호출 필수.
+		PlayerController &SetMouseInput(SJH::MouseInput *m);
+
+		/// @brief 좌클릭 시 실행할 콜백 (Shot Composite 등). 미주입이면 좌클릭 무시.
+		PlayerController &SetFireCallback(std::function<void()> cb);
+
+		/// @brief G키 press 시 실행할 콜백 (Damage Composite 등). 미주입이면 G키 무시.
+		PlayerController &SetDamageCallback(std::function<void()> cb);
+
 		virtual void OnEnter() override;
 		virtual void OnExit() override;
 		virtual void Update(float dt) override;
@@ -46,7 +58,11 @@ namespace TopdownShooter::Controller
 	  private:
 		bool mIsInitialized                          = false;
 		SJH::KeyboardInput<Action> *mKeyboardInput   = nullptr;
+		SJH::MouseInput *mMouseInput                 = nullptr;
 		Entity::IMovable* mMovementPtr = nullptr;
+
+		std::function<void()> mFireCallback;   // 좌클릭
+		std::function<void()> mDamageCallback; // G키
 
 		vmath::vec3 mInputValue {0.0f};
 

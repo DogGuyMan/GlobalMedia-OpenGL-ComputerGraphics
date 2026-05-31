@@ -12,19 +12,39 @@ namespace SJH
 	mLookHandler = nullptr;
     }
 
+    void MouseInput::BindButtonPressHandler(int button, std::function<void()> handler)
+    {
+        mButtonPressHandlers[button] = std::move(handler);
+    }
+
+    void MouseInput::UnbindButtonPress(int button)
+    {
+        mButtonPressHandlers.erase(button);
+    }
+
     void MouseInput::HandleButton(int button, int action, double x, double y)
     {
-        if (button != mDragButton)
-            return;
+        // 드래그 버튼(기본 우클릭) — press~release 동안 시점 조작 상태 토글.
+        if (button == mDragButton)
+        {
+            if (action == GLFW_PRESS)
+            {
+                mIsDragging = true;
+                mLastX = x;
+                mLastY = y;
+            }
+            else if (action == GLFW_RELEASE)
+            {
+                mIsDragging = false;
+            }
+        }
+
+        // 버튼 press 핸들러 디스패치 (이산) — 드래그 처리와 독립. KeyboardInput::Dispatch 대칭.
         if (action == GLFW_PRESS)
         {
-            mIsDragging = true;
-            mLastX = x;
-            mLastY = y;
-        }
-        else if (action == GLFW_RELEASE)
-        {
-            mIsDragging = false;
+            auto it = mButtonPressHandlers.find(button);
+            if (it != mButtonPressHandlers.end() && it->second)
+                it->second();
         }
     }
 

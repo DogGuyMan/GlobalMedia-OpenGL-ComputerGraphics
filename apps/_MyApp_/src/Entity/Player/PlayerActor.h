@@ -5,11 +5,13 @@
 #include "Entity/Components/MovementComponents.h"
 #include "InputHandler/PlayerController.h"
 #include "input/keyboard_input.h"
+#include "input/mouse_input.h"
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/physics_movement.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vmath.h>
@@ -47,6 +49,9 @@ namespace TopdownShooter::Entity::Player
 		struct ControllerCfg
 		{
 			SJH::KeyboardInput<Controller::PlayerController::Action> *keyboard = nullptr;
+			SJH::MouseInput      *mouse    = nullptr;   // 좌클릭 Fire 바인딩용 (선택)
+			std::function<void()> onFire;               // 좌클릭 콜백 (선택)
+			std::function<void()> onDamage;             // G키 콜백 (선택)
 		};
 
 		struct PhysicsCfg
@@ -117,7 +122,10 @@ namespace TopdownShooter::Entity::Player
 			{
 				auto *controller = actor->AddComponent<Controller::PlayerController>();
 				controller->SetKeyboardInput(cfg.controller.keyboard);
+				controller->SetMouseInput(cfg.controller.mouse);
 				controller->SetMovableTarget(pm);
+				controller->SetFireCallback(cfg.controller.onFire);
+				controller->SetDamageCallback(cfg.controller.onDamage);
 				controller->SetUp();
 			}
 		}
@@ -130,7 +138,10 @@ namespace TopdownShooter::Entity::Player
 			{
 				auto *controller = actor->AddComponent<Controller::PlayerController>();
 				controller->SetKeyboardInput(cfg.controller.keyboard);
+				controller->SetMouseInput(cfg.controller.mouse);
 				controller->SetMovableTarget(movement);
+				controller->SetFireCallback(cfg.controller.onFire);
+				controller->SetDamageCallback(cfg.controller.onDamage);
 				controller->SetUp();
 			}
 		}
