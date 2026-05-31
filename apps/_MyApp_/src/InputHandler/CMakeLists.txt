@@ -18,12 +18,18 @@ target_include_directories(myapp_input_handler
 # CameraController.cpp 전용 의존 (PRIVATE):
 #   object/transform.h                            -> SJH::object
 #   <GLFW/glfw3.h>                                -> project_deps (이미 PUBLIC 으로 흡수)
+# PlayerController.cpp 전용 의존 (PRIVATE):
+#   sprite/sprite_component.h (flipX 캐시 dynamic_cast typeinfo)   -> SJH::sprite
+#   Entity/Components/WeaponComponents.h (Weapon::UseWeapon 심볼)  -> MyApp::Entity
+#   (의존 방향 input_handler -> entity 단방향. Entity 가 src/ 에서 먼저 add_subdirectory 됨)
 target_link_libraries(myapp_input_handler
     PUBLIC  SJH::input
             SJH::scene
             project_deps
             game_deps
     PRIVATE SJH::object
+            SJH::sprite
+            MyApp::Entity
 )
 
 target_compile_features(myapp_input_handler PUBLIC cxx_std_17)

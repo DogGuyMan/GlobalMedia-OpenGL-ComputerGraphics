@@ -6,6 +6,7 @@
 #include "Audio/FmodPlayable.h"
 #include "Audio/FmodStudioPlayable.h"
 #include "Entity/Player/PlayerActor.h"
+#include "Entity/Player/PlayerHand.h"
 #include "InputHandler/ActorFolower.h"
 #include "Manager.h"
 #include "Physics/filter.h"
@@ -99,6 +100,9 @@ namespace TopdownShooter::Bootstrap
 		pac.physics.linearDamping = 5.0f;
 		pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
 		pac.physics.maskBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
+		// Weapon — 좌클릭 발사 시 bullet 을 spawn 할 물리 월드 + 데미지. (physics 분기에서 Weapon 부착)
+		pac.weapon.damage = 10;
+		pac.weapon.world  = deps.physicsWorld;
 
 		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
 		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
@@ -125,6 +129,11 @@ namespace TopdownShooter::Bootstrap
 		result.SpriteSeq->Play();
 
 		result.SpriteActor = dir.Root().AddChild(std::move(spriteActor));
+
+		// 손 — PlayerHands::OnEnter 가 자식 Hand actor 2개를 생성·부착 (player Y facing 상속 궤도).
+		// SpriteActor 는 이미 entered → 부착 즉시 OnEnter 실행. (손 스프라이트 비주얼은 사용자 WIP)
+		result.SpriteActor->AddComponent<TopdownShooter::Entity::PlayerHands>();
+
 		deps.worldCamera
 		    ->GetOwner()
 		    ->GetComponent<Controller::ActorFolower>()

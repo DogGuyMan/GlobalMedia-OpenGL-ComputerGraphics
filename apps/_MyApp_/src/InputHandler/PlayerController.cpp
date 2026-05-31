@@ -8,7 +8,8 @@
 #include "object/transform.h"
 #include "scene/actor.h"
 
-// [TEST] 마우스→Ground raycast + 노란 마커 스폰에 필요한 의존 (Client 코드라 직접 사용 OK).
+// 마우스→Ground raycast + 발사/회전/디버그 마커에 필요한 의존 (Client 코드라 직접 사용 OK).
+#include "Entity/Components/WeaponComponents.h"
 #include "material/material.h"
 #include "material/material_uniforms.h"
 #include "object/mesh.h"
@@ -17,6 +18,7 @@
 #include "resource_registry/resource_registry.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
+#include "sprite/sprite_component.h"
 
 #include <GLFW/glfw3.h>
 #include <cassert>
@@ -38,10 +40,11 @@ namespace TopdownShooter::Controller
 		// W = 앞 = -Z (OpenGL forward 컨벤션).
 		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
 		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
-		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); spdlog::info("[input] W (MoveForward)"); });
-		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); spdlog::info("[input] S (MoveBack)"); });
-		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); spdlog::info("[input] A (MoveLeft)"); });
-		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); spdlog::info("[input] D (MoveRight)"); });
+		// (held 핸들러는 매 프레임 호출 → 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec §2.)
+		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); });
+		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
+		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
+		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
 
 		// G키 (이산 press) — Damage Composite 트리거. 콜백은 호출 시점 null-check.
 		mKeyboardInput->BindKey(Action::Damage, GLFW_KEY_G);
@@ -51,15 +54,9 @@ namespace TopdownShooter::Controller
 				mDamageCallback();
 		});
 
-		// 좌클릭 (이산 press) — Shot Composite 트리거. MouseInput 미주입이면 바인딩 생략.
+		// 좌클릭 (이산 press) — 발사. MouseInput 미주입이면 바인딩 생략.
 		if (mMouseInput)
-			mMouseInput->BindButtonPressHandler(GLFW_MOUSE_BUTTON_LEFT, [this] {
-				spdlog::info("[input] LMB (Fire)");
-				// [TEST] 마우스→Ground raycast → 좌표 로그 + 노란 마커 스폰.
-				TestPickGroundAndSpawnMarker();
-				if (mFireCallback)
-					mFireCallback();
-			});
+			mMouseInput->BindButtonPressHandler(GLFW_MOUSE_BUTTON_LEFT, [this] { OnFirePressed(); });
 	}
 
 	void PlayerController::UnregisterBindings()
@@ -121,6 +118,12 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
+	PlayerController &PlayerController::SetGroundClickCallback(std::function<void(const vmath::vec3 &)> cb)
+	{
+		mGroundClickCallback = std::move(cb);
+		return *this;
+	}
+
 	PlayerController &PlayerController::SetFireCallback(std::function<void()> cb)
 	{
 		mFireCallback = std::move(cb);
@@ -156,25 +159,49 @@ namespace TopdownShooter::Controller
 		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
 		// 누적값 리셋.
 		mInputValue = vmath::vec3(0.0f);
+
+		// === 연속 조준 (spec D1) — 매 프레임 마우스→Ground raycast 로 조준 멤버 갱신. ===
+		UpdateAim();
+
+		// === 플레이어 회전 (spec D2/§3) — 논리 facing(EulerRot.Y) + 빌보드 좌우반전(flipX). ===
+		// mAimAngleY/mAimDirection 은 직전 유효값을 유지하므로 mAimValid 와 무관하게 매 프레임 반영.
+		SJH::Scene::Actor *owner = GetOwner();
+		if (owner != nullptr)
+		{
+			owner->GetTransform().EulerRot[1] = mAimAngleY; // 논리 facing — 자식 손이 WorldMatrix 로 상속
+
+			// SpriteRenderer(형제) lazy 캐시 — controller 가 sprite 보다 먼저 생성되므로 첫 조회 시점이 늦음.
+			if (mCachedSprite == nullptr)
+				mCachedSprite = owner->GetComponent<SJH::Sprite::SpriteRenderer>();
+			if (mCachedSprite != nullptr)
+				mCachedSprite->flipX = (mAimDirection[0] < 0.0f);
+		}
 	}
 
-	void PlayerController::TestPickGroundAndSpawnMarker()
+	bool PlayerController::UpdateAim()
 	{
+		// 카메라 미주입 / 윈도우 없음 — 직전 조준 유지 (silent).
 		if (mCamera == nullptr || mCamera->GetOwner() == nullptr)
 		{
-			spdlog::warn("[pick] World 카메라 미주입 — raycast 생략");
-			return;
+			mAimValid = false;
+			return false;
 		}
 		GLFWwindow *win = glfwGetCurrentContext();
 		if (win == nullptr)
-			return;
+		{
+			mAimValid = false;
+			return false;
+		}
 
 		double mx = 0.0, my = 0.0;
 		glfwGetCursorPos(win, &mx, &my);
 		int ww = 0, wh = 0;
 		glfwGetWindowSize(win, &ww, &wh);
 		if (ww <= 0 || wh <= 0)
-			return;
+		{
+			mAimValid = false;
+			return false;
+		}
 
 		// 화면(픽셀) → NDC. y 는 위가 +1 이 되도록 뒤집는다.
 		const float ndcX = 2.0f * static_cast<float>(mx) / static_cast<float>(ww) - 1.0f;
@@ -193,38 +220,68 @@ namespace TopdownShooter::Controller
 		const vmath::vec3 dir =
 		    normalize(right * (ndcX * aspect * tanHalf) + up * (ndcY * tanHalf) + forward);
 
-		// y=0 평면과 교차. dir.y ≈ 0 이면 평행, t<0 이면 카메라 뒤 → 무시.
+		// y=0 평면과 교차. dir.y ≈ 0 이면 평행, t<0 이면 카메라 뒤 → 직전값 유지.
 		if (std::fabs(dir[1]) < 1e-5f)
 		{
-			spdlog::warn("[pick] ray 가 y=0 평면과 평행 — 교차 없음");
-			return;
+			mAimValid = false;
+			return false;
 		}
 		const float t = -camPos[1] / dir[1];
 		if (t < 0.0f)
 		{
-			spdlog::warn("[pick] y=0 교차가 카메라 뒤 — 무시");
-			return;
+			mAimValid = false;
+			return false;
 		}
 		const vmath::vec3 hit = camPos + dir * t;
 
-		spdlog::info("[pick] screen=({:.0f},{:.0f}) ndc=({:.2f},{:.2f}) -> ground=({:.2f},{:.2f},{:.2f})",
-		             mx, my, ndcX, ndcY, hit[0], hit[1], hit[2]);
-
-		// === PlayerActor(owner) → 클릭 Ground 좌표 = 조준 Vector 추출 (XZ 평면) ===
+		// === PlayerActor(owner) → 커서 Ground 좌표 = 조준 Vector 추출 (XZ 평면) ===
 		SJH::Scene::Actor *player = GetOwner();
 		const vmath::vec3 playerPos = (player != nullptr) ? player->GetTransform().Translate : vmath::vec3(0.0f);
 
 		vmath::vec3 aim = hit - playerPos;
 		aim[1] = 0.0f; // 탑다운 조준 — 높이 성분 제거 (XZ 평면)
 		const float dist = vmath::length(aim);
+
 		mAimPoint = hit;
-		mAimDirection = (dist > 1e-4f) ? aim * (1.0f / dist) : vmath::vec3(0.0f, 0.0f, -1.0f);
+		mAimValid = true;
+		if (dist > 1e-4f)
+		{
+			mAimDirection = aim * (1.0f / dist);
+			// facing Y각 (degree) — spec §1: θ = degrees(atan2(-dir.x, -dir.z)). forward(-Z)=0, +X=-90.
+			mAimAngleY = vmath::degrees(std::atan2(-mAimDirection[0], -mAimDirection[2]));
+		}
+		// dist≈0 (커서가 player 위) — 방향/각도는 직전값 유지 (snap 방지). mAimPoint 만 갱신.
+		return true;
+	}
 
-		spdlog::info("[aim] player=({:.2f},{:.2f},{:.2f}) -> dir=({:.2f},{:.2f},{:.2f}) dist={:.2f}",
-		             playerPos[0], playerPos[1], playerPos[2],
-		             mAimDirection[0], mAimDirection[1], mAimDirection[2], dist);
+	void PlayerController::OnFirePressed()
+	{
+		// 클릭 직전 조준 갱신 — 입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값으로 재산출.
+		UpdateAim();
 
-		SpawnGroundMarker(hit);
+		spdlog::info("[fire] ground=({:.2f},{:.2f},{:.2f}) dir=({:.2f},{:.2f},{:.2f}) angleY={:.1f}",
+		             mAimPoint[0], mAimPoint[1], mAimPoint[2],
+		             mAimDirection[0], mAimDirection[1], mAimDirection[2], mAimAngleY);
+
+		// 발사 — owner 의 Weapon 경유 (spec D3). box2d forward = (aimDir.x, -aimDir.z).
+		SJH::Scene::Actor *owner = GetOwner();
+		if (owner != nullptr)
+		{
+			auto *weapon = owner->GetComponent<Entity::Components::Weapon>();
+			if (weapon != nullptr)
+				weapon->UseWeapon(vmath::vec2(mAimDirection[0], -mAimDirection[2]));
+		}
+
+		// 오디오/VFX Composite (onFire) — 주입됐으면.
+		if (mFireCallback)
+			mFireCallback();
+
+		// 디버그 노란 마커 — 좌클릭에서만 스폰 (spec §2). 매 프레임 스폰 금지.
+		SpawnGroundMarker(mAimPoint);
+
+		// Ground 좌표 소비자(VFX 소환 등) — 주입됐으면 클릭 위치 전달.
+		if (mGroundClickCallback)
+			mGroundClickCallback(mAimPoint);
 	}
 
 	void PlayerController::SpawnGroundMarker(const vmath::vec3 &worldPos)

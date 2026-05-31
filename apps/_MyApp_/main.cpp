@@ -23,6 +23,8 @@
 #include "VFX/ParticleStage.h"
 
 #include "Spawns/OneShotSweeper.h"
+#include "Spawns/VfxInstance.h"
+#include "UI/VfxSpawnLayer.h"
 
 #include "Stage/StageBuilder.h"
 #include "UI/ImGuiLayerStack.h"
@@ -225,6 +227,31 @@ namespace TopdownShooter
 			Bootstrap::WarmupAudio(Manager::Get().Audio());
 			reg.CreateEffect(vfxs.GetManager(), "muzzle", u"resources/vfx/distortion.efk");
 
+			// VFX 테스트 — 6종 Effekseer 이펙트 로드 (ImGui 드롭다운 선택 + 좌클릭 위치 소환).
+			// ※ .efk 가 참조하는 텍스처가 resources/vfx/ 아래에 있어야 실제로 보인다 (현재 누락 가능 — 별도 배치 필요).
+			std::vector<UI::VfxSpawnLayer::Entry> vfxEntries;
+			{
+				const struct
+				{
+					const char     *key;
+					const char16_t *path;
+				} kTestVfx[] = {
+				    {"dust", u"resources/vfx/dust.efk"},
+				    {"hit", u"resources/vfx/hit.efk"},
+				    {"laser", u"resources/vfx/laser.efk"},
+				    {"orbital_background", u"resources/vfx/orbital_background.efk"},
+				    {"slash", u"resources/vfx/slash.efk"},
+				    {"summon", u"resources/vfx/summon.efk"},
+				};
+				for (const auto &v : kTestVfx)
+				{
+					if (auto *eff = reg.CreateEffect(vfxs.GetManager(), v.key, v.path))
+						vfxEntries.push_back({v.key, eff});
+					else
+						spdlog::warn("[vfx-test] load failed: {}", v.key);
+				}
+			}
+
 			dir.Root().AddChild(std::move(TopdownShooter::Stage::CreateStageActor({
 			    &phys.World(),
 			    &reg,
@@ -243,6 +270,22 @@ namespace TopdownShooter
 				if (i < mPassComponents.size())
 					debugEntries.push_back({POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
 			mImGuiCtx = UI::BuildGameUI({window, &reg, &mImGuiStack, std::move(debugEntries), &mGamma});
+
+			// VFX 테스트 드롭다운 (항상 표시) + 좌클릭 Ground 좌표 → 선택 이펙트 소환.
+			{
+				auto layer = std::make_unique<UI::VfxSpawnLayer>(std::move(vfxEntries));
+				mVfxLayer  = layer.get();
+				mImGuiStack.Push(std::move(layer));
+			}
+			if (mSpriteActor)
+				if (auto *pc = mSpriteActor->GetComponent<Controller::PlayerController>())
+					pc->SetGroundClickCallback([this](const vmath::vec3 &p) {
+						// PlayerController 의 마우스→Ground raycast 결과(p)에 선택 이펙트를 단발 스폰.
+						if (mVfxLayer && mFxRoot)
+							if (auto *fx = mVfxLayer->GetSelectedEffect())
+								TopdownShooter::Spawns::SpawnVfxInstance(
+								    *mFxRoot, &TopdownShooter::Manager::Get().VFX(), fx, p);
+					});
 
 			dir.Enter();
 		}
@@ -391,6 +434,7 @@ namespace TopdownShooter
 		// ImGui
 		ImGuiContext *mImGuiCtx = nullptr;
 		UI::ImGuiLayerStack mImGuiStack;
+		UI::VfxSpawnLayer  *mVfxLayer = nullptr; // VFX 테스트 드롭다운 (비소유 — 스택이 소유)
 		bool mShowEditor = true;
 
 		// 씬 오브젝트
