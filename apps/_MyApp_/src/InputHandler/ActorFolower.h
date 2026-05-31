@@ -17,31 +17,32 @@ namespace TopdownShooter::Controller
 	///   ### CameraController 와의 차이
 	///   - free-fly 모드를 갖지 않는 *전용* follow 컨트롤러.
 	///   - KeyboardInput 의존 없음 (Mouse only).
-	class TargetFollowableCameraController : public SJH::Scene::Component
+	class ActorFolower : public SJH::Scene::Component
 	{
 	  public:
-		TargetFollowableCameraController()                                                    = default;
-		TargetFollowableCameraController(const TargetFollowableCameraController &)            = delete;
-		TargetFollowableCameraController &operator=(const TargetFollowableCameraController &) = delete;
+		ActorFolower()                                                    = default;
+		ActorFolower(const ActorFolower &)            = delete;
+		ActorFolower &operator=(const ActorFolower &) = delete;
 
 		bool SetUp();
 
 		//  Builder Pattern — fluent setter (self 반환)
 		/// @brief 마우스 입력 의존 주입. SetUp() 전에 호출 필수.
-		TargetFollowableCameraController &SetMouseInput(SJH::MouseInput *m);
+		ActorFolower &SetMouseInput(SJH::MouseInput *m);
 
 		/// @brief 제어할 Camera Component 의존 주입. SetUp() 전에 호출 필수.
 		/// @note Camera 가 Actor 미부착이면 Update no-op.
-		TargetFollowableCameraController &SetCamera(SJH::Scene::Camera *c);
+		ActorFolower &SetCamera(SJH::Scene::Camera *c);
 
 		/// @brief Follow target Actor 설정. nullptr 이면 Update no-op.
-		TargetFollowableCameraController &SetFollowTarget(SJH::Scene::Actor *t);
+		ActorFolower &SetFollowTarget(SJH::Scene::Actor *t);
 
 		/// @brief Follow 시 target  camera offset (default = vec3(0, 5, 5)).
-		TargetFollowableCameraController &SetFollowOffset(vmath::vec3 offset);
+		ActorFolower &SetFollowOffset(vmath::vec3 offset);
+		ActorFolower &SetFollowRotate(vmath::vec2 rot);
 
 		/// @brief 마우스 감도 (default 0.1).
-		TargetFollowableCameraController &SetLookSensitivity(float v);
+		ActorFolower &SetLookSensitivity(float v);
 
 		virtual void OnEnter() override;
 		virtual void OnExit() override;
@@ -52,10 +53,10 @@ namespace TopdownShooter::Controller
 		SJH::MouseInput *mMouseInput     = nullptr;
 		SJH::Scene::Camera *mCamera      = nullptr;
 		SJH::Scene::Actor *mFollowTarget = nullptr;
-		vmath::vec3 mFollowOffset        = vmath::vec3(0.0f, 5.0f, 5.0f);
+		vmath::vec3 mFollowOffset        = vmath::vec3(0.0f, 0.0f, 0.0f);
 
 		float mYawDeg          = 0.0f;
-		float mPitchDeg        = -45.0f; // 탑다운 기본 시점 — 아래를 향함
+		float mPitchDeg        = 0.0f; // 탑다운 기본 시점 — 아래를 향함
 		float mLookSensitivity = 0.1f;
 
 		void RegisterBindings();

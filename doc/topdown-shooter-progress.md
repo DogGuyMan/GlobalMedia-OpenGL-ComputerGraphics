@@ -62,7 +62,7 @@
 
 | 구현 | Commit | 산출 |
 |---|---|---|
-| 초기 도입 | `c1012ea` | PlayerController.h/.cpp 신설 + TargetFollowableCameraController (별도 클래스 — plan 의 follow mode 추가 보다 깔끔) |
+| 초기 도입 | `c1012ea` | PlayerController.h/.cpp 신설 + ActorFolower (별도 클래스 — plan 의 follow mode 추가 보다 깔끔) |
 | Movement 추상화 | `2eb4150` | `SetMovableTarget(IMovable*)` (Movement 구체 의존 제거) + dt 전달 (fps-independent) + `+=` 누적 (동시 키 대각 이동) + 입력 부호 정정 (W=-Z) |
 | IMovable 시그니처 | `2eb4150` | `DoForward(vec2 dir, float dt)` units/sec 단위 명시 |
 | Movement Component | `2eb4150` | `normalize(dir) * (speed * dt)` + zero-vec 가드 |

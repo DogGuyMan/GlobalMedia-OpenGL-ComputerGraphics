@@ -18,8 +18,8 @@
 #include "Audio/FmodPlayable.h"
 #include "Audio/FmodStudioPlayable.h"
 #include "Entity/Player/PlayerActor.h"
+#include "InputHandler/ActorFolower.h"
 #include "InputHandler/PlayerController.h"
-#include "InputHandler/TargetFollowableCameraController.h"
 #include "Manager.h"
 #include "Physics/filter.h"
 #include "Tween/TweenPlayable.h"
@@ -33,6 +33,7 @@
 #include "UI/PostFXDebugLayer.h"
 #include "buffer/framebuffer.h"
 #include "common/common.h"
+#include "material/pass.h"
 #include "object/mesh.h"
 #include "program/program.h"
 #include "render/camera_stage.h"
@@ -188,14 +189,10 @@ namespace TopdownShooter
 			SJH::Scene::Director::Get().Update(dt);
 			TopdownShooter::Manager::Get().Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
 
-			// 스카이박스 시간(u_time) 및 위치 동기화
+			// 스카이박스 시간(u_time) 동기화 — 위치는 셰이더가 view 이동 제거로 자동 처리.
 			if (mSkyboxMat)
 			{
 				mSkyboxMat->Properties.Floats["u_time"] = static_cast<float>(currentTime);
-			}
-			if (mSkyboxActor && mCamera && mCamera->GetOwner())
-			{
-				mSkyboxActor->GetTransform().Translate = mCamera->GetOwner()->GetTransform().Translate;
 			}
 
 			// ── stages 컬렉션 순회 — World → Screen → ScreenQuad ─────────────────
@@ -370,9 +367,11 @@ namespace TopdownShooter
 
 			// ── World Camera (Perspective) — 3D 월드 ────────────────────────────
 			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, aspect, 0.1f, 100.0f);
-			worldCamActor->GetTransform().SetTransformWithVectors(
-			    vmath::vec3(0.0f, 5.0f, 5.0f),
-			    vmath::vec3(-45.0f, 0.0f, 0.0f));
+			auto &worldCamTransform = worldCamActor->GetTransform();
+			worldCamTransform.SetTransformWithVectors(
+			                     vmath::vec3(0.0f, 4.0f, 8.0f),
+			                     vmath::vec3(-30.0f, 0.0f, 0.0))
+			    .PrintTransform();
 
 			auto *camera = worldCamActor->GetComponent<SJH::Scene::Camera>();
 			camera
@@ -383,9 +382,10 @@ namespace TopdownShooter
 			    .SetTargetRenderTarget(mSceneFB.get());
 
 			worldCamActor
-			    ->AddComponent<Controller::TargetFollowableCameraController>()
+			    ->AddComponent<Controller::ActorFolower>()
 			    ->SetMouseInput(&mMouse)
 			    .SetCamera(camera)
+			    .SetFollowOffset(worldCamTransform.Translate)
 			    .SetUp();
 
 			dir.Root().AddChild(std::move(worldCamActor));
@@ -402,6 +402,8 @@ namespace TopdownShooter
 
 			// ── Screen Camera (Orthographic) — HUD + PassComponent 체인 ────────
 			auto screenCamActor = SJH::Scene::CreateCameraActor("ScreenCamera", 45.0f, aspect, -1.0f, 1.0f);
+
+			auto &screenCamTransform = screenCamActor->GetTransform();
 			auto *camera = screenCamActor->GetComponent<SJH::Scene::Camera>();
 			camera->IsOrthographic = true;
 			camera->OrthoSize = 1.0f;
@@ -555,9 +557,10 @@ namespace TopdownShooter
 			mSpriteSeq->Play();
 
 			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
-			mCamera->GetOwner()->GetComponent<Controller::TargetFollowableCameraController>()
-				->SetFollowTarget(mSpriteActor)
-				.SetFollowOffset(vmath::vec3(0.0f, 10.0f, 10.0f));
+			mCamera
+				->GetOwner()
+				->GetComponent<Controller::ActorFolower>()
+				->SetFollowTarget(mSpriteActor);
 		}
 
 		void WarmupSkybox(SJH::ResourceRegistry &reg, SJH::Scene::Director &dir)
@@ -568,18 +571,36 @@ namespace TopdownShooter
 			    "resources/shaders/matrix_skybox.fs");
 
 			auto *charsTex = reg.CreateTexture("chars", SJH::Image::Load("chars", "resources/texture/characters.png").get());
+			// 매트릭스 글자 스크롤 필수 — 셰이더의 char_uv.x 가 +noise+time 으로 1 을 넘어 순환한다.
+			// CreateTexture 기본 wrap 은 GL_CLAMP_TO_EDGE(texture.cpp) 라 끝 열에 고착돼 세로 줄로
+			// 보이므로, 글자 열이 순환하도록 REPEAT 로 덮어쓴다 (uniform_atlas Bind→SetWrap 선례).
+			charsTex->Bind();
+			charsTex->SetWrap(GL_REPEAT, GL_REPEAT);
+			// 촘촘한 격자에서 글자칸이 작아지면 기본 MIPMAP_LINEAR(texture.cpp)가 LOD 를 올려
+			// 글자를 회색으로 뭉갠다 → mipmap 없는 GL_LINEAR 로 또렷하게 유지.
+			charsTex->SetFilter(GL_LINEAR, GL_LINEAR);
 			auto *noiseTex = reg.CreateTexture("noise_tex", SJH::Image::Load("noise_tex", "resources/texture/matrix_noise.png").get());
+			// 셰이더가 noise 좌표를 NOISE_SCALE(=8)배로 키워 샘플 → 1 을 넘는 좌표가 클램프되지
+			// 않고 타일링되도록 REPEAT 필수 (CLAMP 면 가장자리 한 색으로 뭉개짐).
+			noiseTex->Bind();
+			noiseTex->SetWrap(GL_REPEAT, GL_REPEAT);
 
 			mSkyboxMat = reg.CreateSharedMaterial("mat_matrix_skybox");
 			mSkyboxMat->SetProgram(skyboxProg);
-			mSkyboxMat->Properties.Textures["chars"] = { charsTex };
-			mSkyboxMat->Properties.Textures["noise_tex"] = { noiseTex };
+			// Skybox Pass — DepthFunc LEQUAL(.xyww 트릭) + CullMode FRONT(박스 안쪽 면) +
+			// DepthWrite off + queue 2500(Opaque 다음). pass.h 의 Kind::Skybox 가 전부 자동 도출.
+			mSkyboxMat->SetPass(SJH::Pass::Kind::Skybox);
+			// 텍스처 유닛 분리 필수 — TextureBinding.Unit 이 둘 다 기본값 0 이면
+			// 두 sampler 가 같은 유닛을 가리켜 한 텍스처만 읽힌다 (PropertyBlockSetter 가
+			// binding.Unit 그대로 BindTexture + sampler int 송신).
+			mSkyboxMat->Properties.Textures["chars"] = {charsTex, 0};
+			mSkyboxMat->Properties.Textures["noise_tex"] = {noiseTex, 1};
 			mSkyboxMat->Properties.Floats["u_time"] = 0.0f;
 
 			auto *skyboxMesh = reg.RegisterMesh("mesh_skybox", SJH::Mesh::CreateBox());
 			auto skyboxActor = std::make_unique<SJH::Scene::Actor>("MatrixSkybox");
-			// 스카이박스 모델이 카메라 클리핑 범위를 벗어나지 않고 렌더링되게 넉넉한 크기로 스케일 조정
-			skyboxActor->GetTransform().Scale = vmath::vec3(50.0f, 50.0f, 50.0f);
+			// Transform 은 셰이더가 무시한다 — matrix_skybox.vs 는 uModel 을 쓰지 않고
+			// view 의 이동 성분을 제거(mat3)해 박스를 항상 카메라 중심에 둔다.
 			skyboxActor->AddComponent<SJH::Scene::MeshRenderer>(skyboxMesh, mSkyboxMat);
 			mSkyboxActor = dir.Root().AddChild(std::move(skyboxActor));
 		}

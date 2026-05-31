@@ -15,6 +15,7 @@
 #ifndef __SJH_TRANSFORM_H__
 #define __SJH_TRANSFORM_H__
 
+#include <spdlog/spdlog.h>
 #include <vmath.h>
 
 namespace SJH
@@ -99,6 +100,12 @@ namespace SJH
 		EulerRot = rotate;
 		Scale = scal;
 		return *this;	
+	}
+
+	void PrintTransform() {
+		spdlog::info("Translate {}, {}, {}", Translate[0], Translate[1], Translate[2]);
+		spdlog::info("Rotate {}, {}, {}", EulerRot[0], EulerRot[1], EulerRot[2]);
+		spdlog::info("Scale {}, {}, {}", Scale[0], Scale[1], Scale[2]);
 	}
     };
 

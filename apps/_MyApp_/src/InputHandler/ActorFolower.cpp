@@ -1,5 +1,5 @@
 
-#include "TargetFollowableCameraController.h"
+#include "ActorFolower.h"
 #include "input/mouse_input.h"
 #include "object/transform.h"
 #include "scene/actor.h"
@@ -10,7 +10,7 @@
 
 namespace TopdownShooter::Controller
 {
-	void TargetFollowableCameraController::RegisterBindings()
+	void ActorFolower::RegisterBindings()
 	{
 		// MouseInput::BindLookHandler 시그니처는 std::function<void(double, double)>.
 		mMouseInput->BindLookHandler([this](double dx, double dy) {
@@ -24,18 +24,18 @@ namespace TopdownShooter::Controller
 		});
 	}
 
-	void TargetFollowableCameraController::UnregisterBindings()
+	void ActorFolower::UnregisterBindings()
 	{
 		// SetUp 이 성공한 경우만 호출됨 (OnExit 의 mIsInitialized 가드).
 		assert(this->mMouseInput != nullptr);
 		mMouseInput->UnbindLook();
 	}
 
-	bool TargetFollowableCameraController::SetUp()
+	bool ActorFolower::SetUp()
 	{
 		if (!mMouseInput || !mCamera)
 		{
-			spdlog::error("TargetFollowableCameraController::SetUp — 의존 누락 (mouse={}, camera={})",
+			spdlog::error("ActorFolower::SetUp — 의존 누락 (mouse={}, camera={})",
 			              static_cast<void *>(mMouseInput),
 			              static_cast<void *>(mCamera));
 			return false;
@@ -45,45 +45,51 @@ namespace TopdownShooter::Controller
 		return true;
 	}
 
-	TargetFollowableCameraController &TargetFollowableCameraController::SetMouseInput(SJH::MouseInput *m)
+	ActorFolower &ActorFolower::SetMouseInput(SJH::MouseInput *m)
 	{
 		if (mMouseInput == nullptr)
 			mMouseInput = m;
 		return *this;
 	}
 
-	TargetFollowableCameraController &TargetFollowableCameraController::SetCamera(SJH::Scene::Camera *c)
+	ActorFolower &ActorFolower::SetCamera(SJH::Scene::Camera *c)
 	{
 		if (mCamera == nullptr)
 			mCamera = c;
 		return *this;
 	}
 
-	TargetFollowableCameraController &TargetFollowableCameraController::SetFollowTarget(SJH::Scene::Actor *t)
+	ActorFolower &ActorFolower::SetFollowTarget(SJH::Scene::Actor *t)
 	{
 		mFollowTarget = t;
 		return *this;
 	}
 
-	TargetFollowableCameraController &TargetFollowableCameraController::SetFollowOffset(vmath::vec3 offset)
+	ActorFolower &ActorFolower::SetFollowOffset(vmath::vec3 offset)
 	{
 		mFollowOffset = offset;
 		return *this;
 	}
+	ActorFolower &ActorFolower::SetFollowRotate(vmath::vec2 rot)
+	{
+		mYawDeg = rot[0];
+		mPitchDeg = rot[1];
+		return *this;
+	}
 
-	TargetFollowableCameraController &TargetFollowableCameraController::SetLookSensitivity(float v)
+	ActorFolower &ActorFolower::SetLookSensitivity(float v)
 	{
 		mLookSensitivity = v;
 		return *this;
 	}
 
-	void TargetFollowableCameraController::OnEnter()
+	void ActorFolower::OnEnter()
 	{
 		if (!mIsInitialized)
 			return;
 	}
 
-	void TargetFollowableCameraController::OnExit()
+	void ActorFolower::OnExit()
 	{
 		if (!mIsInitialized)
 			return;
@@ -94,7 +100,7 @@ namespace TopdownShooter::Controller
 		mIsInitialized = false;
 	}
 
-	void TargetFollowableCameraController::Update(float dt)
+	void ActorFolower::Update(float dt)
 	{
 		(void)dt;
 		if (!mIsInitialized)
@@ -108,12 +114,13 @@ namespace TopdownShooter::Controller
 			return;
 		auto &tr = owner->GetTransform();
 
-		// target 위치 + offset 으로 카메라 위치 갱신.
 		const auto &targetTr = mFollowTarget->GetTransform();
+		spdlog::info("tr.Translate Before {}, {}, {}", tr.Translate[0], tr.Translate[1], tr.Translate[2]);
+		spdlog::info("mFollowOffset {}, {}, {}", mFollowOffset[0], mFollowOffset[1], mFollowOffset[2]);
+		spdlog::info("mFollowTarget->GetTransform() {}, {}, {}", targetTr.Translate[0], targetTr.Translate[1], targetTr.Translate[2]);
+		// target 위치 + offset 으로 카메라 위치 갱신.
 		tr.Translate         = targetTr.Translate + mFollowOffset;
 
-		// Mouse 누적 yaw/pitch -> EulerRot (target 머리 위 상대 회전).
-		tr.EulerRot[0] = mPitchDeg;
-		tr.EulerRot[1] = mYawDeg;
+		spdlog::info("tr.Translate After {}, {}, {}", tr.Translate[0], tr.Translate[1], tr.Translate[2]);
 	}
 } // namespace TopdownShooter::Controller

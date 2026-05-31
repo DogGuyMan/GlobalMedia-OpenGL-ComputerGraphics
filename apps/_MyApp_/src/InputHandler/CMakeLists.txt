@@ -1,7 +1,7 @@
 add_library(myapp_input_handler STATIC
     CameraController.cpp
     PlayerController.cpp
-    TargetFollowableCameraController.cpp
+    ActorFolower.cpp
 )
 add_library(MyApp::InputHandler ALIAS myapp_input_handler)
 

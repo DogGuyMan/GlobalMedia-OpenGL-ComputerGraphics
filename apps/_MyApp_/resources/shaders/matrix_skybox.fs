@@ -7,15 +7,30 @@ uniform sampler2D chars;
 uniform sampler2D noise_tex;
 uniform float u_time; // Godot의 TIME을 대체하는 uniform
 
-const vec2 invAtan = vec2(0.15915494309, 0.31830988618); // 1.0 / (2.0 * PI), 1.0 / PI
+const vec2 invAtan = vec2(0.15915494309, 0.31830988618);
+
+// 격자 밀도 (클수록 글자가 작고 촘촘 — 취향껏 조절)
+//    가로:세로 = 2:1 유지 권장 (equirectangular 가 2:1 이므로 글자 비율 보존).
+const float COLS = 256.0;
+const float ROWS = 128.0;
+
+// characters.png 아틀라스 실측 레이아웃─
+//    글자 10개, 각 글자칸 64x128, 글자간/양끝 여백 4px → 총 폭 4+(64+4)*10 = 684.
+//    글자 d 의 칸 좌측(px) = MARGIN + d*(CHAR_W + GAP).
+const float CHAR_W = 64.0;
+const float GAP = 4.0; // 글자간 간격 = 양끝 여백
+const float ATLAS_W = 684.0; // = GAP + (CHAR_W + GAP) * 10
+const float CHAR_CNT = 10.0;
+
+// 노이즈 샘플 주파수 — 클수록 노이즈가 작고 촘촘 (간격 1/NOISE_SCALE).
+// noise_tex 가 REPEAT wrap 이어야 좌표 >1 이 클램프 없이 타일링된다 (main.cpp 에서 설정).
+const float NOISE_SCALE = 1.0;
 
 // 3D 방향 벡터를 2D 구면(Equirectangular) UV 좌표로 변환
 vec2 getSphericalUV(vec3 v) {
         vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
         uv *= invAtan;
-        uv += 0.5;
         // OpenGL은 Y축이 아래에서 위로 증가하므로, Godot(위에서 아래)와 맞추기 위해 반전
-        uv.y = 1.0 - uv.y;
         return uv;
 }
 
@@ -23,30 +38,31 @@ void main() {
         vec3 dir = normalize(v_TexCoords);
         vec2 base_uv = getSphericalUV(dir);
 
-        // 스카이박스 맵은 보통 가로가 세로의 2배(2:1 비율)이므로 글자가 정사각형을 유지하도록 타일링
-        // (원하는 빗줄기의 촘촘함에 따라 이 값을 조절하세요)
-        vec2 grid_uv = base_uv * vec2(64.0, 32.0);
+        // 글자 격자 셀 분해
+        vec2 grid_uv = base_uv * vec2(COLS, ROWS);
+        vec2 cellId = floor(grid_uv); // 정수 셀 좌표
+        vec2 inCell = fract(grid_uv); // 셀 내부 위치 [0,1)
 
-        // Random character
-        vec2 char_uv = fract(grid_uv); // 글자 출력을 위해 uv 루프
+        // 디지트 선택 — *셀당 한 번* 샘플 (셀 내부에서 일정해야 한 글자만 보임).
+        //    예전엔 per-fragment 라 셀 안에서 글자가 갈라져 어긋나 보였다.
+        float g = texture(noise_tex, cellId / vec2(COLS, ROWS) * NOISE_SCALE).g;
+        float d = mod(floor(g * CHAR_CNT) + floor(u_time * 5.0), CHAR_CNT); // 0..9 + 시간 스크롤
 
-        // 전체 스카이박스 UV 기준으로 노이즈 샘플링
-        float noise = texture(noise_tex, base_uv).g;
-        noise = round(noise * 10.0) / 10.0; // 0.1 단위로 스냅하여 완벽한 오프셋 생성
+        // 텍스처 아틀라스 정확 매핑 — d 번째 64px 글자칸만 샘플 (간격/여백 제외)
+        float cellLeftPx = GAP + d * (CHAR_W + GAP);
+        vec2 char_uv = vec2(
+                        (cellLeftPx + inCell.x * CHAR_W) / ATLAS_W, // 가로: 정확히 64px 글자칸
+                        inCell.y); // 세로: 아틀라스 전체 높이(128)
 
-        char_uv.x = (char_uv.x / 10.0) - 0.005; // 텍스처 내 글자 열 분할 오프셋
-        char_uv.x += noise; // 노이즈 값에 따라 무작위 글자 선택
-        char_uv.x += round(u_time * 0.5 * 10.0) / 10.0; // 시간에 따른 애니메이션 스냅
-
-        // distortion
-        float rain = base_uv.y; // 수직 그레디언트 (내리는 비)
-        float distortion = texture(noise_tex, base_uv / vec2(1.0, 32.0)).g; // 가로로 긴 노이즈로 왜곡
+        // 내리는 비(rain) — 세로 그레디언트 + 노이즈 왜곡
+        float distortion = texture(noise_tex, base_uv / vec2(1.0, ROWS) * NOISE_SCALE).g; // 가로로 긴 노이즈 (NOISE_SCALE 배 촘촘)
         distortion = round(distortion * 10.0) / 10.0;
 
-        rain -= round(u_time * 0.2 * 32.0) / 32.0; // 비가 떨어지는 애니메이션 적용
+        float rain = base_uv.y; // 수직 그레디언트 (내리는 비)
+        rain += round(u_time * 0.2 * ROWS) / ROWS; // 비 스크롤 — 반대 방향 (+= : 기존 -= 의 역)
         rain += distortion; // 그레디언트 왜곡
         rain = fract(rain); // 루프
-        rain = round(rain * 16.0) / 16.0; // 비 픽셀화 (선택사항)
+        rain = round(rain * 16.0) / 16.0; // 비 픽셀화
         rain = pow(rain, 3.0); // 샤프닝
         rain *= 2.0; // 밝기 증폭
 
