@@ -27,6 +27,7 @@
 #include "VFX/ParticleStage.h"
 #include "playable/composite_playable.h"
 
+#include "Spawns/AmbientSequences.h"
 #include "Spawns/OneShotSweeper.h"
 #include "Spawns/SequenceContext.h"
 
@@ -448,14 +449,11 @@ namespace TopdownShooter
 			audio.LoadBank("resources/banks/Master.strings.bank");
 			audio.LoadBank("resources/banks/Master.bank");
 
-			auto *bgmEvent = audio.LoadEvent("event:/BGM");
-			if (bgmEvent)
-			{
-				auto *bgmActor = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("BgmActor"));
-				auto *bgm = bgmActor->AddComponent<TopdownShooter::Audio::FmodStudioPlayable>(bgmEvent);
-				bgm->SetIsLoop(true);
-				bgm->Play();
-			}
+			// BGM — 인라인 → Spawns::BuildBGM 이관 (M6 Task 5).
+			TopdownShooter::Spawns::SequenceContext bgmCtx;
+			bgmCtx.audio     = &audio;
+			bgmCtx.sceneRoot = &dir.Root();
+			TopdownShooter::Spawns::BuildBGM(bgmCtx);
 
 			reg.CreateSound(audio.GetSystem(), "shot", "resources/audio/Laser.wav");
 		}
