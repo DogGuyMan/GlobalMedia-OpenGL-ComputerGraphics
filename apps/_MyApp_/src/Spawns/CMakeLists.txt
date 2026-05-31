@@ -1,6 +1,9 @@
 add_library(myapp_spawns STATIC
     OneShotSweeper.cpp
     AudioInstance.cpp
+    VfxInstance.cpp
+    CombatSequences.cpp
+    AmbientSequences.cpp
 )
 add_library(MyApp::Spawns ALIAS myapp_spawns)
 
