@@ -45,6 +45,28 @@ namespace SJH
         glViewport(0, 0, GetWidth(), GetHeight());
     }
 
+    void Framebuffer::Resize(int width, int height)
+    {
+        // color 어태치먼트 — 같은 텍스처 핸들로 in-place 재할당 (Texture::Resize).
+        if (mColorAttachment)
+            mColorAttachment->Resize(width, height);
+
+        // depth/stencil RBO — 같은 RBO 핸들로 스토리지 재할당.
+        if (mRBODepthStencilBuffer)
+        {
+            glBindRenderbuffer(GL_RENDERBUFFER, mRBODepthStencilBuffer);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        }
+
+        // FBO 핸들·어태치먼트 결합 불변(텍스처/RBO ID 동일) → 재attach 불필요. 상태만 재검증.
+        glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
+        auto result = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (result != GL_FRAMEBUFFER_COMPLETE)
+            spdlog::error("Framebuffer::Resize 실패 {}x{}: {}", width, height, result);
+        BindToDefault();
+    }
+
     int Framebuffer::GetWidth() const {
 	if (mColorAttachment)
 		return mColorAttachment->GetWidth();
