@@ -11,6 +11,15 @@ namespace SJH::SpriteSequence
     {
     }
 
+    // 값-소유 ctor — ownedClip_ 가 먼저 생성된 뒤 clip_ 가 그 주소를 가리킨다(선언 순서 ownedClip_ → clip_).
+    // ownedClip_ 는 객체와 함께 안정 주소에 할당되고, 클래스는 move/copy 금지(IPlayable 가 = delete) +
+    // AddComponent 의 make_unique in-place 생성이라 clip_ 댕글링 불가.
+    SpriteSequencePlayable::SpriteSequencePlayable(SJH::Sprite::SpriteRenderer* spriteRef,
+                                                    SpriteFrameClip              clip)
+        : sprite_(spriteRef), ownedClip_(clip), clip_(&ownedClip_)
+    {
+    }
+
     SpriteSequencePlayable::~SpriteSequencePlayable() = default;
 
     SpriteSequencePlayable& SpriteSequencePlayable::RegisterClip(int clipIdx,

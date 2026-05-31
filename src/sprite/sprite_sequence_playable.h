@@ -15,6 +15,10 @@ namespace SJH::SpriteSequence
       public:
         SpriteSequencePlayable(SJH::Sprite::SpriteRenderer* spriteRef,
                                 const SpriteFrameClip*       clip);
+        /// @brief 값-소유 ctor — clip 을 멤버(ownedClip_)에 복사 보관, clip_ 가 이를 가리킨다.
+        ///        호출자가 외부 clip 저장소를 관리할 필요 없음 (비소유 포인터 footgun 제거).
+        SpriteSequencePlayable(SJH::Sprite::SpriteRenderer* spriteRef,
+                                SpriteFrameClip              clip);
         ~SpriteSequencePlayable() override;
 
         // === Multi-clip API (M4) ===
@@ -31,7 +35,8 @@ namespace SJH::SpriteSequence
 
       private:
         SJH::Sprite::SpriteRenderer* sprite_;
-        const SpriteFrameClip*        clip_;   // 하위 호환 기본 클립 (clipIdx=0 fallback)
+        SpriteFrameClip               ownedClip_{}; // 값 ctor 사용 시 clip 값 보관 — clip_ 가 이를 가리킴
+        const SpriteFrameClip*        clip_;        // 하위 호환 기본 클립 (clipIdx=0 fallback)
 
         std::unordered_map<int, const SpriteFrameClip*>              clips_;
         std::unordered_map<int, std::vector<SJH::Playable::IPlayable*>> onClipEnter_;
