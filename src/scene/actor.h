@@ -65,9 +65,19 @@ namespace SJH::Scene
 
         // === Tree ===
         Actor* AddChild(std::unique_ptr<Actor> child);
+        /// @brief 파괴 없이 자식을 분리, 소유권 반환 (Godot remove_child 정통).
+        /// @details mEntered 상태면 OnExit 호출 후 mParent 를 nullptr 로 초기화.
+        ///          반환된 unique_ptr 을 다른 Actor::AddChild 에 넘겨 재부착 가능.
+        std::unique_ptr<Actor> DetachChild(Actor* child);
         void   RemoveChild(Actor* child);
         Actor* GetParent() const { return mParent; }
         const std::vector<std::unique_ptr<Actor>>& GetChildren() const { return mChildren; }
+
+        /// @brief 이름으로 직계(또는 재귀) 자식을 조회 (Cocos getChildByName 정통).
+        Actor* FindChild(const std::string& name, bool recursive = false) const;
+        /// @brief 술어 fn 을 만족하는 첫 번째 자식 반환.
+        template<typename Fn>
+        Actor* FindChildIf(Fn&& fn, bool recursive = false) const;
 
         // === Components ===
         template<typename T, typename... Args>
@@ -133,6 +143,18 @@ namespace SJH::Scene
     };
 
     // === Template 정의 (ddd 2 차 patch 적용) ===
+
+    template<typename Fn>
+    Actor* Actor::FindChildIf(Fn&& fn, bool recursive) const
+    {
+        for (auto& child : mChildren)
+        {
+            if (fn(child.get())) return child.get();
+            if (recursive)
+                if (auto* found = child->FindChildIf(fn, true)) return found;
+        }
+        return nullptr;
+    }
 
     template<typename T, typename... Args>
     T* Actor::AddComponent(Args&&... args)

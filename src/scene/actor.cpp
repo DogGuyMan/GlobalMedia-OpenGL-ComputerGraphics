@@ -41,6 +41,33 @@ namespace SJH::Scene
 		mChildren.erase(it);
 	}
 
+	std::unique_ptr<Actor> Actor::DetachChild(Actor *child)
+	{
+		auto it = std::find_if(mChildren.begin(), mChildren.end(),
+		                       [&](const auto &p) { return p.get() == child; });
+		if (it == mChildren.end())
+			return nullptr;
+		if (mEntered)
+			(*it)->OnExit();
+		(*it)->mParent = nullptr;
+		auto uptr = std::move(*it);
+		mChildren.erase(it);
+		return uptr;
+	}
+
+	Actor *Actor::FindChild(const std::string &name, bool recursive) const
+	{
+		for (auto &child : mChildren)
+		{
+			if (child->mName == name)
+				return child.get();
+			if (recursive)
+				if (auto *found = child->FindChild(name, true))
+					return found;
+		}
+		return nullptr;
+	}
+
 	void Actor::RemoveAllComponents()
 	{
 		// ddd POLA: OnExit 는 enabled 무관 cleanup hook. mEntered 일 때만 호출.
