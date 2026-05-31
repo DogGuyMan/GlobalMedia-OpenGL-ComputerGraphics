@@ -4,6 +4,7 @@
 add_library(myapp_bootstrap STATIC
     WorldSceneBuilder.cpp
     PlayerBuilder.cpp
+    AudioWarmup.cpp
 )
 add_library(MyApp::Bootstrap ALIAS myapp_bootstrap)
 

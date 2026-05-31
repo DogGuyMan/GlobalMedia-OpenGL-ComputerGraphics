@@ -19,6 +19,7 @@ add_subdirectory(src)
 # PostFXDebugLayer.cpp 는 <imgui.h> 가 필요 ->executable PRIVATE include path 상속을 위해 직접 추가
 set(UI_SRC
     src/UI/PostFXDebugLayer.cpp
+    src/UI/UiBootstrap.cpp
 )
 
 # 실행파일

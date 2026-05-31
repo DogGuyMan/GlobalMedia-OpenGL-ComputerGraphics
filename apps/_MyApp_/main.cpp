@@ -15,34 +15,22 @@
 #include <imgui_impl_glfw_gl3.h>
 
 #include "Audio/AudioSystem.h"
-#include "Audio/FmodPlayable.h"
-#include "Audio/FmodStudioPlayable.h"
+#include "Bootstrap/AudioWarmup.h"
 #include "Bootstrap/PlayerBuilder.h"
 #include "Bootstrap/WorldSceneBuilder.h"
-#include "Entity/Player/PlayerActor.h"
-#include "InputHandler/ActorFolower.h"
 #include "InputHandler/PlayerController.h"
 #include "Manager.h"
-#include "Physics/filter.h"
-#include "Tween/TweenPlayable.h"
-#include "VFX/EffekseerPlayable.h"
 #include "VFX/ParticleStage.h"
-#include "playable/composite_playable.h"
 
-#include "Spawns/AmbientSequences.h"
 #include "Spawns/OneShotSweeper.h"
-#include "Spawns/SequenceContext.h"
 
 #include "Stage/StageBuilder.h"
-#include "UI/ExitButtonLayer.h"
 #include "UI/ImGuiLayerStack.h"
 #include "UI/PostFXDebugLayer.h"
+#include "UI/UiBootstrap.h"
 #include "buffer/framebuffer.h"
 #include "common/common.h"
 #include "common/window_helper.h"
-#include "material/pass.h"
-#include "object/mesh.h"
-#include "program/program.h"
 #include "render/camera_stage.h"
 #include "render/pass_component.h"
 #include "render/render_pipeline.h"
@@ -52,14 +40,11 @@
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
-#include "object/light.h"
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
 #include "sprite/sprite_component.h"
 #include "sprite/sprite_frame_clip.h"
 #include "sprite/sprite_sequence_playable.h"
-#include <cmath>
-#include <tweeny/tweeny.h>
 
 #include <cstring>
 #include <memory>
@@ -237,7 +222,7 @@ namespace TopdownShooter
 			    std::make_unique<TopdownShooter::VFX::ParticleStage>(
 			        &TopdownShooter::Manager::Get().VFX(), mCamera));
 
-			WramupFMOD(dir, reg, Manager::Get().Audio());
+			Bootstrap::WarmupAudio(Manager::Get().Audio());
 			reg.CreateEffect(vfxs.GetManager(), "muzzle", u"resources/vfx/distortion.efk");
 
 			dir.Root().AddChild(std::move(TopdownShooter::Stage::CreateStageActor({
@@ -251,7 +236,13 @@ namespace TopdownShooter
 			mSprite      = player.Sprite;
 			mSpriteSeq   = player.SpriteSeq;
 			mSpriteActor = player.SpriteActor;
-			WarmupImgui(reg);
+
+			// UI — render(PostFX) ↔ UI 매핑은 Composition Root(main) 책임. 빌더는 결과만 받음.
+			std::vector<UI::PassDebugEntry> debugEntries;
+			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size(); ++i)
+				if (i < mPassComponents.size())
+					debugEntries.push_back({POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
+			mImGuiCtx = UI::BuildGameUI({window, &reg, &mImGuiStack, std::move(debugEntries), &mGamma});
 
 			dir.Enter();
 		}
@@ -437,47 +428,6 @@ namespace TopdownShooter
 			fogMat->Properties.Textures["uDepth"] = {mSceneFB->GetDepthAttachment().get(), 1}; // unit 1 (uScene=0).
 		}
 
-		void WramupFMOD(SJH::Scene::Director &dir, SJH::ResourceRegistry &reg, TopdownShooter::Audio::AudioSystem &audio)
-		{
-
-			audio.LoadBank("resources/banks/Master.strings.bank");
-			audio.LoadBank("resources/banks/Master.bank");
-
-			// BGM — 인라인 → Spawns::BuildBGM 이관 (M6 Task 5).
-			TopdownShooter::Spawns::SequenceContext bgmCtx;
-			bgmCtx.audio     = &audio;
-			bgmCtx.sceneRoot = &dir.Root();
-			TopdownShooter::Spawns::BuildBGM(bgmCtx);
-
-			reg.CreateSound(audio.GetSystem(), "shot", "resources/audio/Laser.wav");
-		}
-
-		void WarmupImgui(SJH::ResourceRegistry &reg)
-		{
-			// === ImGui v1.53 init (install_callbacks=false — sb7 가 GLFW 콜백 소유) ===
-			mImGuiCtx = ImGui::CreateContext();
-			ImGui::StyleColorsDark();
-			ImGui_ImplGlfwGL3_Init(window, /*install_callbacks=*/false);
-			glfwSetScrollCallback(window, ImGui_ImplGlfwGL3_ScrollCallback);
-			glfwSetCharCallback(window, ImGui_ImplGlfwGL3_CharCallback);
-
-			// ExitButton 텍스처 — Game UI Layer
-			const auto *exitTex = reg.CreateTexture(
-			    "exit_texture",
-			    SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png").get());
-
-			// ImGui 레이어 등록 — Game(항상) / Editor(F1 토글)
-			mImGuiStack.Push(std::make_unique<UI::ExitButtonLayer>(window, exitTex));
-
-			std::vector<UI::PassDebugEntry> debugEntries;
-			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size(); ++i)
-			{
-				if (i < mPassComponents.size())
-					debugEntries.push_back({POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
-			}
-			mImGuiStack.Push(std::make_unique<UI::PostFXDebugLayer>(
-			    std::move(debugEntries), mGamma));
-		}
 	};
 
 } // namespace TopdownShooter
