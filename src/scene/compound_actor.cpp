@@ -1,8 +1,13 @@
 #include "scene/compound_actor.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
+#include "scene/layer.h"
 #include "object/light.h"
 #include "object/transform.h"
+#include "render/mesh_renderer.h"  // SJH::Scene::MeshRenderer (render 헤더에 있지만 Scene namespace)
+#include "object/mesh.h"           // SJH::Mesh 완전 타입
+#include "material/material.h"     // SJH::Material 완전 타입
+#include "buffer/framebuffer.h"    // SJH::Framebuffer 완전 타입 (SetTargetRenderTarget 인자)
 #include <cmath>
 #include <memory>
 #include <string>
@@ -66,5 +71,35 @@ namespace SJH::Scene
         light->CutoffAngleDeg       = innerCutoffDeg;
         light->OuterCutoffAngleDeg  = outerCutoffDeg;
         return actor;
+    }
+
+    std::unique_ptr<Actor> CreateScreenCameraActor(
+        std::string name,
+        float aspect,
+        Framebuffer* sceneFB)
+    {
+        // 기존 main.cpp::CreateAndRegisterScreenCamera 22줄 이주.
+        auto screenCamActor = CreateCameraActor(std::move(name), 45.0f, aspect, -1.0f, 1.0f);
+        auto* camera = screenCamActor->GetComponent<Camera>();
+        camera->IsOrthographic = true;
+        camera->OrthoSize      = 1.0f;
+        camera->NoClear        = true; // WorldCamera 출력 보존 — clear 없이 합성
+        camera
+            ->SetCullingMask(Layer::UI | Layer::Screen)
+            .SetTargetRenderTarget(sceneFB);
+        return screenCamActor;
+    }
+
+    std::unique_ptr<Actor> CreateSkyboxActor(
+        std::string name,
+        Mesh* skyboxMesh,
+        Material* skyboxMat,
+        float scale)
+    {
+        auto skyboxActor = std::make_unique<Actor>(std::move(name));
+        // 스카이박스 모델이 카메라 클리핑 범위를 벗어나지 않게 넉넉한 크기로 스케일.
+        skyboxActor->GetTransform().Scale = vmath::vec3(scale, scale, scale);
+        skyboxActor->AddComponent<MeshRenderer>(skyboxMesh, skyboxMat);
+        return skyboxActor;
     }
 } // namespace SJH::Scene

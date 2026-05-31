@@ -16,6 +16,7 @@ target_include_directories(sjhopengl_scene
 target_link_libraries(sjhopengl_scene
     PUBLIC  SJH::common SJH::object project_deps
     PRIVATE spdlog        # scene_context.cpp 의 warn/limit 송신
+            SJH::render   # compound_actor.cpp: MeshRenderer 완전 타입 직접 사용 (T2 review)
 )
 
 target_compile_features(sjhopengl_scene PUBLIC cxx_std_17)

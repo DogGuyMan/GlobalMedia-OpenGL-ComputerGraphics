@@ -33,17 +33,20 @@
 #include "UI/PostFXDebugLayer.h"
 #include "buffer/framebuffer.h"
 #include "common/common.h"
+#include "common/window_helper.h"
 #include "material/pass.h"
 #include "object/mesh.h"
 #include "program/program.h"
 #include "render/camera_stage.h"
 #include "render/pass_component.h"
+#include "render/render_pipeline.h"
 #include "render/render_target.h"
 #include "render/scene_renderer.h"
 #include "render/screen_quad_stage.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
+#include "object/light.h"
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
 #include "sprite/sprite_component.h"
@@ -52,7 +55,6 @@
 #include <cmath>
 #include <tweeny/tweeny.h>
 
-#include <array>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -78,12 +80,13 @@ namespace TopdownShooter
 
 		// 체인 인덱스 = 실행 순서. 모든 PostFX 단계가 동일 postprocess.vs 공유.
 		// 실제 디렉토리 = resources/shaders/postprocess/ (shaders 복수).
-		const std::vector<ProgramConfig> POSTFX_PROGRAM_CONFIGS = {
-		    {"blurring", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/blurring.fs"},
-		    {"gamma", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/gamma.fs"},
-		    {"invert", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs"},
-		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs"},
-		    {"sobel", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs"},
+		// D-6 data-driven — gamma 초기값을 InitFloats 로 명시.
+		const std::vector<SJH::Render::PostFXStageConfig> POSTFX_PROGRAM_CONFIGS = {
+		    {"blurring",   "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/blurring.fs",   {}},
+		    {"gamma",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/gamma.fs",      {{"gamma", 1.0f}}},
+		    {"invert",     "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs",     {}},
+		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
+		    {"sobel",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs",      {}},
 		};
 	} // namespace
 
@@ -102,10 +105,8 @@ namespace TopdownShooter
 
 		void startup() override
 		{
-
-			int fbW = 0, fbH = 0;
-			glfwGetFramebufferSize(window, &fbW, &fbH);
-			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
+			// A1 — GLFW window 정보 1 호출.
+			const auto fb = SJH::GetFramebufferInfo(window);
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
 			auto &manager = TopdownShooter::Manager::Get();
@@ -115,11 +116,32 @@ namespace TopdownShooter
 			auto &phys = TopdownShooter::Manager::Get().Physics();
 			auto &vfxs = TopdownShooter::Manager::Get().VFX();
 
-			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fbW, fbH);
-			WramupSceneRenderer(reg, Manager::Get().SceneRenderer(), PASSTHOURH_PROGRAM_CONFIG);
+			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fb.Width, fb.Height);
+			mSceneFB       = SJH::Framebuffer::Create(fb.Width, fb.Height);
+
+			// A3 — RenderPipeline 셋업 + ScreenQuadStage 받아 mStages push.
+			SJH::Render::DefaultPipelineConfig pipelineCfg{
+			    PASSTHOURH_PROGRAM_CONFIG.Name,
+			    PASSTHOURH_PROGRAM_CONFIG.VertFile,
+			    PASSTHOURH_PROGRAM_CONFIG.FragFile,
+			    // ScreenQuadMeshKey / BypassMatKey 는 default
+			};
+			auto sqStage = SJH::Render::SetupDefaultPipeline(reg, manager.SceneRenderer(), mSceneFB.get(), pipelineCfg);
+			mScreenQuadStagePtr = sqStage.get();
+			mStages.push_back(std::move(sqStage));
+
+			// World Camera 는 Client 한정 (TargetFollowableCameraController + 초기 transform) — 그대로 유지.
 			mCamera = CreateAndRegisterWorldCamera();
-			mScreenCamera = CreateAndRegisterScreenCamera();
-			WarmupPassRenderer(reg, POSTFX_PROGRAM_CONFIGS);
+
+			// A2 — ScreenCamera Pure factory.
+			auto screenCamActor = SJH::Scene::CreateScreenCameraActor("ScreenCamera", fb.Aspect, mSceneFB.get());
+			mScreenCamera = screenCamActor->GetComponent<SJH::Scene::Camera>();
+			auto* screenCamActorPtr = dir.Root().AddChild(std::move(screenCamActor));
+
+			// A4 — PostFX 체인 빌드.
+			auto chain = SJH::Render::BuildPostFXChain(reg, *screenCamActorPtr, POSTFX_PROGRAM_CONFIGS, mSceneFB.get(), fb.Width, fb.Height);
+			mPostFXFBs      = std::move(chain.Framebuffers);
+			mPassComponents = std::move(chain.PassComponents);
 
 			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
 			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
@@ -156,6 +178,7 @@ namespace TopdownShooter
 
 			WramupPlayer(reg, dir, phys);
 			WarmupSkybox(reg, dir);
+			WarmupLighting(dir);
 			WarmupImgui(reg);
 
 			dir.Enter();
@@ -336,7 +359,7 @@ namespace TopdownShooter
 		SJH::ScreenQuadStage *mScreenQuadStagePtr;
 
 		SJH::FramebufferUPtr mSceneFB;
-		std::array<SJH::FramebufferUPtr, 5> mPostFXFBs;
+		std::vector<SJH::FramebufferUPtr> mPostFXFBs;  // configs 가변 size 대응 (D-6)
 		std::vector<SJH::Scene::PassComponent *> mPassComponents; // PostFXDebug ImGui 패널이 토글 대상 참조 — 비소유 raw
 		float mGamma = 1.0f;
 
@@ -392,31 +415,6 @@ namespace TopdownShooter
 			return camera;
 		}
 
-		SJH::Scene::Camera *CreateAndRegisterScreenCamera()
-		{
-			int fbW = 0, fbH = 0;
-			glfwGetFramebufferSize(window, &fbW, &fbH);
-			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
-
-			auto &dir = SJH::Scene::Director::Get();
-
-			// ── Screen Camera (Orthographic) — HUD + PassComponent 체인 ────────
-			auto screenCamActor = SJH::Scene::CreateCameraActor("ScreenCamera", 45.0f, aspect, -1.0f, 1.0f);
-
-			auto &screenCamTransform = screenCamActor->GetTransform();
-			auto *camera = screenCamActor->GetComponent<SJH::Scene::Camera>();
-			camera->IsOrthographic = true;
-			camera->OrthoSize = 1.0f;
-			camera->NoClear = true; // WorldCamera 출력 보존 — clear 없이 합성
-			camera
-			    ->SetCullingMask(SJH::Scene::Layer::UI |
-			                     SJH::Scene::Layer::Screen)
-			    .SetTargetRenderTarget(mSceneFB.get());
-
-			dir.Root().AddChild(std::move(screenCamActor));
-			return camera;
-		}
-
 		void WramupFMOD(SJH::Scene::Director &dir, SJH::ResourceRegistry &reg, TopdownShooter::Audio::AudioSystem &audio)
 		{
 
@@ -433,89 +431,6 @@ namespace TopdownShooter
 			}
 
 			reg.CreateSound(audio.GetSystem(), "shot", "resources/audio/Laser.wav");
-		}
-
-		void WramupSceneRenderer(SJH::ResourceRegistry &reg, SJH::SceneRenderer &scene_renderer, ProgramConfig program_config)
-		{
-			int fbW = 0, fbH = 0;
-			glfwGetFramebufferSize(window, &fbW, &fbH);
-			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
-
-			// ScreenQuadStage — passthrough 셰이더 + ScreenQuad 메쉬 등록
-			auto *passthroughProg = reg.CreateProgram(
-			    program_config.Name,
-			    program_config.VertFile,
-			    program_config.FragFile);
-
-			mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
-			auto *quadMesh = reg.RegisterMesh("mesh_screen_quad", SJH::Mesh::CreateScreenQuad());
-
-			// ── ScreenQuadStage 생성 — 소유권 stages 컬렉션으로 이전 ──────────────
-			// 이 시점에 카메라 멤버 (mCamera/mScreenCam) 는 아직 valid 아님 (line 143 / 203 에서 대입).
-			// 그래서 ScreenQuadStage 만 먼저 mStages 에 push, 카메라 stages 는 Step 4 에서
-			// *앞에* insert 하여 최종 [worldCam, screenCam, ScreenQuadStage] 순서 정착.
-			auto screenQuadStage = std::make_unique<SJH::ScreenQuadStage>(
-			    *passthroughProg,
-			    *quadMesh); // ! 필요한거 맞나.
-
-			screenQuadStage->SetSources({mSceneFB.get()}); // 초기 sources — sceneFB fallback
-			mScreenQuadStagePtr = screenQuadStage.get();
-			mStages.push_back(std::move(screenQuadStage));
-
-			// AI 에이전틱
-			auto *bypassMat = reg.CreateSharedMaterial("mat_bypass_passthrough");
-			bypassMat->SetProgram(passthroughProg);
-
-			scene_renderer.SetScreenQuadMesh(quadMesh);
-			scene_renderer.SetBypassMaterial(bypassMat);
-		}
-
-		void WarmupPassRenderer(SJH::ResourceRegistry &reg /*, ScreenRenderer*/, const std::vector<ProgramConfig> &program_configs)
-		{
-			int fbW = 0, fbH = 0;
-			glfwGetFramebufferSize(window, &fbW, &fbH);
-			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
-
-			mPassComponents.clear();
-			SJH::Framebuffer *prevFB = mSceneFB.get();
-			for (std::size_t i = 0; i < program_configs.size(); ++i)
-			{
-				const auto &def = program_configs[i];
-				const auto progKey = std::string("postfx_") + def.Name;
-				const auto matKey = std::string("mat_pass_") + def.Name;
-
-				auto *prog = reg.CreateProgram(
-				    program_configs[i].Name,
-				    program_configs[i].VertFile,
-				    program_configs[i].FragFile);
-				if (!prog)
-				{
-					spdlog::error("[PassComponent] 셰이더 로드 실패: {}", def.FragFile);
-					continue;
-				}
-
-				auto *mat = reg.CreateSharedMaterial(matKey);
-				mat->SetProgram(prog);
-				if (std::string(def.Name) == "gamma")
-					mat->Properties.Floats["gamma"] = mGamma;
-
-				mPostFXFBs[i] = SJH::Framebuffer::Create(fbW, fbH);
-				if (!mPostFXFBs[i])
-				{
-					spdlog::error("[PassComponent] FB 생성 실패: {}", def.Name);
-					continue;
-				}
-
-				auto passActor = std::make_unique<SJH::Scene::Actor>(std::string("PassActor_") + def.Name);
-				passActor->SetLayer(SJH::Scene::Layer::Screen);
-				auto *pc = passActor->AddComponent<SJH::Scene::PassComponent>(
-				    prevFB, mPostFXFBs[i].get(), mat);
-				mPassComponents.push_back(pc); // PostFXDebug ImGui 패널이 토글 대상 참조
-
-				prevFB = mPostFXFBs[i].get();
-
-				mScreenCamera->GetOwner()->AddChild(std::move(passActor));
-			}
 		}
 
 		void WramupPlayer(SJH::ResourceRegistry &reg, SJH::Scene::Director &dir, Physics::PhysicsSystem &phys)
@@ -563,6 +478,17 @@ namespace TopdownShooter
 				->SetFollowTarget(mSpriteActor);
 		}
 
+		void WarmupLighting(SJH::Scene::Director &dir)
+		{
+			auto lightActor = SJH::Scene::CreateDirLightActor("MainDirLight",
+			    vmath::vec3(-0.4f, -1.0f, -0.5f));
+			auto *light = lightActor->GetComponent<SJH::DirLight>();
+			light->Ambient  = vmath::vec3(0.3f, 0.3f, 0.3f);
+			light->Diffuse  = vmath::vec3(0.9f, 0.9f, 0.85f);
+			light->Specular = vmath::vec3(0.5f, 0.5f, 0.5f);
+			dir.Root().AddChild(std::move(lightActor));
+		}
+
 		void WarmupSkybox(SJH::ResourceRegistry &reg, SJH::Scene::Director &dir)
 		{
 			auto *skyboxProg = reg.CreateProgram(
@@ -598,11 +524,8 @@ namespace TopdownShooter
 			mSkyboxMat->Properties.Floats["u_time"] = 0.0f;
 
 			auto *skyboxMesh = reg.RegisterMesh("mesh_skybox", SJH::Mesh::CreateBox());
-			auto skyboxActor = std::make_unique<SJH::Scene::Actor>("MatrixSkybox");
-			// Transform 은 셰이더가 무시한다 — matrix_skybox.vs 는 uModel 을 쓰지 않고
-			// view 의 이동 성분을 제거(mat3)해 박스를 항상 카메라 중심에 둔다.
-			skyboxActor->AddComponent<SJH::Scene::MeshRenderer>(skyboxMesh, mSkyboxMat);
-			mSkyboxActor = dir.Root().AddChild(std::move(skyboxActor));
+			// A5 — actor 생성은 Pure factory.
+			mSkyboxActor = dir.Root().AddChild(SJH::Scene::CreateSkyboxActor("MatrixSkybox", skyboxMesh, mSkyboxMat, 50.0f));
 		}
 
 		void WarmupImgui(SJH::ResourceRegistry &reg)

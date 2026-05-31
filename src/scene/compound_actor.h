@@ -6,6 +6,13 @@
 #include <string>
 #include <vmath.h>
 
+namespace SJH
+{
+    class Framebuffer;
+    class Mesh;
+    class Material;
+}
+
 namespace SJH::Scene
 {
     /// @brief PreBuilt Actor 팩토리 — Unreal "Actor Class" 영감 + Cocos `Camera::createPerspective` 정통.
@@ -26,6 +33,26 @@ namespace SJH::Scene
         float aspect = 16.0f / 9.0f,
         float nearZ = 0.1f,
         float farZ = 100.0f);
+
+    /// @brief PostFX 2-Camera 패턴의 Orthographic ScreenCamera Actor 생성.
+    /// @details IsOrthographic=true + OrthoSize=1.0 + NoClear=true
+    ///          + CullingMask(UI|Screen) + SetTargetRenderTarget(sceneFB).
+    ///          기존 main.cpp 의 CreateAndRegisterScreenCamera() 22줄 보일러 추출.
+    /// @return Actor UPtr — caller 가 Director::Root().AddChild 책임 (Pure factory).
+    std::unique_ptr<Actor> CreateScreenCameraActor(
+        std::string name,
+        float aspect,
+        Framebuffer* sceneFB);
+
+    /// @brief Skybox Actor 생성 — Mesh + 큰 scale + MeshRenderer.
+    /// @details 카메라 따라가기는 *셰이더 측* (vert shader 의 view matrix translation 제거)
+    ///          으로 자동 처리. SyncSkyboxToCamera 자유 함수 불필요.
+    /// @return Actor UPtr — caller 가 dir.Root().AddChild 책임.
+    std::unique_ptr<Actor> CreateSkyboxActor(
+        std::string name,
+        Mesh* skyboxMesh,
+        Material* skyboxMat,
+        float scale = 50.0f);
 
     // ── Lights ─────────────────────────────────────────────────────────────
     /// @brief DirLightActor 생성 — Actor + Transform(방향 매핑) + DirLight 컴포넌트.

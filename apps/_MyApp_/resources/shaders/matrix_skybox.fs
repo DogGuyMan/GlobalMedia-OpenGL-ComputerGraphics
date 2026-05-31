@@ -24,7 +24,11 @@ const float CHAR_CNT = 10.0;
 
 // 노이즈 샘플 주파수 — 클수록 노이즈가 작고 촘촘 (간격 1/NOISE_SCALE).
 // noise_tex 가 REPEAT wrap 이어야 좌표 >1 이 클램프 없이 타일링된다 (main.cpp 에서 설정).
-const float NOISE_SCALE = 1.0;
+const float NOISE_SCALE = 2.0;
+
+// 노이즈 UV 오프셋 — 노이즈 패턴을 통째로 이동 (글자를 자르는 rain 띠 위치 조정용).
+//    .x = 가로 이동, .y = 세로 이동. distortion(아래 rain)에 가장 큰 영향.
+const vec2 NOISE_OFFSET = vec2(0.5, 0.0);
 
 // 3D 방향 벡터를 2D 구면(Equirectangular) UV 좌표로 변환
 vec2 getSphericalUV(vec3 v) {
@@ -45,7 +49,7 @@ void main() {
 
         // 디지트 선택 — *셀당 한 번* 샘플 (셀 내부에서 일정해야 한 글자만 보임).
         //    예전엔 per-fragment 라 셀 안에서 글자가 갈라져 어긋나 보였다.
-        float g = texture(noise_tex, cellId / vec2(COLS, ROWS) * NOISE_SCALE).g;
+        float g = texture(noise_tex, cellId / vec2(COLS, ROWS) * NOISE_SCALE + NOISE_OFFSET).g;
         float d = mod(floor(g * CHAR_CNT) + floor(u_time * 5.0), CHAR_CNT); // 0..9 + 시간 스크롤
 
         // 텍스처 아틀라스 정확 매핑 — d 번째 64px 글자칸만 샘플 (간격/여백 제외)
@@ -55,11 +59,11 @@ void main() {
                         inCell.y); // 세로: 아틀라스 전체 높이(128)
 
         // 내리는 비(rain) — 세로 그레디언트 + 노이즈 왜곡
-        float distortion = texture(noise_tex, base_uv / vec2(1.0, ROWS) * NOISE_SCALE).g; // 가로로 긴 노이즈 (NOISE_SCALE 배 촘촘)
+        float distortion = texture(noise_tex, vec2(cellId.x / COLS, 0.0) * NOISE_SCALE + NOISE_OFFSET).g; // 열(column)별 낙하 위상 — 글자 셀 가로(width)에 정렬
         distortion = round(distortion * 10.0) / 10.0;
 
-        float rain = base_uv.y; // 수직 그레디언트 (내리는 비)
-        rain += round(u_time * 0.2 * ROWS) / ROWS; // 비 스크롤 — 반대 방향 (+= : 기존 -= 의 역)
+        float rain = cellId.y / ROWS; // 세로 그레디언트 — 글자 셀 행(UV)에 정렬 (셀 단위 양자화, 중간 안 잘림)
+        rain += round(u_time * 0.2 * ROWS) / ROWS; // 비/노이즈 스크롤 방향 (부호로 반전: -= ↔ +=)
         rain += distortion; // 그레디언트 왜곡
         rain = fract(rain); // 루프
         rain = round(rain * 16.0) / 16.0; // 비 픽셀화

@@ -28,8 +28,18 @@ namespace TopdownShooter::Stage
         constexpr const char* kPickupMatKey = "stage_pickup";
         constexpr const char* kVS           = "resources/shaders/simple.vs";
         constexpr const char* kFS           = "resources/shaders/simple.fs";
-        constexpr const char* kPcbKey       = "stage_pcb";
-        constexpr const char* kPcbModelPath = "resources/model/pcb.fbx";
+        constexpr const char* kPcbKey        = "stage_pcb";
+        constexpr const char* kPcbModelPath  = "resources/model/pcb.fbx";
+        constexpr const char* kPhongAlbedoProgKey = "stage_phong_albedo";
+        constexpr const char* kPhongAlbedoVS      = "resources/shaders/phong_tex.vs";   // VS 공유
+        constexpr const char* kPhongAlbedoFS      = "resources/shaders/phong_albedo.fs";
+
+        SJH::Program* EnsurePhongAlbedoProgram(SJH::ResourceRegistry& reg)
+        {
+            if (auto* existing = reg.FindProgram(kPhongAlbedoProgKey))
+                return existing;
+            return reg.CreateProgram(kPhongAlbedoProgKey, kPhongAlbedoVS, kPhongAlbedoFS);
+        }
 
         SJH::Mesh* EnsurePlane(SJH::ResourceRegistry& reg)
         {
@@ -84,13 +94,15 @@ namespace TopdownShooter::Stage
         // PCB 모델 자원 등록 및 캐싱
         SJH::Model* pcbModel = EnsurePcbModel(reg);
         
-        // Assimp 로 로드된 모델의 머티리얼에 셰이더(Program) 주입 (model.h 주석 가이드 반영)
+        // PCB 머티리얼에 phong_tex 셰이더 주입 — model.cpp 가 저장한
+        // material.diffuse/specular 텍스처를 그대로 활용.
+        SJH::Program* pcbProg = EnsurePhongAlbedoProgram(reg);
         for (int i = 0; i < pcbModel->GetMaterialCount(); ++i)
         {
             if (SJH::Material* mat = pcbModel->GetMaterial(i))
             {
                 if (mat->GetProgram() == nullptr)
-                    mat->SetProgram(solidProg); // 단순 셰이더 임시 주입 (필요시 텍스처 전용 셰이더로 교체)
+                    mat->SetProgram(pcbProg);
             }
         }
 

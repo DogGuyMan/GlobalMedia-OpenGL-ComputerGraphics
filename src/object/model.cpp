@@ -2,7 +2,9 @@
 #include "object/geometry.h"
 #include "resource_registry/texture.h"
 #include "material/material.h"
+#include <assimp/material.h>
 #include <spdlog/spdlog.h>
+#include <vmath.h>
 
 namespace SJH
 {
@@ -77,7 +79,14 @@ namespace SJH
             // 셰이더의 sampler uniform 이름 (lighting.fs 의 material.diffuse / material.specular) 과 1:1.
             if (diffuse)  glMaterial->Properties.Textures["material.diffuse"]  = { diffuse,  /*unit*/ 0 };
             if (specular) glMaterial->Properties.Textures["material.specular"] = { specular, /*unit*/ 1 };
-            glMaterial->Properties.Floats["material.shininess"] = 32.0f;   // 기본 Phong shininess.
+            glMaterial->Properties.Floats["material.shininess"] = 32.0f;
+
+            // 텍스처 없는 머티리얼(Albedo 전용 FBX 등)을 위해 aiColor_Diffuse 를 항상 추출.
+            // phong_albedo.fs 가 sampler2D 대신 material.albedo (vec3) 로 Phong diffuse 계산.
+            aiColor4D aiDiffColor(0.8f, 0.8f, 0.8f, 1.0f);
+            aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, aiDiffColor);
+            glMaterial->Properties.Vec3s["material.albedo"] =
+                vmath::vec3(aiDiffColor.r, aiDiffColor.g, aiDiffColor.b);
 
             mMaterials.push_back(std::move(glMaterial)); //  m_materials -> mMaterials
         }
