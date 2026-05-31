@@ -39,7 +39,8 @@ void main()
 
     // 스크린 공간 dist 근사 — vUV.y (1=top) 가 클수록 멀리 (지평선 위쪽).
     // 0~10 범위로 스케일하여 exp 함수의 의미 있는 범위 활용.
-    float dist = (1.0 - vUV.y) * 10.0;
+    // Invert — top (vUV.y=1) 이 멀게 → 화면 위쪽이 FogColor 에 쌓임.
+    float dist = vUV.y * 10.0;
 
     float fogAmount = 0.0;
     if (uFogMode == 0)      fogAmount = fogFactorLinear(dist, uFogStart * 10.0, uFogEnd * 10.0);
