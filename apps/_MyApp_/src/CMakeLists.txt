@@ -6,6 +6,7 @@ add_subdirectory(Stage)
 add_subdirectory(Audio)
 add_subdirectory(VFX)
 add_subdirectory(Tween)
+add_subdirectory(Spawns)
 
 # M5 CL3 — Director 싱글톤 (Audio + VFX + Physics 집계)
 add_library(myapp_manager STATIC
@@ -39,4 +40,5 @@ target_link_libraries(myapp_client INTERFACE
     MyApp::VFX
     MyApp::Tween
     MyApp::Manager  # M5 CL3 — Audio+VFX+Physics 집계 싱글톤
+    MyApp::Spawns
 )
