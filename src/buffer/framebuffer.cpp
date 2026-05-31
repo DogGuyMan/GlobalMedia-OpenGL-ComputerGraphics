@@ -20,6 +20,14 @@ namespace SJH
         return framebuffer;
     }
 
+    FramebufferUPtr Framebuffer::CreateWithDepthTexture(int width, int height)
+    {
+        auto framebuffer = FramebufferUPtr(new Framebuffer());
+        if (!framebuffer->InitWithSizeAndDepthTexture(width, height))
+            return nullptr;
+        return framebuffer;
+    }
+
     Framebuffer::~Framebuffer()
     {
         if (mRBODepthStencilBuffer)
@@ -58,6 +66,12 @@ namespace SJH
             glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
             glBindRenderbuffer(GL_RENDERBUFFER, 0);
         }
+
+        // depth/stencil 텍스처 모드(CreateWithDepthTexture) — 같은 텍스처 핸들로 스토리지 재할당.
+        // Texture::Resize 가 저장된 format/type triple(GL_DEPTH_STENCIL/GL_UNSIGNED_INT_24_8)로 정확히 재할당.
+        // RBO 분기와 상호배타 — 텍스처 모드면 mRBODepthStencilBuffer==0.
+        if (mDepthAttachment)
+            mDepthAttachment->Resize(width, height);
 
         // FBO 핸들·어태치먼트 결합 불변(텍스처/RBO ID 동일) → 재attach 불필요. 상태만 재검증.
         glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
@@ -122,5 +136,45 @@ namespace SJH
             return false;
         }
         return InitWithColorAttachment(TexturePtr(std::move(textureU)));
+    }
+
+    bool Framebuffer::InitWithSizeAndDepthTexture(int width, int height)
+    {
+        // 색 RGBA8 텍스처 (기존 3-arg) — GL_COLOR_ATTACHMENT0.
+        auto colorU = Texture::Create(width, height, GL_RGBA);
+        if (!colorU)
+        {
+            spdlog::error("Framebuffer::CreateWithDepthTexture: color 텍스처 생성 실패 — {}x{}", width, height);
+            return false;
+        }
+        mColorAttachment = TexturePtr(std::move(colorU));
+
+        // depth-stencil 텍스처 (5-arg) — sampler2D 로 .r=depth, stencil 보존.
+        auto depthU = Texture::Create(width, height,
+                                      GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8);
+        if (!depthU)
+        {
+            spdlog::error("Framebuffer::CreateWithDepthTexture: depth 텍스처 생성 실패 — {}x{}", width, height);
+            return false;
+        }
+        mDepthAttachment = TexturePtr(std::move(depthU));
+
+        glGenFramebuffers(1, &mFBOFramebuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
+
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                               mColorAttachment->GetTextureID(), 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D,
+                               mDepthAttachment->GetTextureID(), 0);
+
+        auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+        {
+            spdlog::error("Framebuffer::CreateWithDepthTexture: incomplete — {}", status);
+            return false;
+        }
+
+        BindToDefault();
+        return true;
     }
 }

@@ -38,6 +38,16 @@ namespace SJH
          */
         static TextureUPtr Create(int width, int height, uint32_t format);
         /**
+         * @brief 빈 GL 텍스처를 internalFormat/format/type 분리 지정으로 생성 — depth/packed 포맷용.
+         * @param internalFormat GPU 저장 포맷 (@c GL_RGBA8, @c GL_DEPTH24_STENCIL8 등).
+         * @param format         픽셀 데이터 채널 의미 (@c GL_RGBA, @c GL_DEPTH_STENCIL 등).
+         * @param type           원소 타입 (@c GL_UNSIGNED_BYTE, @c GL_UNSIGNED_INT_24_8 등).
+         * @return 생성된 텍스처 (@c unique_ptr). 실패 시 @c nullptr.
+         * @note depth/packed 텍스처는 보간/mipmap 부적합 → 본 overload 는 @c GL_NEAREST 필터 + @c GL_CLAMP_TO_EDGE wrap 으로 생성.
+         */
+        static TextureUPtr Create(int width, int height,
+                                  uint32_t internalFormat, uint32_t format, uint32_t type);
+        /**
          * @brief 디코드된 Image 로부터 GL 텍스처를 생성하고 GPU 에 업로드.
          * @param image  CPU 측 픽셀 데이터 컨테이너 (소유권 X — 호출 동안만 유효하면 됨).
          * @return 생성된 텍스처 (단일 소유 @c unique_ptr). 실패 시 @c nullptr 반환 가능.
@@ -66,15 +76,25 @@ namespace SJH
         /// @brief S/T 좌표 wrap 모드 설정 (@c GL_TEXTURE_WRAP_S / @c GL_TEXTURE_WRAP_T).
         void SetWrap(GLuint sWrap, GLuint tWrap) const;
 
+        /// @brief 같은 GL 핸들을 유지하고 색상 스토리지를 새 크기로 재할당 (FBO 어태치먼트 리사이즈용).
+        /// @details 핸들(@c GetTextureID) 불변 → 이 텍스처를 sampler 로 참조하는 모든 consumer 가
+        ///          재바인딩 없이 새 크기를 인식. 포맷은 기존 @c mFormat 유지.
+        /// @param width  새 너비 (픽셀). @param height 새 높이 (픽셀).
+        void Resize(int width, int height);
+
     private:
         Texture() = default;
         void CreateTexture();                         ///< @c glGenTextures + 기본 필터/wrap 설정.
         void SetTextureFromImage(const Image *image); ///< @c glTexImage2D 로 GPU 업로드.
         void SetTextureFormat(int width, int height, uint32_t format); ///< @c glTexImage2D 로 빈 GPU 메모리 할당.
+        void SetTextureFormat(int width, int height,
+                              uint32_t internalFormat, uint32_t format, uint32_t type); ///< 5-arg — internalFormat/format/type 분리.
         GLuint mTextureID = 0;     ///< GL 텍스처 핸들 — 0 은 invalid.
         int mWidth{0};             ///< 텍스처 너비 (픽셀). @ref Create / @ref SetTextureFromImage 가 설정.
         int mHeight{0};            ///< 텍스처 높이 (픽셀).
         uint32_t mFormat{GL_RGBA}; ///< GL 내부 포맷. @ref Create 가 설정; @ref CreateTexture 는 채널 수로 자동 선택.
+        uint32_t mDataFormat{GL_RGBA};        ///< glTexImage2D 의 format 인자 (GL_DEPTH_STENCIL 등). Resize 재할당용.
+        uint32_t mDataType{GL_UNSIGNED_BYTE}; ///< glTexImage2D 의 type 인자 (GL_UNSIGNED_INT_24_8 등). Resize 재할당용.
     };
 
 }

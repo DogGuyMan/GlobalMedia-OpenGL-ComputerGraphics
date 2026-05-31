@@ -54,6 +54,14 @@ namespace SJH
          */
         static FramebufferUPtr Create(int width, int height);
 
+        /**
+         * @brief 내부 RGBA8 색 텍스처 + depth-stencil *텍스처* 를 생성하는 factory.
+         * @details depth 를 RBO 대신 텍스처로 attach → 셰이더가 @c sampler2D 로 .r=정규화 depth 읽기 가능.
+         *          @c GL_DEPTH24_STENCIL8 사용 — depth 샘플링 + stencil(Outline) 동시 보존.
+         * @return 성공 시 @c FramebufferUPtr, 실패 시 @c nullptr.
+         */
+        static FramebufferUPtr CreateWithDepthTexture(int width, int height);
+
         /// @brief 기본 프레임버퍼(스크린) 로 바인딩 복귀 (@c glBindFramebuffer(GL_FRAMEBUFFER, 0)).
         static void BindToDefault();
 
@@ -75,6 +83,9 @@ namespace SJH
         /// @brief 색상 어태치먼트 텍스처 반환 — 포스트프로세스 패스가 sampler 로 읽을 때 사용.
         const TexturePtr GetColorAttachment() const { return mColorAttachment; }
 
+        /// @brief depth-stencil 텍스처 어태치먼트 반환 (텍스처 모드일 때만 non-null). depth-based fog 가 sampler 로 읽음.
+        const TexturePtr GetDepthAttachment() const { return mDepthAttachment; }
+
         /// @brief FBO 핸들을 유지하고 color 어태치먼트 + RBO depth/stencil 을 새 크기로 재할당.
         /// @details ⚠ RBO depth 모드 전용 — color 어태치먼트(@c mColorAttachment)와 RBO(@c mRBODepthStencilBuffer)만
         ///          재할당한다. depth-texture 모드(@c mDepthAttachment) 도입 시 분기 확장 필요(depth-fog 후속).
@@ -87,10 +98,12 @@ namespace SJH
         Framebuffer() = default;
         bool InitWithColorAttachment(const TexturePtr colorAttachment);
         bool InitWithSize(int width, int height);
+        bool InitWithSizeAndDepthTexture(int width, int height);
 
         uint32_t   mFBOFramebuffer{0};       ///< GL FBO 핸들 — 0 은 invalid (기본 프레임버퍼).
-        uint32_t   mRBODepthStencilBuffer{0};///< 깊이/스텐실 렌더버퍼 핸들 (@c GL_DEPTH24_STENCIL8).
+        uint32_t   mRBODepthStencilBuffer{0};///< 깊이/스텐실 렌더버퍼 핸들 (@c GL_DEPTH24_STENCIL8). 텍스처 모드면 0.
         TexturePtr mColorAttachment;         ///< 색상 어태치먼트 텍스처 공유 포인터 — 소멸 순서 주의.
+        TexturePtr mDepthAttachment;         ///< depth-stencil 텍스처 (텍스처 모드). RBO 모드면 nullptr.
     };
 }
 #endif // __SJH_FRAMEBUFFER_H__

@@ -220,7 +220,10 @@ namespace TopdownShooter
 					mCamera->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 				if (mScreenCamera)
 					mScreenCamera->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
-				mSceneFB = SJH::Framebuffer::Create(fbW, fbH);
+				mSceneFB->Resize(fbW, fbH);                       // 교체 → in-place (포인터 안정: 첫 PassComponent.InputFB dangling 해소)
+				for (auto &fb : mPostFXFBs)                       // 중간 FB 동기 리사이즈 (스케일 불일치 해소)
+					if (fb)
+						fb->Resize(fbW, fbH);
 				if (mCamera)
 					mCamera->SetTargetRenderTarget(mSceneFB.get());
 				if (mScreenCamera)
