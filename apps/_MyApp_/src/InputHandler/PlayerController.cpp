@@ -210,6 +210,20 @@ namespace TopdownShooter::Controller
 		spdlog::info("[pick] screen=({:.0f},{:.0f}) ndc=({:.2f},{:.2f}) -> ground=({:.2f},{:.2f},{:.2f})",
 		             mx, my, ndcX, ndcY, hit[0], hit[1], hit[2]);
 
+		// === PlayerActor(owner) → 클릭 Ground 좌표 = 조준 Vector 추출 (XZ 평면) ===
+		SJH::Scene::Actor *player = GetOwner();
+		const vmath::vec3 playerPos = (player != nullptr) ? player->GetTransform().Translate : vmath::vec3(0.0f);
+
+		vmath::vec3 aim = hit - playerPos;
+		aim[1] = 0.0f; // 탑다운 조준 — 높이 성분 제거 (XZ 평면)
+		const float dist = vmath::length(aim);
+		mAimPoint = hit;
+		mAimDirection = (dist > 1e-4f) ? aim * (1.0f / dist) : vmath::vec3(0.0f, 0.0f, -1.0f);
+
+		spdlog::info("[aim] player=({:.2f},{:.2f},{:.2f}) -> dir=({:.2f},{:.2f},{:.2f}) dist={:.2f}",
+		             playerPos[0], playerPos[1], playerPos[2],
+		             mAimDirection[0], mAimDirection[1], mAimDirection[2], dist);
+
 		SpawnGroundMarker(hit);
 	}
 

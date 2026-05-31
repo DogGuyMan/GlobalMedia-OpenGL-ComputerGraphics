@@ -17,6 +17,8 @@
 #include "Audio/AudioSystem.h"
 #include "Audio/FmodPlayable.h"
 #include "Audio/FmodStudioPlayable.h"
+#include "Bootstrap/PlayerBuilder.h"
+#include "Bootstrap/WorldSceneBuilder.h"
 #include "Entity/Player/PlayerActor.h"
 #include "InputHandler/ActorFolower.h"
 #include "InputHandler/PlayerController.h"
@@ -126,15 +128,18 @@ namespace TopdownShooter
 		// 실제 디렉토리 = resources/shaders/postprocess/ (shaders 복수).
 		// D-6 data-driven — gamma 초기값을 InitFloats 로 명시.
 		const std::vector<SJH::Render::PostFXStageConfig> POSTFX_PROGRAM_CONFIGS = {
-		    {"blurring",   "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/blurring.fs",   {}},
+		    // 실행 순서 재배열 (2026-06-01 사용자 지정): gamma→sharpening→bloom→fog→invert→blur→sobel.
 		    {"gamma",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/gamma.fs",      {{"gamma", 1.0f}}},
-		    {"invert",     "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs",     {}},
 		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
-		    {"sobel",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs",      {}},
-		    {"fog",        "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/fog.fs",
-		     {{"uFogDensity", 0.05f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
 		    {"bloom",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/bloom.fs",
 		     {{"uBloomThreshold", 0.7f}, {"uBloomSpread", 1.5f}, {"uBloomIntensity", 1.0f}}},
+		    {"fog",        "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/fog.fs",
+		     {{"uFogDensity", 0.05f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
+		    {"grayscale_vignetting", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/grayscale_vignetting.fs",
+		     {{"uGrayscaleAmount", 1.0f}, {"uVignetteAmount", 0.5f}}}, // uVignetteColor(vec3)는 startup 에서 set.
+		    {"invert",     "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs",     {}},
+		    {"blurring",   "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/blurring.fs",   {}},
+		    {"sobel",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs",      {}},
 		};
 	} // namespace
 
@@ -178,8 +183,12 @@ namespace TopdownShooter
 			mScreenQuadStagePtr = sqStage.get();
 			mStages.push_back(std::move(sqStage));
 
-			// World Camera 는 Client 한정 (TargetFollowableCameraController + 초기 transform) — 그대로 유지.
-			mCamera = CreateAndRegisterWorldCamera();
+			// WorldScene (camera + light + skybox) — Bootstrap 빌더로 추출 (B/C 그룹).
+			// stages 가 mCamera 의존이라 stages 셋업보다 먼저 호출. light·skybox 도 함께
+			// 생성되나 Light=SceneRenderer 매 프레임 수집 / Skybox=Pass queue 정렬이라 순서 무관(시각 동일).
+			auto worldScene = Bootstrap::BuildWorldScene({fb.Aspect, &mMouse, mSceneFB.get()});
+			mCamera    = worldScene.WorldCamera;
+			mSkyboxMat = worldScene.SkyboxMat;
 
 			// A2 — ScreenCamera Pure factory.
 			auto screenCamActor = SJH::Scene::CreateScreenCameraActor("ScreenCamera", fb.Aspect, mSceneFB.get());
@@ -198,6 +207,10 @@ namespace TopdownShooter
 				fogMat->Properties.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
 			}
 			RebindFogUniforms(); // uDepth = sceneFB depth 텍스처 (unit 1).
+
+			// grayscale_vignetting 의 vec3 초기값 (InitFloats 밖) — 비네팅 색 명시 set.
+			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
+				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(0.0f, 0.0f, 0.0f); // 기본 검정 비네팅.
 
 			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
 			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
@@ -234,9 +247,10 @@ namespace TopdownShooter
 
 			mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("FxRoot"));
 
-			WramupPlayer(reg, dir, phys);
-			WarmupSkybox(reg, dir);
-			WarmupLighting(dir);
+			auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera, &mWholeAtlasClip});
+			mSprite      = player.Sprite;
+			mSpriteSeq   = player.SpriteSeq;
+			mSpriteActor = player.SpriteActor;
 			WarmupImgui(reg);
 
 			dir.Enter();
@@ -389,7 +403,6 @@ namespace TopdownShooter
 		bool mShowEditor = true;
 
 		// 씬 오브젝트
-		SJH::Scene::Actor *mSkyboxActor = nullptr;
 		SJH::Material *mSkyboxMat = nullptr;
 		SJH::Scene::Actor *mSpriteActor = nullptr;
 		SJH::Scene::Actor *mFxRoot = nullptr; // 단발 시퀀스 전용 부모 (sweep 대상)
@@ -401,15 +414,18 @@ namespace TopdownShooter
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;
 
-		// fog PassComponent 의 Material 탐색 — POSTFX_PROGRAM_CONFIGS 와 mPassComponents 인덱스 정합.
-		// (PostFXStageConfig::Name 은 std::string → operator==("fog") 는 정상 문자열 비교.)
-		SJH::Material *FindFogMaterial()
+		// 이름으로 PostFX PassComponent 의 Material 탐색 — POSTFX_PROGRAM_CONFIGS 와 mPassComponents 인덱스 정합.
+		// (PostFXStageConfig::Name 은 std::string → operator==(name) 는 정상 문자열 비교.)
+		SJH::Material *FindPassMaterial(const char *name)
 		{
 			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
-				if (mPassComponents[i] && POSTFX_PROGRAM_CONFIGS[i].Name == "fog")
+				if (mPassComponents[i] && POSTFX_PROGRAM_CONFIGS[i].Name == name)
 					return mPassComponents[i]->mMaterial;
 			return nullptr;
 		}
+
+		// fog material 단축 — uInverseProjection / uDepth 송신부에서 사용.
+		SJH::Material *FindFogMaterial() { return FindPassMaterial("fog"); }
 
 		// fog material 의 uDepth 를 현재 mSceneFB 의 depth 텍스처(unit 1)로 (재)바인딩.
 		// startup + resize 직후 호출 — sceneFB 재생성 시 dangling 방지 (D2).
@@ -419,41 +435,6 @@ namespace TopdownShooter
 			if (!fogMat || !mSceneFB || !mSceneFB->GetDepthAttachment())
 				return;
 			fogMat->Properties.Textures["uDepth"] = {mSceneFB->GetDepthAttachment().get(), 1}; // unit 1 (uScene=0).
-		}
-
-		SJH::Scene::Camera *CreateAndRegisterWorldCamera()
-		{
-			int fbW = 0, fbH = 0;
-			glfwGetFramebufferSize(window, &fbW, &fbH);
-			const float aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
-
-			auto &dir = SJH::Scene::Director::Get();
-
-			// ── World Camera (Perspective) — 3D 월드 ────────────────────────────
-			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, aspect, 0.1f, 100.0f);
-			auto &worldCamTransform = worldCamActor->GetTransform();
-			worldCamTransform.SetTransformWithVectors(
-			                     vmath::vec3(0.0f, 4.0f, 8.0f),
-			                     vmath::vec3(-30.0f, 0.0f, 0.0))
-			    .PrintTransform();
-
-			auto *camera = worldCamActor->GetComponent<SJH::Scene::Camera>();
-			camera
-			    ->SetCullingMask(SJH::Scene::Layer::Default |
-			                     SJH::Scene::Layer::Player |
-			                     SJH::Scene::Layer::Enemy |
-			                     SJH::Scene::Layer::DebugDraw)
-			    .SetTargetRenderTarget(mSceneFB.get());
-
-			worldCamActor
-			    ->AddComponent<Controller::ActorFolower>()
-			    ->SetMouseInput(&mMouse)
-			    .SetCamera(camera)
-			    .SetFollowOffset(worldCamTransform.Translate)
-			    .SetUp();
-
-			dir.Root().AddChild(std::move(worldCamActor));
-			return camera;
 		}
 
 		void WramupFMOD(SJH::Scene::Director &dir, SJH::ResourceRegistry &reg, TopdownShooter::Audio::AudioSystem &audio)
@@ -469,153 +450,6 @@ namespace TopdownShooter
 			TopdownShooter::Spawns::BuildBGM(bgmCtx);
 
 			reg.CreateSound(audio.GetSystem(), "shot", "resources/audio/Laser.wav");
-		}
-
-		void WramupPlayer(SJH::ResourceRegistry &reg, SJH::Scene::Director &dir, Physics::PhysicsSystem &phys)
-		{
-			TopdownShooter::Entity::Player::PlayerActorConfig pac;
-			pac.name = "PlayerSprite";
-			pac.life.hp = 100;
-			pac.movement.speed = 3.0f;
-			pac.controller.keyboard = &mKeyboard;
-			pac.controller.mouse    = &mMouse;
-			pac.controller.camera   = mCamera;   // 좌클릭 마우스→Ground raycast 용 (World 카메라)
-			// 좌클릭 — M5 CO1: Sequence( Effekseer.distortion → Parallel( Fmod.Laser ∥ FmodStudio.Slash ) ).
-			// 의존은 전부 싱글턴이라 캡처 없는 자기완결 람다 (PlayerController 는 audio/vfx 를 모름).
-			pac.controller.onFire = [] {
-				auto &reg = SJH::ResourceRegistry::Get();
-				auto &audio = TopdownShooter::Manager::Get().Audio();
-				auto &vfx = TopdownShooter::Manager::Get().VFX();
-
-				auto *shot = reg.FindSound("shot");
-				auto *muzzle = reg.FindEffect("muzzle");
-				auto *slashEvt = audio.LoadEvent("event:/Slash");
-
-				if (shot && muzzle && slashEvt)
-				{
-					auto *cActor = SJH::Scene::Director::Get().Root().AddChild(
-					    std::make_unique<SJH::Scene::Actor>("ShotComposite"));
-					auto *seq = cActor->AddComponent<SJH::Playable::SequencePlayable>();
-
-					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
-					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
-					    TopdownShooter::VFX::TrackPolicy::Static));
-
-					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodPlayable>(audio.GetSystem(), shot));
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(slashEvt));
-					seq->Append(std::move(par));
-
-					seq->Play();
-				}
-			};
-			// G키 — M5 CO2: Parallel( TweenShake ∥ FmodStudio.Damaged ).
-			pac.controller.onDamage = [] {
-				auto &audio = TopdownShooter::Manager::Get().Audio();
-				auto *damagedEvt = audio.LoadEvent("event:/Damaged");
-
-				auto *dActor = SJH::Scene::Director::Get().Root().AddChild(
-				    std::make_unique<SJH::Scene::Actor>("DamageComposite"));
-				auto *par = dActor->AddComponent<SJH::Playable::ParallelPlayable>();
-
-				auto tween = tweeny::from(0.0f).to(1.0f).during(100).via(tweeny::easing::sinusoidalInOut);
-				par->Join(std::make_unique<TopdownShooter::Tween::TweenPlayable<float>>(
-				    std::move(tween),
-				    [](float v) {
-					    float offset = std::sin(v * 8.0f * 3.14159f) * 5.0f;
-					    spdlog::info("[shake] v={:.3f} offset={:.3f}", v, offset);
-				    }));
-				if (damagedEvt)
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(damagedEvt));
-
-				par->Play();
-			};
-			pac.physics.world = &phys.World();
-			pac.physics.size = vmath::vec2(1.0f, 1.0f);
-			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
-			pac.physics.density = 1.0f;
-			pac.physics.linearDamping = 5.0f;
-			pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
-			pac.physics.maskBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
-
-			auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
-			spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-			spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
-
-			// Atlas — registry 가 LoadFromPNG + SetGrid 일괄.
-			auto *atlas = reg.CreateUniformAtlas(
-			    "test_pattern",
-			    "resources/texture/TestPattern.png",
-			    4, 4);
-			if (!atlas)
-			{
-				spdlog::error("[M1] atlas load failed");
-				return;
-			}
-
-			mSprite = spriteActor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
-
-			mWholeAtlasClip = SJH::SpriteSequence::SpriteFrameClip{0, atlas->FrameCount(), 4.0f};
-			mSpriteSeq = spriteActor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
-			    mSprite, &mWholeAtlasClip);
-			mSpriteSeq->SetIsLoop(true);
-			mSpriteSeq->Play();
-
-			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
-			mCamera
-				->GetOwner()
-				->GetComponent<Controller::ActorFolower>()
-				->SetFollowTarget(mSpriteActor);
-		}
-
-		void WarmupLighting(SJH::Scene::Director &dir)
-		{
-			auto lightActor = SJH::Scene::CreateDirLightActor("MainDirLight",
-			    vmath::vec3(-0.4f, -1.0f, -0.5f));
-			auto *light = lightActor->GetComponent<SJH::DirLight>();
-			light->Ambient  = vmath::vec3(0.3f, 0.3f, 0.3f);
-			light->Diffuse  = vmath::vec3(0.9f, 0.9f, 0.85f);
-			light->Specular = vmath::vec3(0.5f, 0.5f, 0.5f);
-			dir.Root().AddChild(std::move(lightActor));
-		}
-
-		void WarmupSkybox(SJH::ResourceRegistry &reg, SJH::Scene::Director &dir)
-		{
-			auto *skyboxProg = reg.CreateProgram(
-			    "matrix_skybox",
-			    "resources/shaders/matrix_skybox.vs",
-			    "resources/shaders/matrix_skybox.fs");
-
-			auto *charsTex = reg.CreateTexture("chars", SJH::Image::Load("chars", "resources/texture/characters.png").get());
-			// 매트릭스 글자 스크롤 필수 — 셰이더의 char_uv.x 가 +noise+time 으로 1 을 넘어 순환한다.
-			// CreateTexture 기본 wrap 은 GL_CLAMP_TO_EDGE(texture.cpp) 라 끝 열에 고착돼 세로 줄로
-			// 보이므로, 글자 열이 순환하도록 REPEAT 로 덮어쓴다 (uniform_atlas Bind→SetWrap 선례).
-			charsTex->Bind();
-			charsTex->SetWrap(GL_REPEAT, GL_REPEAT);
-			// 촘촘한 격자에서 글자칸이 작아지면 기본 MIPMAP_LINEAR(texture.cpp)가 LOD 를 올려
-			// 글자를 회색으로 뭉갠다 → mipmap 없는 GL_LINEAR 로 또렷하게 유지.
-			charsTex->SetFilter(GL_LINEAR, GL_LINEAR);
-			auto *noiseTex = reg.CreateTexture("noise_tex", SJH::Image::Load("noise_tex", "resources/texture/matrix_noise.png").get());
-			// 셰이더가 noise 좌표를 NOISE_SCALE(=8)배로 키워 샘플 → 1 을 넘는 좌표가 클램프되지
-			// 않고 타일링되도록 REPEAT 필수 (CLAMP 면 가장자리 한 색으로 뭉개짐).
-			noiseTex->Bind();
-			noiseTex->SetWrap(GL_REPEAT, GL_REPEAT);
-
-			mSkyboxMat = reg.CreateSharedMaterial("mat_matrix_skybox");
-			mSkyboxMat->SetProgram(skyboxProg);
-			// Skybox Pass — DepthFunc LEQUAL(.xyww 트릭) + CullMode FRONT(박스 안쪽 면) +
-			// DepthWrite off + queue 2500(Opaque 다음). pass.h 의 Kind::Skybox 가 전부 자동 도출.
-			mSkyboxMat->SetPass(SJH::Pass::Kind::Skybox);
-			// 텍스처 유닛 분리 필수 — TextureBinding.Unit 이 둘 다 기본값 0 이면
-			// 두 sampler 가 같은 유닛을 가리켜 한 텍스처만 읽힌다 (PropertyBlockSetter 가
-			// binding.Unit 그대로 BindTexture + sampler int 송신).
-			mSkyboxMat->Properties.Textures["chars"] = {charsTex, 0};
-			mSkyboxMat->Properties.Textures["noise_tex"] = {noiseTex, 1};
-			mSkyboxMat->Properties.Floats["u_time"] = 0.0f;
-
-			auto *skyboxMesh = reg.RegisterMesh("mesh_skybox", SJH::Mesh::CreateBox());
-			// A5 — actor 생성은 Pure factory.
-			mSkyboxActor = dir.Root().AddChild(SJH::Scene::CreateSkyboxActor("MatrixSkybox", skyboxMesh, mSkyboxMat, 50.0f));
 		}
 
 		void WarmupImgui(SJH::ResourceRegistry &reg)

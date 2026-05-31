@@ -7,8 +7,8 @@ namespace TopdownShooter::Playable
 	{
 		const int DrawOrder = -1;
 		const char *TexturePath = nullptr;
-		const int ColCount = -1;
 		const int RowCount = -1;
+		const int ColCount = -1;
 		const bool Flip = false;
 	};
 	const std::vector<PlayerTextureConfig> BACK_IDLE = {
@@ -46,10 +46,11 @@ namespace TopdownShooter::Playable
 	    {3, "./resources/texture/player/FRONT_MOVE_F_3.png", 1, 1},
 	};
 
+
 	const std::vector<PlayerTextureConfig> BACK_MOVE = {
-	    {0, "./resources/texture/player/BACK_MOVE_B_0.png", 1, 1},
-	    {1, "./resources/texture/player/BACK_MOVE_H_1.png", 1, 2},
-	    {2, "./resources/texture/player/BACK_MOVE_E_2.png", 1, 2},
+	    {0, "./resources/texture/player/BACK_MOVE_B_0.png", 1, 2},
+	    {1, "./resources/texture/player/BACK_MOVE_H_1.png", 1, 1},
+	    {2, "./resources/texture/player/BACK_MOVE_E_2.png", 1, 1},
 	    {3, "./resources/texture/player/BACK_MOVE_F_3.png", 1, 1},
 	};
 

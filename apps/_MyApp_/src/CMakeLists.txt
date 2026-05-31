@@ -26,6 +26,9 @@ target_link_libraries(myapp_manager
 )
 target_compile_features(myapp_manager PUBLIC cxx_std_17)
 
+# Warmup 보일러플레이트 추출 빌더 — MyApp::Manager 정의 뒤 (Bootstrap 이 Manager 의존).
+add_subdirectory(Bootstrap)
+
 # 우산 INTERFACE — 클라이언트 스크립트 전체 묶음
 add_library(myapp_client INTERFACE)
 add_library(MyApp::Client ALIAS myapp_client)
@@ -41,4 +44,5 @@ target_link_libraries(myapp_client INTERFACE
     MyApp::Tween
     MyApp::Manager  # M5 CL3 — Audio+VFX+Physics 집계 싱글톤
     MyApp::Spawns
+    MyApp::Bootstrap # Warmup 보일러플레이트 추출 빌더 (WorldScene/Player/Audio)
 )

@@ -59,6 +59,11 @@ namespace TopdownShooter::Controller
 		/// @brief G키 press 시 실행할 콜백 (Damage Composite 등). 미주입이면 G키 무시.
 		PlayerController &SetDamageCallback(std::function<void()> cb);
 
+		/// @brief 마지막 좌클릭의 조준 정보 — PlayerActor(owner)→클릭 Ground 좌표.
+		/// @details `mAimDirection` 은 XZ 평면 정규화 방향(발사/회전 방향). `mAimPoint` 는 클릭된 월드 좌표.
+		const vmath::vec3 &GetAimDirection() const { return mAimDirection; }
+		const vmath::vec3 &GetAimPoint() const { return mAimPoint; }
+
 		virtual void OnEnter() override;
 		virtual void OnExit() override;
 		virtual void Update(float dt) override;
@@ -74,6 +79,10 @@ namespace TopdownShooter::Controller
 		std::function<void()> mDamageCallback; // G키
 
 		vmath::vec3 mInputValue {0.0f};
+
+		// 좌클릭 시 추출되는 조준 정보 — PlayerActor(owner) 위치 + 클릭된 Ground 좌표로 산출.
+		vmath::vec3 mAimPoint {0.0f};                  // 클릭된 Ground 월드 좌표 (y≈0)
+		vmath::vec3 mAimDirection {0.0f, 0.0f, -1.0f}; // player → click 방향 (XZ 평면, 정규화)
 
 		void RegisterBindings();
 		void UnregisterBindings();

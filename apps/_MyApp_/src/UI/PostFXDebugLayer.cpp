@@ -51,6 +51,14 @@ namespace TopdownShooter::UI
 				ImGui::SliderFloat("spread##bloom",    &props.Floats["uBloomSpread"],    0.1f, 5.0f);
 				ImGui::SliderFloat("intensity##bloom", &props.Floats["uBloomIntensity"], 0.0f, 4.0f);
 			}
+			else if (entry.Name == "grayscale_vignetting")
+			{
+				// Health[0,1] → grayscale 강도 (1=원본색, 0=무채색). 셰이더는 Health 를 모름(uGrayscaleAmount 만).
+				ImGui::SliderFloat("Health##gv",    &props.Floats["uGrayscaleAmount"], 0.0f, 1.0f);
+				// Vignette — grayscale 과 독립. 색(필수) + 강도.
+				ImGui::SliderFloat("vignette##gv",  &props.Floats["uVignetteAmount"],  0.0f, 1.0f);
+				ImGui::ColorEdit3 ("vig color##gv", &props.Vec3s["uVignetteColor"][0]);
+			}
 		}
 
 		ImGui::End();
