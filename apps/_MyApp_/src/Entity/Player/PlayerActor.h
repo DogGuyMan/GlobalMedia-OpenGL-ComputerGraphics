@@ -3,17 +3,20 @@
 
 #include "Entity/Components/LifeComponents.h"
 #include "Entity/Components/MovementComponents.h"
+#include "Entity/Components/WeaponComponents.h"
 #include "InputHandler/PlayerController.h"
 #include "input/keyboard_input.h"
 #include "input/mouse_input.h"
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/physics_movement.h"
+#include "Playable/Constants.h"   // TopdownShooter::Playable::PlayerTextureConfig / FRONT_MOVE 등
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 #include <vmath.h>
 
 namespace TopdownShooter::Entity::Player
@@ -68,10 +71,26 @@ namespace TopdownShooter::Entity::Player
 			bool        isSensor      = false;
 		};
 
+		struct WeaponCfg
+		{
+			int      damage = 10;       // bullet 데미지 (Stat base)
+			b2World* world  = nullptr;  // bullet body 생성용 물리 월드 (physics 분기에서만 부착)
+		};
+
+		/// @brief 방향 텍스처 합성 설정 (spec §6.1). M6 Task7 의 SpriteCfg{atlas,clips} 를 대체.
+		struct SpriteCfg
+		{
+			/// @brief 방향 텍스처 세트(예: Playable::FRONT_MOVE). nullptr → 스프라이트 없음(게임플레이-only).
+			const std::vector<TopdownShooter::Playable::PlayerTextureConfig> *direction = nullptr;
+			float fps = 6.0f; ///< 애니 파트(ColCount>1) 의 초당 프레임
+		};
+
 		LifeCfg       life;
 		MovementCfg   movement;
 		ControllerCfg controller;
 		PhysicsCfg    physics;
+		WeaponCfg     weapon;
+		SpriteCfg     sprite;
 	};
 
 	/// @brief PlayerActor 생성 — Compound Actor 컨벤션 (Actor 비상속) + Component 부착.
@@ -86,71 +105,7 @@ namespace TopdownShooter::Entity::Player
 	///   본 함수는 *클라이언트 도메인* (TopdownShooter) 영역 — `src/scene/compound_actor.h` (엔진 코어)
 	///   가 *클라이언트 도메인을 모르는* 의존 방향 보존. 범용 Compound (Camera/Light) 는 엔진 코어,
 	///   도메인 Compound (PlayerActor) 는 도메인 영역에 위치.
-	inline std::unique_ptr<SJH::Scene::Actor> CreatePlayerActor(const PlayerActorConfig &cfg)
-	{
-		auto actor = std::make_unique<SJH::Scene::Actor>(cfg.name);
-
-		actor->AddComponent<Components::Life>(cfg.life.hp);
-
-		if (cfg.physics.world != nullptr)
-		{
-			// Physics body 생성 — b2World 가 lifetime 소유.
-			b2BodyDef bd;
-			bd.type     = b2_dynamicBody;
-			bd.position.Set(cfg.physics.startPosition[0], cfg.physics.startPosition[1]);
-			bd.linearDamping = cfg.physics.linearDamping;
-			b2Body *body = cfg.physics.world->CreateBody(&bd);
-
-			b2PolygonShape box;
-			box.SetAsBox(cfg.physics.size[0] * 0.5f, cfg.physics.size[1] * 0.5f);
-
-			b2FixtureDef fd;
-			fd.shape             = &box;
-			fd.density           = cfg.physics.density;
-			fd.friction          = cfg.physics.friction;
-			fd.isSensor          = cfg.physics.isSensor;
-			fd.filter.categoryBits = cfg.physics.categoryBits;
-			fd.filter.maskBits     = cfg.physics.maskBits;
-			body->CreateFixture(&fd);
-
-			auto *pb = actor->AddComponent<Physics::Components::BoxBody>();
-			pb->SetBody(body);
-			pb->SetSensor(cfg.physics.isSensor);
-
-			auto *pm = actor->AddComponent<Physics::PhysicsMovement>(cfg.movement.speed);
-
-			if (cfg.controller.keyboard != nullptr)
-			{
-				auto *controller = actor->AddComponent<Controller::PlayerController>();
-				controller->SetKeyboardInput(cfg.controller.keyboard);
-				controller->SetMouseInput(cfg.controller.mouse);
-				controller->SetWorldCamera(cfg.controller.camera);
-				controller->SetMovableTarget(pm);
-				controller->SetFireCallback(cfg.controller.onFire);
-				controller->SetDamageCallback(cfg.controller.onDamage);
-				controller->SetUp();
-			}
-		}
-		else
-		{
-			// physics 미사용 — 기존 Movement (Transform 직접 조작).
-			auto *movement = actor->AddComponent<Components::Movement>(cfg.movement.speed);
-
-			if (cfg.controller.keyboard != nullptr)
-			{
-				auto *controller = actor->AddComponent<Controller::PlayerController>();
-				controller->SetKeyboardInput(cfg.controller.keyboard);
-				controller->SetMouseInput(cfg.controller.mouse);
-				controller->SetWorldCamera(cfg.controller.camera);
-				controller->SetMovableTarget(movement);
-				controller->SetFireCallback(cfg.controller.onFire);
-				controller->SetDamageCallback(cfg.controller.onDamage);
-				controller->SetUp();
-			}
-		}
-
-		return actor;
-	}
+	std::unique_ptr<SJH::Scene::Actor> CreatePlayerActor(const PlayerActorConfig &cfg);
 } // namespace TopdownShooter::Entity::Player
 
 #endif //_TOPDOWNSHOOTER_ENTITY_PLAYER_PLAYER_ACTOR__

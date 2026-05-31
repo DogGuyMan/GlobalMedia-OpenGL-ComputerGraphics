@@ -1,7 +1,10 @@
 add_library(myapp_entity STATIC
     BaseEntity.cpp
+    Components/WeaponComponents.cpp
+    Player/PlayerActor.cpp
     Player/PlayerBehavior.cpp
     Player/BulletSpawnPlayable.cpp
+    Player/PlayerHand.cpp
     Bullet/BulletContactHandler.cpp
     Enemy/SimplePursueAI.cpp
     Enemy/EnemyContactHandler.cpp
