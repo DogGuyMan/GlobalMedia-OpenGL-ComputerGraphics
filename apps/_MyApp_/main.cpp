@@ -87,6 +87,10 @@ namespace TopdownShooter
 		    {"invert",     "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs",     {}},
 		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
 		    {"sobel",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs",      {}},
+		    {"fog",        "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/fog.fs",
+		     {{"uFogDensity", 0.05f}, {"uFogStart", 0.0f}, {"uFogEnd", 1.0f}}},
+		    {"bloom",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/bloom.fs",
+		     {{"uBloomThreshold", 0.7f}, {"uBloomSpread", 1.5f}, {"uBloomIntensity", 1.0f}}},
 		};
 	} // namespace
 
@@ -142,6 +146,19 @@ namespace TopdownShooter
 			auto chain = SJH::Render::BuildPostFXChain(reg, *screenCamActorPtr, POSTFX_PROGRAM_CONFIGS, mSceneFB.get(), fb.Width, fb.Height);
 			mPostFXFBs      = std::move(chain.Framebuffers);
 			mPassComponents = std::move(chain.PassComponents);
+
+			// fog 의 non-float 초기값 명시 set (PostFXStageConfig.InitFloats 는 Floats 만 지원).
+			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
+			{
+				if (!mPassComponents[i] || !mPassComponents[i]->mMaterial)
+					continue;
+				if (POSTFX_PROGRAM_CONFIGS[i].Name == "fog")
+				{
+					auto &props = mPassComponents[i]->mMaterial->Properties;
+					props.Vec3s["uFogColor"] = vmath::vec3(0.5f, 0.6f, 0.7f);
+					props.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
+				}
+			}
 
 			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
 			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
