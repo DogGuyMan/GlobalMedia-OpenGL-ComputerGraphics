@@ -1,5 +1,6 @@
 #include "EffekseerPlayable.h"
 
+#include "diagnostics/effekseer_diagnostics.h"   // Effekseer 핸들 lifecycle 진단
 #include "scene/actor.h"        // GetOwner() (FollowOwner 정책에서 Transform 조회)
 #include <spdlog/spdlog.h>
 
@@ -29,6 +30,10 @@ namespace TopdownShooter::VFX
 		if (mManager.Get() == nullptr || mEffect == nullptr) return;
 		mHandle = mManager->Play(mEffect->Ref(),
 		                         ::Effekseer::Vector3D(mSpawnPos[0], mSpawnPos[1], mSpawnPos[2]));
+		// 진단 — Play 실패(-1) / Play 직후 즉시 종료(빈 이펙트·텍스처 전무) 감지.
+		SJH::Diagnostics::EffekseerDiagnostics::CheckPlayHandle(mHandle, "effekseer");
+		SJH::Diagnostics::EffekseerDiagnostics::CheckHandleAlive(
+		    mHandle, mManager->Exists(mHandle), "effekseer");
 	}
 
 	void EffekseerPlayable::OnStop()
