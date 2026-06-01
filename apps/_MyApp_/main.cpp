@@ -120,11 +120,11 @@ namespace TopdownShooter
 		    {"gamma",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/gamma.fs",      {{"gamma", 1.0f}}},
 		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
 		    {"bloom",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/bloom.fs",
-		     {{"uBloomThreshold", 0.7f}, {"uBloomSpread", 1.5f}, {"uBloomIntensity", 1.0f}}},
+		     {{"uBloomThreshold", 0.769f}, {"uBloomSpread", 2.342f}, {"uBloomIntensity", 0.927f}}},
 		    {"fog",        "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/fog.fs",
-		     {{"uFogDensity", 0.05f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
+		     {{"uFogDensity", 0.042f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
 		    {"grayscale_vignetting", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/grayscale_vignetting.fs",
-		     {{"uGrayscaleAmount", 1.0f}, {"uVignetteAmount", 0.5f}}}, // uVignetteColor(vec3)는 startup 에서 set.
+		     {{"uGrayscaleAmount", 1.0f}, {"uVignetteAmount", 0.0f}}}, // uVignetteColor(vec3)는 startup 에서 set.
 		    {"invert",     "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs",     {}},
 		    {"blurring",   "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/blurring.fs",   {}},
 		    {"sobel",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs",      {}},
@@ -200,14 +200,14 @@ namespace TopdownShooter
 			// fog 의 non-float 초기값 + uDepth 바인딩 (PostFXStageConfig.InitFloats 는 Floats 만 지원).
 			if (auto *fogMat = FindFogMaterial())
 			{
-				fogMat->Properties.Vec3s["uFogColor"] = vmath::vec3(0.5f, 0.6f, 0.7f);
+				fogMat->Properties.Vec3s["uFogColor"] = vmath::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
 				fogMat->Properties.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
 			}
 			RebindFogUniforms(); // uDepth = sceneFB depth 텍스처 (unit 1).
 
 			// grayscale_vignetting 의 vec3 초기값 (InitFloats 밖) — 비네팅 색 명시 set.
 			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
-				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(0.0f, 0.0f, 0.0f); // 기본 검정 비네팅.
+				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
 
 			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
 			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
