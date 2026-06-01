@@ -82,7 +82,7 @@ namespace TopdownShooter::Entity::Player
 		{
 			/// @brief 방향 텍스처 세트(예: Playable::FRONT_MOVE). nullptr → 스프라이트 없음(게임플레이-only).
 			const std::vector<TopdownShooter::Playable::PlayerTextureConfig> *direction = nullptr;
-			float fps = 6.0f; ///< 애니 파트(ColCount>1) 의 초당 프레임
+			float fps = 8.0f; ///< 애니 파트(ColCount>1) 의 초당 프레임
 		};
 
 		LifeCfg       life;

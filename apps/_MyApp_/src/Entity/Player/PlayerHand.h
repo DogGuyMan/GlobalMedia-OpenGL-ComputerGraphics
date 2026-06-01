@@ -35,21 +35,23 @@ namespace TopdownShooter::Entity
 
 	/// @brief 양손 조립 컴포넌트 — player actor 에 부착 → OnEnter 에서 자식 Hand actor 2개 생성·AddChild.
 	/// @details
-	///   각 자식 actor 는 PlayerSingleHand 를 보유 (컴포넌트는 actor 에 부착되는 게 정통 —
-	///   값 멤버 보유 구조 폐기). 부모(player) Y facing 을 상속해 양손이 조준 방향으로 자동 궤도.
-	///   ⚠ 손 스프라이트(atlas/프레임/오프셋)는 사용자 WIP — 현재는 구조(자식+상속 궤도)만 정착.
+	///   각 자식 actor 는 PlayerSingleHand(고정 ±벌림각 local) + 빌보드 SpriteRenderer(HAND_PART) 를 보유.
+	///   부모(player) Y facing 을 상속해 양손 *위치* 가 조준 방향으로 자동 궤도(WorldMatrix 합성). 스프라이트는
+	///   빌보드라 항상 카메라를 향한다. HAND_PART 텍스처는 Playable/Constants.h 정의(양손 공유 atlas 캐시).
+	///   ※ spread/radius/yOffset/QueueOffset 수치는 비주얼 튜닝 대상.
 	class PlayerHands : public SJH::Scene::Component
 	{
 	  public:
-		void OnEnter() override;       // 자식 Hand actor 2개 생성·부착
+		void OnEnter() override;       // 자식 Hand actor 2개 생성·부착 (+ HAND_PART 스프라이트)
 		void OnExit() override {}
 		void Update(float dt) override {}
 
 	  private:
-		// 양손 기본 배치 — forward(-Z) 기준 ±벌림각 + 거리. (사용자 WIP 튜닝 대상)
-		static constexpr float kSpreadDeg = 25.0f;
-		static constexpr float kRadius    = 0.6f;
-		static constexpr float kYOffset   = 0.0f;
+		// 양손 기본 배치 — forward(-Z) 기준 ±벌림각 + 거리. (비주얼 튜닝 대상)
+		static constexpr float kSpreadDeg       = 25.0f;
+		static constexpr float kRadius          = 0.6f;
+		static constexpr float kYOffset         = 0.0f;
+		static constexpr int   kHandQueueOffset = 10; // 플레이어 몸통 레이어(DrawOrder 0~3) 위 (튜닝 대상)
 	};
 }; // namespace TopdownShooter::Entity
 

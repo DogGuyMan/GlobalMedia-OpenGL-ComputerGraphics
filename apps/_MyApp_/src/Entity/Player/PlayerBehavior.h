@@ -75,9 +75,9 @@ namespace TopdownShooter::Entity::Player
         float       mDashSpeed           = 7.5f;
         float       mDashDuration        = 0.3f;
         float       mDashCooldown        = 0.8f;
-        float       mHitInvincibility    = 0.5f;
         float       mDashTimer           = 0.0f;
         float       mDashCooldownTimer   = 0.0f;
+        float       mHitInvincibility    = 0.5f;
         float       mInvincibilityTimer  = 0.0f;
         bool        mDead                = false;
         int         mCurrentClip         = 0;
