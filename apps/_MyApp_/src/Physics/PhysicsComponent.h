@@ -70,8 +70,8 @@ namespace TopdownShooter::Physics::Components
 	};
 
 	/// @brief Actor 의 Component 중 첫 번째 Physics-derived 를 polymorphic 으로 검색.
-	/// @details Actor::GetComponent<T> 는 type_index 정확 매치 — Physics base 로 질의 불가.
-	///          본 헬퍼는 ForEachComponent + dynamic_cast 로 BoxBody/CircleBody 모두 회수.
+	/// @details Actor::GetComponent<Physics> 도 이제 polymorphic 조회 가능(게이트 완화).
+	///          단 첫 매칭만 반환하므로, 다중 Physics 가능성 + 명시적 의도를 위해 본 헬퍼 유지.
 	inline Physics *FindPhysics(SJH::Scene::Actor *actor)
 	{
 		if (!actor) return nullptr;
