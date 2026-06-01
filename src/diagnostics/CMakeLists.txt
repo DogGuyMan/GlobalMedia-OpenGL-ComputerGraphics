@@ -4,6 +4,7 @@ add_library(sjhopengl_diagnostics STATIC
     gl_state_fields.cpp
     gl_state_log.cpp
     gl_validate.cpp
+    effekseer_diagnostics.cpp
 )
 add_library(SJH::diagnostics ALIAS sjhopengl_diagnostics)
 
