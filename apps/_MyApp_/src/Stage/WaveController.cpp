@@ -1,5 +1,5 @@
 #include "Stage/WaveController.h"
-#include "Entity/Enemy/enemy_factory.h"
+#include "Bootstrap/EnemyBuilder.h"
 #include <box2d/box2d.h>
 #include <cstdlib>
 #include <spdlog/spdlog.h>
@@ -40,17 +40,20 @@ namespace TopdownShooter::Stage
     {
         if (!mWorld || !mSpawnParent || !mPlayerActor) return;
 
-        Entity::Enemy::EnemyConfig cfg;
-        cfg.world        = mWorld;
-        cfg.pos          = RandomEdgePos();
-        cfg.playerTarget = mPlayerActor;
-        cfg.hp           = 20 + mWave * 5;
-        cfg.speed        = 1.5f + static_cast<float>(mWave) * 0.3f;
-        cfg.damage       = 10;
+        Bootstrap::EnemyDeps d;
+        d.world        = mWorld;
+        d.spawnParent  = mSpawnParent;
+        d.playerTarget = mPlayerActor;
+        d.pos          = RandomEdgePos();
+        d.hp           = 20 + mWave * 5;
+        d.speed        = 1.5f + static_cast<float>(mWave) * 0.3f;
+        d.damage       = 10;
+        d.variant      = mSpawnCount % 3; // 3종 순환
 
-        auto* enemy = mSpawnParent->AddChild(Entity::Enemy::CreateEnemyActor(cfg));
+        auto* enemy = Bootstrap::BuildEnemy(d);
+        ++mSpawnCount;
         mEnemies.push_back(enemy);
-        spdlog::info("[Wave {}] Enemy spawned at ({:.1f},{:.1f})", mWave, cfg.pos[0], cfg.pos[1]);
+        spdlog::info("[Wave {}] Enemy spawned at ({:.1f},{:.1f})", mWave, d.pos[0], d.pos[1]);
     }
 
     void WaveController::Update(float dt)

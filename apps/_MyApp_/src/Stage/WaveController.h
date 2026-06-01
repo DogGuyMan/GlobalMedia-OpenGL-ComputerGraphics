@@ -38,6 +38,7 @@ namespace TopdownShooter::Stage
         std::vector<SJH::Scene::Actor*> mEnemies;
         int   mWave       = 0;
         float mSpawnTimer = 0.0f;
+        int   mSpawnCount = 0; // 누적 스폰 카운터 — ENEMY_FRONT variant 순환용
 
         static constexpr float kSpawnInterval = 3.0f;
         static constexpr int   kMaxEnemies    = 5;
