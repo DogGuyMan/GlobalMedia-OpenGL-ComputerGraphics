@@ -2,6 +2,8 @@
 
 #include "Entity/Player/PlayerActor.h"
 
+#include "Physics/PhysicsImpulse.h"
+
 #include "resource_registry/resource_registry.h"
 #include "sprite/sprite_component.h"
 #include "sprite/sprite_frame_clip.h"
@@ -45,6 +47,9 @@ namespace TopdownShooter::Entity::Player
 			pb->SetSensor(cfg.physics.isSensor);
 
 			auto *pm = actor->AddComponent<Physics::PhysicsMovement>(cfg.movement.speed);
+
+			// Dash/Knockback 속도버스트 — dash 입력 미배선이라 현재 dormant (Action::Dash 바인딩 시 활성).
+			actor->AddComponent<Physics::Impulse>();
 
 			// Weapon — bullet 스폰은 box2d 의존이라 physics 분기에서만 부착. 좌클릭 시 controller 가 호출.
 			auto *weapon = actor->AddComponent<Components::Weapon>(cfg.weapon.damage, "default");
