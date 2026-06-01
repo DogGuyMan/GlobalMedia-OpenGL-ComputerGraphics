@@ -19,7 +19,6 @@ namespace SJH::Sprite
 namespace SJH::SpriteSequence
 {
 	class SpriteSequencePlayable;
-	struct SpriteFrameClip;
 }
 
 namespace TopdownShooter::Bootstrap
@@ -31,9 +30,6 @@ namespace TopdownShooter::Bootstrap
 		SJH::MouseInput     *mouse        = nullptr;
 		b2World             *physicsWorld = nullptr;
 		SJH::Scene::Camera  *worldCamera  = nullptr; ///< raycast 카메라 + ActorFolower follow-target wiring.
-		/// @brief SpriteFrameClip 의 lifetime 저장소 — main 이 멤버로 소유 (SpriteSequencePlayable 가
-		///        clip 을 *포인터로만* 보유하므로 빌더 로컬에 두면 댕글링. caller-owned 필수).
-		SJH::SpriteSequence::SpriteFrameClip *clipStorage = nullptr;
 	};
 
 	/// @brief main 이 멤버로 보유할 산출 포인터.
@@ -44,10 +40,10 @@ namespace TopdownShooter::Bootstrap
 		SJH::Scene::Actor                            *SpriteActor = nullptr;
 	};
 
-	/// @brief 플레이어 액터 구성 — PlayerActorConfig(Life/Movement/Controller/Physics) +
-	///        좌클릭(onFire) / G키(onDamage) Composite 콜백 + 스프라이트 아틀라스 시퀀스
-	///        + WorldCamera ActorFolower follow-target wiring. 기존 main.cpp WramupPlayer 와 동일.
-	/// @return atlas 로드 실패 시 SpriteActor=nullptr 인 빈 Result (기존 early-return 보존).
+	/// @brief 플레이어 액터 구성 — PlayerActorConfig(Life/Movement/Controller/Physics/Weapon) +
+	///        좌클릭(onFire) / G키(onDamage) Composite 콜백 + FRONT_MOVE 4-레이어 스프라이트(CreatePlayerActor)
+	///        + WorldCamera ActorFolower follow-target wiring.
+	/// @return 구성된 PlayerResult (SpriteActor = root 부착 플레이어; Sprite/SpriteSeq = 애니 레이어 또는 nullptr).
 	PlayerResult BuildPlayer(const PlayerDeps &deps);
 }
 

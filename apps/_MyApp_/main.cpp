@@ -45,7 +45,6 @@
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
 #include "sprite/sprite_component.h"
-#include "sprite/sprite_frame_clip.h"
 #include "sprite/sprite_sequence_playable.h"
 
 #include <cstring>
@@ -259,7 +258,7 @@ namespace TopdownShooter
 
 			mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("FxRoot"));
 
-			auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera, &mWholeAtlasClip});
+			auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
 			mSprite      = player.Sprite;
 			mSpriteSeq   = player.SpriteSeq;
 			mSpriteActor = player.SpriteActor;
@@ -444,7 +443,6 @@ namespace TopdownShooter
 		SJH::Scene::Camera *mCamera = nullptr;
 		SJH::Scene::Camera *mScreenCamera = nullptr;
 		SJH::SpriteSequence::SpriteSequencePlayable *mSpriteSeq = nullptr;
-		SJH::SpriteSequence::SpriteFrameClip mWholeAtlasClip{};
 		SJH::Sprite::SpriteRenderer *mSprite = nullptr;
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;

@@ -7,6 +7,7 @@
 #include "Audio/FmodStudioPlayable.h"
 #include "Entity/Player/PlayerActor.h"
 #include "Entity/Player/PlayerHand.h"
+#include "Playable/Constants.h" // TopdownShooter::Playable::FRONT_MOVE
 #include "InputHandler/ActorFolower.h"
 #include "Manager.h"
 #include "Physics/filter.h"
@@ -17,7 +18,6 @@
 #include "scene/actor.h"
 #include "scene/scene.h"
 #include "sprite/sprite_component.h"
-#include "sprite/sprite_frame_clip.h"
 #include "sprite/sprite_sequence_playable.h"
 
 #include <spdlog/spdlog.h>
@@ -31,7 +31,6 @@ namespace TopdownShooter::Bootstrap
 {
 	PlayerResult BuildPlayer(const PlayerDeps &deps)
 	{
-		auto &reg = SJH::ResourceRegistry::Get();
 		auto &dir = SJH::Scene::Director::Get();
 
 		PlayerResult result;
@@ -104,29 +103,24 @@ namespace TopdownShooter::Bootstrap
 		pac.weapon.damage = 10;
 		pac.weapon.world  = deps.physicsWorld;
 
+		pac.sprite.direction = &TopdownShooter::Playable::FRONT_MOVE; // FRONT_MOVE 4-레이어 (E·H·B·F)
+		pac.sprite.fps       = 6.0f;
+
 		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
 		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
 		spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
 
-		// Atlas — registry 가 LoadFromPNG + SetGrid 일괄.
-		auto *atlas = reg.CreateUniformAtlas(
-		    "test_pattern",
-		    "resources/texture/TestPattern.png",
-		    4, 4);
-		if (!atlas)
+		// 4-레이어 바디는 CreatePlayerActor 가 child 로 생성 (spec §6.3).
+		// PlayerResult.Sprite/SpriteSeq 는 애니(B) 레이어의 컴포넌트를 가리킨다 (호환용 — 없으면 nullptr).
+		for (const auto &child : spriteActor->GetChildren())
 		{
-			spdlog::error("[M1] atlas load failed");
-			return result; // SpriteActor=nullptr — caller early-return 보존.
+			if (auto *seq = child->GetComponent<SJH::SpriteSequence::SpriteSequencePlayable>())
+			{
+				result.Sprite    = child->GetComponent<SJH::Sprite::SpriteRenderer>();
+				result.SpriteSeq = seq;
+				break;
+			}
 		}
-
-		result.Sprite = spriteActor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
-
-		// clip 은 caller-owned 저장소에 기록 — SpriteSequencePlayable 가 포인터로만 보유 (lifetime 함정).
-		*deps.clipStorage = SJH::SpriteSequence::SpriteFrameClip{0, atlas->FrameCount(), 4.0f};
-		result.SpriteSeq = spriteActor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
-		    result.Sprite, deps.clipStorage);
-		result.SpriteSeq->SetIsLoop(true);
-		result.SpriteSeq->Play();
 
 		result.SpriteActor = dir.Root().AddChild(std::move(spriteActor));
 
