@@ -188,6 +188,15 @@ namespace TopdownShooter
 			mPostFXFBs      = std::move(chain.Framebuffers);
 			mPassComponents = std::move(chain.PassComponents);
 
+			// invert/blurring/sobel 만 기본 비활성 (자동활성화 취소) — 나머지 PostFX 는 기본 ON.
+			// ImGui(F1) 체크박스로 토글. (Enabled=false ⇒ mesh_pass_processor 가 bypass blit.)
+			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
+			{
+				const auto &name = POSTFX_PROGRAM_CONFIGS[i].Name;
+				if (mPassComponents[i] && (name == "invert" || name == "blurring" || name == "sobel"))
+					mPassComponents[i]->Enabled = false;
+			}
+
 			// fog 의 non-float 초기값 + uDepth 바인딩 (PostFXStageConfig.InitFloats 는 Floats 만 지원).
 			if (auto *fogMat = FindFogMaterial())
 			{
@@ -237,12 +246,14 @@ namespace TopdownShooter
 					const char     *key;
 					const char16_t *path;
 				} kTestVfx[] = {
-				    {"dust", u"resources/vfx/dust.efk"},
-				    {"hit", u"resources/vfx/hit.efk"},
-				    {"laser", u"resources/vfx/laser.efk"},
-				    {"orbital_background", u"resources/vfx/orbital_background.efk"},
-				    {"slash", u"resources/vfx/slash.efk"},
-				    {"summon", u"resources/vfx/summon.efk"},
+				    // 1.7 에디터 export (.efk 포맷 1710 — 런타임 SupportBinaryVersion 과 일치).
+				    {"dust", u"resources/vfx/170/01_Pierre01/Dust.efk"},
+				    {"hit", u"resources/vfx/170/03_Hanmado01/Effect/Signlehit.efk"},
+				    {"laser", u"resources/vfx/170/01_AndrewFM01/blue_laser.efk"},
+				    {"orbital_background", u"resources/vfx/170/01_AndrewFM01/orbital_background.efk"},
+				    {"slash", u"resources/vfx/170/Slash/slash_weak.efk"},
+				    {"summon", u"resources/vfx/170/01_NextSoft01/summon.efk"},
+				    {"gunshoot", u"resources/vfx/170/gunshoot/gunshoot.efk"},
 				};
 				for (const auto &v : kTestVfx)
 				{

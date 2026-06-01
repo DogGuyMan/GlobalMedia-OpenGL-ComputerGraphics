@@ -18,7 +18,8 @@ target_link_libraries(myapp_stage
         SJH::render
         SJH::resource_registry
         MyApp::Physics    # Stage/Factories/*.h 가 Physics/filter.h + Components.Interfaces.h include
-        MyApp::Entity     # WaveController ->enemy_factory (헤더 온리 팩토리 포함)
+        MyApp::Entity     # Stage/Factories/*.h (CreateWallActor 등) + enemy_factory 전이 의존
+        MyApp::Bootstrap  # WaveController ->Bootstrap::BuildEnemy (적 스프라이트 조립, acyclic)
         project_deps
         game_deps
 )

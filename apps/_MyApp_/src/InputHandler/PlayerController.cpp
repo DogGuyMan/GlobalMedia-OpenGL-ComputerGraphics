@@ -276,40 +276,40 @@ namespace TopdownShooter::Controller
 		if (mFireCallback)
 			mFireCallback();
 
-		// 디버그 노란 마커 — 좌클릭에서만 스폰 (spec §2). 매 프레임 스폰 금지.
-		SpawnGroundMarker(mAimPoint);
+		// // 디버그 노란 마커 — 좌클릭에서만 스폰 (spec §2). 매 프레임 스폰 금지.
+		// SpawnGroundMarker(mAimPoint);
 
 		// Ground 좌표 소비자(VFX 소환 등) — 주입됐으면 클릭 위치 전달.
 		if (mGroundClickCallback)
 			mGroundClickCallback(mAimPoint);
 	}
 
-	void PlayerController::SpawnGroundMarker(const vmath::vec3 &worldPos)
-	{
-		auto &reg = SJH::ResourceRegistry::Get();
+	// void PlayerController::SpawnGroundMarker(const vmath::vec3 &worldPos)
+	// {
+	// 	auto &reg = SJH::ResourceRegistry::Get();
 
-		// 박스 메시 (idempotent 캐시).
-		SJH::Mesh *mesh = reg.FindMesh("test_marker_box");
-		if (mesh == nullptr)
-			mesh = reg.RegisterMesh("test_marker_box", SJH::Mesh::CreateBox());
+	// 	// 박스 메시 (idempotent 캐시).
+	// 	SJH::Mesh *mesh = reg.FindMesh("test_marker_box");
+	// 	if (mesh == nullptr)
+	// 		mesh = reg.RegisterMesh("test_marker_box", SJH::Mesh::CreateBox());
 
-		// 노란 단색 머티리얼 — simple.vs/fs(baseColor) + Opaque.
-		SJH::Material *mat = reg.FindSharedMaterial("test_marker_yellow");
-		if (mat == nullptr)
-		{
-			SJH::Program *prog = reg.FindProgram("test_solid");
-			if (prog == nullptr)
-				prog = reg.CreateProgram("test_solid", "resources/shaders/simple.vs", "resources/shaders/simple.fs");
-			mat = reg.CreateSharedMaterial("test_marker_yellow");
-			mat->SetProgram(prog);
-			mat->SetPass(SJH::Pass::Kind::Opaque);
-			SJH::Uniforms::SetVec4(*mat, "baseColor", vmath::vec4(1.0f, 0.95f, 0.1f, 1.0f));
-		}
+	// 	// 노란 단색 머티리얼 — simple.vs/fs(baseColor) + Opaque.
+	// 	SJH::Material *mat = reg.FindSharedMaterial("test_marker_yellow");
+	// 	if (mat == nullptr)
+	// 	{
+	// 		SJH::Program *prog = reg.FindProgram("test_solid");
+	// 		if (prog == nullptr)
+	// 			prog = reg.CreateProgram("test_solid", "resources/shaders/simple.vs", "resources/shaders/simple.fs");
+	// 		mat = reg.CreateSharedMaterial("test_marker_yellow");
+	// 		mat->SetProgram(prog);
+	// 		mat->SetPass(SJH::Pass::Kind::Opaque);
+	// 		SJH::Uniforms::SetVec4(*mat, "baseColor", vmath::vec4(1.0f, 0.95f, 0.1f, 1.0f));
+	// 	}
 
-		auto marker = std::make_unique<SJH::Scene::Actor>("GroundMarker");
-		marker->GetTransform().Translate = worldPos;
-		marker->GetTransform().Scale = vmath::vec3(0.4f, 0.4f, 0.4f);
-		marker->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
-		SJH::Scene::Director::Get().Root().AddChild(std::move(marker));
-	}
+	// 	auto marker = std::make_unique<SJH::Scene::Actor>("GroundMarker");
+	// 	marker->GetTransform().Translate = worldPos;
+	// 	marker->GetTransform().Scale = vmath::vec3(0.4f, 0.4f, 0.4f);
+	// 	marker->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
+	// 	SJH::Scene::Director::Get().Root().AddChild(std::move(marker));
+	// }
 } // namespace TopdownShooter::Controller
