@@ -22,11 +22,13 @@
 #include "Manager.h"
 #include "VFX/ParticleStage.h"
 
+#include "diagnostics/effekseer_diagnostics.h"   // VFX 텍스처 로드 검증
 #include "Spawns/OneShotSweeper.h"
 #include "Spawns/VfxInstance.h"
 #include "UI/VfxSpawnLayer.h"
 
 #include "Stage/StageBuilder.h"
+#include "Stage/WaveController.h"
 #include "UI/ImGuiLayerStack.h"
 #include "UI/PostFXDebugLayer.h"
 #include "UI/UiBootstrap.h"
@@ -245,7 +247,14 @@ namespace TopdownShooter
 				for (const auto &v : kTestVfx)
 				{
 					if (auto *eff = reg.CreateEffect(vfxs.GetManager(), v.key, v.path))
+					{
 						vfxEntries.push_back({v.key, eff});
+						// 진단 — .efk 가 참조하는 텍스처가 실제 해석되는지 검증 (u16 경로 → ASCII narrow).
+						std::string narrow;
+						for (const char16_t *p = v.path; *p; ++p)
+							narrow.push_back(static_cast<char>(*p));
+						SJH::Diagnostics::EffekseerDiagnostics::CheckEffectTextures(narrow);
+					}
 					else
 						spdlog::warn("[vfx-test] load failed: {}", v.key);
 				}
@@ -262,6 +271,11 @@ namespace TopdownShooter
 			mSprite      = player.Sprite;
 			mSpriteSeq   = player.SpriteSeq;
 			mSpriteActor = player.SpriteActor;
+
+			// 적 웨이브 스폰 트리거 — player(mSpriteActor) 생성 이후라야 SimplePursueAI 타깃 유효.
+			// root 하위 Component 라 Director::Update(dt) 가 자동 tick. arenaHalfExtent 는 StageConfig 기본(10.0f)과 일치.
+			auto *waveSpawner = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("WaveSpawner"));
+			waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, 10.0f);
 
 			// UI — render(PostFX) ↔ UI 매핑은 Composition Root(main) 책임. 빌더는 결과만 받음.
 			std::vector<UI::PassDebugEntry> debugEntries;
