@@ -54,6 +54,9 @@ namespace SJH::Timer
 
         /// @brief non-const — interval 경과 시 true 1회 + nextInterval 누적.
         ///        매 프레임 1회 폴링 가정 (한 Tick에 여러 interval 건너뛰어도 1회만 보고 — C# 동일).
+        /// @note  누적 발사는 *합쳐지지 않고 프레임마다 이연*된다. 큰 프레임 히치나 acceleration>1 로
+        ///        한 Tick 에 경계를 N개 넘어도 그 N회는 이후 N 프레임에 걸쳐 1회씩 보고된다
+        ///        (catch-up 드레인 아님). "true 1회 = interval 1구간 경과" 로 가정하지 말 것.
         bool PollInterval()
         {
             if (intervalTime_ <= 0.0f) return false;
