@@ -181,10 +181,16 @@ namespace SJH::Scene
     template<typename T, typename>
     T* Actor::GetComponent() const
     {
-        // Fast path — 구체 타입 정확 매칭 (O(1))
-        auto it = mComponents.find(typeid(T));
-        if (it != mComponents.end())
-            return static_cast<T*>(it->second.get());
+        // Fast path — 구체 컴포넌트(Component 파생) 정확 매칭 (O(1), RTTI 없음 — static_cast).
+        // if constexpr 가드: T 가 순수 인터페이스(비-Component)면 이 블록은 폐기되어
+        // static_cast<T*>(Component*) (무관한 타입 간 변환 = 컴파일 에러)가 인스턴스화되지 않는다.
+        // 인터페이스/base 조회는 항상 아래 slow-path dynamic_cast 로 떨어진다.
+        if constexpr (std::is_base_of_v<Component, T>)
+        {
+            auto it = mComponents.find(typeid(T));
+            if (it != mComponents.end())
+                return static_cast<T*>(it->second.get());
+        }
 
         // Slow path — 인터페이스/base 매칭 (O(N), 현 Actor 의 컴포넌트만, 자식 미순회)
         for (auto& [ti, comp] : mComponents)
