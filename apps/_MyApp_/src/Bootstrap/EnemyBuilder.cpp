@@ -2,7 +2,7 @@
 
 #include "Bootstrap/EnemyBuilder.h"
 
-#include "Entity/Enemy/enemy_factory.h"   // CreateEnemyActor / EnemyConfig (+box2d)
+#include "Entity/Enemy/EnemyFactory.h"   // CreateEnemyActor / EnemyConfig (+box2d)
 #include "Playable/Constants.h"           // ENEMY_FRONT
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"

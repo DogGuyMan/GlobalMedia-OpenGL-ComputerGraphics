@@ -134,7 +134,7 @@ M3 직후 ~ M3.5 사이 진행된 render 모듈 정비 — spec/마일스톤 외
 |---|---|
 | `fc4ad0a` | refactor(scene/render): Camera 의 RenderTarget 의존 역전 — Framebuffer 직접 의존 제거 |
 | `73ec685` | refactor(render): DrawCommand 를 MeshRenderer 단일 의존으로 통합 — program/mesh/material/actor 직접 필드 제거 |
-| `251277c` | chore(_MyApp_): 빌드 잡음 청소 — physics_movement.cpp empty 삭제 + duplicate library 경고 silencing |
+| `251277c` | chore(_MyApp_): 빌드 잡음 청소 — PhysicsMovement.cpp empty 삭제 + duplicate library 경고 silencing |
 | `7b95332` | docs(render): DeviceContext / Uniforms / Program 책임 경계 명시 (Phase 1) |
 | `e95be90` | dev: remove observer program - material (Material 의 Program observer 패턴 제거) |
 | `642040b` | fix(material): Program 참조 복구 + EagerBuild 도입 — Observer 제거 후속 |
@@ -236,9 +236,9 @@ M3 직후 ~ M3.5 사이 진행된 render 모듈 정비 — spec/마일스톤 외
 | `Components.Interfaces.h` | `IContactable` — Unity MonoBehaviour OnTriggerEnter/OnCollisionEnter 정통 (4 콜백 default empty) |
 | `PhysicsComponent.h` | `Components::Physics` abstract base — b2Body 라이프사이클 + `SetBody/SetHeightOffset/SetSensor` + getters + `FindPhysics(Actor*)` polymorphic 헬퍼 |
 | `PhysicsComponent.Imp.h` | `Components::BoxBody / CircleBody` concrete — 형태 태그 (instantiable) |
-| `physics_system.{h,cpp}` | `PhysicsSystem` — `b2World` owner + `Init/Step/Shutdown/SyncToTransform` + `PhysicsContactListener` 설치 |
-| `physics_movement.{h,cpp}` | `PhysicsMovement : IMovable` — `DoForward` 가 `SetLinearVelocity` 갱신 |
-| `contact_listener.{h,cpp}` | `PhysicsContactListener : b2ContactListener` — `IsSensor()` 분기 → `IContactable` 디스패치 |
+| `PhysicsSystem.{h,cpp}` | `PhysicsSystem` — `b2World` owner + `Init/Step/Shutdown/SyncToTransform` + `PhysicsContactListener` 설치 |
+| `PhysicsMovement.{h,cpp}` | `PhysicsMovement : IMovable` — `DoForward` 가 `SetLinearVelocity` 갱신 |
+| `ContactListener.{h,cpp}` | `PhysicsContactListener : b2ContactListener` — `IsSensor()` 분기 → `IContactable` 디스패치 |
 | `wall_factory.h` | `CreateWallActor` — b2_staticBody + box shape (Solid) + `BoxBody` |
 | `pickup_factory.h` | `CreatePickupActor` — b2_staticBody + box shape (Sensor) + `PickupTriggerLogger` |
 | `filter.h` | `enum class PhysicsLayer : uint64_t` (Player/Enemy/Wall/Pickup/BulletPlayer/BulletEnemy) + `operator\| / & / ~` + `ToBits()` Box2D 어댑터 + `PlayerMask/EnemyMask/WallMask` 조합 |
@@ -265,7 +265,7 @@ spec §4 + 결정 #18 의 원본 의도와 실제 정착 사이의 차이:
 
 - ❌ 두 dynamic body 충돌 → 튕김 검증 — spec §4 검증 항목 #5. 적/총알 도입 (M4) 시점에 자연 검증.
 - ❌ `CircleBody` 실사용 — concrete 클래스 정착만, 사용처는 M4 총알.
-- ❌ `physics_movement.cpp` empty 파일 — 헤더 inline 만이라 `(no symbols)` 경고 매 빌드. 향후 정리.
+- ❌ `PhysicsMovement.cpp` empty 파일 — 헤더 inline 만이라 `(no symbols)` 경고 매 빌드. 향후 정리.
 
 ---
 

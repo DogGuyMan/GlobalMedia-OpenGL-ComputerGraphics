@@ -8,7 +8,7 @@
 #include "input/keyboard_input.h"
 #include "input/mouse_input.h"
 #include "Physics/PhysicsComponent.Imp.h"
-#include "Physics/physics_movement.h"
+#include "Physics/PhysicsMovement.h"
 #include "Playable/Constants.h"   // TopdownShooter::Playable::PlayerTextureConfig / FRONT_MOVE 등
 #include "scene/actor.h"
 #include <box2d/box2d.h>

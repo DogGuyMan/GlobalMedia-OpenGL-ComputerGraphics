@@ -1,6 +1,6 @@
-#include "Physics/physics_system.h"
+#include "Physics/PhysicsSystem.h"
 #include "Physics/PhysicsComponent.h"
-#include "Physics/contact_listener.h"
+#include "Physics/ContactListener.h"
 
 #include "scene/actor.h"
 #include "object/transform.h"
