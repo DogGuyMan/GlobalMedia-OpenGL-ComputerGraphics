@@ -103,7 +103,7 @@ namespace TopdownShooter::Bootstrap
 		pac.weapon.damage = 10;
 		pac.weapon.world  = deps.physicsWorld;
 
-		pac.sprite.direction = &TopdownShooter::Playable::FRONT_MOVE; // FRONT_MOVE 4-레이어 (E·H·B·F)
+		pac.sprite.direction = &TopdownShooter::Playable::PLAYER_FRONT_MOVE; // FRONT_MOVE 4-레이어 (E·H·B·F)
 		// pac.sprite.fps 미설정 — SpriteCfg 기본값(PlayerActor.h SpriteCfg::fps) 이 단일 소스.
 
 		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);

@@ -4,6 +4,11 @@
 #include "render/mesh_renderer.h"   // base class — Unity SpriteRenderer is_a MeshRenderer 정통
 #include <vmath.h>
 
+namespace SJH
+{
+    class Texture;   // forward — dissolveTex 핸들 참조 (resource_registry 거주, SJH 네임스페이스)
+}
+
 namespace SJH::Sprite
 {
     class UniformAtlas;   // forward — 핸들 참조
@@ -53,6 +58,20 @@ namespace SJH::Sprite
         vmath::vec2   size     = vmath::vec2(1.0f, 1.0f);   // 월드 단위 (현재 미사용 — Transform.Scale 우선)
         vmath::vec4   tint     = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
         bool          flipX    = false;
+
+        // === 피격 깜빡임 (billboard_atlas.fs uEnableHit/uTime) ===
+        // sink(분해 Task 6 PlayerSpriteDirector)가 enableHit 만 on/off, uTime 은 본 컴포넌트 자체 clock.
+        bool enableHit = false;
+
+        // === 사망 디졸브 (billboard_atlas.fs uEnableDissolve/...) — sink 가 구동 ===
+        bool                enableDissolve           = false;
+        float               dissolveThreshold        = 0.0f;   // 0→1 (사라지는 정도)
+        float               dissolveOutlineThickness = 0.05f;
+        vmath::vec3         dissolveOutlineColor     = vmath::vec3(1.0f, 0.5f, 0.0f);
+        const SJH::Texture* dissolveTex              = nullptr; // resources/texture/dissolve.png (sink 주입)
+
+    private:
+        float mEffectClock = 0.0f;   // uTime 용 free-running clock (Update 에서 += dt)
     };
 } // namespace SJH::Sprite
 

@@ -81,7 +81,7 @@ namespace TopdownShooter::Entity::Player
 		struct SpriteCfg
 		{
 			/// @brief 방향 텍스처 세트(예: Playable::FRONT_MOVE). nullptr → 스프라이트 없음(게임플레이-only).
-			const std::vector<TopdownShooter::Playable::PlayerTextureConfig> *direction = nullptr;
+			const std::vector<TopdownShooter::Playable::EntityTextureConfig> *direction = nullptr;
 			float fps = 8.0f; ///< 애니 파트(ColCount>1) 의 초당 프레임
 		};
 

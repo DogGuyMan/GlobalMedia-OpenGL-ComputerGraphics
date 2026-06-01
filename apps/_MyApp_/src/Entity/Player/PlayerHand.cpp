@@ -44,7 +44,7 @@ namespace TopdownShooter::Entity
 
 		// HAND_PART 아틀라스 (정적 1x1 빌보드) — key=path, 양손 공유 캐시.
 		auto &reg = SJH::ResourceRegistry::Get();
-		const auto &hp = TopdownShooter::Playable::HAND_PART;
+		const auto &hp = TopdownShooter::Playable::PLAYER_HAND_PART;
 		auto *atlas = reg.FindUniformAtlas(hp.TexturePath);
 		if (atlas == nullptr)
 			atlas = reg.CreateUniformAtlas(hp.TexturePath, hp.TexturePath, hp.ColCount, hp.RowCount);

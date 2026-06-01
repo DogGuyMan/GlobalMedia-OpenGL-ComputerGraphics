@@ -96,12 +96,26 @@ namespace SJH::Sprite
 	{
 	}
 
-	void SpriteRenderer::Update(float /*dt*/)
+	void SpriteRenderer::Update(float dt)
 	{
 		if (!atlas || !Material)
 			return;
+		mEffectClock += dt;   // uTime free-running clock
+
 		Uniforms::SetVec4(*Material, "uUvRect", atlas->GetUVRect(frameIdx));
 		Uniforms::SetFloat(*Material, "uFlipX", flipX ? -1.0f : 1.0f);
 		Uniforms::SetVec4(*Material, "uTint", tint);
+
+		// === 피격 (uEnableHit / uTime) ===
+		Uniforms::SetInt(*Material, "uEnableHit", enableHit ? 1 : 0);
+		Uniforms::SetFloat(*Material, "uTime", mEffectClock);
+
+		// === 디졸브 (uEnableDissolve / uDissolve*) ===
+		Uniforms::SetInt(*Material, "uEnableDissolve", enableDissolve ? 1 : 0);
+		Uniforms::SetFloat(*Material, "uDissolveThreshold", dissolveThreshold);
+		Uniforms::SetFloat(*Material, "uDissolveOutlineThickness", dissolveOutlineThickness);
+		Uniforms::SetVec3(*Material, "uDissolveOutlineColor", dissolveOutlineColor);
+		if (dissolveTex)
+			Uniforms::SetTexture(*Material, "uDissolveTex", dissolveTex, /*unit=*/1); // uAtlas=unit0
 	}
 } // namespace SJH::Sprite

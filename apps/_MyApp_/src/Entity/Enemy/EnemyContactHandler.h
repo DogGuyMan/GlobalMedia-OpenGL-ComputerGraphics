@@ -6,7 +6,7 @@
 
 namespace TopdownShooter::Entity::Enemy
 {
-    /// @brief 플레이어에 접촉 시 PlayerBehavior::Hit(damage) 호출.
+    /// @brief 플레이어에 접촉 시 IDamageable::DoDamaged(damage) 호출 (i-frame 게이트는 Life 거주).
     class EnemyContactHandler : public SJH::Scene::Component,
                                  public TopdownShooter::Physics::IContactable
     {

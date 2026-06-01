@@ -22,6 +22,10 @@ namespace TopdownShooter::Entity::Components
 		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // spawn-at-point seam
 		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
 
+		float mDeathDelaySeconds = 0.0f;   // 0 = 즉시(현행). >0 = 사망 연출(디졸브) 동안 SetActive 지연
+		bool  mDying             = false;
+		float mDeathTimer        = 0.0f;
+
 	  public:
 		Life()
 		    : mMaxHp(0.0f, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::MaxHp), mCurHp(0)
@@ -42,6 +46,7 @@ namespace TopdownShooter::Entity::Components
 
 		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
+		Life &SetDeathDelaySeconds(float s) { mDeathDelaySeconds = s; return *this; }
 		bool  IsInvincible() const { return mInvincibleTimer > 0.0f; }
 
 		void OnEnter() override
@@ -55,6 +60,12 @@ namespace TopdownShooter::Entity::Components
 		void Update(float dt) override
 		{
 			if (mInvincibleTimer > 0.0f) mInvincibleTimer -= dt;
+			if (mDying)   // 사망 연출 진행 중 — 타이머 만료 시 SetActive(false)
+			{
+				mDeathTimer -= dt;
+				if (mDeathTimer <= 0.0f && GetOwner()) GetOwner()->SetActive(false);
+				return;
+			}
 			// 안전망 — DoDamaged 외 경로(직접 mCurHp 조작 등)로 죽었어도 death 1회 발화.
 			if (!mDeathFxFired && !IsAlive()) DoDie();
 		}
@@ -83,7 +94,15 @@ namespace TopdownShooter::Entity::Components
 			const vmath::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f);
 			if (mSink) mSink->ReactDied(pos);
 			if (mOnDeathFx) mOnDeathFx(pos);         // spawn-at-point seam
-			if (GetOwner()) GetOwner()->SetActive(false);
+			if (mDeathDelaySeconds <= 0.0f)
+			{
+				if (GetOwner()) GetOwner()->SetActive(false);   // 즉시 (기본/현행)
+			}
+			else
+			{
+				mDying      = true;                  // 지연 — Update 가 만료 시 비활성
+				mDeathTimer = mDeathDelaySeconds;
+			}
 		}
 	};
 }; // namespace TopdownShooter::Entity::Components
