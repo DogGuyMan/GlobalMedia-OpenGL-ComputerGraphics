@@ -13,6 +13,7 @@ add_subdirectory(render)
 add_subdirectory(resource_registry)
 add_subdirectory(input)
 add_subdirectory(playable)
+add_subdirectory(timer)     # <- 추가 (SJH::timer, spec 2026-06-01)
 
 add_library(sjhopengl_engine INTERFACE)
 add_library(SJH::engine ALIAS sjhopengl_engine)
@@ -33,4 +34,5 @@ target_link_libraries(sjhopengl_engine INTERFACE
     SJH::sprite             # M1 — 13 모듈 (sprite 합류)
     SJH::fsm                # M2 — 14 모듈 (fsm 합류)
     SJH::playable           # M3.5 — 15 모듈 (playable 합류)
+    SJH::timer              # 16 모듈 — 게임플레이 타이머 (spec 2026-06-01)
 )
