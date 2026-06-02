@@ -49,7 +49,8 @@ namespace TopdownShooter::Entity::Bullet
 
         // 데미지 배달 = Carrier::Projectile (IDamageable/IImpulsable 인터페이스 배달 + self-despawn).
         auto* proj = actor->AddComponent<Spawn::Carrier::Projectile>(cfg.damage);
-        proj->SetOwnerEntity(nullptr); // 발사자 자가피해 방지 site (현재 물리 필터로 충분 — 후속 owner 주입 가능)
+        proj->SetOwnerEntity(nullptr);   // 발사자 자가피해 방지 site (현재 물리 필터로 충분 — 후속 owner 주입 가능)
+        proj->SetLaunchDir(cfg.dir);     // 넉백 방향 = 비행방향(box2d XY) — 위치차분 불안정 대체
         actor->AddComponent<BulletLifetime>(cfg.lifetime);
 
         // ── 임시: 비행 가시화용 Magenta 단색 구 (정식 비주얼은 추후 sprite/FX 로 대체) ──

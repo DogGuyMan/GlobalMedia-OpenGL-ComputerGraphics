@@ -58,6 +58,10 @@ namespace TopdownShooter::Spawn::Carrier
 	  public:
 		explicit Projectile(int damage) { mDamage = damage; }
 
+		/// @brief 비행 방향 주입 (box2d XY, 정규화 가정) — 넉백 방향 소스.
+		///        위치차분(enemy-bullet)은 접촉 시 관통 깊이에 따라 불안정/역전되므로 비행방향을 쓴다.
+		void SetLaunchDir(vmath::vec2 box2dDir) { mLaunchDir = box2dDir; }
+
 		void OnEnter() override {}
 		void OnExit() override {}
 		void Update(float /*dt*/) override
@@ -78,15 +82,16 @@ namespace TopdownShooter::Spawn::Carrier
 			if (!mAlive || !other || !GetOwner())
 				return;
 			mAlive = false;
-			// 넉백 방향 = 발사 진행 방향(소유자→타겟). 간단히 타겟-소유자 XZ 평면 차분.
-			// (GetTransform 은 Actor 메서드 — Component 는 GetOwner() 경유.)
-			const vmath::vec3 d = other->GetTransform().Translate - GetOwner()->GetTransform().Translate;
-			Deliver(other, vmath::vec2(d[0], -d[2]));
+			// 넉백 방향 = 총알 비행 방향(=플레이어→타겟 진행 방향, 안정).
+			// box2d XY(mLaunchDir) → world XZ(x, -y): IImpulsable::DoImpulse 계약이 world XZ in → box2d 변환.
+			// (위치차분(enemy-bullet)은 관통 깊이로 부호가 뒤집혀 "플레이어 쪽 돌진" 버그를 유발 → 폐기.)
+			Deliver(other, vmath::vec2(mLaunchDir[0], -mLaunchDir[1]));
 			DoDie();
 		}
 
-		bool mAlive         = true;
-		bool mPendingDisable = false;
+		vmath::vec2 mLaunchDir{0.0f, 0.0f}; // box2d XY 비행방향 (SetLaunchDir 주입)
+		bool        mAlive          = true;
+		bool        mPendingDisable = false;
 	};
 
 	/// @brief sensor + persistent (적 접촉 데미지). EnemyContactHandler 흡수 — 적 body 재사용(동작 보존).

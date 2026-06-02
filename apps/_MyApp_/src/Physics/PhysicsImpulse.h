@@ -17,7 +17,7 @@ namespace TopdownShooter::Physics
 	{
 	public:
 		Impulse()
-		    : mImpulseForce(7.5f, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::DashForce),
+		    : mImpulseForce(2.5f, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::DashForce), // 7.5→2.5 (1/3 — 넉백 세기 튜닝)
 		      mCooldown(0.8f, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::CoolDownSpeed),
 		      mActiveTimer(kDurationSec),
 		      mCooldownTimer(mCooldown.GetValue())
