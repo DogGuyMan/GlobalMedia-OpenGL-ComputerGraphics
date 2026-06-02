@@ -6,6 +6,7 @@ add_subdirectory(Stage)
 add_subdirectory(Audio)
 add_subdirectory(VFX)
 add_subdirectory(Tween)
+add_subdirectory(Text)        # <- 추가 (MyApp::Text — Manager 가 의존, Manager 앞)
 add_subdirectory(Spawns)
 add_subdirectory(Playable)   # 연출 foundation — PlayableDirector + PostFXRegistry (Spawns/Entity 뒤)
 
@@ -22,6 +23,7 @@ target_link_libraries(myapp_manager
         MyApp::Audio
         MyApp::VFX
         MyApp::Physics
+        MyApp::Text       # <- 추가 (WorldTextSystem)
     PRIVATE
         spdlog
 )
@@ -43,6 +45,7 @@ target_link_libraries(myapp_client INTERFACE
     MyApp::Audio
     MyApp::VFX
     MyApp::Tween
+    MyApp::Text       # <- 추가 (WorldTextSystem)
     MyApp::Manager  # M5 CL3 — Audio+VFX+Physics 집계 싱글톤
     MyApp::Spawns
     MyApp::Playable # 연출 foundation — PlayableDirector + PostFXRegistry

@@ -15,7 +15,8 @@ namespace TopdownShooter
 		mAudio.Init();
 		mVFX.Init(/*maxSprites=*/8000);
 		mPhysics.Init();
-		spdlog::info("[Director] init OK (Audio + VFX + Physics)");
+		mWorldText.Init();   // minogram BMFont 로드 (내부에서 ResourceRegistry::Get())
+		spdlog::info("[Director] init OK (Audio + VFX + Physics + WorldText)");
 	}
 
 	void Manager::Update(float dt)

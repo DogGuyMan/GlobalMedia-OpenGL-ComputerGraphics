@@ -4,6 +4,7 @@
 #include "Audio/AudioSystem.h"
 #include "Physics/PhysicsSystem.h"
 #include "VFX/VFXSystem.h"
+#include "Text/WorldTextSystem.h"   // <- 추가
 #include "render/scene_renderer.h"
 
 namespace TopdownShooter
@@ -25,7 +26,8 @@ namespace TopdownShooter
 		Audio::AudioSystem      &Audio()   { return mAudio; }
 		VFX::VFXSystem          &VFX()     { return mVFX; }
 		Physics::PhysicsSystem  &Physics() { return mPhysics; }
-		SJH::SceneRenderer  &SceneRenderer() { return mScenesRender; }
+		SJH::SceneRenderer      &SceneRenderer() { return mScenesRender; }
+		Text::WorldTextSystem   &WorldText() { return mWorldText; }   // <- 추가
 
 		Manager(const Manager &)            = delete;
 		Manager &operator=(const Manager &) = delete;
@@ -40,6 +42,7 @@ namespace TopdownShooter
 		Audio::AudioSystem      mAudio;
 		VFX::VFXSystem          mVFX;
 		Physics::PhysicsSystem  mPhysics;
+		Text::WorldTextSystem   mWorldText;   // <- 추가
 	};
 }
 
