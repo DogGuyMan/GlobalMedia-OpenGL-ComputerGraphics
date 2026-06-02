@@ -92,7 +92,12 @@ namespace SJH::Text
 
         for (const auto& r : chars)
         {
-            const int frame = (r.y / font.mCellH) * cols + (r.x / font.mCellW);
+            // 텍스처 V-flip 보정 — SJH::Image::Load 가 PNG 를 상하 반전해 GL 업로드하므로
+            // (texture V=0 = PNG 맨 아래 행), BMFont 의 y(위→아래) 를 그대로 frame 행으로 쓰면
+            // 행이 뒤집혀 엉뚱한 글자가 샘플링된다. frameRow = (rows-1) - PNG행 으로 보정.
+            // (minogram = 이 엔진 첫 다중행 atlas 라 여기서 발견 — Nx1 스트립은 row=0 뿐이라 무관했음.)
+            const int frameRow = (rows - 1) - (r.y / font.mCellH);
+            const int frame    = frameRow * cols + (r.x / font.mCellW);
             font.mGlyphs[r.id] = Glyph{frame, r.adv};
         }
         return font;

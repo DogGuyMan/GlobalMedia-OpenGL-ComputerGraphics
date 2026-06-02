@@ -320,8 +320,10 @@ namespace TopdownShooter
 						if (mFxRoot)
 							if (auto *font = TopdownShooter::Manager::Get().WorldText().GetFont())
 							{
-								static int demoN = 0;
-								const std::string dmg = "-" + std::to_string(10 + (demoN++ % 90));
+								// 1~3자리 자릿수별 center 정렬 확인용 더미값 (실제 데미지는 전투 배선 시 — spec 범위 밖)
+								static const int demoVals[] = {5, 42, 137, 9, 88, 250, 1, 76, 999};
+								static std::size_t demoN = 0;
+								const std::string dmg = "-" + std::to_string(demoVals[demoN++ % (sizeof(demoVals) / sizeof(demoVals[0]))]);
 								TopdownShooter::Spawns::SpawnWorldText(
 								    *mFxRoot, font, p, dmg,
 								    TopdownShooter::Spawns::WorldTextStyle{});

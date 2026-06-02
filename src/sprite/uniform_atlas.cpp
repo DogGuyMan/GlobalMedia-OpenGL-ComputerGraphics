@@ -6,7 +6,7 @@
 
 namespace SJH::Sprite
 {
-    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
+    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
                                int atlasWidth, int atlasHeight)
     {
         if (cols <= 0 || atlasWidth <= 0 || atlasHeight <= 0) {
@@ -14,11 +14,18 @@ namespace SJH::Sprite
         }
         int col = frameIdx % cols;
         int row = frameIdx / cols;
-        float u  = static_cast<float>(col * tileSize) / static_cast<float>(atlasWidth);
-        float v  = static_cast<float>(row * tileSize) / static_cast<float>(atlasHeight);
-        float du = static_cast<float>(tileSize)        / static_cast<float>(atlasWidth);
-        float dv = static_cast<float>(tileSize)        / static_cast<float>(atlasHeight);
+        float u  = static_cast<float>(col * tileW) / static_cast<float>(atlasWidth);
+        float v  = static_cast<float>(row * tileH) / static_cast<float>(atlasHeight);
+        float du = static_cast<float>(tileW)       / static_cast<float>(atlasWidth);
+        float dv = static_cast<float>(tileH)       / static_cast<float>(atlasHeight);
         return vmath::vec4(u, v, du, dv);
+    }
+
+    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
+                               int atlasWidth, int atlasHeight)
+    {
+        // 정사각 편의 오버로드 — tileW=tileH=tileSize 위임 (기존 시그니처/단위 테스트 호환).
+        return ComputeUVRect(frameIdx, cols, tileSize, tileSize, atlasWidth, atlasHeight);
     }
 
     UniformAtlas& UniformAtlas::LoadFromPNG(const char* path)
@@ -67,11 +74,11 @@ namespace SJH::Sprite
                            mAtlasWidth, mAtlasHeight, cols, rows);
             return *this;
         }
-        mCols     = cols;
-        mRows     = rows;
-        // square tile 가정 — atlasW/cols 와 atlasH/rows 가 같아야 정확. mismatch 시 atlasW/cols 우선.
-        mTileSize = mAtlasWidth / cols;
-        spdlog::info("[UniformAtlas] grid set ({}x{} grid, tile={})", mCols, mRows, mTileSize);
+        mCols       = cols;
+        mRows       = rows;
+        mTileSize   = mAtlasWidth  / cols;   // tile 가로(U)
+        mTileHeight = mAtlasHeight / rows;   // tile 세로(V) — 비정사각 폰트(6×10) 지원 (이전엔 square 가정으로 V 잘림)
+        spdlog::info("[UniformAtlas] grid set ({}x{} grid, tile={}x{})", mCols, mRows, mTileSize, mTileHeight);
         return *this;
     }
 
@@ -87,9 +94,10 @@ namespace SJH::Sprite
                            mAtlasWidth, mAtlasHeight, tilePx);
             return *this;
         }
-        mTileSize = tilePx;
-        mCols     = mAtlasWidth / tilePx;
-        mRows     = mAtlasHeight / tilePx;
+        mTileSize   = tilePx;
+        mTileHeight = tilePx;   // 정사각 (tilePx 명시 경로)
+        mCols       = mAtlasWidth / tilePx;
+        mRows       = mAtlasHeight / tilePx;
         spdlog::info("[UniformAtlas] tileSize set (tile={}, {}x{} grid)", tilePx, mCols, mRows);
         return *this;
     }
@@ -101,6 +109,6 @@ namespace SJH::Sprite
 
     vmath::vec4 UniformAtlas::GetUVRect(int frameIdx) const
     {
-        return ComputeUVRect(frameIdx, mCols, mTileSize, mAtlasWidth, mAtlasHeight);
+        return ComputeUVRect(frameIdx, mCols, mTileSize, mTileHeight, mAtlasWidth, mAtlasHeight);
     }
 }

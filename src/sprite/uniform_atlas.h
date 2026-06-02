@@ -20,7 +20,12 @@ namespace SJH::Sprite
 	vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
 	                          int atlasWidth, int atlasHeight);
 
-	/// @brief 등간격 N×M 정사각 그리드 atlas — sprite frame 시퀀스의 1차원 인덱스  2D UV rect 변환.
+	/// @brief 비정사각 tile 오버로드 — tileW ≠ tileH (비트맵 폰트 6×10 등). 정사각은 tileW=tileH.
+	/// @param tileW  tile 가로 픽셀 (U), @param tileH  tile 세로 픽셀 (V)
+	vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
+	                          int atlasWidth, int atlasHeight);
+
+	/// @brief 등간격 N×M 그리드 atlas — sprite frame 시퀀스의 1차원 인덱스  2D UV rect 변환.
 	/// @details
 	///   - PNG 한 장에 동일 tile 크기 sprite N×M 행렬로 배치
 	///   - frameIdx 가 row-major (col = idx % cols, row = idx / cols)
@@ -114,7 +119,8 @@ namespace SJH::Sprite
 		SJH::TextureUPtr mTexture; // GL 텍스처 RAII 위탁
 		int mAtlasWidth = 0;
 		int mAtlasHeight = 0;
-		int mTileSize = 64;
+		int mTileSize = 64;   // tile 가로(U) 픽셀
+		int mTileHeight = 0;  // tile 세로(V) 픽셀 — 비정사각 폰트(6×10) 지원. SetGrid 가 atlasH/rows 로 설정
 		int mCols = 0;
 		int mRows = 0;
 	};
