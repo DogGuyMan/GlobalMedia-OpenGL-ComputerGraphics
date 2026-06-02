@@ -37,11 +37,11 @@ namespace TopdownShooter::Entity::Bullet
 
         Physics::Components::BodyConfig bc;
         bc.world          = cfg.world;
-        bc.bodyType       = b2_kinematicBody;      // 총알 — 등속 비행(velocity), 충돌에 무반응
+        bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 → 안 떨어짐) — static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
         bc.startPosition  = cfg.pos;
         bc.linearVelocity = vmath::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
         bc.density        = 1.0f;
-        bc.isSensor       = false;
+        bc.isSensor       = true;        // 트리거 — 벽/적 OnTriggerEnter 로 despawn (물리 밀어내기/바운스 없음)
         bc.categoryBits   = Physics::ToBits(Physics::PhysicsLayer::BulletPlayer);
         bc.maskBits       = Physics::ToBits(Physics::PhysicsLayer::Enemy |
                                             Physics::PhysicsLayer::Wall);
