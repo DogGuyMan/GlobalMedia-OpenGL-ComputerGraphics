@@ -26,6 +26,7 @@
 #include "Playable/PostFXRegistry.h"             // 연출 foundation — PostFX pass Material 레지스트리
 #include "Spawns/OneShotSweeper.h"
 #include "Spawns/VfxInstance.h"
+#include "Spawns/WorldTextInstance.h"   // <- 추가 (데모 트리거)
 #include "UI/VfxSpawnLayer.h"
 
 #include "Stage/StageBuilder.h"
@@ -314,6 +315,17 @@ namespace TopdownShooter
 							if (auto *fx = mVfxLayer->GetSelectedEffect())
 								TopdownShooter::Spawns::SpawnVfxInstance(
 								    *mFxRoot, &TopdownShooter::Manager::Get().VFX(), fx, p);
+
+						// 데모 — 클릭 지점에 데미지 텍스트 (World Text 검증)
+						if (mFxRoot)
+							if (auto *font = TopdownShooter::Manager::Get().WorldText().GetFont())
+							{
+								static int demoN = 0;
+								const std::string dmg = "-" + std::to_string(10 + (demoN++ % 90));
+								TopdownShooter::Spawns::SpawnWorldText(
+								    *mFxRoot, font, p, dmg,
+								    TopdownShooter::Spawns::WorldTextStyle{});
+							}
 					});
 
 			dir.Enter();
