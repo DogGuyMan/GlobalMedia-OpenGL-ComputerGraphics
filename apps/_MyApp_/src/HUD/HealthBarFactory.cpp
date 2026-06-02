@@ -3,17 +3,20 @@
 #include "HUD/HealthBarDriver.h"
 
 #include "Entity/Components/Components.Interfaces.h" // TopdownShooter::Entity::ILivable
-#include "GL/gl3w.h"                                 // GL_TRIANGLES
 #include "material/material.h"
 #include "material/pass.h"
 #include "object/geometry.h"
 #include "object/mesh.h"
+#include "program/program.h" // SJH::Program (FindProgram/CreateProgram 반환형)
 #include "render/mesh_renderer.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 
+#include <GL/glcorearb.h> // GL_TRIANGLES
 #include <memory>
 #include <string>
+#include <utility>
+#include <vmath.h>
 
 namespace TopdownShooter::HUD
 {
