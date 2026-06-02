@@ -13,6 +13,7 @@
 #include "Playable/PlayableDirector.h"   // 연출 foundation — onFire/onDamage 이관 대상
 #include "Playable/PostFXTweenPlayable.h" // hit PostFX 연출(비네팅)
 #include "Playable/SpriteFxPlayable.h"    // hit-flash / dissolve 스프라이트 연출(Task6)
+#include "HUD/HealthBarFactory.h"          // 머리 위 분절형 체력바 (AttachHealthBar)
 #include "InputHandler/ActorFolower.h"
 #include "Manager.h"
 #include "Physics/PhysicsLayer.h"
@@ -209,6 +210,9 @@ namespace TopdownShooter::Bootstrap
 		// 손 — PlayerHands::OnEnter 가 자식 Hand actor 2개를 생성·부착 (player Y facing 상속 궤도).
 		// SpriteActor 는 이미 entered → 부착 즉시 OnEnter 실행. (손 스프라이트 비주얼은 사용자 WIP)
 		result.SpriteActor->AddComponent<TopdownShooter::Entity::PlayerHands>();
+
+		// 머리 위 분절형 체력바 — Life(ILivable) HP 비율을 uFill 로 구동 (월드 빌보드, Transparent).
+		TopdownShooter::HUD::AttachHealthBar(*result.SpriteActor);
 
 		deps.worldCamera
 		    ->GetOwner()
