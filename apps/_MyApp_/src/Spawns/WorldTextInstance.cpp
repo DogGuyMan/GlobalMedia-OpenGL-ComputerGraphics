@@ -18,6 +18,7 @@ namespace TopdownShooter::Spawns
 
         auto* a = fxParent.AddChild(std::make_unique<SJH::Scene::Actor>("WorldText"));
         a->GetTransform().Translate = worldPos;        // 앵커 = 하단중앙
+        a->GetTransform().Scale     = vmath::vec3(style.scale, style.scale, 1.0f); // 전체 배율 — 자식 글리프 WorldMatrix 합성(빌보드 sx/sy + 배치 균일). Z 무관
 
         auto* tr = a->AddComponent<SJH::Text::TextRenderer>(font);
         tr->SetCharHeight(style.charHeight);           // SetText 전 설정(크기 bake)

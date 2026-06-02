@@ -324,9 +324,9 @@ namespace TopdownShooter
 								static const int demoVals[] = {5, 42, 137, 9, 88, 250, 1, 76, 999};
 								static std::size_t demoN = 0;
 								const std::string dmg = "-" + std::to_string(demoVals[demoN++ % (sizeof(demoVals) / sizeof(demoVals[0]))]);
-								TopdownShooter::Spawns::SpawnWorldText(
-								    *mFxRoot, font, p, dmg,
-								    TopdownShooter::Spawns::WorldTextStyle{});
+								TopdownShooter::Spawns::WorldTextStyle style;
+								style.scale = 0.5f;   // 0.5배 사이즈다운 (Transform.Scale 합성)
+								TopdownShooter::Spawns::SpawnWorldText(*mFxRoot, font, p, dmg, style);
 							}
 					});
 
