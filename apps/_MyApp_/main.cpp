@@ -23,6 +23,7 @@
 #include "VFX/ParticleStage.h"
 
 #include "diagnostics/effekseer_diagnostics.h"   // VFX 텍스처 로드 검증
+#include "Playable/PostFXRegistry.h"             // 연출 foundation — PostFX pass Material 레지스트리
 #include "Spawns/OneShotSweeper.h"
 #include "Spawns/VfxInstance.h"
 #include "UI/VfxSpawnLayer.h"
@@ -208,6 +209,10 @@ namespace TopdownShooter
 			// grayscale_vignetting 의 vec3 초기값 (InitFloats 밖) — 비네팅 색 명시 set.
 			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
 				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
+
+			// 연출 foundation — PostFX pass Material 을 레지스트리에 등록 (hit-FX 트랙의 PostFXTweenPlayable 이
+			// PostFXRegistry::Get().Material("grayscale_vignetting")->Properties 로 도달). pass material 유효 지점.
+			TopdownShooter::Playable::PostFXRegistry::Get().Register("grayscale_vignetting", FindPassMaterial("grayscale_vignetting"));
 
 			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
 			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.

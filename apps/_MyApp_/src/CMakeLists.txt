@@ -7,6 +7,7 @@ add_subdirectory(Audio)
 add_subdirectory(VFX)
 add_subdirectory(Tween)
 add_subdirectory(Spawns)
+add_subdirectory(Playable)   # 연출 foundation — PlayableDirector + PostFXRegistry (Spawns/Entity 뒤)
 
 # M5 CL3 — Director 싱글톤 (Audio + VFX + Physics 집계)
 add_library(myapp_manager STATIC
@@ -44,5 +45,6 @@ target_link_libraries(myapp_client INTERFACE
     MyApp::Tween
     MyApp::Manager  # M5 CL3 — Audio+VFX+Physics 집계 싱글톤
     MyApp::Spawns
+    MyApp::Playable # 연출 foundation — PlayableDirector + PostFXRegistry
     MyApp::Bootstrap # Warmup 보일러플레이트 추출 빌더 (WorldScene/Player/Audio)
 )

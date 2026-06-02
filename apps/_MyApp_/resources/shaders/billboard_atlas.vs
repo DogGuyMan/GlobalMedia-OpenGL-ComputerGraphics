@@ -11,6 +11,7 @@ uniform mat4 uView;
 uniform mat4 uProj;
 uniform vec4 uUvRect; // (uMin, vMin, uSize, vSize) — atlas 내부 sub-rect
 uniform float uFlipX; // +1.0 or -1.0
+uniform float uRoll; // 카메라 정면축(roll) 회전 — Transform.EulerRot.z (radians), 기본 0
 
 out vec2 vUv;
 
@@ -28,9 +29,16 @@ void main()
         float sx = length(uModel[0].xyz);
         float sy = length(uModel[1].xyz);
 
+        // === roll (카메라 정면축) — Transform.EulerRot.z 만 반영, pitch/yaw 는 빌보드 유지 ===
+        // flip 선반영 후 cameraRight/cameraUp 평면 내에서 quad 를 2D 회전. uRoll=0 ⇒ 기존과 동일.
+        vec2 p = vec2(aPos.x * uFlipX, aPos.y);
+        float cr = cos(uRoll);
+        float sr = sin(uRoll);
+        vec2 rp = vec2(p.x * cr - p.y * sr, p.x * sr + p.y * cr);
+
         vec3 worldPos = center
-                        + cameraRight * aPos.x * sx * uFlipX
-                        + cameraUp * aPos.y * sy;
+                        + cameraRight * rp.x * sx
+                        + cameraUp * rp.y * sy;
 
         vUv = uUvRect.xy + aTexCoord * uUvRect.zw;
         gl_Position = uProj * uView * vec4(worldPos, 1.0);

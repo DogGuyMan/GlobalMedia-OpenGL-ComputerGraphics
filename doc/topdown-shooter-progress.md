@@ -241,7 +241,7 @@ M3 직후 ~ M3.5 사이 진행된 render 모듈 정비 — spec/마일스톤 외
 | `ContactListener.{h,cpp}` | `PhysicsContactListener : b2ContactListener` — `IsSensor()` 분기 → `IContactable` 디스패치 |
 | `wall_factory.h` | `CreateWallActor` — b2_staticBody + box shape (Solid) + `BoxBody` |
 | `pickup_factory.h` | `CreatePickupActor` — b2_staticBody + box shape (Sensor) + `PickupTriggerLogger` |
-| `filter.h` | `enum class PhysicsLayer : uint64_t` (Player/Enemy/Wall/Pickup/BulletPlayer/BulletEnemy) + `operator\| / & / ~` + `ToBits()` Box2D 어댑터 + `PlayerMask/EnemyMask/WallMask` 조합 |
+| `PhysicsLayer.h` | `enum class PhysicsLayer : uint64_t` (Player/Enemy/Wall/Pickup/BulletPlayer/BulletEnemy) + `operator\| / & / ~` + `ToBits()` Box2D 어댑터 + `PlayerMask/EnemyMask/WallMask` 조합 |
 
 ### spec 결정 진화 (회고)
 

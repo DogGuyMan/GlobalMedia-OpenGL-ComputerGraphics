@@ -14,8 +14,8 @@
 
 namespace TopdownShooter::Entity
 {
-	PlayerSingleHand::PlayerSingleHand(float spreadDeg, float radius, float yOffset)
-	    : mSpreadRad(vmath::radians(spreadDeg)), mRadius(radius), mYOffset(yOffset)
+	PlayerSingleHand::PlayerSingleHand(float spreadDeg, float radius, float yOffset, float scale)
+	    : mSpreadRad(vmath::radians(spreadDeg)), mRadius(radius), mYOffset(yOffset), mScale(scale)
 	{
 	}
 
@@ -29,11 +29,15 @@ namespace TopdownShooter::Entity
 		auto *owner = GetOwner();
 		if (owner == nullptr)
 			return;
+		auto &tr = owner->GetTransform();
 		// forward = -Z. local = (sin(spread)*r, yOffset, -cos(spread)*r).
-		owner->GetTransform().Translate = vmath::vec3(
+		tr.Translate = vmath::vec3(
 		    std::sin(mSpreadRad) * mRadius,
 		    mYOffset,
 		    -std::cos(mSpreadRad) * mRadius);
+		// 시각 크기 — Translate(궤도 오프셋)와 직교. SetTransformWithVectors 로 한꺼번에 세팅하면
+		// Translate 가 (0,0,0) 으로 덮여 궤도가 깨지므로, Scale 만 별도로 둔다 (단일 소유).
+		tr.Scale = vmath::vec3(mScale, mScale, mScale);
 	}
 
 	void PlayerHands::OnEnter()
@@ -58,7 +62,8 @@ namespace TopdownShooter::Entity
 		auto makeHand = [&](const char *name, float spreadDeg) {
 			SJH::Scene::Actor *hand =
 			    owner->AddChild(std::make_unique<SJH::Scene::Actor>(name));
-			hand->AddComponent<PlayerSingleHand>(spreadDeg, kRadius, kYOffset);
+			// 크기(kHandScale)는 PlayerSingleHand 가 ApplyLocalOffset 에서 Scale 로 세팅 — Translate(궤도) 와 분리.
+			hand->AddComponent<PlayerSingleHand>(spreadDeg, kRadius, kYOffset, kHandScale);
 			if (atlas != nullptr)
 			{
 				auto *spr = hand->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);

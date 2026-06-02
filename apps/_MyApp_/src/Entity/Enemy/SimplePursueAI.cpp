@@ -14,12 +14,12 @@ namespace TopdownShooter::Entity::Enemy
     {
         if (!mBody || !mTarget) return;
 
-        // 사망 감지 — 죽으면 정지 후 비활성화
+        // 사망 감지 — 죽으면 추적 정지(속도 0)만. 비활성/despawn 은 Life 의 사망 지연(mDieTimer)이 담당.
+        // (여기서 즉시 SetActive(false) 하면 사망 dissolve 연출이 0프레임이 되어 안 보인다 — Life 가 0.6s 후 비활성.)
         auto* life = GetOwner() ? GetOwner()->GetComponent<Components::Life>() : nullptr;
         if (life && !life->IsAlive())
         {
             mBody->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
-            if (GetOwner()) GetOwner()->SetActive(false);
             return;
         }
 

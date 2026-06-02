@@ -8,7 +8,8 @@ class b2Body;
 
 namespace TopdownShooter::Entity::Enemy
 {
-    /// @brief 매 프레임 Player 위치를 향해 SetLinearVelocity. 사망 시 정지 + SetActive(false).
+    /// @brief 매 프레임 Player 위치를 향해 SetLinearVelocity. 사망 시 추적 정지(속도 0)만 —
+    ///        비활성/despawn 은 Life 의 사망 지연(mDieTimer)이 담당(사망 dissolve 시간 확보).
     class SimplePursueAI : public SJH::Scene::Component
     {
       public:

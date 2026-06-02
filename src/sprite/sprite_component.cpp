@@ -106,6 +106,13 @@ namespace SJH::Sprite
 		Uniforms::SetFloat(*Material, "uFlipX", flipX ? -1.0f : 1.0f);
 		Uniforms::SetVec4(*Material, "uTint", tint);
 
+		// === billboard roll — owner Transform.EulerRot.z(degree) 만 송신 (pitch/yaw 무시) ===
+		// 빌보드 셰이더는 uModel 회전을 버리므로, z축 roll 은 별도 uniform 으로 전달해야 반영된다.
+		float rollDeg = 0.0f;
+		if (auto *owner = GetOwner())
+			rollDeg = owner->GetTransform().EulerRot[2];
+		Uniforms::SetFloat(*Material, "uRoll", vmath::radians(rollDeg));
+
 		// === 피격 (uEnableHit / uTime) ===
 		Uniforms::SetInt(*Material, "uEnableHit", enableHit ? 1 : 0);
 		Uniforms::SetFloat(*Material, "uTime", mEffectClock);

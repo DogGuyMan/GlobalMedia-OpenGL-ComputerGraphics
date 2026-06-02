@@ -32,7 +32,7 @@
 | `apps/_MyApp_/main.cpp` | 수정 | `WramupPlayer` 에서 `pac.controller.camera = mCamera` |
 
 > **되돌린 것(1차 → 제거됨)**: `wall_factory.h::CreateGroundActor`, StageBuilder 의 Ground 스폰,
-> `filter.h::PhysicsLayer::Ground` — 모두 삭제. 물리 레이어는 다시 Player/Enemy/Bullet*/Wall/Pickup 6종.
+> `PhysicsLayer.h::PhysicsLayer::Ground` — 모두 삭제. 물리 레이어는 다시 Player/Enemy/Bullet*/Wall/Pickup 6종.
 
 ---
 

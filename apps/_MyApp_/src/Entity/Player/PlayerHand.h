@@ -18,12 +18,14 @@ namespace TopdownShooter::Entity
 		float mSpreadRad; // forward(-Z) 기준 좌(+)/우(-) 벌림각 (radian)
 		float mRadius;    // forward 거리 (player local)
 		float mYOffset;   // 높이 오프셋
+		float mScale;     // 손 스프라이트 시각 크기 (local Scale, 균등)
 
 	  public:
 		/// @param spreadDeg forward(-Z) 기준 좌(+)/우(-) 벌림각 (degree). 좌손 +, 우손 -.
 		/// @param radius    forward 거리 (player local).
 		/// @param yOffset   높이 오프셋.
-		explicit PlayerSingleHand(float spreadDeg = 25.0f, float radius = 0.6f, float yOffset = 0.0f);
+		/// @param scale     손 스프라이트 균등 Scale (Translate 와 직교 — 궤도에 영향 없음).
+		explicit PlayerSingleHand(float spreadDeg = 25.0f, float radius = 0.6f, float yOffset = 0.0f, float scale = 1.0f);
 
 		void OnEnter() override;       // 고정 local 위치 1회 세팅
 		void OnExit() override {}
@@ -47,10 +49,11 @@ namespace TopdownShooter::Entity
 		void Update(float dt) override {}
 
 	  private:
-		// 양손 기본 배치 — forward(-Z) 기준 ±벌림각 + 거리. (비주얼 튜닝 대상)
+		// 양손 기본 배치 — forward(-Z) 기준 ±벌림각 + 거리 + 스프라이트 크기. (비주얼 튜닝 대상)
 		static constexpr float kSpreadDeg       = 25.0f;
 		static constexpr float kRadius          = 0.6f;
 		static constexpr float kYOffset         = 0.0f;
+		static constexpr float kHandScale       = 0.25f; // 손 스프라이트가 커서 축소 (Scale 만 — 궤도 무관)
 		static constexpr int   kHandQueueOffset = 10; // 플레이어 몸통 레이어(DrawOrder 0~3) 위 (튜닝 대상)
 	};
 }; // namespace TopdownShooter::Entity

@@ -47,6 +47,7 @@ namespace SJH::PropertyBlockSetter
 					Uniforms::SetVec2(prog, name.c_str(), it->second);
 				break;
 			}
+			case GL_BOOL: // GLSL bool 은 glUniform1i(0/1) 로 set — Ints 맵에서 가져온다 (Material 이 SetInt 로 저장).
 			case GL_INT: {
 				auto it = block.Ints.find(name);
 				if (it != block.Ints.end())
