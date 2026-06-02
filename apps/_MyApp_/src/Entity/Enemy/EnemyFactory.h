@@ -3,9 +3,11 @@
 
 #include "Entity/Components/LifeComponents.h"
 #include "Entity/Enemy/EnemyDeathHandler.h"
+#include "Entity/Enemy/EnemyEntity.h"
 #include "Entity/Enemy/SimplePursueAI.h"
 #include "Spawns/Carrier.h"
 #include "Physics/PhysicsComponent.Imp.h"
+#include "Physics/PhysicsImpulse.h"
 #include "Physics/PhysicsLayer.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
@@ -46,6 +48,8 @@ namespace TopdownShooter::Entity::Enemy
         if (cfg.onDeathFx)
             actor->AddComponent<EnemyDeathHandler>(cfg.onDeathFx);
 
+        actor->AddComponent<Physics::Impulse>();   // 넉백 타겟 (Carrier::Projectile 이 DoImpulse 배달)
+        actor->AddComponent<EnemyEntity>();   // 적 Accessor-facade (Life/Physics/Director/Impulse 캐시)
         return actor;
     }
 }

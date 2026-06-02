@@ -14,6 +14,8 @@ namespace SJH::Scene
 	class Camera; // 마우스→Ground raycast 용 (포인터 멤버 — 전방 선언으로 충분)
 }
 
+namespace TopdownShooter::Entity { class BaseEntity; }
+
 namespace TopdownShooter::Controller
 {
 	/// @brief Top-down 게임의 Player 이동 컨트롤러 — WASD  Owner Transform.Translate XZ 이동.
@@ -80,6 +82,7 @@ namespace TopdownShooter::Controller
 		SJH::MouseInput *mMouseInput                 = nullptr;
 		SJH::Scene::Camera *mCamera                  = nullptr; // 마우스→Ground raycast 용 (비소유)
 		Entity::IMovable* mMovementPtr = nullptr;
+		TopdownShooter::Entity::BaseEntity* mEntity = nullptr; // 대시 중 이동 suppress 게이트(IsImpulseActive)
 
 		std::function<void()> mFireCallback;   // 좌클릭
 		std::function<void()> mDamageCallback; // G키

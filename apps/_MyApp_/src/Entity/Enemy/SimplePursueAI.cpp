@@ -1,5 +1,5 @@
 #include "Entity/Enemy/SimplePursueAI.h"
-#include "Entity/Components/LifeComponents.h"
+#include "Entity/BaseEntity.h"
 #include <box2d/box2d.h>
 #include <cmath>
 
@@ -10,18 +10,25 @@ namespace TopdownShooter::Entity::Enemy
 
     SimplePursueAI::~SimplePursueAI() = default;
 
+    void SimplePursueAI::OnEnter()
+    {
+        mEntity = GetOwner() ? GetOwner()->GetComponent<TopdownShooter::Entity::BaseEntity>() : nullptr;
+    }
+
     void SimplePursueAI::Update(float /*dt*/)
     {
         if (!mBody || !mTarget) return;
 
-        // 사망 감지 — 죽으면 추적 정지(속도 0)만. 비활성/despawn 은 Life 의 사망 지연(mDieTimer)이 담당.
-        // (여기서 즉시 SetActive(false) 하면 사망 dissolve 연출이 0프레임이 되어 안 보인다 — Life 가 0.6s 후 비활성.)
-        auto* life = GetOwner() ? GetOwner()->GetComponent<Components::Life>() : nullptr;
-        if (life && !life->IsAlive())
+        // 사망 — 추적 정지(속도 0). facade IsAlive (기존 raw GetComponent<Life> 매프레임 호출 제거).
+        if (mEntity && !mEntity->IsAlive())
         {
             mBody->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
             return;
         }
+
+        // 넉백 중 — 추적 속도 설정 skip(버스트 보존, 0 설정 아님). 0.3s 후 자동 재개.
+        if (mEntity && mEntity->IsImpulseActive())
+            return;
 
         const auto& tp = mTarget->GetTransform().Translate;
         const b2Vec2 ep = mBody->GetPosition();

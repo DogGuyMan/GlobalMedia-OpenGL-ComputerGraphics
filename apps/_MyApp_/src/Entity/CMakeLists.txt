@@ -2,6 +2,7 @@ add_library(myapp_entity STATIC
     BaseEntity.cpp
     Components/WeaponComponents.cpp
     Player/PlayerActor.cpp
+    Player/PlayerEntity.cpp
     Player/PlayerHand.cpp
     Enemy/SimplePursueAI.cpp
     Enemy/EnemyDeathHandler.cpp
@@ -28,6 +29,7 @@ target_link_libraries(myapp_entity
     PRIVATE
         SJH::sprite
         game_deps
+        MyApp::Playable  # BaseEntity.cpp 전용(.cpp only) — PlayableDirector 완전형(Play/GetComponent). 헤더는 fwd-decl 라 PRIVATE (Stage/HUD 로 불필요 전파 방지)
 )
 
 target_compile_features(myapp_entity PUBLIC cxx_std_17)

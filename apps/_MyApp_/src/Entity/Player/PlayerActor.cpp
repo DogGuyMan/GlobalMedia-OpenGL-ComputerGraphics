@@ -1,6 +1,7 @@
 #include <GL/gl3w.h> // 반드시 최상단 — resource_registry.h→framebuffer.h→render_target.h→gl3w.h 보다 먼저.
 
 #include "Entity/Player/PlayerActor.h"
+#include "Entity/Player/PlayerEntity.h"
 
 #include "Physics/PhysicsImpulse.h"
 
@@ -110,6 +111,9 @@ namespace TopdownShooter::Entity::Player
 				}
 			}
 		}
+
+		// 모든 형제(Life/Physics/Movement/Impulse/Weapon/Controller) 부착 후 facade 부착 — OnEnter 캐시.
+		actor->AddComponent<PlayerEntity>();
 
 		return actor;
 	}

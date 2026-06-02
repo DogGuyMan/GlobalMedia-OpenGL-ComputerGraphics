@@ -9,6 +9,7 @@
 #include "scene/actor.h"
 
 // 마우스→Ground raycast + 발사/회전/디버그 마커에 필요한 의존 (Client 코드라 직접 사용 OK).
+#include "Entity/BaseEntity.h"
 #include "Entity/Components/WeaponComponents.h"
 #include "Playable/Constants.h" // FacingThresholdConfig / PLAYER_FACING_THRESHOLD (헤더-only 데이터)
 #include "material/material.h"
@@ -178,8 +179,17 @@ namespace TopdownShooter::Controller
 	{
 		if (!mIsInitialized)
 			return;
-		// dt 는 Movement::DoForward 가 units/sec  프레임 변위로 변환 (fps-independent).
-		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
+
+		// facade lazy 캐시 (controller 가 facade 보다 먼저 OnEnter 될 수 있어 첫 Update 에서 조회).
+		if (mEntity == nullptr && GetOwner() != nullptr)
+			mEntity = GetOwner()->GetComponent<TopdownShooter::Entity::BaseEntity>();
+
+		// 대시(Impulse) 중에는 입력 자유이동을 Block — DoForward 호출 자체를 skip.
+		// (입력 0 이어도 DoForward(0) 이 속도를 0 으로 만들어 버스트를 죽이므로 호출 자체를 막아야 함.)
+		// 현재 dash 입력 미배선이라 IsImpulseActive()=false → 게이트 dormant(행동 변화 0).
+		const bool impulseActive = (mEntity != nullptr && mEntity->IsImpulseActive());
+		if (!impulseActive)
+			mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
 
 		// === 연속 조준 (spec D1) — 매 프레임 마우스→Ground raycast 로 조준 멤버 갱신. ===
 		UpdateAim();

@@ -6,6 +6,8 @@
 
 class b2Body;
 
+namespace TopdownShooter::Entity { class BaseEntity; }
+
 namespace TopdownShooter::Entity::Enemy
 {
     /// @brief 매 프레임 Player 위치를 향해 SetLinearVelocity. 사망 시 추적 정지(속도 0)만 —
@@ -16,7 +18,7 @@ namespace TopdownShooter::Entity::Enemy
         SimplePursueAI(SJH::Scene::Actor* target, b2Body* body, float speed);
         ~SimplePursueAI() override;
 
-        void OnEnter() override {}
+        void OnEnter() override;
         void OnExit()  override {}
         void Update(float dt) override;
 
@@ -24,6 +26,7 @@ namespace TopdownShooter::Entity::Enemy
         SJH::Scene::Actor* mTarget;
         b2Body*            mBody;
         float              mSpeed;
+        TopdownShooter::Entity::BaseEntity* mEntity = nullptr; // facade (IsAlive/IsImpulseActive)
     };
 }
 
