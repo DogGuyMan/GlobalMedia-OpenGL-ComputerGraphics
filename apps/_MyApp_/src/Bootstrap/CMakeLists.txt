@@ -27,6 +27,7 @@ target_link_libraries(myapp_bootstrap
         MyApp::Tween         # TweenPlayable (PlayerBuilder .cpp)
         MyApp::Spawns        # BuildBGM (AudioWarmup .cpp) + SequenceContext (PlayerBuilder)
         MyApp::Playable      # PlayableDirector (PlayerBuilder onFire/onDamage 마이그레이션)
+        MyApp::HUD           # <- 추가 (AttachHealthBar — PlayerBuilder .cpp)
         game_deps            # box2d / tweeny / fmod / effekseer (.cpp 전용)
         spdlog
 )
