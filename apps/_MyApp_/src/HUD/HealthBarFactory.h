@@ -17,7 +17,7 @@ namespace TopdownShooter::HUD
 		vmath::vec4 bgColor        = vmath::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
 		float       segmentCount   = 5.0f;
 		float       segmentSpacing = 0.08f;
-		float       headOffset     = 1.2f;                     // cameraUp 방향 머리 위 거리
+		float       headOffset     = 0.2f;                     // cameraUp 방향 머리 위 거리 (1.2→0.2, 1.0 하향)
 		vmath::vec2 size           = vmath::vec2(1.2f, 0.18f); // 바 가로×세로
 	};
 
