@@ -36,4 +36,5 @@ target_link_libraries(sjhopengl_engine INTERFACE
     SJH::fsm                # M2 — 14 모듈 (fsm 합류)
     SJH::playable           # M3.5 — 15 모듈 (playable 합류)
     SJH::timer              # 16 모듈 — 게임플레이 타이머 (spec 2026-06-01)
+    SJH::text               # 17 모듈 — World Text (spec 2026-06-02)
 )
