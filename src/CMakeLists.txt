@@ -14,6 +14,7 @@ add_subdirectory(resource_registry)
 add_subdirectory(input)
 add_subdirectory(playable)
 add_subdirectory(timer)     # <- 추가 (SJH::timer, spec 2026-06-01)
+add_subdirectory(text)      # <- 추가 (SJH::text, spec 2026-06-02 World Text)
 
 add_library(sjhopengl_engine INTERFACE)
 add_library(SJH::engine ALIAS sjhopengl_engine)
