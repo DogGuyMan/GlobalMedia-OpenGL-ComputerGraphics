@@ -109,7 +109,7 @@ Expected: `Built target sjhopengl_common` 출력 (에러 없음).
 
 - [ ] **Step 1.2.1: 오타 수정 + 의도 보존**
 
-기존 `// cpp 스타일의 파일 로팅 방식이다.` 를 `// ifstream 으로 전체 내용을 stringstream 에 흘려넣는 표준 패턴` 로 교체. (오타 "로팅"->내용 명확화)
+기존 `// cpp 스타일의 파일 로팅 방식이다.` 를 `// ifstream 으로 전체 내용을 stringstream 에 흘려넣는 표준 패턴` 로 교체. (오타 "로팅"→내용 명확화)
 
 Edit: `src/common/common.cpp:8`
 old: `        // cpp 스타일의 파일 로팅 방식이다.`
@@ -223,8 +223,8 @@ EOF
 - [ ] **Step 2.1.1: 헤더 전체를 다음으로 교체**
 
 ```cpp
-#ifndef __SJH_SHADER_H__
-#define __SJH_SHADER_H__
+#ifndef __SHADER_H__
+#define __SHADER_H__
 
 #pragma once
 
@@ -254,7 +254,7 @@ namespace SJH
          *  -# **RAII 소유권 강제** — 생성자 @c private + 반환 타입 @c UPtr 의 협력:
          *     생성자 private 으로 직접 생성 차단, @c UPtr 반환으로 호출자에게 자동 소유권 이전.
          *  -# **클래스 불변식** — 외부 노출 인스턴스는 항상 유효한 GL 핸들 보유:
-         *     팩토리 내부에서 빈 객체 생성 -> @c TryLoadFile 로 GL 자원 획득 시도 ->
+         *     팩토리 내부에서 빈 객체 생성 → @c TryLoadFile 로 GL 자원 획득 시도 →
          *     성공 시 소유권 이전, 실패 시 임시 UPtr 즉시 파괴 + @c nullptr 반환.
          * @note 컴파일 에러 로그는 @c diagnostics::GLObjectLog::CheckShaderCompile 가 출력.
          */
@@ -272,7 +272,7 @@ namespace SJH
         GLuint mShaderAddr{0};
     };
 }
-#endif // __SJH_SHADER_H__
+#endif // __SHADER_H__
 ```
 
 - [ ] **Step 2.1.2: 빌드 통과 확인**
@@ -310,13 +310,13 @@ New: (해당 줄 삭제 — `std::move` 가 자명)
 
 - [ ] **Step 2.2.2: TryLoadFile 의 자명한 단계 주석은 보존**
 
-`TryLoadFile` 의 `// OpenGL shader object 생성`, `// shader에 소스 코드 설정`, `// 셰이더 컴파일` 주석은 OpenGL 학습자 관점에서 단계 이정표로 가치 있음 -> **보존**.
+`TryLoadFile` 의 `// OpenGL shader object 생성`, `// shader에 소스 코드 설정`, `// 셰이더 컴파일` 주석은 OpenGL 학습자 관점에서 단계 이정표로 가치 있음 → **보존**.
 
 변경 없음.
 
 - [ ] **Step 2.2.3: 잘못된 include 정리**
 
-`src/shader/shader.cpp:1` 이 `#include "context/context.h"` 인데 shader.cpp 는 context 를 사용하지 않음 -> 삭제하고 올바른 헤더 include.
+`src/shader/shader.cpp:1` 이 `#include "context/context.h"` 인데 shader.cpp 는 context 를 사용하지 않음 → 삭제하고 올바른 헤더 include.
 
 Edit: `src/shader/shader.cpp:1-3`
 Old:
@@ -858,7 +858,7 @@ digraph RenderSequence {
   node [shape=box, fontname="Helvetica"];
   Start [label="main()", shape=ellipse];
   init [label="GLFW init\n+ glad load"];
-  ctx [label="Context::Create()\n-> shaders -> program -> VAO"];
+  ctx [label="Context::Create()\n→ shaders → program → VAO"];
   loop [label="while (!shouldClose)\n  Context::Render()\n  swapBuffers", shape=box, style="rounded,filled", fillcolor="#fff7d6"];
   term [label="GLFW terminate", shape=ellipse];
   Start -> init -> ctx -> loop -> term;
@@ -910,7 +910,7 @@ digraph IncludeOrder {
   dep [label="cmake/Dependency.cmake\n(find_package vcpkg)"];
   cfg [label="cmake/Config.cmake\n(WINDOW_NAME/WIDTH/HEIGHT)"];
   src [label="add_subdirectory(src)\n(SJH:: aliases)"];
-  app [label="add_subdirectory(app)\n(configure_file -> config.h)"];
+  app [label="add_subdirectory(app)\n(configure_file → config.h)"];
   test [label="add_subdirectory(test)\n(Catch2)"];
   cxx -> doxy -> dep -> cfg -> src -> app -> test;
 }
@@ -992,7 +992,7 @@ Create: `doc/pages/20-dependencies.md` with content:
 | **stb** | `stb` | `${Stb_INCLUDE_DIR}` (헤더 only) | 이미지 로딩 (텍스처) — `app/` |
 | **Catch2** | `catch2` | `Catch2::Catch2WithMain` | 단위 테스트 (`test/`) |
 
-## 의존성 그래프 (모듈 -> 외부)
+## 의존성 그래프 (모듈 → 외부)
 
 \dot
 digraph DepGraph {
@@ -1130,11 +1130,11 @@ EOF
 
 **배경:** Phase 4 작성 시점의 `context.h` 는 `Render` / `Init` 두 메서드만 가진 단순 형태. 이후 다음이 추가됨 (커밋 `3696136` 카메라 리팩토링까지 반영):
 - `src/object/camera.h` — POD-like Camera 상태. m-prefix 통일: `mPos` / `mTarget` / `mCamUp`, 회전 `mEulerYaw` / `mEulerPitch`, 입력 플래그 `mIsCamControl`, 투영 `mFov` / `mAspect` / `mNearPlane` / `mFarPlane`.
-- Camera 메서드: `GetFront()` (Yaw->Pitch 회전식), `GetForwardViewMatrix()` / `GetLookAtViewMatrix()` (모드 분리), `GetProjMatrix()` (인자 없음 — `mAspect` 멤버 사용), `SetAspect(w,h)` (height==0 가드).
-- `Context::ProcessInput` (W/A/S/D/Q/E 키 -> 카메라 위치 이동, 매 프레임 `GetFront()` 1회 캐싱).
-- `Context::Reshape` (framebuffer 콜백 -> `glViewport` + width/height 갱신 + `mCamera.SetAspect`).
-- `Context::MouseMove` (cursor 콜백 -> `mEulerYaw/Pitch` 갱신, clamp/wrap. front 직접 갱신 X).
-- `Context::MouseButton` (좌클릭 -> `mCamera.mIsCamControl` 토글, `mPrevMousePos` 초기화).
+- Camera 메서드: `GetFront()` (Yaw→Pitch 회전식), `GetForwardViewMatrix()` / `GetLookAtViewMatrix()` (모드 분리), `GetProjMatrix()` (인자 없음 — `mAspect` 멤버 사용), `SetAspect(w,h)` (height==0 가드).
+- `Context::ProcessInput` (W/A/S/D/Q/E 키 → 카메라 위치 이동, 매 프레임 `GetFront()` 1회 캐싱).
+- `Context::Reshape` (framebuffer 콜백 → `glViewport` + width/height 갱신 + `mCamera.SetAspect`).
+- `Context::MouseMove` (cursor 콜백 → `mEulerYaw/Pitch` 갱신, clamp/wrap. front 직접 갱신 X).
+- `Context::MouseButton` (좌클릭 → `mCamera.mIsCamControl` 토글, `mPrevMousePos` 초기화).
 - 추가 멤버: `mCamera`, `mWidth`, `mHeight`, `mPrevMousePos`, `mVertexArrayObject`, `mVertexBufferObject`, `mElementBufferObject`, `mRM`.
 - `app/main.cpp` — `glfwSetWindowUserPointer(window, ctx.get())` 로 Context 주입, `Handle*` 콜백이 `glfwGetWindowUserPointer` 캐스팅으로 역참조 후 `Context::*` 위임.
 
@@ -1149,7 +1149,7 @@ EOF
 - 클래스 docstring 의 *책임 / 비-책임 / 좌표계 가정 / 명명 컨벤션* 4블록 — `gl_log.h` 톤과 일치.
 - `mIsCamControl` / `mEulerPitch` / `mEulerYaw` 등 입력으로 변경되는 필드는 *누가 갱신하는지* (`Context::*`) 를 명시.
 - `mAspect` 는 `SetAspect(w,h)` 가 갱신, `GetProjMatrix()` 가 멤버 직접 사용 (인자 없음).
-- `GetFront()` 의 회전 순서 (Yaw 먼저 -> Pitch 적용) 를 *FPS 카메라 표준* 으로 명시.
+- `GetFront()` 의 회전 순서 (Yaw 먼저 → Pitch 적용) 를 *FPS 카메라 표준* 으로 명시.
 - `GetForwardViewMatrix()` 와 `GetLookAtViewMatrix()` 는 *동시 사용 금지* — 모드 추적 안 함이 호출자 책임임을 표기 (모드 enum 도입 예정).
 - `SetAspect` 의 `height==0` 가드 (윈도우 최소화 등) 동작을 docstring 에 명시.
 
@@ -1161,9 +1161,9 @@ EOF
 - [x] **Step 7.2.1: 클래스 docstring 의 책임 표 갱신**
 
 추가 책임 항목:
-- 카메라 상태 보관 + 입력 -> 카메라 갱신 위임 (@ref Camera).
-- (비-책임) 키/마우스 *콜백 등록*은 `app/main.cpp` 가 GLFW 에 등록 -> @ref ProcessInput / @ref MouseMove / @ref MouseButton 으로 위임.
-- (비-책임) framebuffer 리사이즈 콜백 -> @ref Reshape 위임.
+- 카메라 상태 보관 + 입력 → 카메라 갱신 위임 (@ref Camera).
+- (비-책임) 키/마우스 *콜백 등록*은 `app/main.cpp` 가 GLFW 에 등록 → @ref ProcessInput / @ref MouseMove / @ref MouseButton 으로 위임.
+- (비-책임) framebuffer 리사이즈 콜백 → @ref Reshape 위임.
 
 - [x] **Step 7.2.2: 입력 위임 메서드 4개 docstring**
 
@@ -1224,4 +1224,4 @@ EOF
 사용자에게 보여줄 것:
 - `classSJH_1_1Camera.html` 클래스 페이지 (책임/비-책임 블록).
 - `classSJH_1_1Context.html` 의 입력 위임 메서드 섹션.
-- Doxygen 경고 변화량 (Phase 6 -> Phase 7).
+- Doxygen 경고 변화량 (Phase 6 → Phase 7).

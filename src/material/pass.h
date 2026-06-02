@@ -90,7 +90,7 @@ namespace SJH::Pass
 		                              // 	❌ 하고 상태를 말뚝 박는것과 동치  ❌
 		                              // 	새 z != 기존 z 인 fragment 만 통과 — 합법이지만 실용성 낮음
 		                              // 	float 정밀도 + z-fighting 때문에 "정확히 같다" 판정이 불안정
-		                              // 	⚠ "Outline 의 NOTEQUAL" 은 *Stencil* 의 glStencilFunc(GL_NOTEQUAL, ref, mask) 이지
+		                              // 	!! "Outline 의 NOTEQUAL" 은 *Stencil* 의 glStencilFunc(GL_NOTEQUAL, ref, mask) 이지
 		                              // 	  glDepthFunc(GL_NOTEQUAL) 이 아니다. 같은 enum 이름의 다른 함수.
 		                              // 	  Depth state 를 NOTEQUAL 로 바꿔도 Stencil test 는 자동으로 안 켜진다
 		                              // 	  (Stencil 활성화는 glEnable(GL_STENCIL_TEST) 별도 호출 필요)

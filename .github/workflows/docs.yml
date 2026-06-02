@@ -1,0 +1,82 @@
+name: Deploy Doxygen to GitHub Pages
+
+# Trigger:
+#  - game/main push: 코드 변경 시 자동 배포
+#  - tag 'docs-deploy-*' push: 명시적 수동 배포 (UI Run 버튼 대체)
+#      예) git tag docs-deploy-$(date +%Y%m%d-%H%M%S) && git push origin --tags
+#  - workflow_dispatch: default branch(game/main)에 workflow 가 있어야 UI 버튼 활성화
+on:
+  push:
+    branches: [game/main]
+    tags: ['docs-deploy-*']
+  workflow_dispatch:
+
+# Pages 배포에 필요한 권한
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 동시 배포 방지 — 진행 중 배포는 완료 후 다음 실행
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Doxygen HTML
+    runs-on: ubuntu-latest
+    steps:
+      # INPUT 은 src/ + doc/pages/ (모두 체크인) — extern/ 서브모듈 불필요.
+      - uses: actions/checkout@v4
+
+      - name: Install Doxygen + Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends doxygen graphviz
+          doxygen --version
+          dot -V
+
+      - name: Generate Doxyfile from template
+        # cmake/Doxygen.cmake 의 configure_file() 변수 4개를 직접 치환.
+        # cmake 를 우회해 빌드 시간 30초 이내 유지.
+        # NOTE: cmake/Doxygen.cmake 에 새 @VAR@ 가 추가되면 여기에도 동기화 필요.
+        run: |
+          mkdir -p build_ci
+          # CMakeLists.txt 의 project(... VERSION x.y.z ...) 에서 추출
+          PROJECT_VERSION=$(grep -E "^\s*project\(" CMakeLists.txt | grep -oP "VERSION\s+\K[0-9]+\.[0-9]+\.[0-9]+" | head -1)
+          PROJECT_VERSION=${PROJECT_VERSION:-0.0.0}
+          echo "PROJECT_VERSION=${PROJECT_VERSION}"
+
+          sed \
+            -e "s|@PROJECT_VERSION@|${PROJECT_VERSION}|g" \
+            -e "s|@DOXYGEN_INPUT_DIR@|${GITHUB_WORKSPACE}/src|g" \
+            -e "s|@DOXYGEN_OUTPUT_DIR@|${GITHUB_WORKSPACE}/doc|g" \
+            -e "s|@DOXYGEN_PAGES_DIR@|${GITHUB_WORKSPACE}/doc/pages|g" \
+            doc/Doxyfile.in > build_ci/Doxyfile
+
+      - name: Run Doxygen
+        run: |
+          doxygen build_ci/Doxyfile 2>&1 | tee build_ci/doxy.log
+          # 회귀 시 빌드 실패시키려면 아래 주석 해제 (현재 경고 허용)
+          # if grep -qiE "warning|error" build_ci/doxy.log; then
+          #   echo "Doxygen warnings detected — failing build."
+          #   exit 1
+          # fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: doc/html
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

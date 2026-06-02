@@ -1,0 +1,61 @@
+# Doxyfile.in — Doxygen 설정 템플릿
+# cmake/Doxygen.cmake 의 configure_file() 로 다음 변수가 치환됩니다.
+#   @PROJECT_VERSION@     -> CMake project(... VERSION x.y.z) 버전
+#   @DOXYGEN_INPUT_DIR@   -> PROJECT_SOURCE_DIR/src        (엔진 코어 모듈)
+#   @DOXYGEN_PAGES_DIR@   -> PROJECT_SOURCE_DIR/doc/pages  (\page 마크다운)
+#   @DOXYGEN_OUTPUT_DIR@  -> PROJECT_SOURCE_DIR/doc        (html/ 출력 루트)
+#
+# NOTE: 새 치환 변수를 추가하면 .github/workflows/docs.yml 의 sed 치환에도 동기화 필요.
+
+#  프로젝트 정보
+PROJECT_NAME           = "OpenGL-ComputerGraphics"
+PROJECT_NUMBER         = @PROJECT_VERSION@
+PROJECT_BRIEF          = "SJH 엔진 — Core/Client 분리 + Actor/Component 씬 그래프 + SceneRenderer (C++17 / CMake)"
+
+#  입출력 경로 — src/ 코어 모듈 + doc/pages/ 마크다운만 (apps/ 데모는 범위 외)
+INPUT                  = @DOXYGEN_INPUT_DIR@ @DOXYGEN_PAGES_DIR@
+OUTPUT_DIRECTORY       = @DOXYGEN_OUTPUT_DIR@
+RECURSIVE              = YES
+
+#  입력 인코딩 (한국어 주석)
+INPUT_ENCODING         = UTF-8
+
+#  추출 범위
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+
+#  파일 패턴
+FILE_PATTERNS          = *.cpp *.h *.hpp *.md
+
+#  HTML 출력
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_EXTRA_STYLESHEET  =
+
+#  LaTeX 비활성화
+GENERATE_LATEX         = NO
+
+#  기타 설정
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+GENERATE_TREEVIEW      = YES
+USE_MDFILE_AS_MAINPAGE = @DOXYGEN_PAGES_DIR@/00-mainpage.md
+
+#  Graphviz 자동 다이어그램
+HAVE_DOT               = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
+
+#  마크다운 페이지 처리
+MARKDOWN_SUPPORT       = YES
+TOC_INCLUDE_HEADINGS   = 3

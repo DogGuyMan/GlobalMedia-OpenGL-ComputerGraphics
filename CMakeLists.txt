@@ -4,12 +4,20 @@ cmake_minimum_required(VERSION 3.14.0)
 # ______ 프로젝트 이름 지정 ______
 project(OpenGL-ComputerGraphics VERSION 0.1.0 LANGUAGES C CXX)
 
+# ______ 빌드 옵션 ______
+# Doxygen 문서 타겟 등록 여부. ON 이라도 Doxygen 미설치 환경은
+# cmake/Doxygen.cmake 의 find_package(Doxygen QUIET) 가 조용히 스킵.
+option(SJH_OPENGL_BUILD_DOCS "Enable Doxygen doc target" ON)
+
 # ______ CMake 헬퍼 모듈 ______
 include(cmake/CXXStandard.cmake)
 
 # ______ 의존성 수집 -> project_deps INTERFACE 타겟 ______
 # lib/, include/ 는 build_extern.sh (또는 .bat) 로 사전 빌드
 include(cmake/Dependency.cmake)
+
+# ______ Doxygen 툴체인 -> sjhopengl_setup_doxygen() 정의 ______
+include(cmake/Doxygen.cmake)
 
 # ______ 공용 라이브러리 (모든 챕터에서 사용) ______
 if(EXISTS ${CMAKE_SOURCE_DIR}/src/CMakeLists.txt)
@@ -37,4 +45,11 @@ if(ENABLE_TESTING)
     if(EXISTS ${CMAKE_SOURCE_DIR}/test/CMakeLists.txt)
         add_subdirectory(test)
     endif()
+endif()
+
+# ______ 문서 (Doxygen) ______
+# `doxygen` 커스텀 타겟 등록. 빌드: cmake --build build_ninja --target doxygen
+# 출력: doc/html/index.html (메인페이지 = doc/pages/00-mainpage.md)
+if(SJH_OPENGL_BUILD_DOCS)
+    sjhopengl_setup_doxygen()
 endif()

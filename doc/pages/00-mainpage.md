@@ -1,263 +1,149 @@
-# OpenGL-With-CMake {#mainpage}
+# OpenGL-ComputerGraphics {#mainpage}
 
-OpenGL 학습 프로젝트 — C++17 + CMake + vcpkg manifest mode.
+**SJH 엔진** — SuperBible 7th Edition 코스워크에서 출발해 *Core/Client 분리* + *Actor/Component 씬 그래프* + *SceneRenderer* 로 전환된 데모/엔진.
+C++17 / CMake 단독 빌드. macOS·Linux (Ninja) + Windows (MSVC) 크로스 플랫폼.
+
+> **교수 제출용 — vcpkg 미사용.** 모든 서드파티는 `lib/`·`include/` 사전 빌드 산출물을 체크인해 CMake 단독으로 완결된다.
+> 재빌드는 `shell/BuildExternLibs.{sh,bat}`. 본 문서는 `src/` 코어 모듈 16종 + `doc/pages/` 가이드를 대상으로 한다 (`apps/` 데모는 범위 외).
 
 ## 모듈 레이어 다이어그램
 
+> 개념적 레이어 뷰. 정확한 클래스 단위 관계는 각 클래스 페이지의 자동 collaboration graph 참조.
+> 16개 코어 모듈은 INTERFACE 우산 `SJH::engine` 으로 묶여 한 줄 link 된다
+> (`target_link_libraries(<demo> PRIVATE project_deps SJH::engine)`).
+
 \dot
-digraph LayerArchitecture {
+digraph EngineArchitecture {
   rankdir=BT;
   node [shape=box, style=rounded, fontname="Helvetica"];
+  compound=true;
 
   subgraph cluster_app {
-    label="앱 (라이프 사이클)";
-    style=dashed;
-    main [label="app/main.cpp"];
+    label="앱 (Client — 라이프 사이클)"; style=dashed;
+    MyApp [label="apps/_MyApp_\n(탑다운 슈터)", style="rounded,filled", fillcolor="#fff7d6"];
+  }
+
+  subgraph cluster_umbrella {
+    label="우산 (INTERFACE)"; style=dashed;
+    engine [label="SJH::engine", style="rounded,filled", fillcolor="#e8f5e9"];
+  }
+
+  subgraph cluster_content {
+    label="콘텐츠 / 게임플레이"; style=dashed;
+    sprite; fsm; playable; input; resource_registry; timer;
   }
 
   subgraph cluster_scene {
-    label="씬 캡슐화 (Context)";
-    style=dashed;
-    Context;
+    label="씬 / 렌더"; style=dashed;
+    scene; render;
   }
 
   subgraph cluster_gl {
-    label="GL 자원 / 셰이더";
-    style=dashed;
-    Program; Shader;
-    Buffer [label="Buffer\n(VBO/EBO)"];
-    VertexLayout [label="VertexLayout\n(VAO)"];
-    ResourceRegistry [label="ResourceRegistry\n(Texture/Material/Model)"];
-  }
-
-  subgraph cluster_objects {
-    label="씬 객체";
-    style=dashed;
-    Camera;
+    label="GL 자원 / 머티리얼"; style=dashed;
+    buffer; shader; program; layout; material; object;
   }
 
   subgraph cluster_base {
-    label="기반";
-    style=dashed;
-    Common; Diagnostics;
+    label="기반"; style=dashed;
+    common; diagnostics;
   }
 
-  subgraph cluster_external {
-    label="외부 (vcpkg)";
-    style=filled; fillcolor="#f0f0f0";
-    glfw; glad; spdlog; fmt; glm; stb;
+  subgraph cluster_project_deps {
+    label="project_deps (GL/윈도우)"; style=filled; fillcolor="#f0f0f0";
+    sb7; glfw3; OpenGL;
   }
 
-  main -> Context;
-  main -> spdlog;
-  main -> glfw;
-  main -> glad;
+  subgraph cluster_game_deps {
+    label="game_deps (게임/엔진)"; style=filled; fillcolor="#eef3fb";
+    box2d; Effekseer; assimp; spdlog; tweeny; stb; FMOD [label="fmod\n(조건부)"];
+  }
 
-  Context -> Program;
-  Context -> Shader;
-  Context -> Buffer;
-  Context -> VertexLayout;
-  Context -> ResourceRegistry;
-  Context -> Camera;
-  Context -> Diagnostics;
-  Context -> glm;
-  Context -> glad;
+  // 앱 -> 우산 -> 모듈 그룹 (레이어 흐름)
+  MyApp   -> engine;
+  MyApp   -> FMOD [lhead=cluster_game_deps, style=dashed, label="POST_BUILD dll copy"];
+  engine  -> sprite    [lhead=cluster_content];
+  engine  -> scene     [lhead=cluster_scene];
+  engine  -> buffer    [lhead=cluster_gl];
+  engine  -> common    [lhead=cluster_base];
 
-  Program -> Shader;
-  Program -> Diagnostics;
-  Program -> Common;
-  Program -> glad;
-
-  Shader -> Common;
-  Shader -> Diagnostics;
-  Shader -> glad;
-
-  Buffer -> Common;
-  Buffer -> Diagnostics;
-  Buffer -> glad;
-
-  VertexLayout -> Common;
-  VertexLayout -> Diagnostics;
-  VertexLayout -> glad;
-
-  ResourceRegistry -> Common;
-  ResourceRegistry -> Diagnostics;
-  ResourceRegistry -> glad;
-  ResourceRegistry -> glm;
-  ResourceRegistry -> stb;
-
-  Camera -> glm;
-
-  Common -> spdlog;
-  Diagnostics -> spdlog;
-  Diagnostics -> fmt;
-  Diagnostics -> glad;
+  // 코어 모듈 -> 외부
+  buffer  -> sb7    [ltail=cluster_gl, lhead=cluster_project_deps];
+  scene   -> sb7    [ltail=cluster_scene, lhead=cluster_project_deps];
+  resource_registry -> box2d [lhead=cluster_game_deps, label="PUBLIC\n(FMOD/Effekseer/stb)"];
+  diagnostics -> spdlog [style=dotted];
 }
 \enddot
 
-## 렌더링 시퀀스 (high-level)
+## 빌드 / 실행 흐름 (high-level)
 
 \dot
-digraph RenderSequence {
+digraph RunFlow {
   rankdir=LR;
   node [shape=box, fontname="Helvetica"];
-  Start [label="main()", shape=ellipse];
-  init [label="GLFW init\n+ glad load"];
-  ctx [label="Context::Create()\n-> Shader -> Program\n-> VAO -> VBO/EBO\n-> Texture (Image: transient)"];
-  uptr [label="glfwSetWindowUserPointer(window, ctx)\n(콜백에서 Context 역참조용)"];
-  callbacks [label="GLFW callbacks 등록\n(framebuffer / key / cursor / mouse)"];
-  loop [label="while (!shouldClose)\n  ProcessInput()\n  Render()\n   swapBuffers + pollEvents",
-        shape=box, style="rounded,filled", fillcolor="#fff7d6"];
-  term [label="GLFW terminate", shape=ellipse];
-  Start -> init -> ctx -> uptr -> callbacks -> loop -> term;
+  Start    [label="apps/_MyApp_/main.cpp", shape=ellipse];
+  init     [label="sb7::application::init()\nGL 4.1 Core / GLSL 410"];
+  build    [label="Director + SceneRenderer\nActor/Component 씬 구성\nResourceRegistry 자원 위탁"];
+  loop     [label="while (running)\n  Update(dt)\n  SceneRenderer::Render()\n  swapBuffers",
+            shape=box, style="rounded,filled", fillcolor="#fff7d6"];
+  term     [label="자원 자동 파괴 (UPtr)", shape=ellipse];
+  Start -> init -> build -> loop -> term;
 }
 \enddot
 
-## 입력 -> 카메라 위임 흐름 (Phase 7, 커밋 `3696136` 반영)
+## 씬 시스템 관계 (아키텍처 스케치)
+
+> 권위 있는 정의는 각 클래스 페이지의 자동 그래프 + `src/scene/`·`src/render/` 헤더.
+> 본 다이어그램은 새 Component/Playable 를 어디에 끼울지 잡기 위한 개념 스케치.
 
 \dot
-digraph InputDelegation {
-  rankdir=LR;
-  node [shape=box, fontname="Helvetica"];
-
-  user    [label="사용자 입력", shape=ellipse, style=filled, fillcolor="#fff7d6"];
-  glfw    [label="GLFW 콜백\n(main.cpp Handle*)", style=filled, fillcolor="#e8f0ff"];
-  uptr    [label="glfwGetWindowUserPointer()\n-> SJH::Context*", shape=note, style=filled, fillcolor="#fff3e0"];
-  context [label="Context 위임 메서드\nProcessInput / MouseMove\nMouseButton / Reshape", style=filled, fillcolor="#e8f5e9"];
-  camera  [label="Camera 상태\nmPos / mEulerYaw / mEulerPitch\nmIsCamControl / mAspect", style=filled, fillcolor="#fce4ec"];
-
-  user -> glfw [label="키 / 마우스 / 리사이즈"];
-  glfw -> uptr [label="콜백 진입 시 캐스팅"];
-  uptr -> context;
-  context -> camera [label="mPos += speed*GetFront()\nmEulerYaw/Pitch ±= delta\nmIsCamControl 토글\nSetAspect(w,h)"];
-  camera -> context [label="GetForwardViewMatrix()\nGetProjMatrix()\nGetFront()", style=dashed];
-}
-\enddot
-
-## 클래스 의존 그래프 (전 프로젝트 통합)
-
-> 모듈 단위가 아닌 *클래스* 단위로 본 의존 관계.
-> 자동 collaboration graph 는 클래스 페이지마다 따로 생성되지만,
-> 본 그래프는 *전체 프로젝트* 를 한 화면에 보여 줘 새 멤버를 어디 끼워야 할지 한눈에 잡기 위한 것.
-
-\dot
-digraph ClassDependencyGraph {
+digraph SceneSystem {
   rankdir=BT;
-  compound=true;
   node [shape=box, style=rounded, fontname="Helvetica"];
 
-  // 정적 진단 헬퍼 (인스턴스 없음, 모두 static)
-  subgraph cluster_diag {
-    label="Diagnostics (static-only + POD struct)"; style=dashed; color="#aaaaaa";
-    GLObjectLog; GLDebug; UniformDiagnostics; GLStateLog;
-    // POD struct (Phase 9) — 노드 모양 구분
-    GLStateFields    [shape=note];
-    VertexAttribInfo [shape=note];
-  }
+  Scene; Actor; Component; Director;
+  SceneRenderer; DeviceContext; MeshPassProcessor;
+  Material; Program; Texture; IPlayable;
 
-  // 자원 / 데이터
-  subgraph cluster_resource {
-    label="Resource"; style=dashed; color="#aaaaaa";
-    Image; Texture; ResourceRegistry;
-  }
+  Scene  -> Actor      [label="보유"];
+  Actor  -> Component  [label="보유 (Actor 비상속)"];
+  Director -> IPlayable [label="구동 (Play/Update)", style=dashed];
+  Director -> SceneRenderer [label="Render 위임", style=dashed];
+  SceneRenderer -> DeviceContext [label="glUseProgram owner"];
+  SceneRenderer -> MeshPassProcessor;
+  SceneRenderer -> Component [label="Light/Camera 수집", style=dashed];
+  Material -> Program [label="const* (비소유)", style=dashed];
+  Material -> Texture [label="const* (비소유)", style=dashed];
 
-  // GL 객체 RAII + 메시/프레임버퍼 (Phase 16+)
-  subgraph cluster_gl {
-    label="GL Object RAII + Mesh/FBO"; style=dashed; color="#aaaaaa";
-    Shader; Program; Buffer; VertexLayout; Mesh; Framebuffer;
-  }
-
-  // 씬 + 라이팅/머티리얼/모델 (Phase 12+)
-  subgraph cluster_scene {
-    label="Scene + Light/Material/Model + SceneGraph"; style=dashed; color="#aaaaaa";
-    Camera; Light; DirLight; PointLight; SpotLight; Material; Model; Context;
-    Transform; SceneNode; SceneGraph;
-  }
-
-  // 입력 디스패치 — 콜백 바인딩 (논리 액션 계층)
-  subgraph cluster_input {
-    label="Input"; style=dashed; color="#aaaaaa";
-    KeyboardInput; MouseInput;
-  }
-
-  // 소유 관계 (실선) — 멤버로 보유, 수명 결합
-  Context -> Program          [label="UPtr ×4\n(lighting/simple/texture/post)"];
-  Context -> ResourceRegistry [label="UPtr (mRM)"];
-  Context -> Camera           [label="value"];
-  Context -> DirLight         [label="value (mDirLight)"];
-  Context -> PointLight       [label="value ×2\n(mPointLights)"];
-  Context -> SpotLight        [label="value (mSpotLight)"];
-  Context -> Mesh             [label="MeshUPtr ×2\n(mBox + mPlane)"];
-  Context -> Framebuffer      [label="FramebufferUPtr"];
-  Context -> SceneGraph       [label="value (mScene)"];
-  Context -> KeyboardInput    [label="value (mKeyboard)\n<GameAction>"];
-  Context -> MouseInput       [label="value (mMouse)"];
-
-  Mesh -> VertexLayout        [label="UPtr"];
-  Mesh -> Buffer              [label="BufferPtr ×2\n(VBO/EBO)"];
-
-  ResourceRegistry -> Texture   [label="map<name, UPtr>"];
-  ResourceRegistry -> Material  [label="map<name, UPtr>"];
-  ResourceRegistry -> Model     [label="map<name, UPtr>"];
-
-  Model -> Mesh     [label="vector<RenderUnit>"];
-  Model -> Material [label="vector<MaterialUPtr>"];
-  Model -> Texture  [label="vector<TextureUPtr>"];
-
-  Framebuffer -> Texture [label="TexturePtr\n(색상 어태치먼트)"];
-
-  SceneGraph -> SceneNode  [label="array<SceneNode, Count>"];
-  SceneNode  -> Transform  [label="value (mLocal)"];
-
-  // 입력 의존 (긴 점선) — 멤버 X, 팩토리 인자 / 이름 키 해석 / 비소유 관찰자
-  edge [style=dashed, color="#5b6b80"];
-  Program  -> Shader   [label="vector<ShaderPtr>\n(Create 인자)"];
-  Texture  -> Image    [label="Image*\n(CreateTexture 인자)"];
-  Material -> Texture  [label="const Texture*\n관찰자 (비소유)"];
-  Material -> Program  [label="const Program*\n관찰자 (비소유)"];
-  SceneNode -> SceneNode [label="SceneNode* 부모 / vector<SceneNode*> 자식\n(비소유 관찰자)"];
-
-  // 정적 진단 사용 (짧은 점선) — 인스턴스 X
-  edge [style=dotted, color="#9aa6b8", fontcolor="#9aa6b8"];
-  Shader       -> GLObjectLog;
-  Program      -> GLObjectLog;
-  Program      -> UniformDiagnostics;
-  Buffer       -> GLDebug;
-  VertexLayout -> GLDebug;
-
-  // GL State 진단 (Phase 9) — Log -> Fields -> struct 종속
-  GLStateLog       -> GLStateFields    [label="CaptureGLState\nFieldsToString"];
-  GLStateFields    -> VertexAttribInfo [label="array<.., 16>"];
+  edge [style=dotted, color="#9aa6b8"];
+  Program -> "SJH::Diagnostics" [label="컴파일/uniform 진단"];
 }
 \enddot
 
-**범례**
+## 코어 모듈 (16종)
 
-| 선 / 노드 | 의미 |
-|---|---|
-| 실선 | *소유* — 멤버 변수로 보유. 부모 소멸 시 자식도 소멸 (`UPtr` / value 멤버). |
-| 긴 점선 | *입력 의존* — 팩토리/생성자 인자. 수명 결합 없음. |
-| 짧은 점선 | *정적 호출* — 인스턴스 없이 free/static 함수만 사용. |
-| 사각 노드 | 클래스 (멤버 함수 + 캡슐화). |
-| 노트 모양 노드 | POD struct — 모든 필드 public, 동작 없음 (예: `GLStateFields`, `VertexAttribInfo`). |
-
-> 갱신 방법: 새 클래스를 추가했거나 멤버 구성이 바뀌면 `.claude/skills/doxygen-class-graph/` 의 절차를 따른다.
+| 모듈 | 책임 |
+|------|------|
+| `common` | 공통 유틸 (`common.h`), GL 로더 비의존 |
+| `diagnostics` | GL 호출/셰이더/uniform/상태 진단 + `GLValidate` Cat A–F |
+| `buffer` | VBO/EBO 통합 RAII (`Buffer`) |
+| `shader` | 셰이더 컴파일 + InfoLog (`Shader::CreateFromSource`) |
+| `program` | 프로그램 링킹 + uniform 핸들/캐시 |
+| `layout` | Vertex 레이아웃 (`vertex.h`) + VAO attribute setter |
+| `material` | Phong/PBR Material 값 클래스 + `Texture*`/`Program*` 보관 |
+| `object` | Mesh + Geometry 생성기 + `Light`/`Transform` POD |
+| `scene` | Actor + Component + Scene 그래프 (Actor 비상속) |
+| `render` | DeviceContext + SceneRenderer + MeshPassProcessor |
+| `sprite` | 2D 스프라이트 atlas + `SpriteSequencePlayable` + `UniformAtlas` |
+| `fsm` | `StateMachine<TState, TOwner>` + `IFsmState<TOwner>` |
+| `playable` | `IPlayable` + `PlayableBase` + Composite (Sequence/Parallel) |
+| `input` | `KeyboardInput<TAction>` / `MouseInput` 디스패치 |
+| `resource_registry` | 9종 자원 캐시 (Texture/Material/Model/Program/Mesh/Framebuffer/UniformAtlas/Sound/Effect). game_deps PUBLIC |
+| `timer` | 게임플레이 타이머 |
 
 ## 추가 페이지
 
 - @ref build-system "빌드 시스템 가이드"
-- @ref dependencies "의존 라이브러리"
+- @ref dependencies "의존 라이브러리 (project_deps / game_deps)"
 
-## 핵심 모듈
-
-| 모듈 | 클래스 | 역할 |
-|------|--------|------|
-| common | — | @c CLASS_PTR 매크로 + @ref SJH::LoadTextFile |
-| diagnostics | @ref SJH::Diagnostics::GLObjectLog "GLObjectLog", @ref SJH::Diagnostics::GLDebug "GLDebug", @ref SJH::Diagnostics::UniformDiagnostics "UniformDiagnostics" | GL 에러 로깅 + uniform warn-once 일원화 |
-| shader | @ref SJH::Shader "Shader" | 셰이더 컴파일 RAII |
-| program | @ref SJH::Program "Program" + `SJH::Uniforms::*` 자유 함수 | 프로그램 링크 RAII + uniform setter (캐시 친구 함수) |
-| buffer | @ref SJH::Buffer "Buffer" | VBO/EBO RAII (`glGenBuffers` ~ `glDeleteBuffers`) |
-| layout | @ref SJH::VertexLayout "VertexLayout" | VAO + `glVertexAttribPointer` 진단 통합 |
-| resource_registry | @ref SJH::ResourceRegistry "ResourceRegistry", @ref SJH::Image "Image", @ref SJH::Texture "Texture" | Texture/Material/Model 이름 키 캐시 — `Create*`/`Find*` 동사 분리, 세션 수명 불변식 |
-| object | @ref SJH::Camera "Camera" | 카메라 상태 + view/projection 행렬 산출 |
-| context | @ref SJH::Context "Context" | 씬 자원 + 매 프레임 draw + GLFW 콜백 위임 진입점 |
+> **클래스 의존 그래프 갱신:** 새 클래스를 추가했거나 멤버 구성이 바뀌면
+> `.claude/skills/doxygen-class-graph/` 절차에 따라 위 "씬 시스템 관계" 스케치를 보강한다.

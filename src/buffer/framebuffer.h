@@ -87,9 +87,9 @@ namespace SJH
         const TexturePtr GetDepthAttachment() const { return mDepthAttachment; }
 
         /// @brief FBO 핸들을 유지하고 color 어태치먼트 + RBO depth/stencil 을 새 크기로 재할당.
-        /// @details ⚠ RBO depth 모드 전용 — color 어태치먼트(@c mColorAttachment)와 RBO(@c mRBODepthStencilBuffer)만
+        /// @details !! RBO depth 모드 전용 — color 어태치먼트(@c mColorAttachment)와 RBO(@c mRBODepthStencilBuffer)만
         ///          재할당한다. depth-texture 모드(@c mDepthAttachment) 도입 시 분기 확장 필요(depth-fog 후속).
-        ///          ⚠ @c mColorAttachment 가 외부 공유 텍스처(@c Create(TexturePtr) 경로)면 공유 holder 에 영향 —
+        ///          !! @c mColorAttachment 가 외부 공유 텍스처(@c Create(TexturePtr) 경로)면 공유 holder 에 영향 —
         ///          @c Create(int,int) 로 생성한 자족 FBO 에만 안전.
         /// @param width  새 너비 (픽셀). @param height 새 높이 (픽셀).
         void Resize(int width, int height);

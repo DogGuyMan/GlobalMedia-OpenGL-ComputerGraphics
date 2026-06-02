@@ -43,7 +43,7 @@ pushd "$EXEC_DIR" > /dev/null
 
 if [ "$LOGGING_TYPE" = "leaks" ]; then
     if [ "$(uname)" != "Darwin" ]; then
-        echo "⚠️  leaks 옵션은 macOS 에서만 지원됩니다. (현재: $(uname))"
+        echo "!!️  leaks 옵션은 macOS 에서만 지원됩니다. (현재: $(uname))"
         popd > /dev/null
         exit 1
     fi
