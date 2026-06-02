@@ -5,10 +5,13 @@
 #include "playable/playable_base.h"                  // SJH::Playable::PlayableBase (map 보유 + Component)
 #include "scene/actor.h"                             // SJH::Scene::Component
 
+#include <array>
 #include <map>
 #include <memory>
 #include <string>
 #include <vmath.h>
+
+namespace SJH::Sprite { class SpriteRenderer; } // DirGroup 핸들 (실타입 .cpp)
 
 namespace TopdownShooter::Playable
 {
@@ -33,6 +36,13 @@ namespace TopdownShooter::Playable
 		void Stop(const std::string &key);
 		bool Has(const std::string &key) const;
 
+		/// @brief (facing,pose) 한 그룹 = 그 방향/포즈 4-레이어 SpriteRenderer 핸들(애니 미보유).
+		struct DirGroup { std::array<SJH::Sprite::SpriteRenderer *, 4> layers{}; };
+		/// @brief 그룹 등록 (빌드 시 1회).
+		void RegisterGroup(Entity::EFacing f, Entity::EPose p, const DirGroup &g) { mGroups[idx(f)][idx(p)] = g; }
+		/// @brief AddChild(enter) 후 1회 — 초기 (Front,Idle) 만 활성.
+		void RefreshDirectional() { Apply(); }
+
 		// === Component hook ===
 		void OnEnter() override {}
 		void OnExit() override {}
@@ -43,9 +53,9 @@ namespace TopdownShooter::Playable
 		void ReactDamaged(int /*dmg*/) override { Play("hit"); }
 		void ReactDied(vmath::vec3 pos) override; // Play("death") 만 (월드점 death FX[B]는 도메인 seam 이 트리거 — 역할별 분리 P2)
 		void ReactAttack(vmath::vec2 /*aimDir*/) override { Play("attack"); }
-		// SetFacing/SetPose 는 분해 Task6 가 directional sprite Playable 로 채울 빈 훅 (현재 no-op).
-		void SetFacing(Entity::EFacing /*facing*/) override {}
-		void SetPose(Entity::EPose /*pose*/) override {}
+		// SetFacing/SetPose — controller(RD5) 가 계산한 facing/pose 로 8그룹 가시성 토글.
+		void SetFacing(Entity::EFacing f) override; // 본문 .cpp
+		void SetPose(Entity::EPose p) override;     // 본문 .cpp
 
 	  private:
 		/// @brief 한 named Playable 슬롯. playing = Play() 로 활성화됨(미활성/완료 슬롯은 tick 제외).
@@ -56,6 +66,13 @@ namespace TopdownShooter::Playable
 		};
 
 		std::map<std::string, Slot> mPlayables;
+
+		static int idx(Entity::EFacing f) { return static_cast<int>(f); }
+		static int idx(Entity::EPose p) { return static_cast<int>(p); }
+		void Apply();
+		DirGroup        mGroups[4][2]{};
+		Entity::EFacing mFacing = Entity::EFacing::Front;
+		Entity::EPose   mPose   = Entity::EPose::Idle;
 	};
 }
 

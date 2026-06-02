@@ -59,7 +59,8 @@ namespace TopdownShooter::Bootstrap
 		pac.weapon.damage = 10;
 		pac.weapon.world  = deps.physicsWorld;
 
-		pac.sprite.direction = &TopdownShooter::Playable::PLAYER_FRONT_MOVE; // FRONT_MOVE 4-레이어 (E·H·B·F)
+		// 단일방향 주입 제거 — 8그룹을 아래에서 직접 빌드(PlayerActor 의 if(direction!=nullptr) 단일블록 비활성).
+		// pac.sprite.direction 기본값 nullptr 유지.
 		// pac.sprite.fps 미설정 — SpriteCfg 기본값(PlayerActor.h SpriteCfg::fps) 이 단일 소스.
 
 		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
@@ -71,6 +72,55 @@ namespace TopdownShooter::Bootstrap
 		// 루트 액터에 1개 부착 = Life 의 IActorPresentation sink (Life::OnEnter 가 GetComponent 로 캐시).
 		// AddChild(=Enter) 보다 먼저 부착해야 sink 가 해소된다.
 		auto *director = spriteActor->AddComponent<TopdownShooter::Playable::PlayableDirector>();
+
+		// ─── directional 8그룹(4방향×2포즈) child 빌드 + RegisterGroup (분해 Task6) ───
+		{
+			namespace P = TopdownShooter::Playable;
+			using TopdownShooter::Entity::EFacing;
+			using TopdownShooter::Entity::EPose;
+			struct GrpSrc { EFacing f; EPose p; const std::vector<P::EntityTextureConfig> *layers; };
+			const GrpSrc kGroups[] = {
+			    {EFacing::Front, EPose::Idle, &P::PLAYER_FRONT_IDLE}, {EFacing::Back, EPose::Idle, &P::PLAYER_BACK_IDLE},
+			    {EFacing::Left, EPose::Idle, &P::PLAYER_LEFT_IDLE},   {EFacing::Right, EPose::Idle, &P::PLAYER_RIGHT_IDLE},
+			    {EFacing::Front, EPose::Move, &P::PLAYER_FRONT_MOVE}, {EFacing::Back, EPose::Move, &P::PLAYER_BACK_MOVE},
+			    {EFacing::Left, EPose::Move, &P::PLAYER_LEFT_MOVE},   {EFacing::Right, EPose::Move, &P::PLAYER_RIGHT_MOVE},
+			};
+			auto           &reg  = SJH::ResourceRegistry::Get();
+			constexpr float kFps = 8.0f; // 애니(ColCount>1) 초당 프레임 (SpriteCfg 기본과 동일)
+			for (const auto &grp : kGroups)
+			{
+				P::PlayableDirector::DirGroup dg{};
+				std::size_t                   li = 0;   // std::array 인덱스 — size_type 일치(-Wconversion 회피)
+				for (const auto &t : *grp.layers)
+				{
+					auto *atlas = reg.FindUniformAtlas(t.TexturePath); // 공유 PNG 중복키 nullptr 회피
+					if (!atlas)
+						atlas = reg.CreateUniformAtlas(t.TexturePath, t.TexturePath, t.ColCount, t.RowCount);
+					if (!atlas)
+					{
+						spdlog::error("[8layer] atlas 실패: {}", t.TexturePath);
+						continue;
+					}
+					auto  child = std::make_unique<SJH::Scene::Actor>(
+					    "player_dir_" + std::to_string(static_cast<int>(grp.f)) + "_" +
+					    std::to_string(static_cast<int>(grp.p)) + "_L" + std::to_string(t.DrawOrder));
+					auto *cp = spriteActor->AddChild(std::move(child));
+					auto *spr = cp->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
+					spr->flipX       = t.Flip;
+					spr->QueueOffset = t.DrawOrder; // 초기 가시성 안 건드림 — RefreshDirectional 이 처리
+					if (li < 4) dg.layers[li] = spr;
+					if (t.ColCount > 1) // 걷기 애니(B) — t.ColCount 로만 판정
+					{
+						auto *seq = cp->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
+						    spr, SJH::SpriteSequence::SpriteFrameClip{0, t.ColCount, kFps});
+						seq->SetIsLoop(true);
+						seq->Play(); // [A] scene-tick (child 소유, DirGroup 미보유)
+					}
+					++li;
+				}
+				director->RegisterGroup(grp.f, grp.p, dg);
+			}
+		}
 
 		// 체력 비율 → 화면 grayscale ([A] 상시 바인더, director 무관). HP 닳을수록 무채색, HP0 시 완전 무채색.
 		spriteActor->AddComponent<TopdownShooter::Playable::HpGrayscalePostFX>("grayscale_vignetting", "uGrayscaleAmount");
@@ -164,6 +214,9 @@ namespace TopdownShooter::Bootstrap
 		    ->GetOwner()
 		    ->GetComponent<Controller::ActorFolower>()
 		    ->SetFollowTarget(result.SpriteActor);
+
+		// 초기 가시성 확정 — 32레이어가 active 로 enter(OnEnter/애니 시작)된 *뒤* Front/Idle 외 SetActive(false).
+		director->RefreshDirectional();
 
 		return result;
 	}

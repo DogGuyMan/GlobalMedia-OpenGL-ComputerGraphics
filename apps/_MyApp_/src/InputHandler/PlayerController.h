@@ -13,10 +13,6 @@ namespace SJH::Scene
 {
 	class Camera; // 마우스→Ground raycast 용 (포인터 멤버 — 전방 선언으로 충분)
 }
-namespace SJH::Sprite
-{
-	class SpriteRenderer; // 빌보드 좌우반전(flipX) 캐시용 (포인터 멤버 — 전방 선언으로 충분)
-}
 
 namespace TopdownShooter::Controller
 {
@@ -97,8 +93,11 @@ namespace TopdownShooter::Controller
 		float       mAimAngleY = 0.0f;                 // facing Y각 (degree) = degrees(atan2(-dir.x,-dir.z))
 		bool        mAimValid  = false;                // 이번 프레임 유효 교차 여부 (false 면 직전값 유지)
 
-		// SpriteRenderer(형제 컴포넌트) lazy 캐시 — controller 는 sprite 보다 먼저 생성되므로 첫 Update 에서 조회.
-		SJH::Sprite::SpriteRenderer *mCachedSprite = nullptr;
+		// === RD5: facing/pose 단일 작성자 sink (인터페이스로만 — 구체 PlayableDirector 미참조). ===
+		TopdownShooter::Entity::IActorPresentation *mSink = nullptr; // = PlayableDirector(인터페이스로만, lazy)
+		TopdownShooter::Entity::EFacing             mLastFacing = TopdownShooter::Entity::EFacing::Front;
+		float                                       mAttackWindowSec = 0.15f; // 발사 후 "조준 응시" 윈도
+		float                                       mAttackTimer     = 0.0f;
 
 		void RegisterBindings();
 		void UnregisterBindings();

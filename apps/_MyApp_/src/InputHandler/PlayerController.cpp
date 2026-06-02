@@ -10,6 +10,7 @@
 
 // 마우스→Ground raycast + 발사/회전/디버그 마커에 필요한 의존 (Client 코드라 직접 사용 OK).
 #include "Entity/Components/WeaponComponents.h"
+#include "Playable/Constants.h" // FacingThresholdConfig / PLAYER_FACING_THRESHOLD (헤더-only 데이터)
 #include "material/material.h"
 #include "material/material_uniforms.h"
 #include "object/mesh.h"
@@ -18,7 +19,6 @@
 #include "resource_registry/resource_registry.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
-#include "sprite/sprite_component.h"
 
 #include <GLFW/glfw3.h>
 #include <cassert>
@@ -26,6 +26,29 @@
 #include <spdlog/spdlog.h>
 #include <utility>
 #include <vmath.h>
+
+namespace
+{
+	// [start,end](degree)에 deg 포함? start>end 면 0° wrap.
+	bool InRange(float deg, const vmath::vec2 &r)
+	{
+		return (r[0] <= r[1]) ? (deg >= r[0] && deg < r[1]) : (deg >= r[0] || deg < r[1]);
+	}
+	// dir=(x,z) → θ=normalize360(deg(atan2(-z,x))) → 4범위 중 포함 필드. no-match=fallback.
+	TopdownShooter::Entity::EFacing QuantizeByThreshold(
+	    vmath::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
+	    TopdownShooter::Entity::EFacing fallback)
+	{
+		namespace E = TopdownShooter::Entity;
+		float deg = std::atan2(-dir[1], dir[0]) * 57.29578f; // rad→deg, screen-up=-Z
+		if (deg < 0.0f) deg += 360.0f;
+		if (InRange(deg, cfg.Back)) return E::EFacing::Back;
+		if (InRange(deg, cfg.Front)) return E::EFacing::Front;
+		if (InRange(deg, cfg.Left)) return E::EFacing::Left;
+		if (InRange(deg, cfg.Right)) return E::EFacing::Right;
+		return fallback;
+	}
+}
 
 namespace TopdownShooter::Controller
 {
@@ -157,25 +180,39 @@ namespace TopdownShooter::Controller
 			return;
 		// dt 는 Movement::DoForward 가 units/sec  프레임 변위로 변환 (fps-independent).
 		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
-		// 누적값 리셋.
-		mInputValue = vmath::vec3(0.0f);
 
 		// === 연속 조준 (spec D1) — 매 프레임 마우스→Ground raycast 로 조준 멤버 갱신. ===
 		UpdateAim();
 
-		// === 플레이어 회전 (spec D2/§3) — 논리 facing(EulerRot.Y) + 빌보드 좌우반전(flipX). ===
+		// === 플레이어 회전 (spec D2/§3) — 논리 facing(EulerRot.Y). ===
 		// mAimAngleY/mAimDirection 은 직전 유효값을 유지하므로 mAimValid 와 무관하게 매 프레임 반영.
 		SJH::Scene::Actor *owner = GetOwner();
 		if (owner != nullptr)
-		{
 			owner->GetTransform().EulerRot[1] = mAimAngleY; // 논리 facing — 자식 손이 WorldMatrix 로 상속
 
-			// SpriteRenderer(형제) lazy 캐시 — controller 가 sprite 보다 먼저 생성되므로 첫 조회 시점이 늦음.
-			if (mCachedSprite == nullptr)
-				mCachedSprite = owner->GetComponent<SJH::Sprite::SpriteRenderer>();
-			if (mCachedSprite != nullptr)
-				mCachedSprite->flipX = (mAimDirection[0] < 0.0f);
+		// === RD5: facing/pose 단일 작성자 (controller 계산 → sink 토글) ===
+		if (mSink == nullptr && owner != nullptr)
+			mSink = owner->GetComponent<TopdownShooter::Entity::IActorPresentation>(); // lazy(=director, 인터페이스 조회)
+		if (mSink != nullptr)
+		{
+			namespace E = TopdownShooter::Entity;
+			if (mAttackTimer > 0.0f) mAttackTimer -= dt;
+			const bool        attacking = (mAttackTimer > 0.0f);
+			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]); // ★ 리셋 전
+			const bool        moving = (velXZ[0] * velXZ[0] + velXZ[1] * velXZ[1]) > 0.001f;
+			const vmath::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
+
+			E::EFacing facing = attacking ? QuantizeByThreshold(aimXZ, TopdownShooter::Playable::PLAYER_FACING_THRESHOLD, mLastFacing)
+			                  : moving    ? QuantizeByThreshold(velXZ, TopdownShooter::Playable::PLAYER_FACING_THRESHOLD, mLastFacing)
+			                              : mLastFacing;
+			E::EPose pose = (attacking || moving) ? E::EPose::Move : E::EPose::Idle;
+			mSink->SetFacing(facing);
+			mSink->SetPose(pose);
+			mLastFacing = facing;
 		}
+
+		// 누적값 리셋.
+		mInputValue = vmath::vec3(0.0f);
 	}
 
 	bool PlayerController::UpdateAim()
@@ -258,6 +295,8 @@ namespace TopdownShooter::Controller
 	{
 		// 클릭 직전 조준 갱신 — 입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값으로 재산출.
 		UpdateAim();
+
+		mAttackTimer = mAttackWindowSec; // 발사 후 0.15s 동안 facing=조준 (하이브리드)
 
 		spdlog::info("[fire] ground=({:.2f},{:.2f},{:.2f}) dir=({:.2f},{:.2f},{:.2f}) angleY={:.1f}",
 		             mAimPoint[0], mAimPoint[1], mAimPoint[2],

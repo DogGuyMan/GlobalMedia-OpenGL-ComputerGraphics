@@ -1,5 +1,8 @@
 #include "Playable/PlayableDirector.h"
 
+#include "scene/actor.h"             // Actor::GetOwner/SetActive
+#include "sprite/sprite_component.h" // SJH::Sprite::SpriteRenderer (Component 완전형 — GetOwner 호출)
+
 #include <utility> // std::move
 
 namespace TopdownShooter::Playable
@@ -49,6 +52,33 @@ namespace TopdownShooter::Playable
 			}
 			slot.playable->Update(dt);
 		}
+	}
+
+	void PlayableDirector::SetFacing(Entity::EFacing f)
+	{
+		if (f == mFacing) return; // velocity 안 읽음 — 계산은 PlayerController(RD5)
+		mFacing = f;
+		Apply();
+	}
+
+	void PlayableDirector::SetPose(Entity::EPose p)
+	{
+		if (p == mPose) return;
+		mPose = p;
+		Apply();
+	}
+
+	void PlayableDirector::Apply()
+	{
+		// (mFacing,mPose) 그룹만 활성. SetActive 토글 → 렌더+tick 동시 게이트(2프레임 애니라 freeze 무차별).
+		for (int f = 0; f < 4; ++f)
+			for (int p = 0; p < 2; ++p)
+			{
+				const bool active = (f == idx(mFacing) && p == idx(mPose));
+				for (auto *layer : mGroups[f][p].layers)
+					if (layer && layer->GetOwner())
+						layer->GetOwner()->SetActive(active);
+			}
 	}
 
 	void PlayableDirector::ReactDied(vmath::vec3 /*pos*/)
