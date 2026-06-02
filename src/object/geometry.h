@@ -49,6 +49,11 @@ namespace SJH
         MeshData HemiSphere(double us, double ue, int uRes,
                             double vs, double ve, int vRes,
                             float radius = 1.0f, bool back_face = false);
+        /// @brief 완전구 (중심 원점). 법선 = 중심->정점 (구면).
+        /// @param us,ue,uRes 경도와 분할. @param vs,ve,vRes 위도 비율(0~1 -> -PI/2~+PI/2)과 분할.
+        MeshData Sphere(double us, double ue, int uRes,
+                        double vs, double ve, int vRes,
+                        float radius = 1.0f, bool back_face = false);
 
         /// @brief Assimp aiMesh -> MeshData 변환. position/normal/texCoord 채널을 그대로 복사하고
         ///        삼각형 face 인덱스를 펼침. (Triangulate 전처리 가정 — 모든 face 는 3 인덱스)

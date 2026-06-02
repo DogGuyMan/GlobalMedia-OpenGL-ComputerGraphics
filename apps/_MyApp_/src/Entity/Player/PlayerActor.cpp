@@ -23,28 +23,17 @@ namespace TopdownShooter::Entity::Player
 
 		if (cfg.physics.world != nullptr)
 		{
-			// Physics body 생성 — b2World 가 lifetime 소유.
-			b2BodyDef bd;
-			bd.type = b2_dynamicBody;
-			bd.position.Set(cfg.physics.startPosition[0], cfg.physics.startPosition[1]);
-			bd.linearDamping = cfg.physics.linearDamping;
-			b2Body *body = cfg.physics.world->CreateBody(&bd);
-
-			b2PolygonShape box;
-			box.SetAsBox(cfg.physics.size[0] * 0.5f, cfg.physics.size[1] * 0.5f);
-
-			b2FixtureDef fd;
-			fd.shape = &box;
-			fd.density = cfg.physics.density;
-			fd.friction = cfg.physics.friction;
-			fd.isSensor = cfg.physics.isSensor;
-			fd.filter.categoryBits = cfg.physics.categoryBits;
-			fd.filter.maskBits = cfg.physics.maskBits;
-			body->CreateFixture(&fd);
-
-			auto *pb = actor->AddComponent<Physics::Components::BoxBody>();
-			pb->SetBody(body);
-			pb->SetSensor(cfg.physics.isSensor);
+			// Physics body 생성은 BoxBody ctor 가 담당(eager) — b2World 가 lifetime 소유.
+			Physics::Components::BodyConfig bc;
+			bc.world         = cfg.physics.world;
+			bc.startPosition = cfg.physics.startPosition;
+			bc.linearDamping = cfg.physics.linearDamping;
+			bc.density       = cfg.physics.density;
+			bc.friction      = cfg.physics.friction;
+			bc.isSensor      = cfg.physics.isSensor;
+			bc.categoryBits  = cfg.physics.categoryBits;
+			bc.maskBits      = cfg.physics.maskBits;
+			actor->AddComponent<Physics::Components::BoxBody>(bc, cfg.physics.size);
 
 			auto *pm = actor->AddComponent<Physics::PhysicsMovement>(cfg.movement.speed);
 

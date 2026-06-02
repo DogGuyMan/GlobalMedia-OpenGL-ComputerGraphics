@@ -405,6 +405,77 @@ namespace SJH
             }
         }
 
+        void BuildSphereIndexed(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
+                                double us, double ue, int uRes,
+                                double vs, double ve, int vRes,
+                                float radius,
+                                const vmath::vec3 &offset, bool back_face)
+        {
+            // 완전구, 중심 원점. 법선 = 중심->정점 (구면). HemiSphere 와 동일 구조이되
+            // 위도(latitude) 범위만 [0,PI/2] -> [-PI/2,+PI/2] 로 확장 (v=0 남극, v=1 북극).
+            int numCols = uRes + 1;
+            int numRows = vRes + 1;
+
+            const GLuint base = static_cast<GLuint>(vertices.size() / VERTEX_LEN);
+
+            double deltaV = (ve - vs) / (float)vRes;
+            double deltaAngle = (ue - us) / (float)uRes;
+
+            const vmath::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
+
+            for (int row = 0; row < numRows; row++)
+            {
+                for (int col = 0; col < numCols; col++)
+                {
+                    double currentV = vs + row * deltaV;
+                    double latitude = currentV * M_PI - (M_PI / 2.0);
+                    double currentAngle = (us + col * deltaAngle);
+
+                    double r = radius * cos(latitude);
+                    double y = radius * sin(latitude);
+
+                    float px = (float)(r * cos(currentAngle));
+                    float py = (float)y;
+                    float pz = (float)(-r * sin(currentAngle));
+
+                    vmath::vec4 pos(px, py, pz, 1.0f);
+                    vmath::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
+                    vmath::vec3 outN = vmath::normalize(vmath::vec3(px, py, pz));
+                    vmath::vec3 normal = back_face ? -outN : outN;
+                    PushVertex(vertices, pos, white, normal, uv, offset);
+                }
+            }
+
+            for (int row = 0; row < vRes; row++)
+            {
+                for (int col = 0; col < uRes; col++)
+                {
+                    GLuint p0 = base + static_cast<GLuint>(row * numCols + col);
+                    GLuint p1 = base + static_cast<GLuint>(row * numCols + (col + 1));
+                    GLuint p2 = base + static_cast<GLuint>((row + 1) * numCols + (col + 1));
+                    GLuint p3 = base + static_cast<GLuint>((row + 1) * numCols + col);
+                    if (!back_face)
+                    {
+                        indices.push_back(p0);
+                        indices.push_back(p1);
+                        indices.push_back(p2);
+                        indices.push_back(p0);
+                        indices.push_back(p2);
+                        indices.push_back(p3);
+                    }
+                    else
+                    {
+                        indices.push_back(p0);
+                        indices.push_back(p2);
+                        indices.push_back(p1);
+                        indices.push_back(p0);
+                        indices.push_back(p3);
+                        indices.push_back(p2);
+                    }
+                }
+            }
+        }
+
         // === 13-float interleaved -> MeshData 변환 ===
         // 빌더의 raw(pos4 + color4 + normal3 + uv2) 출력을 SJH::Vertex(pos3 + normal3 + uv2) 로 변환.
         // color(4 float) 와 pos.w 는 폐기.
@@ -532,6 +603,18 @@ namespace SJH
             std::vector<GLfloat> raw;
             std::vector<GLuint> idx;
             BuildHemiSphereIndexed(
+                raw, idx, us, ue, uRes, vs, ve, vRes,
+                radius, vmath::vec3(0.0f, 0.0f, 0.0f), back_face);
+            return FromInterleaved(raw, idx);
+        }
+
+        MeshData Sphere(double us, double ue, int uRes,
+                        double vs, double ve, int vRes,
+                        float radius, bool back_face)
+        {
+            std::vector<GLfloat> raw;
+            std::vector<GLuint> idx;
+            BuildSphereIndexed(
                 raw, idx, us, ue, uRes, vs, ve, vRes,
                 radius, vmath::vec3(0.0f, 0.0f, 0.0f), back_face);
             return FromInterleaved(raw, idx);

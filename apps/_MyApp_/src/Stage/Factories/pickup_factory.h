@@ -23,24 +23,14 @@ namespace TopdownShooter::Stage::Factories
     {
         auto actor = std::make_unique<SJH::Scene::Actor>(std::move(name));
 
-        b2BodyDef bd;
-        bd.type = b2_staticBody;
-        bd.position.Set(center[0], center[1]);
-        b2Body* body = world.CreateBody(&bd);
-
-        b2PolygonShape box;
-        box.SetAsBox(half[0], half[1]);
-
-        b2FixtureDef fd;
-        fd.shape               = &box;
-        fd.isSensor            = true;   // Unity isTrigger ON
-        fd.filter.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Pickup);
-        fd.filter.maskBits     = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
-        body->CreateFixture(&fd);
-
-        auto* pb = actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>();
-        pb->SetBody(body);
-        pb->SetSensor(true);
+        TopdownShooter::Physics::Components::BodyConfig bc;
+        bc.world         = &world;
+        bc.bodyType      = b2_staticBody;
+        bc.startPosition = center;
+        bc.isSensor      = true;   // Unity isTrigger ON
+        bc.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Pickup);
+        bc.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
+        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, vmath::vec2(half[0] * 2.0f, half[1] * 2.0f));
 
         actor->AddComponent<Components::PickupTriggerLogger>();
 

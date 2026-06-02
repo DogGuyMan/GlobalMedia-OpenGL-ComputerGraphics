@@ -4,9 +4,27 @@
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <cstdint>
+#include <vmath.h>
 
 namespace TopdownShooter::Physics::Components
 {
+	/// @brief body+fixture 생성 파라미터 (b2BodyDef + fixture 공통부). shape 는 subtype 책임.
+	/// @details 5 call-site 모두 커버 — dynamic(Player/Enemy) / static(Wall/Pickup) / kinematic+velocity(Bullet).
+	struct BodyConfig
+	{
+		b2World*    world          = nullptr;
+		b2BodyType  bodyType       = b2_dynamicBody;             // Wall/Pickup=static, Bullet=kinematic
+		vmath::vec2 startPosition  = vmath::vec2(0.0f, 0.0f);
+		vmath::vec2 linearVelocity = vmath::vec2(0.0f, 0.0f);    // Bullet 초기 속도 (그 외 0)
+		float       linearDamping  = 0.0f;
+		float       density        = 1.0f;
+		float       friction       = 0.2f;                       // b2FixtureDef 기본값 — friction 미설정 site(벽/픽업/총알) 보존
+		bool        isSensor       = false;
+		uint16_t    categoryBits   = 0;
+		uint16_t    maskBits       = 0;
+		float       heightOffset   = 0.0f;
+	};
+
 	/// @brief b2Body* non-owning 보유 abstract base. PhysicsSystem 의 b2World 가 lifetime 소유.
 	/// @details
 	///   ### 좌표계 (spec §4.4)
@@ -64,9 +82,36 @@ namespace TopdownShooter::Physics::Components
 		float   GetHeightOffset() const { return mHeightOffset; }
 		bool    IsSensor()        const { return mIsSensor; }   // isTrigger source-of-truth
 
-		virtual void OnEnter() = 0;
-		virtual void OnExit() = 0;
-		virtual void Update(float dt) = 0;
+		// ── body 생성 (subtype ctor 가 호출, eager). owner 무관 — 등록은 OnEnter. ──
+	  protected:
+		/// @brief b2BodyDef → CreateBody (fixture 없음). subtype ctor 가 호출 후 shape fixture 추가.
+		b2Body* MakeBody(const BodyConfig& cfg)
+		{
+			if (cfg.world == nullptr) return nullptr;
+			b2BodyDef bd;
+			bd.type          = cfg.bodyType;
+			bd.position.Set(cfg.startPosition[0], cfg.startPosition[1]);
+			bd.linearDamping = cfg.linearDamping;
+			bd.linearVelocity.Set(cfg.linearVelocity[0], cfg.linearVelocity[1]);
+			return cfg.world->CreateBody(&bd);
+		}
+		/// @brief 생성된 body 를 멤버에 등록(owner 제외 — OnEnter 가 담당). subtype ctor 말미 호출.
+		void InitBody(b2Body* body, const BodyConfig& cfg)
+		{
+			mBody         = body;
+			mIsSensor     = cfg.isSensor;
+			mHeightOffset = cfg.heightOffset;
+		}
+
+	  public:
+		/// @brief owner userdata 등록 (ctor 엔 GetOwner=null → 여기서). contact 콜백은 런타임에만 읽음.
+		void OnEnter() override
+		{
+			if (mBody != nullptr)
+				mBody->GetUserData().pointer = reinterpret_cast<uintptr_t>(GetOwner());
+		}
+		void OnExit() override = 0;          // subtype 가 구현 (Physics 는 abstract 유지)
+		void Update(float dt) override = 0;
 	};
 
 	/// @brief Actor 의 Component 중 첫 번째 Physics-derived 를 polymorphic 으로 검색.

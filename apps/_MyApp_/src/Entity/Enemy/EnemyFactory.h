@@ -29,28 +29,18 @@ namespace TopdownShooter::Entity::Enemy
     {
         auto actor = std::make_unique<SJH::Scene::Actor>("Enemy");
 
-        b2BodyDef bd;
-        bd.type          = b2_dynamicBody;
-        bd.position.Set(cfg.pos[0], cfg.pos[1]);
-        bd.linearDamping = 0.5f;
-        b2Body* body     = cfg.world->CreateBody(&bd);
-
-        b2CircleShape circle;
-        circle.m_radius = 0.4f;
-
-        b2FixtureDef fd;
-        fd.shape               = &circle;
-        fd.density             = 1.0f;
-        fd.friction            = 0.3f;
-        fd.filter.categoryBits = Physics::ToBits(Physics::PhysicsLayer::Enemy);
-        fd.filter.maskBits     = Physics::ToBits(Physics::EnemyMask);
-        body->CreateFixture(&fd);
-
-        auto* pb = actor->AddComponent<Physics::Components::CircleBody>();
-        pb->SetBody(body);
+        Physics::Components::BodyConfig bc;
+        bc.world         = cfg.world;
+        bc.startPosition = cfg.pos;
+        bc.linearDamping = 0.5f;
+        bc.density       = 1.0f;
+        bc.friction      = 0.3f;
+        bc.categoryBits  = Physics::ToBits(Physics::PhysicsLayer::Enemy);
+        bc.maskBits      = Physics::ToBits(Physics::EnemyMask);
+        auto* pb = actor->AddComponent<Physics::Components::CircleBody>(bc, 0.4f);
 
         actor->AddComponent<Components::Life>(cfg.hp);
-        actor->AddComponent<SimplePursueAI>(cfg.playerTarget, body, cfg.speed);
+        actor->AddComponent<SimplePursueAI>(cfg.playerTarget, pb->GetBody(), cfg.speed);
         // 접촉 데미지 배달 = Carrier::ContactCarrier (적 body 재사용, 동작 보존 — IDamageable 배달).
         actor->AddComponent<Spawn::Carrier::ContactCarrier>(cfg.damage);
         if (cfg.onDeathFx)

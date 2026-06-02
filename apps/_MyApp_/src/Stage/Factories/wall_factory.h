@@ -21,24 +21,15 @@ namespace TopdownShooter::Stage::Factories
     {
         auto actor = std::make_unique<SJH::Scene::Actor>(std::move(name));
 
-        b2BodyDef bd;
-        bd.type = b2_staticBody;
-        bd.position.Set(center[0], center[1]);
-        b2Body* body = world.CreateBody(&bd);
-
-        b2PolygonShape box;
-        box.SetAsBox(half[0], half[1]);
-
-        b2FixtureDef fd;
-        fd.shape               = &box;
-        fd.isSensor            = false;   // solid — Unity isTrigger OFF
-        fd.filter.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Wall);
-        fd.filter.maskBits     = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::WallMask);
-        body->CreateFixture(&fd);
-
-        auto* pb = actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>();
-        pb->SetBody(body);
-        pb->SetHeightOffset(0.0f);
+        TopdownShooter::Physics::Components::BodyConfig bc;
+        bc.world         = &world;
+        bc.bodyType      = b2_staticBody;          // 정적 벽 — 추락/이동 없음
+        bc.startPosition = center;
+        bc.isSensor      = false;                  // solid — Unity isTrigger OFF
+        bc.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Wall);
+        bc.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::WallMask);
+        // half = half-extents → BoxBody 는 size(full)*0.5 로 SetAsBox 하므로 half*2 전달(절반크기 보존).
+        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, vmath::vec2(half[0] * 2.0f, half[1] * 2.0f));
 
         return actor;
     }
