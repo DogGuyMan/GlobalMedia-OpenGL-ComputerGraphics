@@ -1,12 +1,13 @@
 #include "text/bitmap_font.h"
 
-#include "sprite/uniform_atlas.h"
 #include "resource_registry/resource_registry.h"
 
 #include <spdlog/spdlog.h>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 namespace SJH::Text

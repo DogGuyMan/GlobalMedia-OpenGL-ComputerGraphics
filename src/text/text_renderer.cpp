@@ -2,9 +2,9 @@
 
 #include "text/bitmap_font.h"
 #include "sprite/sprite_component.h"   // SJH::Sprite::SpriteRenderer
-#include "sprite/uniform_atlas.h"
 
 #include <memory>
+#include <string>
 
 namespace SJH::Text
 {
@@ -45,14 +45,15 @@ namespace SJH::Text
         const float glyphW      = static_cast<float>(mFont->CellW()) * worldPerPx;
 
         float totalW = 0.0f;
-        for (unsigned char c : mText)
-            totalW += static_cast<float>(mFont->AdvanceOf(c)) * worldPerPx;
+        for (char c : mText)
+            totalW += static_cast<float>(mFont->AdvanceOf(static_cast<unsigned char>(c))) * worldPerPx;
         float penX = -totalW * 0.5f;   // center
 
-        for (unsigned char c : mText)
+        for (char c : mText)
         {
-            const int   frame = mFont->FrameOf(c);
-            const float advW  = static_cast<float>(mFont->AdvanceOf(c)) * worldPerPx;
+            const auto  cp    = static_cast<unsigned char>(c);
+            const int   frame = mFont->FrameOf(cp);
+            const float advW  = static_cast<float>(mFont->AdvanceOf(cp)) * worldPerPx;
             if (frame >= 0)
             {
                 auto* glyph = owner->AddChild(std::make_unique<SJH::Scene::Actor>("glyph"));
