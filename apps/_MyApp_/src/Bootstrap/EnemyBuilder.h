@@ -21,6 +21,7 @@ namespace TopdownShooter::Bootstrap
         int                damage       = 10;
         int                variant      = 0;          ///< 0~2 → ENEMY_FRONT[variant % 3]
         float              spriteFps    = 6.0f;        ///< 2프레임 walk 애니 속도
+        vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
         std::function<void(const vmath::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
     };
 

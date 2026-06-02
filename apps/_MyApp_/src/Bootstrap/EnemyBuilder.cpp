@@ -4,6 +4,7 @@
 
 #include "Entity/Components/LifeComponents.h" // Components::Life — 사망 지연(dissolve 가시화)
 #include "Entity/Enemy/EnemyFactory.h"   // CreateEnemyActor / EnemyConfig (+box2d)
+#include "HUD/HealthBarFactory.h"          // 머리 위 분절형 체력바 (AttachHealthBar + HealthBarConfig)
 #include "Playable/Constants.h"           // ENEMY_FRONT
 #include "Playable/PlayableDirector.h"    // P4 — 적 IActorPresentation [C] sink
 #include "Playable/SpriteFxPlayable.h"    // P4 — hit-flash / dissolve (player 와 동일 클래스 재사용)
@@ -115,6 +116,14 @@ namespace TopdownShooter::Bootstrap
             // SetActive(false) → dissolve 무발현. (적은 onDeathFx 미바인딩 → EnemyDeathHandler 부재라 Life 지연만으로 충분.)
             if (auto* life = enemy->GetComponent<TopdownShooter::Entity::Components::Life>())
                 life->SetDeathDelaySeconds(0.6f);
+        }
+
+        // 머리 위 분절형 체력바 — Enemy Life(ILivable) HP 비율을 uFill 로 구동 (player 와 동일 팩토리 재사용).
+        //   색은 deps.healthBarColor 로 베리에이션 (기본 빨강). AddChild 전 부착 → enemy entry 시 함께 OnEnter.
+        {
+            TopdownShooter::HUD::HealthBarConfig barCfg;
+            barCfg.fillColor = deps.healthBarColor;
+            TopdownShooter::HUD::AttachHealthBar(*enemy, barCfg);
         }
 
         // 5) 씬 트리 부착 (entry → 컴포넌트 OnEnter 캐스케이드)
