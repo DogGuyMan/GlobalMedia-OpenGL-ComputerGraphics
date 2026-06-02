@@ -1,6 +1,7 @@
 add_library(myapp_physics STATIC
     PhysicsSystem.cpp
     ContactListener.cpp
+    PhysicsRaycast.cpp
 )
 add_library(MyApp::Physics ALIAS myapp_physics)
 
