@@ -6,7 +6,7 @@
 #include "Entity/Enemy/EnemyDeathHandler.h"
 #include "Entity/Enemy/SimplePursueAI.h"
 #include "Physics/PhysicsComponent.Imp.h"
-#include "Physics/filter.h"
+#include "Physics/PhysicsLayer.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <memory>

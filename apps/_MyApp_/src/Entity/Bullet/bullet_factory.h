@@ -4,7 +4,7 @@
 #include "Entity/Bullet/BulletContactHandler.h"
 #include "Entity/Bullet/BulletLifetime.h"
 #include "Physics/PhysicsComponent.Imp.h"
-#include "Physics/filter.h"
+#include "Physics/PhysicsLayer.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <memory>

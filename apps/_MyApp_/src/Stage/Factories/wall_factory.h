@@ -2,7 +2,7 @@
 #define __TOPDOWNSHOOTER_STAGE_FACTORIES_WALL_FACTORY_H__
 
 #include "Physics/PhysicsComponent.Imp.h"
-#include "Physics/filter.h"
+#include "Physics/PhysicsLayer.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <memory>
