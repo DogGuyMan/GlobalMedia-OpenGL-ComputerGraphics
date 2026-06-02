@@ -2,9 +2,9 @@
 #define __TOPDOWNSHOOTER_ENTITY_ENEMY_ENEMY_FACTORY_H__
 
 #include "Entity/Components/LifeComponents.h"
-#include "Entity/Enemy/EnemyContactHandler.h"
 #include "Entity/Enemy/EnemyDeathHandler.h"
 #include "Entity/Enemy/SimplePursueAI.h"
+#include "Spawns/Carrier.h"
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/PhysicsLayer.h"
 #include "scene/actor.h"
@@ -51,7 +51,8 @@ namespace TopdownShooter::Entity::Enemy
 
         actor->AddComponent<Components::Life>(cfg.hp);
         actor->AddComponent<SimplePursueAI>(cfg.playerTarget, body, cfg.speed);
-        actor->AddComponent<EnemyContactHandler>(cfg.damage);
+        // 접촉 데미지 배달 = Carrier::ContactCarrier (적 body 재사용, 동작 보존 — IDamageable 배달).
+        actor->AddComponent<Spawn::Carrier::ContactCarrier>(cfg.damage);
         if (cfg.onDeathFx)
             actor->AddComponent<EnemyDeathHandler>(cfg.onDeathFx);
 

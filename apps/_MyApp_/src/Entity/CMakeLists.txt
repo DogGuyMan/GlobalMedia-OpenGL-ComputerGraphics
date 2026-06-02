@@ -2,11 +2,8 @@ add_library(myapp_entity STATIC
     BaseEntity.cpp
     Components/WeaponComponents.cpp
     Player/PlayerActor.cpp
-    Player/PlayerBehavior.cpp
     Player/PlayerHand.cpp
-    Bullet/BulletContactHandler.cpp
     Enemy/SimplePursueAI.cpp
-    Enemy/EnemyContactHandler.cpp
     Enemy/EnemyDeathHandler.cpp
 )
 add_library(MyApp::Entity ALIAS myapp_entity)
@@ -20,9 +17,9 @@ target_include_directories(myapp_entity
 
 # SJH::scene    — Component/Actor 베이스 (헤더 노출)
 # MyApp::Algebraic — LifeComponents.h ->Stat
-# SJH::playable  — PlayerBehavior.h 헤더 노출 (BulletSpawnPlayable 은 P1 에서 삭제 — 게임로직-in-Playable 위반)
-# SJH::sprite  (PRIVATE) — PlayerBehavior.cpp 가 SpriteSequencePlayable 메서드 호출
-# game_deps    (PRIVATE) — SimplePursueAI.cpp / PlayerBehavior.cpp 가 box2d 헤더 사용
+# SJH::playable  — (PB분해 Task7 로 PlayerBehavior 철거 후 현재 Entity 직접 사용 0 — umbrella 전파 consumer 보호용 보수적 유지)
+# SJH::sprite  (PRIVATE) — PlayerHand/PlayerActor 가 SpriteRenderer/SpriteSequencePlayable 사용
+# game_deps    (PRIVATE) — SimplePursueAI / WeaponComponents / 팩토리들이 box2d 헤더 사용
 target_link_libraries(myapp_entity
     PUBLIC
         SJH::scene

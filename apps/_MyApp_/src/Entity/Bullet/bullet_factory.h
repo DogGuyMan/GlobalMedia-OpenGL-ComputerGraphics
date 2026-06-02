@@ -1,8 +1,8 @@
 #ifndef __TOPDOWNSHOOTER_ENTITY_BULLET_BULLET_FACTORY_H__
 #define __TOPDOWNSHOOTER_ENTITY_BULLET_BULLET_FACTORY_H__
 
-#include "Entity/Bullet/BulletContactHandler.h"
 #include "Entity/Bullet/BulletLifetime.h"
+#include "Spawns/Carrier.h"
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/PhysicsLayer.h"
 #include "scene/actor.h"
@@ -47,7 +47,9 @@ namespace TopdownShooter::Entity::Bullet
         auto* pb = actor->AddComponent<Physics::Components::CircleBody>();
         pb->SetBody(body);
 
-        actor->AddComponent<BulletContactHandler>(cfg.damage);
+        // 데미지 배달 = Carrier::Projectile (IDamageable/IImpulsable 인터페이스 배달 + self-despawn).
+        auto* proj = actor->AddComponent<Spawn::Carrier::Projectile>(cfg.damage);
+        proj->SetOwnerEntity(nullptr); // 발사자 자가피해 방지 site (현재 물리 필터로 충분 — 후속 owner 주입 가능)
         actor->AddComponent<BulletLifetime>(cfg.lifetime);
 
         return actor;
