@@ -4,6 +4,7 @@ add_library(myapp_spawns STATIC
     VfxInstance.cpp
     CombatSequences.cpp
     AmbientSequences.cpp
+    WorldTextInstance.cpp      # <- 추가 (T5)
 )
 add_library(MyApp::Spawns ALIAS myapp_spawns)
 
@@ -18,6 +19,7 @@ target_link_libraries(myapp_spawns
     PUBLIC
         SJH::scene
         SJH::playable
+        SJH::text          # <- 추가 (TextRenderer — WorldTextInstance.cpp)
         MyApp::Entity
         MyApp::Audio
         MyApp::VFX
