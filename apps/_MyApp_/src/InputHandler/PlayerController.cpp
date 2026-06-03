@@ -11,6 +11,7 @@
 // 마우스->Ground raycast + 발사/회전/디버그 마커에 필요한 의존 (Client 코드라 직접 사용 OK).
 #include "Entity/BaseEntity.h"
 #include "Entity/Components/WeaponComponents.h"
+#include "Entity/Player/PlayerHand.h" // 발사 핀치 — 좌클릭 바인딩에서 PlayerHands::TriggerFire 통지
 #include "Playable/Constants.h" // FacingThresholdConfig / PLAYER_FACING_THRESHOLD (헤더-only 데이터)
 #include "material/material.h"
 #include "material/material_uniforms.h"
@@ -28,14 +29,15 @@
 #include <utility>
 #include <vmath.h>
 
-namespace
+namespace TopdownShooter::Controller
 {
-	// [start,end](degree)에 deg 포함? start>end 면 0° wrap.
+	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
 	bool InRange(float deg, const vmath::vec2 &r)
 	{
 		return (r[0] <= r[1]) ? (deg >= r[0] && deg < r[1]) : (deg >= r[0] || deg < r[1]);
 	}
-	// dir=(x,z) -> θ=normalize360(deg(atan2(-z,x))) -> 4범위 중 포함 필드. no-match=fallback.
+	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
+	// !dir=(x,z) -> θ=normalize360(deg(atan2(-z,x))) -> 4범위 중 포함 필드. no-match=fallback.
 	TopdownShooter::Entity::EFacing QuantizeByThreshold(
 	    vmath::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
 	    TopdownShooter::Entity::EFacing fallback)
@@ -49,10 +51,7 @@ namespace
 		if (InRange(deg, cfg.Right)) return E::EFacing::Right;
 		return fallback;
 	}
-}
 
-namespace TopdownShooter::Controller
-{
 	void PlayerController::RegisterBindings()
 	{
 		// CameraController.cpp 의 BindKey + BindHeldHandler 2단 패턴을 그대로 모방.
@@ -70,17 +69,15 @@ namespace TopdownShooter::Controller
 		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
 		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
 
-		// G키 (이산 press) — Damage Composite 트리거. 콜백은 호출 시점 null-check.
-		mKeyboardInput->BindKey(Action::Damage, GLFW_KEY_G);
-		mKeyboardInput->BindPressHandler(Action::Damage, [this] {
-			spdlog::info("[input] G (Damage)");
-			if (mDamageCallback)
-				mDamageCallback();
-		});
-
 		// 좌클릭 (이산 press) — 발사. MouseInput 미주입이면 바인딩 생략.
 		if (mMouseInput)
-			mMouseInput->BindButtonPressHandler(GLFW_MOUSE_BUTTON_LEFT, [this] { OnFirePressed(); });
+			mMouseInput->BindButtonPressHandler(GLFW_MOUSE_BUTTON_LEFT, [this] {
+				OnFirePressed();
+				// 발사 핀치 통지 — 좁힘/복귀 로직은 PlayerHands 가 소유. 입력 바인딩은 호출만(멤버 캐시 없음).
+				if (auto *owner = GetOwner())
+					if (auto *hands = owner->GetComponent<Entity::PlayerHands>())
+						hands->TriggerFire();
+			});
 	}
 
 	void PlayerController::UnregisterBindings()
@@ -92,7 +89,6 @@ namespace TopdownShooter::Controller
 		mKeyboardInput->UnbindKey(GLFW_KEY_S);
 		mKeyboardInput->UnbindKey(GLFW_KEY_A);
 		mKeyboardInput->UnbindKey(GLFW_KEY_D);
-		mKeyboardInput->UnbindKey(GLFW_KEY_G);
 
 		if (mMouseInput)
 			mMouseInput->UnbindButtonPress(GLFW_MOUSE_BUTTON_LEFT);
@@ -142,12 +138,6 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
-	PlayerController &PlayerController::SetGroundClickCallback(std::function<void(const vmath::vec3 &)> cb)
-	{
-		mGroundClickCallback = std::move(cb);
-		return *this;
-	}
-
 	PlayerController &PlayerController::SetFireCallback(std::function<void()> cb)
 	{
 		mFireCallback = std::move(cb);
@@ -156,7 +146,6 @@ namespace TopdownShooter::Controller
 
 	PlayerController &PlayerController::SetDamageCallback(std::function<void()> cb)
 	{
-		mDamageCallback = std::move(cb);
 		return *this;
 	}
 
@@ -356,41 +345,6 @@ namespace TopdownShooter::Controller
 		// 오디오/VFX Composite (onFire) — 주입됐으면.
 		if (mFireCallback)
 			mFireCallback();
-
-		// // 디버그 노란 마커 — 좌클릭에서만 스폰 (spec §2). 매 프레임 스폰 금지.
-		// SpawnGroundMarker(mAimPoint);
-
-		// Ground 좌표 소비자(VFX 소환 등) — 주입됐으면 클릭 위치 전달.
-		if (mGroundClickCallback)
-			mGroundClickCallback(mAimPoint);
 	}
 
-	// void PlayerController::SpawnGroundMarker(const vmath::vec3 &worldPos)
-	// {
-	// 	auto &reg = SJH::ResourceRegistry::Get();
-
-	// 	// 박스 메시 (idempotent 캐시).
-	// 	SJH::Mesh *mesh = reg.FindMesh("test_marker_box");
-	// 	if (mesh == nullptr)
-	// 		mesh = reg.RegisterMesh("test_marker_box", SJH::Mesh::CreateBox());
-
-	// 	// 노란 단색 머티리얼 — simple.vs/fs(baseColor) + Opaque.
-	// 	SJH::Material *mat = reg.FindSharedMaterial("test_marker_yellow");
-	// 	if (mat == nullptr)
-	// 	{
-	// 		SJH::Program *prog = reg.FindProgram("test_solid");
-	// 		if (prog == nullptr)
-	// 			prog = reg.CreateProgram("test_solid", "resources/shaders/simple.vs", "resources/shaders/simple.fs");
-	// 		mat = reg.CreateSharedMaterial("test_marker_yellow");
-	// 		mat->SetProgram(prog);
-	// 		mat->SetPass(SJH::Pass::Kind::Opaque);
-	// 		SJH::Uniforms::SetVec4(*mat, "baseColor", vmath::vec4(1.0f, 0.95f, 0.1f, 1.0f));
-	// 	}
-
-	// 	auto marker = std::make_unique<SJH::Scene::Actor>("GroundMarker");
-	// 	marker->GetTransform().Translate = worldPos;
-	// 	marker->GetTransform().Scale = vmath::vec3(0.4f, 0.4f, 0.4f);
-	// 	marker->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
-	// 	SJH::Scene::Director::Get().Root().AddChild(std::move(marker));
-	// }
 } // namespace TopdownShooter::Controller

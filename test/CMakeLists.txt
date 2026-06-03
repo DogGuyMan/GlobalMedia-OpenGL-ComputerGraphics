@@ -329,6 +329,7 @@ add_custom_target(tests DEPENDS
     test_material           # POD value class regression
     test_light              # POD value class regression
     test_transform          # Transform 값 객체 (GetLocalMatrix)
+    test_actor_lifecycle    # Phase SP3 — Actor 라이프사이클 (GL 불요)
     # test_scene_node       # 비활성화 — src/object/scene_node.h 미존재
     # test_scene_graph      # 비활성화 — src/object/scene_graph.h 미존재
     test_mouse_input        # MouseInput 드래그

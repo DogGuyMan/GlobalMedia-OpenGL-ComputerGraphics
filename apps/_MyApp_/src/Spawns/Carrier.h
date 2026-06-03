@@ -2,6 +2,7 @@
 #define __TOPDOWNSHOOTER_SPAWNS_CARRIER_H__
 
 #include "Entity/Components/Components.Interfaces.h" // IDamageable / IImpulsable
+#include "Entity/Components/LifeComponents.h"        // IDamageable / IImpulsable
 #include "Physics/Components.Interfaces.h"           // IContactable
 #include "scene/actor.h"
 #include <functional>
@@ -48,22 +49,32 @@ namespace TopdownShooter::Spawn::Carrier
 		}
 
 		SJH::Scene::Actor *mOwnerEntity = nullptr; // 발사자 (자가 피해 방지)
-		int                mDamage      = 0;
-		HitFx              mOnHitFx;
+		int mDamage = 0;
+		HitFx mOnHitFx;
 	};
 
 	/// @brief flying + lifetime + self-despawn. BulletContactHandler 흡수 (mAlive 가드 + 지연 despawn).
 	class Projectile : public CarrierBase, public Entity::IDieable
 	{
 	  public:
-		explicit Projectile(int damage) { mDamage = damage; }
+		explicit Projectile(int damage)
+		{
+			mDamage = damage;
+		}
 
 		/// @brief 비행 방향 주입 (box2d XY, 정규화 가정) — 넉백 방향 소스.
 		///        위치차분(enemy-bullet)은 접촉 시 관통 깊이에 따라 불안정/역전되므로 비행방향을 쓴다.
-		void SetLaunchDir(vmath::vec2 box2dDir) { mLaunchDir = box2dDir; }
+		void SetLaunchDir(vmath::vec2 box2dDir)
+		{
+			mLaunchDir = box2dDir;
+		}
 
-		void OnEnter() override {}
-		void OnExit() override {}
+		void OnEnter() override
+		{
+		}
+		void OnExit() override
+		{
+		}
 		void Update(float /*dt*/) override
 		{
 			// 콜백 중 b2Body 수정 금지 -> despawn 은 Update 에서 지연 (BulletContactHandler 패턴).
@@ -71,10 +82,19 @@ namespace TopdownShooter::Spawn::Carrier
 				GetOwner()->SetActive(false);
 		}
 
-		void DoDie() override { mPendingDisable = true; }
+		void DoDie() override
+		{
+			mPendingDisable = true;
+		}
 
-		void OnCollisionEnter(SJH::Scene::Actor *other) override { HandleHit(other); }
-		void OnTriggerEnter(SJH::Scene::Actor *other) override { HandleHit(other); }
+		void OnCollisionEnter(SJH::Scene::Actor *other) override
+		{
+			HandleHit(other);
+		}
+		void OnTriggerEnter(SJH::Scene::Actor *other) override
+		{
+			HandleHit(other);
+		}
 
 	  private:
 		void HandleHit(SJH::Scene::Actor *other)
@@ -90,22 +110,41 @@ namespace TopdownShooter::Spawn::Carrier
 		}
 
 		vmath::vec2 mLaunchDir{0.0f, 0.0f}; // box2d XY 비행방향 (SetLaunchDir 주입)
-		bool        mAlive          = true;
-		bool        mPendingDisable = false;
+		bool mAlive = true;
+		bool mPendingDisable = false;
 	};
 
 	/// @brief sensor + persistent (적 접촉 데미지). EnemyContactHandler 흡수 — 적 body 재사용(동작 보존).
 	class ContactCarrier : public CarrierBase
 	{
 	  public:
-		explicit ContactCarrier(int damage) { mDamage = damage; }
+		explicit ContactCarrier(int damage)
+		{
+			mDamage = damage;
+		}
 
-		void OnEnter() override {}
-		void OnExit() override {}
-		void Update(float /*dt*/) override {}
+		void OnEnter() override
+		{
+		}
+		void OnExit() override
+		{
+		}
+		void Update(float /*dt*/) override
+		{
+		}
 
-		void OnCollisionEnter(SJH::Scene::Actor *other) override { Deliver(other, vmath::vec2(0.0f)); }
-		void OnTriggerEnter(SJH::Scene::Actor *other) override { Deliver(other, vmath::vec2(0.0f)); }
+		void OnCollisionEnter(SJH::Scene::Actor *other) override
+		{
+			if (mOwnerEntity != nullptr && !mOwnerEntity->GetComponent<Entity::Components::Life>()->IsAlive())
+				return;
+			Deliver(other, vmath::vec2(0.0f));
+		}
+		void OnTriggerEnter(SJH::Scene::Actor *other) override
+		{
+			if (mOwnerEntity != nullptr && !mOwnerEntity->GetComponent<Entity::Components::Life>()->IsAlive())
+				return;
+			Deliver(other, vmath::vec2(0.0f));
+		}
 	};
 }; // namespace TopdownShooter::Spawn::Carrier
 #endif // __TOPDOWNSHOOTER_SPAWNS_CARRIER_H__

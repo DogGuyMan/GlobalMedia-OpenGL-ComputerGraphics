@@ -2,7 +2,7 @@
 
 #include "UI/UiBootstrap.h"
 
-#include "UI/ExitButtonLayer.h"
+#include "UI/PauseButtonLayer.h"
 #include "UI/ImGuiLayerStack.h"
 #include "UI/PostFXDebugLayer.h"
 #include "resource_registry/image.h"
@@ -26,13 +26,13 @@ namespace TopdownShooter::UI
 		glfwSetScrollCallback(deps.window, ImGui_ImplGlfwGL3_ScrollCallback);
 		glfwSetCharCallback(deps.window, ImGui_ImplGlfwGL3_CharCallback);
 
-		// ExitButton 텍스처 — Game UI Layer
-		const auto *exitTex = deps.reg->CreateTexture(
-		    "exit_texture",
-		    SJH::Image::Load("exit_texture", "resources/texture/exit_texture.png").get());
+		// Pause 버튼 텍스처 — Game UI Layer (구 ExitButton 기능 전환 2026-06-04)
+		const auto *pauseTex = deps.reg->CreateTexture(
+		    "pause_button",
+		    SJH::Image::Load("pause_button", "resources/texture/pause_button.png").get());
 
 		// ImGui 레이어 등록 — Game(항상) / Editor(F1 토글)
-		deps.stack->Push(std::make_unique<ExitButtonLayer>(deps.window, exitTex));
+		deps.stack->Push(std::make_unique<PauseButtonLayer>(deps.onPauseToggle, pauseTex));
 		deps.stack->Push(std::make_unique<PostFXDebugLayer>(std::move(deps.debugEntries), *deps.gamma));
 
 		return ctx;

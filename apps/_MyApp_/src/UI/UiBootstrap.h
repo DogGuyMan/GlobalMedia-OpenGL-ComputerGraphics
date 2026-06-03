@@ -2,6 +2,7 @@
 #define __MYAPP_UI_BOOTSTRAP_H__
 
 #include "UI/PostFXDebugLayer.h" // PassDebugEntry (값 멤버라 완전 타입 필요)
+#include <functional>
 #include <vector>
 
 // fwd — 포인터만 노출.
@@ -24,6 +25,7 @@ namespace TopdownShooter::UI
 		ImGuiLayerStack            *stack  = nullptr;
 		std::vector<PassDebugEntry> debugEntries;
 		float                      *gamma  = nullptr; ///< main 의 mGamma — PostFXDebugLayer 가 float& 보유 (lifetime caller-owned).
+		std::function<void()>       onPauseToggle;    ///< Pause 버튼(PauseButtonLayer) 클릭 콜백 — main: TogglePause.
 	};
 
 	/// @brief ImGui v1.53 init(install_callbacks=false) + Exit/PostFXDebug 레이어 등록.

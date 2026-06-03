@@ -27,10 +27,10 @@ namespace TopdownShooter::Bootstrap
 		{
 			auto &dir = SJH::Scene::Director::Get();
 
-			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, deps.aspect, 0.1f, 100.0f);
+			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, deps.aspect, 0.1f, 1000.0f);
 			auto &worldCamTransform = worldCamActor->GetTransform();
 			worldCamTransform.SetTransformWithVectors(
-			                     vmath::vec3(0.0f, 4.0f, 8.0f),
+			                     vmath::vec3(0.0f, 3.0f, 6.0f),
 			                     vmath::vec3(-30.0f, 0.0f, 0.0))
 			    .PrintTransform();
 

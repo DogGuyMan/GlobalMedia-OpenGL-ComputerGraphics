@@ -5,16 +5,19 @@
 
 namespace TopdownShooter::Stage
 {
-    /// @brief 스테이지 진행 상태 — Title / Combat / Boss 3 단계 비트 플래그.
+    /// @brief 스테이지 진행 상태 — FSM(StageStateMachine)용 단일 비트 플래그.
     /// @details
-    ///   - 각 enumerator 가 단일 비트 — FSM 통합 시 GetStateFlag/GetTransitFlag 와 호환.
-    ///   - 현재는 Components::StageState 가 단순 보유 (setter/getter). FSM 활성화는 M4 / M7.
-    ///   - NONE 은 의도적으로 없음 — 항상 Title/Combat/Boss 중 하나.
+    ///   - 각 enumerator 가 단일 비트 — IFsmState::GetStateFlag/GetTransitFlag 와 호환.
+    ///   - NONE=0 은 FSM 엔진 sentinel(전이 불가). StateMachine 은 startup=Title 로 생성.
+    ///   - Boss 는 미래 마일스톤(현재 미사용).
     enum class EStageStatus : uint64_t
     {
-        Title  = 1ull << 0,
-        Combat = 1ull << 1,
-        Boss   = 1ull << 2,
+        NONE       = 0,         // FSM sentinel — 전이 불가
+        Title      = 1ull << 0,
+        CombatPlay = 1ull << 1, // 구 Combat 에서 리네임
+        Boss       = 1ull << 2, // 미래 — 현재 미사용
+        Pause      = 1ull << 3,
+        GameOver   = 1ull << 4,
     };
 }
 

@@ -16,6 +16,7 @@ namespace SJH::Scene
 
 namespace SJH::Timer { class Timer; }
 namespace TopdownShooter::Entity { class BaseEntity; }
+namespace TopdownShooter::Entity { class PlayerHands; } // 발사 핀치 통지용 (포인터 멤버)
 
 namespace TopdownShooter::Controller
 {
@@ -62,9 +63,6 @@ namespace TopdownShooter::Controller
 		/// @brief G키 press 시 실행할 콜백 (Damage Composite 등). 미주입이면 G키 무시.
 		PlayerController &SetDamageCallback(std::function<void()> cb);
 
-		/// @brief 좌클릭으로 Ground 좌표가 추출됐을 때 실행할 콜백 (월드 좌표 전달).
-		/// @details VFX 테스트(선택 이펙트 소환) 등 *클릭 위치 소비자* 용. 미주입이면 무시.
-		PlayerController &SetGroundClickCallback(std::function<void(const vmath::vec3 &worldPos)> cb);
 
 		/// @brief 조준 정보 — 매 프레임 마우스->Ground raycast 로 갱신 (PlayerActor(owner)->커서 Ground).
 		/// @details `mAimDirection` 은 XZ 평면 정규화 방향(발사/회전 방향). `mAimPoint` 는 커서 월드 좌표.
@@ -90,8 +88,6 @@ namespace TopdownShooter::Controller
 		TopdownShooter::Entity::BaseEntity* mEntity = nullptr; // 대시 중 이동 suppress 게이트(IsImpulseActive)
 
 		std::function<void()> mFireCallback;   // 좌클릭
-		std::function<void()> mDamageCallback; // G키
-		std::function<void(const vmath::vec3 &)> mGroundClickCallback; // 좌클릭 Ground 좌표 소비자(VFX 소환 등)
 
 		vmath::vec3 mInputValue {0.0f};
 

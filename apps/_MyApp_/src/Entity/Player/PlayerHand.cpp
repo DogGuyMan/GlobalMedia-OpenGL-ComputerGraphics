@@ -89,7 +89,7 @@ namespace TopdownShooter::Entity
 		mRight = makeHand("RightHand", -HAND_SPREAD_DEG);
 	}
 
-	void PlayerHands::Update(float /*dt*/)
+	void PlayerHands::Update(float dt)
 	{
 		auto *owner = GetOwner();
 		if (owner == nullptr || mLeft == nullptr || mRight == nullptr)
@@ -102,10 +102,27 @@ namespace TopdownShooter::Entity
 
 		// 화면(NDC) 거리 → half-angle 보간. t=0(커서가 플레이어 화면위치 위) → MAX(90°: 양팔 180°),
 		// t=1(커서 화면 가장자리) → MIN(7.5°: 양팔 15°). GetAimScreenT 는 이미 0~1 포화·정규화.
-		const float t       = mController->GetAimScreenT();
-		const float halfDeg = HAND_HALF_ANGLE_MAX + (HAND_HALF_ANGLE_MIN - HAND_HALF_ANGLE_MAX) * t;
+		const float t = mController->GetAimScreenT();
+		float halfDeg = HAND_HALF_ANGLE_MAX + (HAND_HALF_ANGLE_MIN - HAND_HALF_ANGLE_MAX) * t;
+
+		// 발사 핀치 — TweenPlayable 이 mFireBlend 를 1→0 으로 감쇠. blend 만큼 MIN(7.5°)으로 좁힘.
+		// blend=1: finalHalf=MIN(완전 핀치=15°), blend=0: 거리기반 halfDeg.
+		if (mFireTween && !mFireTween->IsFinished())
+			mFireTween->Update(dt); // onStep 이 mFireBlend 갱신
+		halfDeg += (HAND_HALF_ANGLE_MIN - halfDeg) * mFireBlend;
 
 		mLeft->SetSpreadDeg(+halfDeg);  // 좌손 +
 		mRight->SetSpreadDeg(-halfDeg); // 우손 -
+	}
+
+	void PlayerHands::TriggerFire()
+	{
+		mFireBlend = 1.0f; // 클릭 즉시 완전 핀치(15°)
+		// 1→0 (HAND_FIRE_PINCH_MS) — quadraticOut: 빠르게 풀렸다 끝에서 부드럽게 정착.
+		// 클릭마다 새 트윈 생성 = 재시작(one-shot 의 Stop 은 tween progress 를 안 되돌리므로).
+		auto tw = tweeny::from(1.0f).to(0.0f).during(HAND_FIRE_PINCH_MS).via(tweeny::easing::quadraticOut);
+		mFireTween = std::make_unique<Tween::TweenPlayable<float>>(
+		    std::move(tw), [this](float v) { mFireBlend = v; });
+		mFireTween->Play();
 	}
 } // namespace TopdownShooter::Entity

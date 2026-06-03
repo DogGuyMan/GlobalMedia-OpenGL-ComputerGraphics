@@ -3,13 +3,15 @@
 
 #include "scene/actor.h"
 #include "Entity/Constants.h"
+#include "Tween/TweenPlayable.h" // 발사 핀치 복귀 (Tweeny Playable)
+#include <memory>
 #include <vmath.h>
 
 namespace TopdownShooter::Controller
 {
 	class PlayerController; // 손 spread 거리 보간 — aim 거리 읽기용 (포인터 멤버, 전방 선언)
 }
-
+// CLAUDE ASSIST
 namespace TopdownShooter::Entity
 {
 	/// @brief 손 1개 — owner(자식 Hand actor)의 local Transform 을 forward(-Z) 기준 고정 ±벌림각 위치로 배치.
@@ -56,7 +58,11 @@ namespace TopdownShooter::Entity
 	  public:
 		void OnEnter() override;       // 자식 Hand actor 2개 생성·부착 (+ HAND_PART 스프라이트)
 		void OnExit() override {}
-		void Update(float dt) override; // 매 프레임 aim 거리로 양손 spread 보간 (.cpp)
+		void Update(float dt) override; // 매 프레임 aim 거리로 양손 spread 보간 + 발사 핀치 블렌드 (.cpp)
+
+		/// @brief 좌클릭 발사 — 양팔을 즉시 최소각(15°)으로 핀치한 뒤 HAND_FIRE_PINCH_MS 동안
+		///        거리 기반 각도로 Tweeny 복귀. 클릭마다 트윈 재생성(재시작).
+		void TriggerFire();
 
 	  private:
 		// OnEnter 에서 생성한 자식 손 컴포넌트 (비소유 — 자식 Actor 가 소유).
@@ -64,6 +70,10 @@ namespace TopdownShooter::Entity
 		PlayerSingleHand *mRight = nullptr;
 		// 형제(같은 player actor) PlayerController — aim 거리 출처. lazy 캐시.
 		Controller::PlayerController *mController = nullptr;
+
+		// 발사 핀치 — 1(완전 핀치=15°) → 0(거리기반) 으로 Tween 감쇠. finalHalf = lerp(거리기반, MIN, blend).
+		float mFireBlend = 0.0f;
+		std::unique_ptr<Tween::TweenPlayable<float>> mFireTween; // 클릭마다 새로 생성 (one-shot 재시작)
 	};
 }; // namespace TopdownShooter::Entity
 

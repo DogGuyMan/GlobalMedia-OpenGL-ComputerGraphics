@@ -34,8 +34,13 @@
 #include "Stage/StageBuilder.h"
 #include "Stage/WaveController.h"
 #include "Stage/Constants.h"   // Stage::ARENA_HALF_EXTENT
+#include "Stage/Stage.h"       // EStageStatus (TogglePause)
+#include "Stage/Components/GameContextComponent.h"
+#include "Stage/State/StageStateMachine.h"
+#include "Stage/State/StageState.Impl.h"   // Title/CombatPlay/Pause/GameOver + GetCtx
 #include "UI/ImGuiLayerStack.h"
 #include "UI/PostFXDebugLayer.h"
+#include "UI/StateOverlayLayer.h"
 #include "UI/UiBootstrap.h"
 #include "buffer/framebuffer.h"
 #include "common/common.h"
@@ -47,6 +52,7 @@
 #include "render/scene_renderer.h"
 #include "render/screen_quad_stage.h"
 #include "resource_registry/resource_registry.h"
+#include "resource_registry/image.h"        // SJH::Image::Load
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/compound_actor.h"
@@ -205,6 +211,9 @@ namespace TopdownShooter
 
 			mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("FxRoot"));
 
+			// VFX::Spawn 파사드 컨텍스트 등록 — seam(dust/hit/gunshoot)이 이 fxRoot+VFXSystem 으로 단발 스폰.
+			VFX::SetSpawnContext(mFxRoot, &vfxs);
+
 			auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
 			mSpriteActor = player.SpriteActor;
 
@@ -218,7 +227,7 @@ namespace TopdownShooter
 			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size(); ++i)
 				if (i < mPassComponents.size())
 					debugEntries.push_back({POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
-			mImGuiCtx = UI::BuildGameUI({window, &reg, &mImGuiStack, std::move(debugEntries), &mGamma});
+			mImGuiCtx = UI::BuildGameUI({window, &reg, &mImGuiStack, std::move(debugEntries), &mGamma, [this] { TogglePause(); }});
 
 			// VFX 테스트 드롭다운 (항상 표시) + 좌클릭 Ground 좌표 -> 선택 이펙트 소환.
 			{
@@ -226,30 +235,44 @@ namespace TopdownShooter
 				mVfxLayer  = layer.get();
 				mImGuiStack.Push(std::move(layer));
 			}
-			if (mSpriteActor)
-				if (auto *pc = mSpriteActor->GetComponent<Controller::PlayerController>())
-					pc->SetGroundClickCallback([this](const vmath::vec3 &p) {
-						// PlayerController 의 마우스->Ground raycast 결과(p)에 선택 이펙트를 단발 스폰.
-						if (mVfxLayer && mFxRoot)
-							if (auto *fx = mVfxLayer->GetSelectedEffect())
-								TopdownShooter::Spawns::SpawnVfxInstance(
-								    *mFxRoot, &TopdownShooter::Manager::Get().VFX(), fx, p);
-
-						// 데모 — 클릭 지점에 데미지 텍스트 (World Text 검증)
-						if (mFxRoot)
-							if (auto *font = TopdownShooter::Manager::Get().WorldText().GetFont())
-							{
-								// 1~3자리 자릿수별 center 정렬 확인용 더미값 (실제 데미지는 전투 배선 시 — spec 범위 밖)
-								static const int demoVals[] = {5, 42, 137, 9, 88, 250, 1, 76, 999};
-								static std::size_t demoN = 0;
-								const std::string dmg = "-" + std::to_string(demoVals[demoN++ % (sizeof(demoVals) / sizeof(demoVals[0]))]);
-								TopdownShooter::Spawns::WorldTextStyle style;
-								style.scale = 0.5f;   // 0.5배 사이즈다운 (Transform.Scale 합성)
-								TopdownShooter::Spawns::SpawnWorldText(*mFxRoot, font, p, dmg, style);
-							}
-					});
-
 			dir.Enter();
+
+			// ── Stage FSM (Hybrid) ──────────────────────────────────────────────
+			// 게임 로직(Manager/Director/Physics Update)을 State 가 게이트. startup 본문 유지.
+			// GameContext — State 가 owner.FindChild("GameContext") 로 접근하는 공유 컨텍스트.
+			auto *ctxActor = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("GameContext"));
+			mCtx           = ctxActor->AddComponent<Stage::Components::GameContextComponent>();
+
+			// 오버레이 텍스처 (Title/Pause/GameOver) 로드.
+			mCtx->titleTex    = reg.CreateTexture("ui_title", SJH::Image::Load("ui_title", "resources/texture/Title.png").get());
+			mCtx->pauseTex    = reg.CreateTexture("ui_pause", SJH::Image::Load("ui_pause", "resources/texture/Pause.png").get());
+			mCtx->gameOverTex = reg.CreateTexture("ui_gameover", SJH::Image::Load("ui_gameover", "resources/texture/GameOver.png").get());
+
+			// blur PostFX 핸들 — TitleState 가 OnEnter/OnExit 에서 Enabled 토글 (기본 OFF).
+			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
+				if (mPassComponents[i] && POSTFX_PROGRAM_CONFIGS[i].Name == "blurring")
+					mCtx->blurPass = mPassComponents[i];
+
+			// 오버레이 레이어 — ImGuiLayerStack 이 소유(마지막 push = 최상위). ctx 엔 비소유 raw.
+			{
+				auto overlay  = std::make_unique<UI::StateOverlayLayer>();
+				mCtx->overlay = overlay.get();
+				mImGuiStack.Push(std::move(overlay));
+			}
+
+			// StateMachine — game_application 멤버 보유(D1, Actor 부착 안 함). startup=Title.
+			mStageFsm = std::make_unique<Stage::StageStateMachine>(dir.Root());
+			mStageFsm->RegisterState(std::make_unique<Stage::TitleState>(mStageFsm.get()));
+			mStageFsm->RegisterState(std::make_unique<Stage::CombatPlayState>(mStageFsm.get()));
+			mStageFsm->RegisterState(std::make_unique<Stage::PauseState>(mStageFsm.get()));
+			mStageFsm->RegisterState(std::make_unique<Stage::GameOverState>(mStageFsm.get()));
+
+			// WaveController 연결 — Player 사망 감시 → GameOver 전이 구동(S5b).
+			mCtx->waveCtrl = waveSpawner->GetComponent<Stage::WaveController>();
+			if (mCtx->waveCtrl)
+				mCtx->waveCtrl->SetStageStateMachine(mStageFsm.get());
+
+			mStageFsm->OnEnter(); // curState=Title → TitleState::OnEnter (overlay->Show(titleTex))
 		}
 
 		void render(double currentTime) override
@@ -282,10 +305,15 @@ namespace TopdownShooter
 			mKeyboard.PollHeld(window);
 			if (mCamera && mCamera->GetOwner())
 				TopdownShooter::Manager::Get().Audio().SetListener(mCamera->GetOwner()->GetTransform().Translate);
-			TopdownShooter::Manager::Get().Update(dt);
-			SJH::Scene::Director::Get().Update(dt);
+
+			// Stage FSM — 게임 로직 위탁. CombatPlayState 만 Manager/Director/Physics Update(D5 freeze).
+			//   NewFrame(260) 직후라 State 의 ImGui::IsKeyPressed/IsMouseClicked(frame-edge) 유효.
+			if (mStageFsm)
+				mStageFsm->Update(dt);
+
 			if (mFxRoot) TopdownShooter::Spawns::SweepFinishedChildren(*mFxRoot);
-			TopdownShooter::Manager::Get().Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
+			// 디졸브 끝난 사망 적을 RemoveChild -> OnExit -> Physics::OnExit::DestroyBody (deferred — Director.Update 밖이라 iterator 안전).
+			if (mCtx && mCtx->waveCtrl) mCtx->waveCtrl->SweepDespawned();
 
 			// 스카이박스 시간(u_time) 동기화 — 위치는 셰이더가 view 이동 제거로 자동 처리.
 			if (mSkyboxMat)
@@ -324,6 +352,8 @@ namespace TopdownShooter
 			mScreenCamera = nullptr;
 			mSpriteActor = nullptr;
 			mFxRoot = nullptr;
+			mStageFsm.reset();   // States 해제 (WaveController->mStageFsm 는 이후 미사용)
+			mCtx = nullptr;
 			mStages.clear();
 			mDefaultTarget.reset();
 			TopdownShooter::Manager::Get().Shutdown();
@@ -407,6 +437,10 @@ namespace TopdownShooter
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;
 
+		// Stage FSM (Hybrid) — render() 의 게임로직 Update 를 State 가 게이트.
+		std::unique_ptr<Stage::StageStateMachine> mStageFsm;
+		Stage::Components::GameContextComponent  *mCtx = nullptr; // 비소유 — Root 의 GameContext actor 가 소유
+
 		// 이름으로 PostFX PassComponent 의 Material 탐색 — POSTFX_PROGRAM_CONFIGS 와 mPassComponents 인덱스 정합.
 		// (PostFXStageConfig::Name 은 std::string -> operator==(name) 는 정상 문자열 비교.)
 		SJH::Material *FindPassMaterial(const char *name)
@@ -428,6 +462,18 @@ namespace TopdownShooter
 			if (!fogMat || !mSceneFB || !mSceneFB->GetDepthAttachment())
 				return;
 			fogMat->Properties.Textures["uDepth"] = {mSceneFB->GetDepthAttachment().get(), 1}; // unit 1 (uScene=0).
+		}
+
+		// Pause 버튼(PauseButtonLayer) 콜백 — 현재 State 기준 CombatPlay↔Pause 토글.
+		void TogglePause()
+		{
+			if (!mStageFsm)
+				return;
+			const auto s = mStageFsm->State();
+			if (s == Stage::EStageStatus::CombatPlay)
+				mStageFsm->TryTransit(Stage::EStageStatus::Pause);
+			else if (s == Stage::EStageStatus::Pause)
+				mStageFsm->TryTransit(Stage::EStageStatus::CombatPlay);
 		}
 
 	};
