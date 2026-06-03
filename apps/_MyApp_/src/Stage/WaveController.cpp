@@ -1,5 +1,6 @@
 #include "Stage/WaveController.h"
 #include "Bootstrap/EnemyBuilder.h"
+#include "Stage/Constants.h"
 #include <box2d/box2d.h>
 #include <cstdlib>
 #include <spdlog/spdlog.h>
@@ -45,9 +46,9 @@ namespace TopdownShooter::Stage
         d.spawnParent  = mSpawnParent;
         d.playerTarget = mPlayerActor;
         d.pos          = RandomEdgePos();
-        d.hp           = 20 + mWave * 5;
-        d.speed        = 1.5f + static_cast<float>(mWave) * 0.3f;
-        d.damage       = 10;
+        d.hp           = WAVE_HP_BASE + mWave * WAVE_HP_PER_WAVE;
+        d.speed        = WAVE_SPEED_BASE + static_cast<float>(mWave) * WAVE_SPEED_PER_WAVE;
+        d.damage       = WAVE_CONTACT_DAMAGE;
         d.variant      = mSpawnCount % 3; // 3종 순환
 
         auto* enemy = Bootstrap::BuildEnemy(d);
@@ -75,7 +76,7 @@ namespace TopdownShooter::Stage
         }
 
         mSpawnTimer += dt;
-        if (mSpawnTimer >= kSpawnInterval && LiveCount() < kMaxEnemies)
+        if (mSpawnTimer >= WAVE_SPAWN_INTERVAL && LiveCount() < WAVE_MAX_ENEMIES)
         {
             mSpawnTimer = 0.0f;
             SpawnEnemy();

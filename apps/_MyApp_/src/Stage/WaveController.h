@@ -11,7 +11,7 @@ namespace TopdownShooter::Stage
 {
     /// @brief 웨이브 기반 Enemy spawn 관리.
     /// @details
-    ///   - kSpawnInterval 마다 1마리 spawn (최대 kMaxEnemies 동시 생존).
+    ///   - WAVE_SPAWN_INTERVAL 마다 1마리 spawn (최대 WAVE_MAX_ENEMIES 동시 생존).
     ///   - mEnemies raw ptr 추적 — IsActive()==false 시 전멸 감지.
     ///   - 전멸 ->mWave++ + 다음 웨이브 즉시 개시.
     class WaveController : public SJH::Scene::Component
@@ -39,9 +39,6 @@ namespace TopdownShooter::Stage
         int   mWave       = 0;
         float mSpawnTimer = 0.0f;
         int   mSpawnCount = 0; // 누적 스폰 카운터 — ENEMY_FRONT variant 순환용
-
-        static constexpr float kSpawnInterval = 3.0f;
-        static constexpr int   kMaxEnemies    = 5;
     };
 }
 
