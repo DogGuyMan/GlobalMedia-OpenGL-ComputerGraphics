@@ -5,7 +5,6 @@ add_library(myapp_entity STATIC
     Player/PlayerEntity.cpp
     Player/PlayerHand.cpp
     Enemy/SimplePursueAI.cpp
-    Enemy/EnemyDeathHandler.cpp
 )
 add_library(MyApp::Entity ALIAS myapp_entity)
 

@@ -32,7 +32,6 @@ namespace TopdownShooter::Bootstrap
         cfg.hp           = deps.hp;
         cfg.speed        = deps.speed;
         cfg.damage       = deps.damage;
-        cfg.onDeathFx    = deps.onDeathFx;
         auto enemy = Entity::Enemy::CreateEnemyActor(cfg);   // unique_ptr<Actor> (미부착)
 
         // 2) ENEMY_FRONT[variant] 스프라이트 + 2프레임 애니 — owner-direct(child 없음, 단일 레이어).
@@ -86,7 +85,7 @@ namespace TopdownShooter::Bootstrap
         // P4 — 적 IActorPresentation [C] 공통 연출 클러스터 (player 와 동일 헬퍼):
         //   PlayableDirector 부착(=Life sink) + "hit"=SpriteHitFlash/"death"=SpriteDissolve(0.6) 기본 등록 +
         //   SetDeathDelaySeconds(0.6, dissolve 가시화 창) + 체력바(deps 색, 기본 빨강). 전부 AddChild 전(pre-entry).
-        //   [B] 폭발/spark 는 delegate(onDeathFx)가 별도 트리거(유지). director 추가 사용 없음 -> 반환 무시.
+        //   [B] 폭발/spark death FX 는 Life::SetOnDeathFx seam (현재 미배선 — Task9). director 추가 사용 없음 -> 반환 무시.
         {
             EntityPresentationConfig pres;
             pres.dissolveSeconds   = ENEMY_DISSOLVE_SECONDS;

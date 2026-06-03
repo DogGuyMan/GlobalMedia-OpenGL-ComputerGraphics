@@ -2,7 +2,6 @@
 #define __TOPDOWNSHOOTER_ENTITY_ENEMY_ENEMY_FACTORY_H__
 
 #include "Entity/Components/LifeComponents.h"
-#include "Entity/Enemy/EnemyDeathHandler.h"
 #include "Entity/Enemy/EnemyEntity.h"
 #include "Entity/Enemy/SimplePursueAI.h"
 #include "Spawns/Carrier.h"
@@ -25,7 +24,6 @@ namespace TopdownShooter::Entity::Enemy
         int   hp     = ENEMY_HP;
         float speed  = ENEMY_SPEED;
         int   damage = ENEMY_DAMAGE;
-        EnemyDeathHandler::DeathFx onDeathFx; // 사망 시 FX (외부 주입 — WaveController/main 에서 SpawnEnemyDeathFX 바인딩)
     };
 
     inline std::unique_ptr<SJH::Scene::Actor> CreateEnemyActor(const EnemyConfig& cfg)
@@ -45,9 +43,8 @@ namespace TopdownShooter::Entity::Enemy
         actor->AddComponent<Components::Life>(cfg.hp);
         actor->AddComponent<SimplePursueAI>(cfg.playerTarget, pb->GetBody(), cfg.speed);
         // 접촉 데미지 배달 = Carrier::ContactCarrier (적 body 재사용, 동작 보존 — IDamageable 배달).
-        actor->AddComponent<Spawn::Carrier::ContactCarrier>(cfg.damage);
-        if (cfg.onDeathFx)
-            actor->AddComponent<EnemyDeathHandler>(cfg.onDeathFx);
+        actor->AddComponent<Spawn::Carrier::ContactCarrier>(cfg.damage)
+		->SetOwnerEntity(actor.get());
 
         actor->AddComponent<Physics::Impulse>();   // 넉백 타겟 (Carrier::Projectile 이 DoImpulse 배달)
         actor->AddComponent<EnemyEntity>();   // 적 Accessor-facade (Life/Physics/Director/Impulse 캐시)

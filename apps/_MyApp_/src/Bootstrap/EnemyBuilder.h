@@ -2,7 +2,6 @@
 #define __TOPDOWNSHOOTER_BOOTSTRAP_ENEMY_BUILDER_H__
 
 #include "Entity/Constants.h"
-#include <functional>
 #include <vmath.h>
 
 class b2World;
@@ -23,7 +22,6 @@ namespace TopdownShooter::Bootstrap
         int                variant      = 0;          ///< 0~2 -> ENEMY_FRONT[variant % 3]
         float              spriteFps    = Entity::ENEMY_SPRITE_FPS;        ///< 2프레임 walk 애니 속도
         vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
-        std::function<void(const vmath::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
     };
 
     /// @brief 적 1체 조립 — CreateEnemyActor + ENEMY_FRONT 스프라이트/애니 + spawnParent 부착.
