@@ -2,6 +2,7 @@
 #define __TOPDOWNSHOOTER_PLAYABLE_SPRITE_FX_PLAYABLE_H__
 
 #include "playable/playable_base.h"
+#include "Playable/Constants.h"
 
 // fwd — 대상 액터는 포인터만 보유 (자식 SpriteRenderer 를 .cpp 에서 수집).
 namespace SJH::Scene
@@ -17,7 +18,7 @@ namespace TopdownShooter::Playable
 	class SpriteHitFlashPlayable : public SJH::Playable::PlayableBase
 	{
 	  public:
-		explicit SpriteHitFlashPlayable(SJH::Scene::Actor *target, float durationSec = 0.18f);
+		explicit SpriteHitFlashPlayable(SJH::Scene::Actor *target, float durationSec = SPRITE_HIT_FLASH_DURATION);
 		~SpriteHitFlashPlayable() override;
 
 	  protected:
@@ -36,7 +37,7 @@ namespace TopdownShooter::Playable
 	class SpriteDissolvePlayable : public SJH::Playable::PlayableBase
 	{
 	  public:
-		explicit SpriteDissolvePlayable(SJH::Scene::Actor *target, float durationSec = 1.0f);
+		explicit SpriteDissolvePlayable(SJH::Scene::Actor *target, float durationSec = SPRITE_DISSOLVE_DURATION);
 		~SpriteDissolvePlayable() override;
 
 	  protected:
