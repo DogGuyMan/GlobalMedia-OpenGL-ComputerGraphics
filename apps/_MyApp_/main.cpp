@@ -21,6 +21,7 @@
 #include "InputHandler/PlayerController.h"
 #include "Manager.h"
 #include "VFX/ParticleStage.h"
+#include "VFX/Constants.h"   // MUZZLE_EFFECT / TEST_EFFECTS (VFX 자원 테이블)
 
 #include "diagnostics/effekseer_diagnostics.h"   // VFX 텍스처 로드 검증
 #include "Playable/PostFXRegistry.h"             // 연출 foundation — PostFX pass Material 레지스트리
@@ -199,27 +200,13 @@ namespace TopdownShooter
 			        &TopdownShooter::Manager::Get().VFX(), mCamera));
 
 			Bootstrap::WarmupAudio(Manager::Get().Audio());
-			reg.CreateEffect(vfxs.GetManager(), "muzzle", u"resources/vfx/distortion.efk");
+			reg.CreateEffect(vfxs.GetManager(), VFX::MUZZLE_EFFECT.key, VFX::MUZZLE_EFFECT.path);
 
 			// VFX 테스트 — 6종 Effekseer 이펙트 로드 (ImGui 드롭다운 선택 + 좌클릭 위치 소환).
 			// ※ .efk 가 참조하는 텍스처가 resources/vfx/ 아래에 있어야 실제로 보인다 (현재 누락 가능 — 별도 배치 필요).
 			std::vector<UI::VfxSpawnLayer::Entry> vfxEntries;
 			{
-				const struct
-				{
-					const char     *key;
-					const char16_t *path;
-				} kTestVfx[] = {
-				    // 1.7 에디터 export (.efk 포맷 1710 — 런타임 SupportBinaryVersion 과 일치).
-				    {"dust", u"resources/vfx/170/01_Pierre01/Dust.efk"},
-				    {"hit", u"resources/vfx/170/03_Hanmado01/Effect/Signlehit.efk"},
-				    {"laser", u"resources/vfx/170/01_AndrewFM01/blue_laser.efk"},
-				    {"orbital_background", u"resources/vfx/170/01_AndrewFM01/orbital_background.efk"},
-				    {"slash", u"resources/vfx/170/Slash/slash_weak.efk"},
-				    {"summon", u"resources/vfx/170/01_NextSoft01/summon.efk"},
-				    {"gunshoot", u"resources/vfx/170/gunshoot/gunshoot.efk"},
-				};
-				for (const auto &v : kTestVfx)
+				for (const auto &v : VFX::TEST_EFFECTS)
 				{
 					if (auto *eff = reg.CreateEffect(vfxs.GetManager(), v.key, v.path))
 					{
