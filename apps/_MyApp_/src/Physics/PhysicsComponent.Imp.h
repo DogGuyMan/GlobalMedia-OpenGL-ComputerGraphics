@@ -27,7 +27,6 @@ namespace TopdownShooter::Physics::Components
 			}
 			InitBody(body, cfg);
 		}
-		void OnExit()  override {}
 		void Update(float /*dt*/) override {}
 	};
 
@@ -54,7 +53,6 @@ namespace TopdownShooter::Physics::Components
 			}
 			InitBody(body, cfg);
 		}
-		void OnExit()  override {}
 		void Update(float /*dt*/) override {}
 	};
 }; // namespace TopdownShooter::Physics::Components

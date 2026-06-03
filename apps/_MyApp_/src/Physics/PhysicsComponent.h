@@ -78,6 +78,13 @@ namespace TopdownShooter::Physics::Components
 			return *this;
 		}
 
+		/// @brief b2Body 시뮬레이션 참여 on/off (Box2D b2Body::SetEnabled). 사망 시 *충돌만* 정지(시각 디졸브는 유지)에 사용.
+		Physics &SetBodyEnabled(bool e)
+		{
+			if (mBody) mBody->SetEnabled(e);
+			return *this;
+		}
+
 		b2Body *GetBody()         const { return mBody; }
 		float   GetHeightOffset() const { return mHeightOffset; }
 		bool    IsSensor()        const { return mIsSensor; }   // isTrigger source-of-truth
@@ -110,7 +117,16 @@ namespace TopdownShooter::Physics::Components
 			if (mBody != nullptr)
 				mBody->GetUserData().pointer = reinterpret_cast<uintptr_t>(GetOwner());
 		}
-		void OnExit() override = 0;          // subtype 가 구현 (Physics 는 abstract 유지)
+		/// @brief 액터 제거(despawn) 시 b2Body 완전 파괴 — b2World 가 소유하므로 명시 DestroyBody.
+		///        (Update 가 pure 라 Physics 는 여전히 abstract. subtype 의 빈 OnExit override 는 제거됨.)
+		void OnExit() override
+		{
+			if (mBody != nullptr)
+			{
+				mBody->GetWorld()->DestroyBody(mBody);
+				mBody = nullptr;
+			}
+		}
 		void Update(float dt) override = 0;
 	};
 
