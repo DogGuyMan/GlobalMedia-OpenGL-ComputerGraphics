@@ -112,7 +112,7 @@ namespace TopdownShooter::Bootstrap
 				auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
 				par->Join(std::make_unique<TopdownShooter::Playable::PostFXTweenPlayable>(
 				    "grayscale_vignetting", "uVignetteAmount",
-				    tweeny::from(0.45f).to(0.0f).during(300).via(tweeny::easing::sinusoidalInOut)));
+				    tweeny::from(TopdownShooter::Playable::VIGNETTE_PEAK).to(0.0f).during(TopdownShooter::Playable::VIGNETTE_DURATION_MS).via(tweeny::easing::sinusoidalInOut)));
 				par->Join(std::make_unique<TopdownShooter::Playable::SpriteHitFlashPlayable>(&spriteActor));
 				if (damagedEvt)
 					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(damagedEvt));
@@ -130,8 +130,6 @@ namespace TopdownShooter::Bootstrap
 
 		TopdownShooter::Entity::Player::PlayerActorConfig pac;
 		pac.name = "PlayerSprite";
-		pac.life.hp = 100;
-		pac.movement.speed = 3.0f;
 		pac.controller.keyboard = deps.keyboard;
 		pac.controller.mouse    = deps.mouse;
 		pac.controller.camera   = deps.worldCamera; // 좌클릭 마우스->Ground raycast 용 (World 카메라)
@@ -142,11 +140,9 @@ namespace TopdownShooter::Bootstrap
 		pac.physics.size = vmath::vec2(1.0f, 1.0f);
 		pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
 		pac.physics.density = 1.0f;
-		pac.physics.linearDamping = 5.0f;
 		pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
 		pac.physics.maskBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
 		// Weapon — 좌클릭 발사 시 bullet 을 spawn 할 물리 월드 + 데미지. (physics 분기에서 Weapon 부착)
-		pac.weapon.damage = 10;
 		pac.weapon.world  = deps.physicsWorld;
 
 		// 단일방향 주입 제거 — 8그룹을 아래에서 직접 빌드(PlayerActor 의 if(direction!=nullptr) 단일블록 비활성).
