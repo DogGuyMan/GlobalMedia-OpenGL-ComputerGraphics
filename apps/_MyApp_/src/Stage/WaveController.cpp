@@ -30,31 +30,34 @@ namespace TopdownShooter::Stage
                 life->SetOnDeath([this](SJH::Scene::Actor*) { mPlayerDead = true; });
     }
 
-    // 사망 통지(observer) — live(mEnemies)에서 dying 으로 이동 + 즉시 충돌 정지(body 비활성).
-    // 실제 RemoveChild 는 SweepDespawned(Update 밖)가 디졸브 끝에 수행 (deferred — iterator 무효화 회피).
+    // 사망 통지(observer) — live(mEnemies)->dying 이동만 (enqueue). ⚠ Box2D body 변경(SetEnabled/DestroyBody)은
+    // b2World::Step 잠금 중(여기 = contact 콜백 경유 DoDie) 금지 — 실제 body 비활성/파괴는 SweepDespawned(Step 밖) 담당.
     void WaveController::OnEnemyDeath(SJH::Scene::Actor* e)
     {
         if (e == nullptr) return;
         mEnemies.erase(std::remove(mEnemies.begin(), mEnemies.end(), e), mEnemies.end());
         mDying.push_back(e);
-        if (auto* phys = Physics::Components::FindPhysics(e))
-            phys->SetBodyEnabled(false); // b2Body::SetEnabled(false) — 디졸브 동안 충돌/밀기 정지
     }
 
     void WaveController::SweepDespawned()
     {
-        // 디졸브 끝(Life::IsDespawnReady) 적을 RemoveChild -> OnExit -> Physics::OnExit::DestroyBody.
+        // main 이 b2World::Step 끝난 뒤(잠금 해제) 호출 — 여기서만 body 변경 안전.
+        // 각 dying 적: ① 디졸브 중이면 body 비활성(충돌 정지, idempotent) ② 디졸브 끝(IsDespawnReady)이면 완전 제거.
         for (auto it = mDying.begin(); it != mDying.end();)
         {
             SJH::Scene::Actor* e    = *it;
             auto*              life = e ? e->GetComponent<Entity::Components::Life>() : nullptr;
             if (e == nullptr || life == nullptr || life->IsDespawnReady())
             {
-                if (e && mSpawnParent) mSpawnParent->RemoveChild(e);
+                if (e && mSpawnParent) mSpawnParent->RemoveChild(e); // OnExit -> Physics::OnExit::DestroyBody
                 it = mDying.erase(it);
             }
             else
+            {
+                if (auto* phys = Physics::Components::FindPhysics(e))
+                    phys->SetBodyEnabled(false); // 디졸브 동안 충돌 정지 (Step 밖 = 잠금 해제 = 안전)
                 ++it;
+            }
         }
     }
 
