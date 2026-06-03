@@ -33,9 +33,7 @@ namespace TopdownShooter::Entity::Components
 		bc.world    = mWorld;
 		bc.pos      = b2pos;
 		bc.dir      = box2dForward; // 정규화 가정 (PlayerController 가 정규화 후 전달)
-		bc.speed    = 15.0f;
 		bc.damage   = static_cast<int>(Damage.GetValue());
-		bc.lifetime = 3.0f;
 
 		// bullet 필터(maskBits = Enemy | Wall)가 Player 를 제외 -> 플레이어 중심 스폰이어도 자기충돌 없음.
 		SJH::Scene::Director::Get().Root().AddChild(Bullet::CreateBulletActor(bc));

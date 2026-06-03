@@ -5,6 +5,7 @@
 #include "Spawns/Carrier.h"
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/PhysicsLayer.h"
+#include "Entity/Constants.h"
 #include "scene/actor.h"
 // 임시 비행 가시화 — 구 Mesh + Magenta Material + MeshRenderer (HealthBarFactory 패턴).
 #include "object/geometry.h"
@@ -26,9 +27,9 @@ namespace TopdownShooter::Entity::Bullet
         b2World*    world;
         vmath::vec2 pos;
         vmath::vec2 dir;        // normalized
-        float       speed    = 15.0f;
-        int         damage   = 10;
-        float       lifetime = 3.0f;
+        float       speed    = BULLET_SPEED;
+        int         damage   = BULLET_DAMAGE;
+        float       lifetime = BULLET_LIFETIME;
     };
 
     inline std::unique_ptr<SJH::Scene::Actor> CreateBulletActor(const BulletConfig& cfg)
@@ -45,7 +46,7 @@ namespace TopdownShooter::Entity::Bullet
         bc.categoryBits   = Physics::ToBits(Physics::PhysicsLayer::BulletPlayer);
         bc.maskBits       = Physics::ToBits(Physics::PhysicsLayer::Enemy |
                                             Physics::PhysicsLayer::Wall);
-        actor->AddComponent<Physics::Components::CircleBody>(bc, 0.15f);
+        actor->AddComponent<Physics::Components::CircleBody>(bc, BULLET_RADIUS);
 
         // 데미지 배달 = Carrier::Projectile (IDamageable/IImpulsable 인터페이스 배달 + self-despawn).
         auto* proj = actor->AddComponent<Spawn::Carrier::Projectile>(cfg.damage);
@@ -72,7 +73,7 @@ namespace TopdownShooter::Entity::Bullet
             if (mesh == nullptr)
             {
                 constexpr double kTwoPi = 6.283185307179586; // 2π — 경도 한 바퀴 (M_PI 의존 회피)
-                SJH::MeshData data = SJH::Geometry::Sphere(0.0, kTwoPi, 16, 0.0, 1.0, 8, 0.15f);
+                SJH::MeshData data = SJH::Geometry::Sphere(0.0, kTwoPi, 16, 0.0, 1.0, 8, BULLET_RADIUS);
                 mesh = reg.RegisterMesh(kBulletMeshKey,
                                         SJH::Mesh::Create(data.vertices, data.indices, GL_TRIANGLES));
             }
