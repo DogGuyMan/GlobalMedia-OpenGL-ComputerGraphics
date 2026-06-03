@@ -145,6 +145,11 @@ namespace TopdownShooter::Bootstrap
 				prog = reg.CreateProgram("simple_texture",
 				    "./resources/shaders/simple_texture.vs",
 				    "./resources/shaders/simple_texture.fs");
+			if (!prog)
+			{
+				spdlog::error("AttachGroundDecals: simple_texture program 생성 실패 — 데칼 생략");
+				return;
+			}
 
 			SJH::Mesh *plane = reg.FindMesh("_ground_plane");
 			if (!plane)
@@ -152,13 +157,24 @@ namespace TopdownShooter::Bootstrap
 
 			SJH::Texture *shadowTex = reg.FindTexture("entity_shadow");
 			if (!shadowTex)
-				shadowTex = reg.CreateTexture("entity_shadow",
-				    SJH::Image::Load("entity_shadow", "resources/texture/EntityShadow.png").get());
+			{
+				auto img = SJH::Image::Load("entity_shadow", "resources/texture/EntityShadow.png");
+				if (img)
+					shadowTex = reg.CreateTexture("entity_shadow", img.get());
+			}
 
 			SJH::Texture *circleTex = reg.FindTexture("hit_range_circle");
 			if (!circleTex)
-				circleTex = reg.CreateTexture("hit_range_circle",
-				    SJH::Image::Load("hit_range_circle", "resources/texture/Circle_albedo.png").get());
+			{
+				auto img = SJH::Image::Load("hit_range_circle", "resources/texture/Circle_albedo.png");
+				if (img)
+					circleTex = reg.CreateTexture("hit_range_circle", img.get());
+			}
+			if (!shadowTex || !circleTex)
+			{
+				spdlog::error("AttachGroundDecals: 데칼 텍스처 로드 실패 — 데칼 생략");
+				return;
+			}
 
 			SJH::Material *shadowMat = reg.FindSharedMaterial("shadow_decal_mat");
 			if (!shadowMat)
