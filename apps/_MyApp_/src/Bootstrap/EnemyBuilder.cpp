@@ -34,11 +34,12 @@ namespace TopdownShooter::Bootstrap
         cfg.damage       = deps.damage;
         auto enemy = Entity::Enemy::CreateEnemyActor(cfg);   // unique_ptr<Actor> (미부착)
 
-        // 2) ENEMY_FRONT[variant] 스프라이트 + 2프레임 애니 — owner-direct(child 없음, 단일 레이어).
-        //    공유 헬퍼로 atlas+SpriteRenderer(+애니) 부착. QueueOffset=DrawOrder(=0, 기본값과 동일·무해).
+        // 2) renderActor(root 직속 자식) — sprite + 워블 전용. groundActor 데칼과 Transform 독립.
+        //    (ForEachSpriteRenderer 가 root 직속자식을 훑으므로 hit-flash/dissolve 는 그대로 도달.)
+        auto* renderActor = enemy->AddChild(std::make_unique<SJH::Scene::Actor>("renderActor"));
         const auto& tex = Playable::ENEMY_FRONT[deps.variant % 3];
         auto& reg = SJH::ResourceRegistry::Get();
-        Playable::AttachSpriteLayer(*enemy, reg, tex, deps.spriteFps);
+        Playable::AttachSpriteLayer(*renderActor, reg, tex, deps.spriteFps);
 
         // 4) 상시 루프 트윈 — ParallelPlayable 로 *동시재생* (스케일 펄스 ∥ z축 회전 워블).
         //    composite 모듈(SJH::Playable::ParallelPlayable, EngineAPI.md §ParallelPlayable)을 컨테이너로 쓰고
@@ -48,8 +49,8 @@ namespace TopdownShooter::Bootstrap
         //       는 tweeny progress 를 되감지 않는다 -> "one-shot child + par 루프" 는 끝값에 고정(깨짐).
         //       그래서 child 를 self-loop(PingPong 자가 왕복) 로 두고, par 는 묶음+동시 Play 만 담당.
         {
-            SJH::Scene::Actor* self      = enemy.get();             // 이동 후에도 동일 heap Actor — 댕글링 없음
-            const vmath::vec3  baseScale = enemy->GetTransform().Scale; // 베이스 스케일 보존 (factory 설정 존중)
+            SJH::Scene::Actor* self      = renderActor;            // root 자식 — 주소 안정(enemy children 보유)
+            const vmath::vec3  baseScale = renderActor->GetTransform().Scale; // 신규 Actor 기본 (1,1,1)
 
             // child A — Y 스케일 펄스 (0.4초 편도, 왕복 0.8초)
             auto scaleTween = tweeny::from(0.85f).to(1.15f)
@@ -76,7 +77,7 @@ namespace TopdownShooter::Bootstrap
             rotTw->SetIsLoop(true);
 
             // 동시재생 컨테이너 — Join 후 Play 하면 두 child 가 같은 프레임에 함께 틱.
-            auto* par = enemy->AddComponent<SJH::Playable::ParallelPlayable>();
+            auto* par = renderActor->AddComponent<SJH::Playable::ParallelPlayable>();
             par->Join(std::move(scaleTw));
             par->Join(std::move(rotTw));
             par->Play();
