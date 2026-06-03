@@ -9,6 +9,7 @@
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/PhysicsImpulse.h"
 #include "Physics/PhysicsLayer.h"
+#include "Entity/Constants.h"
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <memory>
@@ -21,9 +22,9 @@ namespace TopdownShooter::Entity::Enemy
         b2World*           world;
         vmath::vec2        pos;
         SJH::Scene::Actor* playerTarget;
-        int   hp     = 30;
-        float speed  = 2.0f;
-        int   damage = 10;
+        int   hp     = ENEMY_HP;
+        float speed  = ENEMY_SPEED;
+        int   damage = ENEMY_DAMAGE;
         EnemyDeathHandler::DeathFx onDeathFx; // 사망 시 FX (외부 주입 — WaveController/main 에서 SpawnEnemyDeathFX 바인딩)
     };
 
@@ -34,12 +35,12 @@ namespace TopdownShooter::Entity::Enemy
         Physics::Components::BodyConfig bc;
         bc.world         = cfg.world;
         bc.startPosition = cfg.pos;
-        bc.linearDamping = 0.5f;
+        bc.linearDamping = ENEMY_LINEAR_DAMPING;
         bc.density       = 1.0f;
-        bc.friction      = 0.3f;
+        bc.friction      = ENEMY_FRICTION;
         bc.categoryBits  = Physics::ToBits(Physics::PhysicsLayer::Enemy);
         bc.maskBits      = Physics::ToBits(Physics::EnemyMask);
-        auto* pb = actor->AddComponent<Physics::Components::CircleBody>(bc, 0.4f);
+        auto* pb = actor->AddComponent<Physics::Components::CircleBody>(bc, ENEMY_RADIUS);
 
         actor->AddComponent<Components::Life>(cfg.hp);
         actor->AddComponent<SimplePursueAI>(cfg.playerTarget, pb->GetBody(), cfg.speed);

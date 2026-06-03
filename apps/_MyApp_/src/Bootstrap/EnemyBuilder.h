@@ -1,6 +1,7 @@
 #ifndef __TOPDOWNSHOOTER_BOOTSTRAP_ENEMY_BUILDER_H__
 #define __TOPDOWNSHOOTER_BOOTSTRAP_ENEMY_BUILDER_H__
 
+#include "Entity/Constants.h"
 #include <functional>
 #include <vmath.h>
 
@@ -16,11 +17,11 @@ namespace TopdownShooter::Bootstrap
         SJH::Scene::Actor* spawnParent  = nullptr;   ///< 적 child 부착 부모 (WaveController.mSpawnParent)
         SJH::Scene::Actor* playerTarget = nullptr;   ///< SimplePursueAI 추적 대상
         vmath::vec2        pos          = vmath::vec2(0.0f);
-        int                hp           = 30;
-        float              speed        = 2.0f;
-        int                damage       = 10;
+        int                hp           = Entity::ENEMY_HP;
+        float              speed        = Entity::ENEMY_SPEED;
+        int                damage       = Entity::ENEMY_DAMAGE;
         int                variant      = 0;          ///< 0~2 -> ENEMY_FRONT[variant % 3]
-        float              spriteFps    = 6.0f;        ///< 2프레임 walk 애니 속도
+        float              spriteFps    = Entity::ENEMY_SPRITE_FPS;        ///< 2프레임 walk 애니 속도
         vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
         std::function<void(const vmath::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
     };
