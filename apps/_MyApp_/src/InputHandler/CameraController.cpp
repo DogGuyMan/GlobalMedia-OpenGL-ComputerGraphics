@@ -10,6 +10,11 @@
 #include <spdlog/spdlog.h>
 #include <vmath.h>
 
+namespace
+{
+	constexpr float kCameraPitchClampDeg = 89.0f; // gimbal lock 회피 pitch 상한(±)
+}
+
 namespace TopdownShooter::Controller
 {
 	void CameraController::RegisterBindings()
@@ -33,10 +38,10 @@ namespace TopdownShooter::Controller
 			mYawDeg -= static_cast<float>(dx) * mLookSensitivity;
 			mPitchDeg -= static_cast<float>(dy) * mLookSensitivity;
 			// pitch clamp — gimbal lock 회피
-			if (mPitchDeg > 89.0f)
-				mPitchDeg = 89.0f;
-			if (mPitchDeg < -89.0f)
-				mPitchDeg = -89.0f;
+			if (mPitchDeg > kCameraPitchClampDeg)
+				mPitchDeg = kCameraPitchClampDeg;
+			if (mPitchDeg < -kCameraPitchClampDeg)
+				mPitchDeg = -kCameraPitchClampDeg;
 		});
 	}
 
