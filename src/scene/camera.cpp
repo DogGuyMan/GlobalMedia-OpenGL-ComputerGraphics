@@ -2,6 +2,7 @@
 #include "scene/actor.h"
 #include "scene/scene.h" // SP-SceneContext+ProgramRegistry — Director::Get().GetContext() 접근.
 #include <cassert>
+#include <cmath> // std::tan (GetInverseProjectionMatrix)
 #include <vmath.h>
 
 namespace SJH::Scene
@@ -47,6 +48,36 @@ namespace SJH::Scene
 			return m;
 		}
 		return vmath::perspective(FovYDeg, Aspect, NearZ, FarZ);
+	}
+
+	// CLAUDE_ASSIST
+	vmath::mat4 Camera::GetInverseProjectionMatrix() const
+	{
+		// GetProjectionMatrix() 의 역행렬을 닫힌 해로 구성 (cofactor 일반 inverse 불필요).
+		// vmath 는 column-major — r[col][row]. 0 으로 초기화 후 비-zero 성분만 채움.
+		vmath::mat4 r(0.0f);
+
+		if (IsOrthographic)
+		{
+			// ortho 는 diag(scale) + translate(affine). 역행렬도 diag(1/scale) + 보정 translate.
+			// l=-OrthoSize*Aspect, r=+, b=-OrthoSize, t=+, n=NearZ, f=FarZ 대입 시 (r+l)=(t+b)=0 으로 소거.
+			r[0][0] = OrthoSize * Aspect;            // (right-left)/2
+			r[1][1] = OrthoSize;                     // (top-bottom)/2
+			r[2][2] = -(FarZ - NearZ) / 2.0f;        // -(f-n)/2
+			r[3][2] = -(FarZ + NearZ) / 2.0f;        // col3,row2 : -(f+n)/2
+			r[3][3] = 1.0f;
+			return r;
+		}
+
+		// perspective(vmath::perspective) 의 닫힌 해 역행렬. 검산: M·M⁻¹ = I.
+		//   A=q/aspect, q=1/tan(fovy/2), B=(n+f)/(n-f), C=2nf/(n-f).
+		const float t = std::tan(vmath::radians(0.5f * FovYDeg));   // = 1/q
+		r[0][0] = Aspect * t;                                        // = 1/A
+		r[1][1] = t;                                                 // = 1/q
+		r[2][3] = (NearZ - FarZ) / (2.0f * NearZ * FarZ);           // col2,row3 : 1/C
+		r[3][2] = -1.0f;                                             // col3,row2
+		r[3][3] = (NearZ + FarZ) / (2.0f * NearZ * FarZ);           // col3,row3 : B/C
+		return r;
 	}
 
 	// SP-SceneContext+ProgramRegistry (2026-05-26) — Component lifecycle hook.

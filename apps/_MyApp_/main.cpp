@@ -59,46 +59,6 @@ namespace TopdownShooter
 {
 	namespace
 	{
-		// sb7 vmath 는 일반 역행렬 미제공(camera.h 명시) + Camera::InverseAffine 은 affine 전용.
-		// perspective projection(비-affine, w≠1) 역행렬 -> cofactor 기반 4x4 일반 inverse (MESA gluInvertMatrix 정통).
-		// vmath 는 column-major(m[col][row]) — flat 배열도 column-major(m[c*4+r])로 변환.
-		vmath::mat4 Mat4Inverse(const vmath::mat4 &src)
-		{
-			float m[16];
-			for (int c = 0; c < 4; ++c)
-				for (int r = 0; r < 4; ++r)
-					m[c * 4 + r] = src[c][r];
-
-			float inv[16];
-			inv[0]  =  m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
-			inv[4]  = -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15] - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
-			inv[8]  =  m[4]*m[9]*m[15] - m[4]*m[11]*m[13] - m[8]*m[5]*m[15] + m[8]*m[7]*m[13] + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
-			inv[12] = -m[4]*m[9]*m[14] + m[4]*m[10]*m[13] + m[8]*m[5]*m[14] - m[8]*m[6]*m[13] - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
-			inv[1]  = -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15] - m[9]*m[3]*m[14] - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
-			inv[5]  =  m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15] + m[8]*m[3]*m[14] + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
-			inv[9]  = -m[0]*m[9]*m[15] + m[0]*m[11]*m[13] + m[8]*m[1]*m[15] - m[8]*m[3]*m[13] - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
-			inv[13] =  m[0]*m[9]*m[14] - m[0]*m[10]*m[13] - m[8]*m[1]*m[14] + m[8]*m[2]*m[13] + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
-			inv[2]  =  m[1]*m[6]*m[15] - m[1]*m[7]*m[14] - m[5]*m[2]*m[15] + m[5]*m[3]*m[14] + m[13]*m[2]*m[7] - m[13]*m[3]*m[6];
-			inv[6]  = -m[0]*m[6]*m[15] + m[0]*m[7]*m[14] + m[4]*m[2]*m[15] - m[4]*m[3]*m[14] - m[12]*m[2]*m[7] + m[12]*m[3]*m[6];
-			inv[10] =  m[0]*m[5]*m[15] - m[0]*m[7]*m[13] - m[4]*m[1]*m[15] + m[4]*m[3]*m[13] + m[12]*m[1]*m[7] - m[12]*m[3]*m[5];
-			inv[14] = -m[0]*m[5]*m[14] + m[0]*m[6]*m[13] + m[4]*m[1]*m[14] - m[4]*m[2]*m[13] - m[12]*m[1]*m[6] + m[12]*m[2]*m[5];
-			inv[3]  = -m[1]*m[6]*m[11] + m[1]*m[7]*m[10] + m[5]*m[2]*m[11] - m[5]*m[3]*m[10] - m[9]*m[2]*m[7] + m[9]*m[3]*m[6];
-			inv[7]  =  m[0]*m[6]*m[11] - m[0]*m[7]*m[10] - m[4]*m[2]*m[11] + m[4]*m[3]*m[10] + m[8]*m[2]*m[7] - m[8]*m[3]*m[6];
-			inv[11] = -m[0]*m[5]*m[11] + m[0]*m[7]*m[9] + m[4]*m[1]*m[11] - m[4]*m[3]*m[9] - m[8]*m[1]*m[7] + m[8]*m[3]*m[5];
-			inv[15] =  m[0]*m[5]*m[10] - m[0]*m[6]*m[9] - m[4]*m[1]*m[10] + m[4]*m[2]*m[9] + m[8]*m[1]*m[6] - m[8]*m[2]*m[5];
-
-			float det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
-			if (det == 0.0f)
-				return vmath::mat4::identity(); // 특이행렬 가드.
-			float invDet = 1.0f / det;
-
-			vmath::mat4 out;
-			for (int c = 0; c < 4; ++c)
-				for (int r = 0; r < 4; ++r)
-					out[c][r] = inv[c * 4 + r] * invDet;
-			return out;
-		}
-
 		struct ProgramConfig
 		{
 			const char *Name;
@@ -371,9 +331,10 @@ namespace TopdownShooter
 			}
 
 			// fog — WorldCamera projection 역행렬 송신 (Properties.Mat4s 자동 송신, D4).
+			// Camera 의 닫힌 해 inverse (cofactor 일반 inverse 폐기 — perspective/ortho 분기 자체 처리).
 			if (auto *fogMat = FindFogMaterial(); fogMat && mCamera)
 				fogMat->Properties.Mat4s["uInverseProjection"] =
-				    Mat4Inverse(mCamera->GetProjectionMatrix());
+				    mCamera->GetInverseProjectionMatrix();
 
 			// ── stages 컬렉션 순회 — World -> Screen -> ScreenQuad ─────────────────
 			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).

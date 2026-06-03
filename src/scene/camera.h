@@ -73,6 +73,12 @@ namespace SJH::Scene
 		/// @brief perspective(fovY, aspect, near, far).
 		vmath::mat4 GetProjectionMatrix() const;
 
+		/// @brief GetProjectionMatrix() 의 역행렬 — 닫힌 해(closed-form).
+		/// @details perspective/ortho 둘 다 sparse 구조라 cofactor 일반 inverse 불필요.
+		///   NDC->view 복원(fog 등 deferred 효과)용. GetProjectionMatrix() 와 동일하게
+		///   IsOrthographic 분기. 범용 행렬엔 부적합 — 투영 전용.
+		vmath::mat4 GetInverseProjectionMatrix() const;
+
 		// ── TargetLock — Unity Cinemachine Composer 정통 ─────────────────────
 		/// @brief 특정 Actor 를 바라보도록 카메라 lock. owner EulerRot 시각 효과 일시 무효.
 		/// @param target 바라볼 대상 Actor. nullptr 이면 TargetRelease 와 동등.
