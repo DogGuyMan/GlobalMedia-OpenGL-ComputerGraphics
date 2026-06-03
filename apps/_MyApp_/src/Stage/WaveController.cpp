@@ -10,7 +10,8 @@ namespace TopdownShooter::Stage
     WaveController::WaveController(b2World* world, SJH::Scene::Actor* spawnParent,
                                     SJH::Scene::Actor* playerActor, float arenaHalfExtent)
         : mWorld(world), mSpawnParent(spawnParent),
-          mPlayerActor(playerActor), mArenaHalfExtent(arenaHalfExtent)
+          mPlayerActor(playerActor), mArenaHalfExtent(arenaHalfExtent),
+          mSpawnTimer(WAVE_SPAWN_INTERVAL)
     {}
 
     WaveController::~WaveController() = default;
@@ -63,7 +64,7 @@ namespace TopdownShooter::Stage
         if (mWave == 0)
         {
             mWave       = 1;
-            mSpawnTimer = 0.0f;
+            mSpawnTimer.Reset();
         }
 
         // 전멸 감지 ->다음 웨이브
@@ -71,14 +72,14 @@ namespace TopdownShooter::Stage
         {
             ++mWave;
             mEnemies.clear();
-            mSpawnTimer = 0.0f;
+            mSpawnTimer.Reset();
             spdlog::info("[Wave] All cleared ->Wave {}", mWave);
         }
 
-        mSpawnTimer += dt;
-        if (mSpawnTimer >= WAVE_SPAWN_INTERVAL && LiveCount() < WAVE_MAX_ENEMIES)
+        mSpawnTimer.Tick(dt);
+        if (mSpawnTimer.IsTimesUp() && LiveCount() < WAVE_MAX_ENEMIES)
         {
-            mSpawnTimer = 0.0f;
+            mSpawnTimer.Reset();
             SpawnEnemy();
         }
     }

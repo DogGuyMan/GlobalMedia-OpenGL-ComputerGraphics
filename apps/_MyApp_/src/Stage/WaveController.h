@@ -2,6 +2,7 @@
 #define __TOPDOWNSHOOTER_STAGE_WAVE_CONTROLLER_H__
 
 #include "scene/actor.h"
+#include "timer/timer.h"   // SJH::Timer::Timer (spawn 간격 — Timer 객체화)
 #include <vector>
 #include <vmath.h>
 
@@ -37,7 +38,7 @@ namespace TopdownShooter::Stage
 
         std::vector<SJH::Scene::Actor*> mEnemies;
         int   mWave       = 0;
-        float mSpawnTimer = 0.0f;
+        SJH::Timer::Timer mSpawnTimer;   // 스폰 간격 누적기 (WAVE_SPAWN_INTERVAL, ctor 초기화)
         int   mSpawnCount = 0; // 누적 스폰 카운터 — ENEMY_FRONT variant 순환용
     };
 }
