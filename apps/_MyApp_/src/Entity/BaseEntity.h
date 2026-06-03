@@ -3,6 +3,7 @@
 
 #include "Components/Components.Interfaces.h"   // ILivable/IDieable/IDamageable/IImpulsable
 #include "scene/actor.h"
+#include "timer/multiple_timer.h"   // MultipleTimer (값 멤버 — 완전형 필요)
 #include <string>
 
 // fwd — 포인터 멤버만 보유(완전형은 .cpp 에서). Entity 헤더가 Playable/Physics 헤더를 안 끌어오게.
@@ -22,11 +23,16 @@ namespace TopdownShooter::Entity
 		Physics::Components::Physics*        mPhysics  = nullptr;   // = entityRigidbody/Collider
 		Playable::PlayableDirector*          mDirector = nullptr;   // 연출+Audio (named playable)
 		Physics::Impulse*                    mImpulse  = nullptr;   // Player+Enemy 부착. null-guard=비엔티티 바디 대비
+		SJH::Timer::MultipleTimer            mTimers;               // ★ 엔티티 timer 유일 보유 (형제가 Register 위탁)
 
 	  public:
 		void OnEnter() override;   // 4캐시 (.cpp — GetComponent/FindPhysics 완전형 필요)
 		void OnExit()  override;
-		void Update(float /*dt*/) override {}   // 로직 없음 — 형제가 자기 Update 보유
+		void Update(float dt) override { mTimers.Update(dt); }   // 중앙 tick 구동 (형제 timer 일괄)
+
+		// ── 중앙 Timer 컨테이너 (엔티티 timer 단일 보유처) ──
+		SJH::Timer::MultipleTimer&       Timers()       { return mTimers; }
+		const SJH::Timer::MultipleTimer& Timers() const { return mTimers; }
 
 		// ── Life 위임 (ILivable/IDieable/IDamageable) ──
 		bool IsAlive()  const override;
