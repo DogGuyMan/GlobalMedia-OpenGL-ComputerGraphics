@@ -2,6 +2,7 @@
 #define __TOPDOWNSHOOTER_STAGE_STAGE_CONFIG_H__
 
 #include "Stage/Stage.h"
+#include "Stage/Constants.h"
 #include <vector>
 #include <vmath.h>
 
@@ -22,8 +23,8 @@ namespace TopdownShooter::Stage
     {
         b2World*               world           = nullptr;   // 필수
         SJH::ResourceRegistry* registry        = nullptr;   // 필수
-        float                  arenaHalfExtent = 10.0f;     // 벽 안쪽 절반 크기
-        float                  wallThickness   = 0.5f;
+        float                  arenaHalfExtent = ARENA_HALF_EXTENT; // 벽 안쪽 절반 크기
+        float                  wallThickness   = WALL_THICKNESS;
         std::vector<vmath::vec2> pickupPositions = { vmath::vec2(0.0f, 3.0f) };
         EStageStatus           startStatus     = EStageStatus::Title;
     };

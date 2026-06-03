@@ -11,6 +11,10 @@ namespace TopdownShooter::Stage
 	constexpr float WAVE_SPEED_BASE     = 1.5f; // 적 속도 = BASE + wave*PER_WAVE
 	constexpr float WAVE_SPEED_PER_WAVE = 0.3f;
 	constexpr int   WAVE_CONTACT_DAMAGE = 10;   // 접촉 데미지(전 웨이브 일정)
+
+	// 아레나/벽 — StageConfig 기본값 (main.cpp WaveController arenaHalfExtent 와 단일화).
+	constexpr float ARENA_HALF_EXTENT = 10.0f; // 벽 안쪽 절반 크기
+	constexpr float WALL_THICKNESS    = 0.5f;
 } // namespace TopdownShooter::Stage
 
 #endif //_TOPDOWNSHOOTER_STAGE_CONSTANTS__

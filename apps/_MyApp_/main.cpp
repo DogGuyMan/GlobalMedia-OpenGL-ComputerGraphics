@@ -32,6 +32,7 @@
 
 #include "Stage/StageBuilder.h"
 #include "Stage/WaveController.h"
+#include "Stage/Constants.h"   // Stage::ARENA_HALF_EXTENT
 #include "UI/ImGuiLayerStack.h"
 #include "UI/PostFXDebugLayer.h"
 #include "UI/UiBootstrap.h"
@@ -235,7 +236,7 @@ namespace TopdownShooter
 			// 적 웨이브 스폰 트리거 — player(mSpriteActor) 생성 이후라야 SimplePursueAI 타깃 유효.
 			// root 하위 Component 라 Director::Update(dt) 가 자동 tick. arenaHalfExtent 는 StageConfig 기본(10.0f)과 일치.
 			auto *waveSpawner = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("WaveSpawner"));
-			waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, 10.0f);
+			waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, Stage::ARENA_HALF_EXTENT);
 
 			// UI — render(PostFX) ↔ UI 매핑은 Composition Root(main) 책임. 빌더는 결과만 받음.
 			std::vector<UI::PassDebugEntry> debugEntries;
