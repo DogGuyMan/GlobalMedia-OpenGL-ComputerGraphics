@@ -311,3 +311,68 @@ xf.q.GetYAxis()  // b2Vec2 — 로컬 Y축 방향 벡터
 | `b2Body::GetPosition` | | ✓ | |
 | `b2Body::GetMass` | | ✓ | |
 | `b2Draw::e_shapeBit` + `e_jointBit` | ✓ | ✓ | ✓ |
+
+---
+
+## 8. ⚠ 런타임 함정 — `b2World::Step` 잠금 중 body 구조 변경 금지
+
+> 출처: `apps/_MyApp_/src/`(게임) — box2d_demo 가 아닌 게임 물리에서 실제로 터진 크래시 (커밋 `d2fb77a`).
+
+`b2World::Step()` 은 실행 중 `m_world->IsLocked() == true` 라, **그 잠금 동안 body *구조* 변경이 금지**된다. 위반 시 즉시 abort:
+
+```
+Assertion failed: (m_world->IsLocked() == false), function SetEnabled, file b2_body.cpp, line 468.
+Abort trap: 6
+```
+
+| | 잠금 중(Step 안) |
+|---|---|
+| **금지 (구조 변경)** | `b2World::CreateBody`/`DestroyBody`/`CreateJoint`/`DestroyJoint`, `b2Body::CreateFixture`/`DestroyFixture`/**`SetEnabled`** |
+| **허용 (상태 변경)** | `b2Body::SetLinearVelocity`/`SetTransform`/`ApplyForce` 등 — 넉백 `DoImpulse`(=SetLinearVelocity)는 콘택 콜백에서 OK |
+
+### 함정: `b2ContactListener` 콜백은 Step *안*에서 발생
+
+접촉 데미지로 적이 죽는 흐름이 전부 Step 안에서 실행된다:
+
+```
+b2World::Step
+  └ b2ContactListener (BeginContact 등)              ← 여기부터 Step 잠금 中
+      └ (게임) Carrier::OnTriggerEnter → HandleHit → Deliver
+          → Life::DoDamaged → DoDie → onDeath observer
+              → WaveController::OnEnemyDeath
+                  → phys->SetBodyEnabled(false)        ✗ ABORT (IsLocked)
+```
+
+콘택 콜백(또는 그 안에서 호출되는 `DoDie`/사망 처리) 안에서 body 를 비활성/파괴하면 abort.
+
+### 정본 패턴 — enqueue + Step 밖 deferred sweep
+
+콜백에서는 **마킹/큐 등록만** 하고, 실제 body 변경(+ 액터 RemoveChild)은 **`Step` 끝난 뒤(잠금 해제)** main 렌더루프가 호출하는 sweep 에서 한다.
+
+```cpp
+// 콜백 경유 (Step 잠금 中) — enqueue 만
+void WaveController::OnEnemyDeath(Actor* e) {
+    mEnemies.erase(...e...);        // live -> dying (vector 연산만)
+    mDying.push_back(e);
+    // ⚠ body 변경 금지 — SetEnabled/DestroyBody 여기서 X
+}
+
+// main 이 Step 끝낸 뒤 호출 (잠금 해제) — 여기서만 body 변경 안전
+void WaveController::SweepDespawned() {
+    for (...e : mDying...) {
+        if (life->IsDespawnReady())  spawnParent->RemoveChild(e);          // OnExit → Physics::OnExit → DestroyBody
+        else                         FindPhysics(e)->SetBodyEnabled(false); // 디졸브 중 충돌 정지 (idempotent)
+    }
+}
+```
+
+```cpp
+// main 렌더루프 — Step(=mStageFsm->Update 내 CombatPlayState) *직후* 에 sweep
+mStageFsm->Update(dt);              // ← Director.Update + physics.Step (잠금 발생→해제)
+SweepFinishedChildren(*mFxRoot);    // 단발 FX 제거 (동일 deferred 원칙)
+mCtx->waveCtrl->SweepDespawned();   // 사망 적 body 비활성/제거
+```
+
+> 같은 이유로 **액터 `RemoveChild`(트리 변경)도 `Director::Update` 순회 *밖*** 이어야 한다 (iterator 무효화 + body 파괴 둘 다 안전해짐). `Spawns::SweepFinishedChildren` 와 동일 원칙.
+>
+> 관련 컴포넌트 lifecycle: body 는 `BoxBody`/`CircleBody` ctor 에서 eager 생성(즉시 active), `Physics::OnExit` 에서 `DestroyBody`(despawn 시 RemoveChild→OnExit 체이닝). `SetBodyEnabled` = `b2Body::SetEnabled` 래퍼(충돌만 on/off, body 보존).
