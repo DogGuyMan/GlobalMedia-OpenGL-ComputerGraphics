@@ -1,4 +1,4 @@
-#include <GL/gl3w.h> // 반드시 최상단 — resource_registry.h->framebuffer.h->render_target.h->gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 반드시 최상단 — resource_registry.h→framebuffer.h→render_target.h→gl3w.h 보다 먼저.
 
 #include "Entity/Player/PlayerActor.h"
 #include "Entity/Player/PlayerEntity.h"
@@ -16,14 +16,23 @@
 
 namespace TopdownShooter::Entity::Player
 {
-	std::unique_ptr<SJH::Scene::Actor> CreatePlayerActor(const PlayerActorConfig &cfg)
+	namespace
 	{
-		auto actor = std::make_unique<SJH::Scene::Actor>(cfg.name);
+		// ════════════ [1] 컴포넌트 초기화 (AddComponent 전용 — Set* 없음) ════════════
 
-		actor->AddComponent<Components::Life>(cfg.life.hp);
-
-		if (cfg.physics.world != nullptr)
+		/// @brief Life — 항상.
+		void InitLife(SJH::Scene::Actor &a, const PlayerActorConfig &cfg)
 		{
+			a.AddComponent<Components::Life>(cfg.life.hp);
+		}
+
+		/// @brief [if/else 분할] 물리 분기 — BoxBody(eager) + PhysicsMovement + Impulse + Weapon.
+		///        world 미주입이면 no-op (분기 guard). Weapon 의 SetWorld 는 [2] WireWeapon 담당.
+		void InitPhysicsBranch(SJH::Scene::Actor &a, const PlayerActorConfig &cfg)
+		{
+			if (cfg.physics.world == nullptr)
+				return;
+
 			// Physics body 생성은 BoxBody ctor 가 담당(eager) — b2World 가 lifetime 소유.
 			Physics::Components::BodyConfig bc;
 			bc.world         = cfg.physics.world;
@@ -34,57 +43,40 @@ namespace TopdownShooter::Entity::Player
 			bc.isSensor      = cfg.physics.isSensor;
 			bc.categoryBits  = cfg.physics.categoryBits;
 			bc.maskBits      = cfg.physics.maskBits;
-			actor->AddComponent<Physics::Components::BoxBody>(bc, cfg.physics.size);
+			a.AddComponent<Physics::Components::BoxBody>(bc, cfg.physics.size);
 
-			auto *pm = actor->AddComponent<Physics::PhysicsMovement>(cfg.movement.speed);
-
-			// Dash/Knockback 속도버스트 — dash 입력 미배선이라 현재 dormant (Action::Dash 바인딩 시 활성).
-			actor->AddComponent<Physics::Impulse>();
-
-			// Weapon — bullet 스폰은 box2d 의존이라 physics 분기에서만 부착. 좌클릭 시 controller 가 호출.
-			auto *weapon = actor->AddComponent<Components::Weapon>(cfg.weapon.damage, "default");
-			weapon->SetWorld(cfg.weapon.world);
-
-			if (cfg.controller.keyboard != nullptr)
-			{
-				auto *controller = actor->AddComponent<Controller::PlayerController>();
-				controller->SetKeyboardInput(cfg.controller.keyboard);
-				controller->SetMouseInput(cfg.controller.mouse);
-				controller->SetWorldCamera(cfg.controller.camera);
-				controller->SetMovableTarget(pm);
-				controller->SetFireCallback(cfg.controller.onFire);
-				controller->SetDamageCallback(cfg.controller.onDamage);
-				controller->SetUp();
-			}
-		}
-		else
-		{
-			// physics 미사용 — 기존 Movement (Transform 직접 조작).
-			auto *movement = actor->AddComponent<Components::Movement>(cfg.movement.speed);
-
-			if (cfg.controller.keyboard != nullptr)
-			{
-				auto *controller = actor->AddComponent<Controller::PlayerController>();
-				controller->SetKeyboardInput(cfg.controller.keyboard);
-				controller->SetMouseInput(cfg.controller.mouse);
-				controller->SetWorldCamera(cfg.controller.camera);
-				controller->SetMovableTarget(movement);
-				controller->SetFireCallback(cfg.controller.onFire);
-				controller->SetDamageCallback(cfg.controller.onDamage);
-				controller->SetUp();
-			}
+			a.AddComponent<Physics::PhysicsMovement>(cfg.movement.speed);
+			a.AddComponent<Physics::Impulse>(); // Dash/Knockback 속도버스트 (dash 입력 미배선이라 dormant)
+			a.AddComponent<Components::Weapon>(cfg.weapon.damage, "default"); // bullet 스폰 box2d 의존 → physics 분기만
 		}
 
-		// === 4-레이어 스프라이트 합성 (spec §6.3) — direction 지정 시에만 ===
-		// 각 파트 PNG = 자기 UniformAtlas (정적=SetGrid(1,1), 애니 B파트=SetGrid(ColCount,1) 스트립).
-		// DrawOrder 별 child Actor (local 0,0,0 -> parent world 공유) + QueueOffset=DrawOrder painter 합성.
-		if (cfg.sprite.direction != nullptr)
+		/// @brief [if/else 분할] 비물리 분기 — 기존 Movement(Transform 직접). physics 면 no-op (분기 guard).
+		void InitMovementBranch(SJH::Scene::Actor &a, const PlayerActorConfig &cfg)
 		{
+			if (cfg.physics.world != nullptr)
+				return;
+			a.AddComponent<Components::Movement>(cfg.movement.speed);
+		}
+
+		/// @brief [if 분할] PlayerController 생성만 (keyboard 미주입이면 no-op). 의존 주입은 [2] WireController.
+		void InitController(SJH::Scene::Actor &a, const PlayerActorConfig &cfg)
+		{
+			if (cfg.controller.keyboard == nullptr)
+				return;
+			a.AddComponent<Controller::PlayerController>();
+		}
+
+		/// @brief [if 분할] 4-레이어 스프라이트 합성 (spec §6.3) — direction 지정 시에만.
+		/// @details 각 파트 PNG = 자기 UniformAtlas. DrawOrder 별 child Actor + QueueOffset painter 합성.
+		void InitSprite(SJH::Scene::Actor &a, const PlayerActorConfig &cfg)
+		{
+			if (cfg.sprite.direction == nullptr)
+				return;
+
 			auto &reg = SJH::ResourceRegistry::Get();
 			for (const auto &t : *cfg.sprite.direction)
 			{
 				// atlas 먼저 (child 생성 전) — key=path. 있으면 재사용(Find), 없으면 생성(Create).
-				// CreateUniformAtlas 는 중복 키에서 nullptr 이므로 LEFT/RIGHT 가 같은 PNG 를 공유할 때 Find 필수.
 				auto *atlas = reg.FindUniformAtlas(t.TexturePath);
 				if (!atlas)
 					atlas = reg.CreateUniformAtlas(t.TexturePath, t.TexturePath, t.ColCount, t.RowCount);
@@ -96,11 +88,11 @@ namespace TopdownShooter::Entity::Player
 
 				auto child = std::make_unique<SJH::Scene::Actor>(
 				    cfg.name + "_L" + std::to_string(t.DrawOrder));
-				SJH::Scene::Actor *childPtr = actor->AddChild(std::move(child));
+				SJH::Scene::Actor *childPtr = a.AddChild(std::move(child));
 
-				auto *spr = childPtr->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
-				spr->flipX = t.Flip;
-				spr->QueueOffset = t.DrawOrder; // 2450+DrawOrder -> distinct 층
+				auto *spr        = childPtr->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
+				spr->flipX       = t.Flip;
+				spr->QueueOffset = t.DrawOrder; // 2450+DrawOrder → distinct 층
 
 				if (t.ColCount > 1) // 애니 파트 (가로 N프레임 스트립)
 				{
@@ -112,8 +104,61 @@ namespace TopdownShooter::Entity::Player
 			}
 		}
 
-		// 모든 형제(Life/Physics/Movement/Impulse/Weapon/Controller) 부착 후 facade 부착 — OnEnter 캐시.
-		actor->AddComponent<PlayerEntity>();
+		/// @brief facade — 모든 형제 부착 후 (OnEnter 가 형제 캐시).
+		void InitFacade(SJH::Scene::Actor &a)
+		{
+			a.AddComponent<PlayerEntity>();
+		}
+
+		// ════════════ [2] 컴포넌트간 의존성 연결 (Set* 전용) ════════════
+
+		/// @brief Weapon → bullet 스폰 물리 월드 주입 (Weapon 있을 때만).
+		void WireWeapon(SJH::Scene::Actor &a, const PlayerActorConfig &cfg)
+		{
+			if (auto *weapon = a.GetComponent<Components::Weapon>())
+				weapon->SetWorld(cfg.weapon.world);
+		}
+
+		/// @brief Controller ← 입력/카메라/IMovable 타깃 주입 + SetUp (Controller 있을 때만).
+		/// @details IMovable 타깃 = 분기 결과 (PhysicsMovement 우선, 없으면 Movement). setter 는 fluent 체인.
+		void WireController(SJH::Scene::Actor &a, const PlayerActorConfig &cfg)
+		{
+			auto *controller = a.GetComponent<Controller::PlayerController>();
+			if (controller == nullptr)
+				return;
+
+			Entity::IMovable *movable = a.GetComponent<Physics::PhysicsMovement>(); // 물리 분기
+			if (movable == nullptr)
+				movable = a.GetComponent<Components::Movement>();                    // 비물리 분기
+
+			controller->SetKeyboardInput(cfg.controller.keyboard)
+			    .SetMouseInput(cfg.controller.mouse)
+			    .SetWorldCamera(cfg.controller.camera)
+			    .SetMovableTarget(movable)
+			    .SetFireCallback(cfg.controller.onFire)
+			    .SetDamageCallback(cfg.controller.onDamage);
+			controller->SetUp();
+		}
+	} // namespace
+
+	std::unique_ptr<SJH::Scene::Actor> CreatePlayerActor(const PlayerActorConfig &cfg)
+	{
+		auto  actor = std::make_unique<SJH::Scene::Actor>(cfg.name);
+		auto &a     = *actor;
+
+		// [1] 컴포넌트 초기화 (if/else → 분기 함수, 각자 내부 guard 로 한쪽만 실효)
+		InitLife(a, cfg);
+		InitPhysicsBranch(a, cfg);
+		InitMovementBranch(a, cfg);
+		InitController(a, cfg);
+		InitSprite(a, cfg);
+
+		// [2] 컴포넌트간 의존성 연결 (초기화 끝난 뒤 Set*)
+		WireWeapon(a, cfg);
+		WireController(a, cfg);
+
+		// facade (모든 형제 후 — OnEnter 캐시)
+		InitFacade(a);
 
 		return actor;
 	}
