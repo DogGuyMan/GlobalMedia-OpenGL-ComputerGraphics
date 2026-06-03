@@ -25,6 +25,7 @@
 
 #include "diagnostics/effekseer_diagnostics.h"   // VFX 텍스처 로드 검증
 #include "Playable/PostFXRegistry.h"             // 연출 foundation — PostFX pass Material 레지스트리
+#include "Playable/PostFXConstants.h"            // PostFX 파이프라인 정의(PASSTHOURH/POSTFX_PROGRAM_CONFIGS) + fog/vignette 색
 #include "Spawns/OneShotSweeper.h"
 #include "Spawns/VfxInstance.h"
 #include "Spawns/WorldTextInstance.h"   // <- 추가 (데모 트리거)
@@ -61,36 +62,10 @@ namespace TopdownShooter
 {
 	namespace
 	{
-		struct ProgramConfig
-		{
-			const char *Name;
-			const char *VertFile;
-			const char *FragFile;
-		};
-		// 체인 인덱스 = 실행 순서 (doc/design/PostFX.md §3.1).
-
-		const ProgramConfig PASSTHOURH_PROGRAM_CONFIG = {
-		    "screen_passthrough",
-		    "./resources/shaders/passthrough.vs",
-		    "./resources/shaders/passthrough.fs"};
-
-		// 체인 인덱스 = 실행 순서. 모든 PostFX 단계가 동일 postprocess.vs 공유.
-		// 실제 디렉토리 = resources/shaders/postprocess/ (shaders 복수).
-		// D-6 data-driven — gamma 초기값을 InitFloats 로 명시.
-		const std::vector<SJH::Render::PostFXStageConfig> POSTFX_PROGRAM_CONFIGS = {
-		    // 실행 순서 재배열 (2026-06-01 사용자 지정): gamma->sharpening->bloom->fog->invert->blur->sobel.
-		    {"gamma",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/gamma.fs",      {{"gamma", 1.0f}}},
-		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
-		    {"bloom",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/bloom.fs",
-		     {{"uBloomThreshold", 0.769f}, {"uBloomSpread", 2.342f}, {"uBloomIntensity", 0.927f}}},
-		    {"fog",        "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/fog.fs",
-		     {{"uFogDensity", 0.042f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
-		    {"grayscale_vignetting", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/grayscale_vignetting.fs",
-		     {{"uGrayscaleAmount", 1.0f}, {"uVignetteAmount", 0.0f}}}, // uVignetteColor(vec3)는 startup 에서 set.
-		    {"invert",     "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs",     {}},
-		    {"blurring",   "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/blurring.fs",   {}},
-		    {"sobel",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs",      {}},
-		};
+		// PostFX 파이프라인 정의(ProgramConfig/PASSTHOURH/POSTFX_PROGRAM_CONFIGS)는
+		// Playable/PostFXConstants.h 로 이관 — 여기선 using 으로 노출(기존 unqualified 사용처 보존).
+		using Playable::PASSTHOURH_PROGRAM_CONFIG;
+		using Playable::POSTFX_PROGRAM_CONFIGS;
 	} // namespace
 
 	class game_application : public sb7::application
@@ -162,14 +137,14 @@ namespace TopdownShooter
 			// fog 의 non-float 초기값 + uDepth 바인딩 (PostFXStageConfig.InitFloats 는 Floats 만 지원).
 			if (auto *fogMat = FindFogMaterial())
 			{
-				fogMat->Properties.Vec3s["uFogColor"] = vmath::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
-				fogMat->Properties.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
+				fogMat->Properties.Vec3s["uFogColor"] = Playable::FOG_COLOR; // {20,36,10}
+				fogMat->Properties.Ints["uFogMode"]   = Playable::FOG_MODE; // 0=Linear, 1=Exp, 2=Exp2
 			}
 			RebindFogUniforms(); // uDepth = sceneFB depth 텍스처 (unit 1).
 
 			// grayscale_vignetting 의 vec3 초기값 (InitFloats 밖) — 비네팅 색 명시 set.
 			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
-				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
+				gvMat->Properties.Vec3s["uVignetteColor"] = Playable::VIGNETTE_COLOR; // {255,0,0} 빨강 비네팅.
 
 			// 연출 foundation — PostFX pass Material 을 레지스트리에 등록 (hit-FX 트랙의 PostFXTweenPlayable 이
 			// PostFXRegistry::Get().Material("grayscale_vignetting")->Properties 로 도달). pass material 유효 지점.
