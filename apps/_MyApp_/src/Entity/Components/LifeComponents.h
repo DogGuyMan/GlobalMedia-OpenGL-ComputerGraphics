@@ -21,6 +21,7 @@ namespace TopdownShooter::Entity::Components
 		bool  mDeathFxFired = false;  // one-shot death guard (mDead 대체)
 		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // 사망 spawn-at-point seam
 		std::function<void(const vmath::vec3 &)> mOnHitFx;     // 피격 spawn-at-point seam (hit FX — 적/플레이어 공통)
+		std::function<void(SJH::Scene::Actor *)> mOnDeath;     // 사망(HP0) 통지 — 생성/파괴 owner(WaveController) observer seam (onDeathFx[vec3]와 별개)
 		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
 
 		// === Timer 중앙화 — BaseEntity 의 MultipleTimer 에 위탁, 핸들만 보유 (비소유) ===
@@ -53,8 +54,11 @@ namespace TopdownShooter::Entity::Components
 		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
 		Life &SetOnHitFx(std::function<void(const vmath::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
+		Life &SetOnDeath(std::function<void(SJH::Scene::Actor *)> fn) { mOnDeath = std::move(fn); return *this; }
 		Life &SetDeathDelaySeconds(float s) { mDieDelaySeconds = s; return *this; }
 		bool  IsInvincible() const { return mInvincibleTimer && !mInvincibleTimer->IsTimesUp(); }
+		/// @brief 디졸브(사망 연출) 종료 = despawn 가능 시점. WaveController deferred sweep 의 RemoveChild 게이트.
+		bool  IsDespawnReady() const { return mDeathFxFired && (mDieTimer == nullptr || mDieTimer->IsTimesUp()); }
 
 		void OnEnter() override
 		{
@@ -126,6 +130,7 @@ namespace TopdownShooter::Entity::Components
 			const vmath::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f);
 			if (mSink) mSink->ReactDied(pos);        // 디졸브 시작 (sink 가 구동 — 분해 Task 6)
 			if (mOnDeathFx) mOnDeathFx(pos);         // spawn-at-point seam
+			if (mOnDeath) mOnDeath(GetOwner());      // 사망 통지(observer) — count↓ + 제거 큐 등록은 owner(WaveController)
 			if (mDieTimer)
 				mDieTimer->Reset();                  // 지연 발동 — Update 가 만료 시 비활성 (mDeathFxFired 가 게이트)
 			else if (GetOwner())
