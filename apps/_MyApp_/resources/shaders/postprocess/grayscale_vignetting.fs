@@ -24,8 +24,8 @@ void main()
 
         // 2. Vignetting — 화면 중앙(0.5,0.5)으로부터 거리 기반 가우시안 계수.
         float dist = distance(vUV, vec2(0.5));
-        float intensity = uVignetteAmount * 20.0; // 0~1 → 0~20 강도.
-        float vignetteFactor = exp(-dist * dist * intensity); // 중앙=1, 외곽→0.
+        float intensity = uVignetteAmount * 20.0; // 0~1 -> 0~20 강도.
+        float vignetteFactor = exp(-dist * dist * intensity); // 중앙=1, 외곽->0.
         finalColor = mix(uVignetteColor, finalColor, vignetteFactor);
 
         fragColor = vec4(finalColor, 1.0);

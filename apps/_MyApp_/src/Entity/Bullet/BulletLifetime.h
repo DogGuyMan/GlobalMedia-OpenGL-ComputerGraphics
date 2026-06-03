@@ -7,7 +7,7 @@
 namespace TopdownShooter::Entity::Bullet
 {
     /// @brief 수명 초과 시 Actor::SetActive(false). (SJH::Timer::Timer 자가 보유 — 패턴 A)
-    /// @details Timer 는 카운트업(0→base) — BulletLifetime 의 기존 카운트업과 방향 동일하므로
+    /// @details Timer 는 카운트업(0->base) — BulletLifetime 의 기존 카운트업과 방향 동일하므로
     ///          §5.1 "역전 함정" 없음. baseTime = lifetime(항상 양수).
     class BulletLifetime : public SJH::Scene::Component
     {

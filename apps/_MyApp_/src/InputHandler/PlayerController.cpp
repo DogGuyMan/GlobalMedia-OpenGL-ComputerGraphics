@@ -1,5 +1,5 @@
 
-// PlayerController.h → input/mouse_input.h 가 <GLFW/glfw3.h> 를 끌어오므로, GLFW 가 자체 GL 헤더를
+// PlayerController.h -> input/mouse_input.h 가 <GLFW/glfw3.h> 를 끌어오므로, GLFW 가 자체 GL 헤더를
 // 포함해 엔진 gl3w 와 PFNGL* 가 충돌하지 않도록 *모든 include 이전* 에 NONE 을 선언한다.
 #define GLFW_INCLUDE_NONE
 
@@ -8,7 +8,7 @@
 #include "object/transform.h"
 #include "scene/actor.h"
 
-// 마우스→Ground raycast + 발사/회전/디버그 마커에 필요한 의존 (Client 코드라 직접 사용 OK).
+// 마우스->Ground raycast + 발사/회전/디버그 마커에 필요한 의존 (Client 코드라 직접 사용 OK).
 #include "Entity/BaseEntity.h"
 #include "Entity/Components/WeaponComponents.h"
 #include "Playable/Constants.h" // FacingThresholdConfig / PLAYER_FACING_THRESHOLD (헤더-only 데이터)
@@ -35,13 +35,13 @@ namespace
 	{
 		return (r[0] <= r[1]) ? (deg >= r[0] && deg < r[1]) : (deg >= r[0] || deg < r[1]);
 	}
-	// dir=(x,z) → θ=normalize360(deg(atan2(-z,x))) → 4범위 중 포함 필드. no-match=fallback.
+	// dir=(x,z) -> θ=normalize360(deg(atan2(-z,x))) -> 4범위 중 포함 필드. no-match=fallback.
 	TopdownShooter::Entity::EFacing QuantizeByThreshold(
 	    vmath::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
 	    TopdownShooter::Entity::EFacing fallback)
 	{
 		namespace E = TopdownShooter::Entity;
-		float deg = std::atan2(-dir[1], dir[0]) * 57.29578f; // rad→deg, screen-up=-Z
+		float deg = std::atan2(-dir[1], dir[0]) * 57.29578f; // rad->deg, screen-up=-Z
 		if (deg < 0.0f) deg += 360.0f;
 		if (InRange(deg, cfg.Back)) return E::EFacing::Back;
 		if (InRange(deg, cfg.Front)) return E::EFacing::Front;
@@ -64,7 +64,7 @@ namespace TopdownShooter::Controller
 		// W = 앞 = -Z (OpenGL forward 컨벤션).
 		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
 		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
-		// (held 핸들러는 매 프레임 호출 → 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec §2.)
+		// (held 핸들러는 매 프레임 호출 -> 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec §2.)
 		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); });
 		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
 		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
@@ -186,12 +186,12 @@ namespace TopdownShooter::Controller
 
 		// 대시(Impulse) 중에는 입력 자유이동을 Block — DoForward 호출 자체를 skip.
 		// (입력 0 이어도 DoForward(0) 이 속도를 0 으로 만들어 버스트를 죽이므로 호출 자체를 막아야 함.)
-		// 현재 dash 입력 미배선이라 IsImpulseActive()=false → 게이트 dormant(행동 변화 0).
+		// 현재 dash 입력 미배선이라 IsImpulseActive()=false -> 게이트 dormant(행동 변화 0).
 		const bool impulseActive = (mEntity != nullptr && mEntity->IsImpulseActive());
 		if (!impulseActive)
 			mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
 
-		// === 연속 조준 (spec D1) — 매 프레임 마우스→Ground raycast 로 조준 멤버 갱신. ===
+		// === 연속 조준 (spec D1) — 매 프레임 마우스->Ground raycast 로 조준 멤버 갱신. ===
 		UpdateAim();
 
 		// === 플레이어 회전 (spec D2/§3) — 논리 facing(EulerRot.Y). ===
@@ -200,7 +200,7 @@ namespace TopdownShooter::Controller
 		if (owner != nullptr)
 			owner->GetTransform().EulerRot[1] = mAimAngleY; // 논리 facing — 자식 손이 WorldMatrix 로 상속
 
-		// === RD5: facing/pose 단일 작성자 (controller 계산 → sink 토글) ===
+		// === RD5: facing/pose 단일 작성자 (controller 계산 -> sink 토글) ===
 		if (mSink == nullptr && owner != nullptr)
 			mSink = owner->GetComponent<TopdownShooter::Entity::IActorPresentation>(); // lazy(=director, 인터페이스 조회)
 		if (mSink != nullptr)
@@ -250,11 +250,11 @@ namespace TopdownShooter::Controller
 			return false;
 		}
 
-		// 화면(픽셀) → NDC. y 는 위가 +1 이 되도록 뒤집는다.
+		// 화면(픽셀) -> NDC. y 는 위가 +1 이 되도록 뒤집는다.
 		const float ndcX = 2.0f * static_cast<float>(mx) / static_cast<float>(ww) - 1.0f;
 		const float ndcY = 1.0f - 2.0f * static_cast<float>(my) / static_cast<float>(wh);
 
-		// 카메라 world basis — owner WorldMatrix 의 컬럼. (vmath 는 일반 inverse 미제공 →
+		// 카메라 world basis — owner WorldMatrix 의 컬럼. (vmath 는 일반 inverse 미제공 ->
 		// proj·view 역행렬 대신 fov/aspect 로 view-space ray 를 직접 구성해 world 로 회전.)
 		const vmath::mat4 camW = mCamera->GetOwner()->GetWorldMatrix();
 		const vmath::vec3 right(camW[0][0], camW[0][1], camW[0][2]);
@@ -267,7 +267,7 @@ namespace TopdownShooter::Controller
 		const vmath::vec3 dir =
 		    normalize(right * (ndcX * aspect * tanHalf) + up * (ndcY * tanHalf) + forward);
 
-		// y=0 평면과 교차. dir.y ≈ 0 이면 평행, t<0 이면 카메라 뒤 → 직전값 유지.
+		// y=0 평면과 교차. dir.y ≈ 0 이면 평행, t<0 이면 카메라 뒤 -> 직전값 유지.
 		if (std::fabs(dir[1]) < 1e-5f)
 		{
 			mAimValid = false;
@@ -281,7 +281,7 @@ namespace TopdownShooter::Controller
 		}
 		const vmath::vec3 hit = camPos + dir * t;
 
-		// === PlayerActor(owner) → 커서 Ground 좌표 = 조준 Vector 추출 (XZ 평면) ===
+		// === PlayerActor(owner) -> 커서 Ground 좌표 = 조준 Vector 추출 (XZ 평면) ===
 		SJH::Scene::Actor *player = GetOwner();
 		const vmath::vec3 playerPos = (player != nullptr) ? player->GetTransform().Translate : vmath::vec3(0.0f);
 

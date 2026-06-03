@@ -73,7 +73,7 @@ namespace TopdownShooter::HUD
 		bar->GetTransform().Scale = vmath::vec3(cfg.size[0], cfg.size[1], 1.0f);
 		auto *barPtr = target.AddChild(std::move(bar));
 
-		// 5) MeshRenderer(QuadMesh, Material, +10) + Driver(Life→uFill).
+		// 5) MeshRenderer(QuadMesh, Material, +10) + Driver(Life->uFill).
 		//    QueueOffset +10 — 같은 Transparent 큐(3000) 안에서 스프라이트 등 위로 정렬.
 		barPtr->AddComponent<SJH::Scene::MeshRenderer>(quad, mat, /*queueOffset*/ 10);
 		barPtr->AddComponent<TopdownShooter::HUD::HealthBarDriver>(life, mat);

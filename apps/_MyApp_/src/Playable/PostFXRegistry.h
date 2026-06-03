@@ -12,7 +12,7 @@ namespace SJH
 
 namespace TopdownShooter::Playable
 {
-	/// @brief PostFX 패스 Material 의 이름→포인터 레지스트리 (Meyer's 싱글톤).
+	/// @brief PostFX 패스 Material 의 이름->포인터 레지스트리 (Meyer's 싱글톤).
 	///        main.cpp 가 startup 에서 PassComponent 의 Material 을 등록하고,
 	///        이후 연출 트랙(hit-FX 의 PostFXTweenPlayable 등)이 셰이더 uniform 에 도달할 때
 	///        FindPassMaterial 대신 PostFXRegistry::Get().Material(name) 로 조회한다.

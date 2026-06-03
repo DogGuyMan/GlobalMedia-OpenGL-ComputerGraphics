@@ -136,8 +136,8 @@ namespace TopdownShooter::Stage
 		const float arena = cfg.arenaHalfExtent;
 		const float wallH = cfg.wallThickness;
 		// 벽 하나를 생성·배치하는 팩토리 — (name, center, yRot) 만으로 통합.
-		//   half(물리 박스)는 yRot 에서 자동 도출: 0/180 → 가로(arena,wallH), 90/270 → 세로(wallH,arena).
-		//   시각 quad 는 항상 (arena*2, 1, 1) 에 yRot 만큼 Y축 회전 → 세로 PoliceTape 펜스.
+		//   half(물리 박스)는 yRot 에서 자동 도출: 0/180 -> 가로(arena,wallH), 90/270 -> 세로(wallH,arena).
+		//   시각 quad 는 항상 (arena*2, 1, 1) 에 yRot 만큼 Y축 회전 -> 세로 PoliceTape 펜스.
 		auto spawnWall = [&](const char *name, vmath::vec2 center, float yRot) {
 			const bool horizontal = (static_cast<int>(yRot) % 180) == 0;
 			const vmath::vec2 half = horizontal ? vmath::vec2(arena, wallH) : vmath::vec2(wallH, arena);

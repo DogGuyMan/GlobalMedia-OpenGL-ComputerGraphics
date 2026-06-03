@@ -93,7 +93,7 @@ namespace SJH::Diagnostics
             std::error_code ec;
             if (!fs::exists(resolved, ec))
             {
-                spdlog::warn("[EfkDiag] {} 텍스처 누락: {} → {}", efkName, ref, resolved.string());
+                spdlog::warn("[EfkDiag] {} 텍스처 누락: {} -> {}", efkName, ref, resolved.string());
                 ++missing;
             }
         }

@@ -23,7 +23,7 @@ namespace TopdownShooter::Playable
 	  protected:
 		void OnPlay() override;           // enableHit = true (대상 서브트리 전체)
 		void OnStop() override;           // enableHit = false (리셋)
-		void OnUpdate(float dt) override; // durationSec 경과 → enableHit=false + finished_
+		void OnUpdate(float dt) override; // durationSec 경과 -> enableHit=false + finished_
 
 	  private:
 		SJH::Scene::Actor *mTarget;
@@ -31,7 +31,7 @@ namespace TopdownShooter::Playable
 	};
 
 	/// @brief [C] 사망 dissolve leaf Playable — 대상 액터(+자식) SpriteRenderer 의 enableDissolve=true +
-	///        dissolveThreshold 를 0→1 로 @p durationSec 에 걸쳐 선형 구동(사라짐). one-shot — 완료 후 dissolved 유지.
+	///        dissolveThreshold 를 0->1 로 @p durationSec 에 걸쳐 선형 구동(사라짐). one-shot — 완료 후 dissolved 유지.
 	///        PlayableDirector "death" 컴포지트에 합성. player/enemy 공용(P4 재사용).
 	class SpriteDissolvePlayable : public SJH::Playable::PlayableBase
 	{
@@ -42,7 +42,7 @@ namespace TopdownShooter::Playable
 	  protected:
 		void OnPlay() override;           // enableDissolve=true, threshold=0
 		void OnStop() override;           // enableDissolve=false, threshold=0 (리셋)
-		void OnUpdate(float dt) override; // threshold = clamp(elapsed/duration) → 1 시 finished_
+		void OnUpdate(float dt) override; // threshold = clamp(elapsed/duration) -> 1 시 finished_
 
 	  private:
 		SJH::Scene::Actor *mTarget;

@@ -1,4 +1,4 @@
-#include <GL/gl3w.h> // 반드시 최상단 — resource_registry.h→framebuffer.h→render_target.h→gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 반드시 최상단 — resource_registry.h->framebuffer.h->render_target.h->gl3w.h 보다 먼저.
 
 #include "Entity/Player/PlayerHand.h"
 
@@ -57,7 +57,7 @@ namespace TopdownShooter::Entity
 
 		// 자식 Hand actor 2개 — 각 PlayerSingleHand(고정 ±벌림각 local) + 빌보드 SpriteRenderer.
 		// 부모(player) Y facing 상속으로 양손 위치가 조준 방향으로 자동 궤도. 빌보드라 항상 카메라 향함.
-		// (AddChild 가 owner(entered)면 즉시 child OnEnter → ApplyLocalOffset. Actor::OnEnter 의 mEntered
+		// (AddChild 가 owner(entered)면 즉시 child OnEnter -> ApplyLocalOffset. Actor::OnEnter 의 mEntered
 		//  가드 덕에 player OnEnter 중 부착해도 이중 OnEnter 없음.)
 		auto makeHand = [&](const char *name, float spreadDeg) {
 			SJH::Scene::Actor *hand =

@@ -94,7 +94,7 @@ namespace TopdownShooter::Entity
 		return v[1] > 0.0f ? EFacing::Front : EFacing::Back;
 	}
 
-	/// @brief 게임플레이 베이스 → 연출 sink (Template-Method forward 대상). RD1 OPT-1.
+	/// @brief 게임플레이 베이스 -> 연출 sink (Template-Method forward 대상). RD1 OPT-1.
 	///        IContactable 式 defaulted no-op — director 가 쓰는 verb 만 override.
 	///        스프라이트/FMOD/Effekseer 타입 0개 (deps inward).
 	class IActorPresentation
@@ -118,7 +118,7 @@ namespace TopdownShooter::Entity
 	};
 
 	/// @brief 일회성 타임드 속도 버스트 (Dash/Knockback). DoForward(지속)의 대칭 파트너.
-	///        IMovable 오버로드 금지 (SetMovableTarget 계약) → 신규 인터페이스.
+	///        IMovable 오버로드 금지 (SetMovableTarget 계약) -> 신규 인터페이스.
 	class IImpulsable
 	{
 	  protected:

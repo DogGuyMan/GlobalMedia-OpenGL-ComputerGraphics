@@ -38,7 +38,7 @@ namespace TopdownShooter::Audio
 		::FMOD::System         *GetSystem()       { return mSystem; }
 		::FMOD::Studio::System *GetStudioSystem() { return mStudioSystem; }
 
-		/// @brief listener 위치/방향 갱신 — render 마다 카메라 Transform 으로 호출 (velocity=0 → doppler 없음).
+		/// @brief listener 위치/방향 갱신 — render 마다 카메라 Transform 으로 호출 (velocity=0 -> doppler 없음).
 		void SetListener(const vmath::vec3 &pos,
 		                 const vmath::vec3 &forward = vmath::vec3(0.0f, 0.0f, -1.0f),
 		                 const vmath::vec3 &up      = vmath::vec3(0.0f, 1.0f, 0.0f));

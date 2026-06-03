@@ -9,7 +9,7 @@ namespace SJH::Timer
     ///        상태 없는 시간 카운터 — 전이 판단은 호출자(FSM 등) 책임.
     ///
     /// ### FSM 응용 레퍼런스 (코드 아님 — SJH::fsm 사용처가 구현)
-    /// C# Affector(Ready→Start→Run⇄Pause→Terminate)는 SJH::fsm::StateMachine 으로 구현한다.
+    /// C# Affector(Ready->Start->Run⇄Pause->Terminate)는 SJH::fsm::StateMachine 으로 구현한다.
     ///   RunState::OnUpdate(owner, dt):
     ///       timer.Tick(dt);
     ///       if (timer.IsBlocked())         machine.TryTransit(Pause);
@@ -27,7 +27,7 @@ namespace SJH::Timer
         // === Fluent Builder (생성 직후 체이닝) ===
         Timer& SetAcceleration(float amount)
         {
-            acceleration_ = (amount < 0.0f) ? 0.0f : amount; // 음수 → 0 (C# 동일)
+            acceleration_ = (amount < 0.0f) ? 0.0f : amount; // 음수 -> 0 (C# 동일)
             return *this;
         }
         Timer& SetInterval(float interval)

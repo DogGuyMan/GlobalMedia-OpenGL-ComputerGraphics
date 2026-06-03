@@ -8,7 +8,7 @@ namespace SJH::Scene { class Actor; }
 
 namespace TopdownShooter::Physics
 {
-	/// @brief Unity RaycastHit / Unreal FHitResult 정통. fraction = [0,1] (start→end 비율).
+	/// @brief Unity RaycastHit / Unreal FHitResult 정통. fraction = [0,1] (start->end 비율).
 	/// @details 입출력 모두 물리 2D 평면 (x, y). 렌더 3D 변환(-y, heightOffset)은 호출측 책임.
 	struct RaycastHit
 	{

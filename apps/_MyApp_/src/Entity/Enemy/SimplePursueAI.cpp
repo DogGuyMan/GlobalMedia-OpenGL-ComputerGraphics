@@ -33,7 +33,7 @@ namespace TopdownShooter::Entity::Enemy
         const auto& tp = mTarget->GetTransform().Translate;
         const b2Vec2 ep = mBody->GetPosition();
         float dx = tp[0] - ep.x;
-        float dy = -tp[2] - ep.y;   // XZ→Box2D XY (Z→-Y, spec §4.4)
+        float dy = -tp[2] - ep.y;   // XZ->Box2D XY (Z->-Y, spec §4.4)
         const float len = std::sqrt(dx*dx + dy*dy);
         if (len < 0.01f) return;
         mBody->SetLinearVelocity(b2Vec2(dx/len * mSpeed, dy/len * mSpeed));

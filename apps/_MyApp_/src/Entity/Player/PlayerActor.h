@@ -53,7 +53,7 @@ namespace TopdownShooter::Entity::Player
 		{
 			SJH::KeyboardInput<Controller::PlayerController::Action> *keyboard = nullptr;
 			SJH::MouseInput      *mouse    = nullptr;   // 좌클릭 Fire 바인딩용 (선택)
-			SJH::Scene::Camera   *camera   = nullptr;   // 좌클릭 마우스→Ground raycast 용 (선택)
+			SJH::Scene::Camera   *camera   = nullptr;   // 좌클릭 마우스->Ground raycast 용 (선택)
 			std::function<void()> onFire;               // 좌클릭 콜백 (선택)
 			std::function<void()> onDamage;             // G키 콜백 (선택)
 		};
@@ -80,7 +80,7 @@ namespace TopdownShooter::Entity::Player
 		/// @brief 방향 텍스처 합성 설정 (spec §6.1). M6 Task7 의 SpriteCfg{atlas,clips} 를 대체.
 		struct SpriteCfg
 		{
-			/// @brief 방향 텍스처 세트(예: Playable::FRONT_MOVE). nullptr → 스프라이트 없음(게임플레이-only).
+			/// @brief 방향 텍스처 세트(예: Playable::FRONT_MOVE). nullptr -> 스프라이트 없음(게임플레이-only).
 			const std::vector<TopdownShooter::Playable::EntityTextureConfig> *direction = nullptr;
 			float fps = 8.0f; ///< 애니 파트(ColCount>1) 의 초당 프레임
 		};

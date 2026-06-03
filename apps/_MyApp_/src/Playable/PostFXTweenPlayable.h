@@ -24,7 +24,7 @@ namespace TopdownShooter::Playable
 
 	  protected:
 		void OnPlay() override;           // 트윈 되감기 (seek 0) — 매 Play 마다 처음부터
-		void OnUpdate(float dt) override; // step(ms) → uniform 기록 → progress>=1 시 one-shot finish
+		void OnUpdate(float dt) override; // step(ms) -> uniform 기록 -> progress>=1 시 one-shot finish
 
 	  private:
 		std::string          mPassName;

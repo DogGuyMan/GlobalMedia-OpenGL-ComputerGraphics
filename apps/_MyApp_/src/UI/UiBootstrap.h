@@ -28,7 +28,7 @@ namespace TopdownShooter::UI
 
 	/// @brief ImGui v1.53 init(install_callbacks=false) + Exit/PostFXDebug 레이어 등록.
 	///        기존 main.cpp WarmupImgui 와 동일. ImGui 의존이라 UI_SRC 로 executable 직접 컴파일.
-	/// @return ImGuiContext* — main → mImGuiCtx (shutdown DestroyContext 용).
+	/// @return ImGuiContext* — main -> mImGuiCtx (shutdown DestroyContext 용).
 	ImGuiContext *BuildGameUI(GameUiDeps deps);
 }
 

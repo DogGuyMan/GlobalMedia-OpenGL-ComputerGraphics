@@ -26,8 +26,8 @@ namespace TopdownShooter::Bootstrap
 	/// @brief main 이 멤버로 보유할 산출 포인터.
 	struct WorldSceneResult
 	{
-		SJH::Scene::Camera *WorldCamera = nullptr; ///< main → mCamera.
-		SJH::Material      *SkyboxMat   = nullptr; ///< main → mSkyboxMat (render() 가 매 프레임 u_time 갱신).
+		SJH::Scene::Camera *WorldCamera = nullptr; ///< main -> mCamera.
+		SJH::Material      *SkyboxMat   = nullptr; ///< main -> mSkyboxMat (render() 가 매 프레임 u_time 갱신).
 	};
 
 	/// @brief 3D 월드 씬 구성 — WorldCamera(+ActorFolower) / DirLight / Matrix Skybox 를

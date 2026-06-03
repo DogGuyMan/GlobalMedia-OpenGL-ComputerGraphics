@@ -1,4 +1,4 @@
-# 머리 위 분절형 체력바 — HealthBarDriver(Life→uFill) + AttachHealthBar 팩토리.
+# 머리 위 분절형 체력바 — HealthBarDriver(Life->uFill) + AttachHealthBar 팩토리.
 # 신규 STATIC lib. SJH::engine(Material/Mesh/Geometry/MeshRenderer/ResourceRegistry/Program/Actor) +
 # MyApp::Entity(ILivable) 의존.
 add_library(myapp_hud STATIC

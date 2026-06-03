@@ -11,7 +11,7 @@
 
 namespace SJH::Scene
 {
-	class Camera; // 마우스→Ground raycast 용 (포인터 멤버 — 전방 선언으로 충분)
+	class Camera; // 마우스->Ground raycast 용 (포인터 멤버 — 전방 선언으로 충분)
 }
 
 namespace TopdownShooter::Entity { class BaseEntity; }
@@ -52,7 +52,7 @@ namespace TopdownShooter::Controller
 		/// @brief 마우스 입력 의존 주입 (선택적 — 좌클릭 Fire 바인딩용). SetUp() 전에 호출 필수.
 		PlayerController &SetMouseInput(SJH::MouseInput *m);
 
-		/// @brief World 카메라 주입 (선택적 — 좌클릭 시 마우스→Ground raycast 용). 미주입이면 raycast 생략.
+		/// @brief World 카메라 주입 (선택적 — 좌클릭 시 마우스->Ground raycast 용). 미주입이면 raycast 생략.
 		PlayerController &SetWorldCamera(SJH::Scene::Camera *cam);
 
 		/// @brief 좌클릭 시 실행할 콜백 (Shot Composite 등). 미주입이면 좌클릭 무시.
@@ -65,7 +65,7 @@ namespace TopdownShooter::Controller
 		/// @details VFX 테스트(선택 이펙트 소환) 등 *클릭 위치 소비자* 용. 미주입이면 무시.
 		PlayerController &SetGroundClickCallback(std::function<void(const vmath::vec3 &worldPos)> cb);
 
-		/// @brief 조준 정보 — 매 프레임 마우스→Ground raycast 로 갱신 (PlayerActor(owner)→커서 Ground).
+		/// @brief 조준 정보 — 매 프레임 마우스->Ground raycast 로 갱신 (PlayerActor(owner)->커서 Ground).
 		/// @details `mAimDirection` 은 XZ 평면 정규화 방향(발사/회전 방향). `mAimPoint` 는 커서 월드 좌표.
 		///          `mAimAngleY` 는 facing Y각(degree). 유효 교차 없으면 직전값 유지.
 		const vmath::vec3 &GetAimDirection() const { return mAimDirection; }
@@ -80,7 +80,7 @@ namespace TopdownShooter::Controller
 		bool mIsInitialized                          = false;
 		SJH::KeyboardInput<Action> *mKeyboardInput   = nullptr;
 		SJH::MouseInput *mMouseInput                 = nullptr;
-		SJH::Scene::Camera *mCamera                  = nullptr; // 마우스→Ground raycast 용 (비소유)
+		SJH::Scene::Camera *mCamera                  = nullptr; // 마우스->Ground raycast 용 (비소유)
 		Entity::IMovable* mMovementPtr = nullptr;
 		TopdownShooter::Entity::BaseEntity* mEntity = nullptr; // 대시 중 이동 suppress 게이트(IsImpulseActive)
 
@@ -90,9 +90,9 @@ namespace TopdownShooter::Controller
 
 		vmath::vec3 mInputValue {0.0f};
 
-		// 매 프레임 마우스→Ground raycast 로 갱신되는 조준 정보 — PlayerActor(owner) 위치 + 커서 Ground 좌표.
+		// 매 프레임 마우스->Ground raycast 로 갱신되는 조준 정보 — PlayerActor(owner) 위치 + 커서 Ground 좌표.
 		vmath::vec3 mAimPoint {0.0f};                  // 커서 Ground 월드 좌표 (y≈0)
-		vmath::vec3 mAimDirection {0.0f, 0.0f, -1.0f}; // player → 커서 방향 (XZ 평면, 정규화)
+		vmath::vec3 mAimDirection {0.0f, 0.0f, -1.0f}; // player -> 커서 방향 (XZ 평면, 정규화)
 		float       mAimAngleY = 0.0f;                 // facing Y각 (degree) = degrees(atan2(-dir.x,-dir.z))
 		bool        mAimValid  = false;                // 이번 프레임 유효 교차 여부 (false 면 직전값 유지)
 
@@ -105,10 +105,10 @@ namespace TopdownShooter::Controller
 		void RegisterBindings();
 		void UnregisterBindings();
 
-		// 마우스 커서 → 카메라 ray → y=0 평면 교차 → 조준 멤버(mAimPoint/Direction/AngleY) 갱신.
+		// 마우스 커서 -> 카메라 ray -> y=0 평면 교차 -> 조준 멤버(mAimPoint/Direction/AngleY) 갱신.
 		// 매 프레임(Update) + 좌클릭 직전 호출. 유효 교차 없으면 mAimValid=false + 직전값 유지 (silent).
 		bool UpdateAim();
-		// 좌클릭 액션 — UpdateAim 갱신 → Weapon 발사 + onFire + 디버그 마커 + GroundClick 콜백.
+		// 좌클릭 액션 — UpdateAim 갱신 -> Weapon 발사 + onFire + 디버그 마커 + GroundClick 콜백.
 		void OnFirePressed();
 		void SpawnGroundMarker(const vmath::vec3 &worldPos);
 	};

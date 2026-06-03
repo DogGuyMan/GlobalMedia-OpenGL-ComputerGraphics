@@ -1,4 +1,4 @@
-#include <GL/gl3w.h> // 반드시 최상단 — resource_registry.h→framebuffer.h→render_target.h→gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 반드시 최상단 — resource_registry.h->framebuffer.h->render_target.h->gl3w.h 보다 먼저.
 
 #include "Entity/Player/PlayerActor.h"
 #include "Entity/Player/PlayerEntity.h"
@@ -77,7 +77,7 @@ namespace TopdownShooter::Entity::Player
 
 		// === 4-레이어 스프라이트 합성 (spec §6.3) — direction 지정 시에만 ===
 		// 각 파트 PNG = 자기 UniformAtlas (정적=SetGrid(1,1), 애니 B파트=SetGrid(ColCount,1) 스트립).
-		// DrawOrder 별 child Actor (local 0,0,0 → parent world 공유) + QueueOffset=DrawOrder painter 합성.
+		// DrawOrder 별 child Actor (local 0,0,0 -> parent world 공유) + QueueOffset=DrawOrder painter 합성.
 		if (cfg.sprite.direction != nullptr)
 		{
 			auto &reg = SJH::ResourceRegistry::Get();
@@ -100,7 +100,7 @@ namespace TopdownShooter::Entity::Player
 
 				auto *spr = childPtr->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
 				spr->flipX = t.Flip;
-				spr->QueueOffset = t.DrawOrder; // 2450+DrawOrder → distinct 층
+				spr->QueueOffset = t.DrawOrder; // 2450+DrawOrder -> distinct 층
 
 				if (t.ColCount > 1) // 애니 파트 (가로 N프레임 스트립)
 				{

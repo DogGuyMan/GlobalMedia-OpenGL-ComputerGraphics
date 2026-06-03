@@ -65,7 +65,7 @@ namespace SJH::Sprite
 
         // === 사망 디졸브 (billboard_atlas.fs uEnableDissolve/...) — sink 가 구동 ===
         bool                enableDissolve           = false;
-        float               dissolveThreshold        = 0.0f;   // 0→1 (사라지는 정도)
+        float               dissolveThreshold        = 0.0f;   // 0->1 (사라지는 정도)
         float               dissolveOutlineThickness = 0.05f;
         vmath::vec3         dissolveOutlineColor     = vmath::vec3(1.0f, 0.5f, 0.0f);
         const SJH::Texture* dissolveTex              = nullptr; // resources/texture/dissolve.png (sink 주입)

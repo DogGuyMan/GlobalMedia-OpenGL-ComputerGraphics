@@ -161,9 +161,12 @@ namespace SJH::Pass
 			    /*QueueLayer*/ QueueOf(Kind::Opaque)};
 
 		case Kind::AlphaTest:
+			// CullMode 0 = face culling 비활성 — sprite(빌보드)는 카메라-정면 2D quad 라 컬링이 무의미하고,
+			// flipX(=-1, RIGHT 등 좌우반전)가 quad winding 을 뒤집어 GL_BACK 컬링 시 투명해지는 버그를 막는다.
+			// (AlphaTest 는 현재 sprite 전용 — blast radius = 스프라이트만.)
 			return PipelineState{
 			    /*DepthTest*/ true, /*DepthWrite*/ true,
-			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ GL_BACK,
+			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ 0,
 			    /*BlendEnable*/ false, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
 			    /*QueueLayer*/ QueueOf(Kind::AlphaTest)};
 

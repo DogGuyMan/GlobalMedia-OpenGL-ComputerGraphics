@@ -59,7 +59,7 @@ namespace TopdownShooter::Playable
 	void SpriteDissolvePlayable::OnPlay()
 	{
 		// 노이즈 디졸브 텍스처(dissolve.png) 1회 로드(이후 FindTexture 캐시). 미지정 시 sprite_component 이
-		// uDissolveTex 를 unit0(=atlas)로 fallback → 스프라이트 내용 의존 crude erode(가시성 불안정, 적이 즉시 사라짐).
+		// uDissolveTex 를 unit0(=atlas)로 fallback -> 스프라이트 내용 의존 crude erode(가시성 불안정, 적이 즉시 사라짐).
 		// 전용 노이즈로 내용 무관 균일·가시 디졸브 보장 (sprite_component 주석의 "dissolve.png sink 주입" 의도).
 		auto               &reg   = SJH::ResourceRegistry::Get();
 		const SJH::Texture *noise = reg.FindTexture(kDissolveTexKey);

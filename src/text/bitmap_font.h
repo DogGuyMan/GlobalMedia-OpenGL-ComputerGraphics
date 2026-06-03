@@ -13,7 +13,7 @@ namespace SJH::Text
     /// @brief 한 글리프의 atlas frame index + advance(px).
     struct Glyph { int frameIndex = -1; int xadvance = 0; };
 
-    /// @brief BMFont(AngelCode) PNG+XML 비트맵 폰트 — codepoint→{frame,advance} + 공유 UniformAtlas.
+    /// @brief BMFont(AngelCode) PNG+XML 비트맵 폰트 — codepoint->{frame,advance} + 공유 UniformAtlas.
     /// @note  균일 그리드 BMFont 서브셋 전용(frostyfreeze/minogram). 범용 XML 파서 아님.
     ///        내부 UniformAtlas 는 ResourceRegistry 캐시(비소유) — 사이클 회피(spec §2.2).
     class BitmapFont
@@ -26,7 +26,7 @@ namespace SJH::Text
                                          const std::string& pngPath, const std::string& xmlPath);
 
         const Glyph* Find(std::uint32_t codepoint) const;
-        int   FrameOf(std::uint32_t codepoint) const;    // 없으면 '?'→space fallback, 둘 다 없으면 -1(skip)
+        int   FrameOf(std::uint32_t codepoint) const;    // 없으면 '?'->space fallback, 둘 다 없으면 -1(skip)
         int   AdvanceOf(std::uint32_t codepoint) const;  // px (fallback 동일)
         SJH::Sprite::UniformAtlas* GetAtlas() const { return mAtlas; }
         int   LineHeight() const { return mLineHeight; }

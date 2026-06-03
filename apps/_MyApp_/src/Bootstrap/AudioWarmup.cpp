@@ -18,7 +18,7 @@ namespace TopdownShooter::Bootstrap
 		audio.LoadBank("resources/banks/Master.strings.bank");
 		audio.LoadBank("resources/banks/Master.bank");
 
-		// BGM — 인라인 → Spawns::BuildBGM 이관 (M6 Task 5).
+		// BGM — 인라인 -> Spawns::BuildBGM 이관 (M6 Task 5).
 		TopdownShooter::Spawns::SequenceContext bgmCtx;
 		bgmCtx.audio     = &audio;
 		bgmCtx.sceneRoot = &dir.Root();

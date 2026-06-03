@@ -62,7 +62,7 @@ namespace TopdownShooter
 	namespace
 	{
 		// sb7 vmath 는 일반 역행렬 미제공(camera.h 명시) + Camera::InverseAffine 은 affine 전용.
-		// perspective projection(비-affine, w≠1) 역행렬 → cofactor 기반 4x4 일반 inverse (MESA gluInvertMatrix 정통).
+		// perspective projection(비-affine, w≠1) 역행렬 -> cofactor 기반 4x4 일반 inverse (MESA gluInvertMatrix 정통).
 		// vmath 는 column-major(m[col][row]) — flat 배열도 column-major(m[c*4+r])로 변환.
 		vmath::mat4 Mat4Inverse(const vmath::mat4 &src)
 		{
@@ -118,7 +118,7 @@ namespace TopdownShooter
 		// 실제 디렉토리 = resources/shaders/postprocess/ (shaders 복수).
 		// D-6 data-driven — gamma 초기값을 InitFloats 로 명시.
 		const std::vector<SJH::Render::PostFXStageConfig> POSTFX_PROGRAM_CONFIGS = {
-		    // 실행 순서 재배열 (2026-06-01 사용자 지정): gamma→sharpening→bloom→fog→invert→blur→sobel.
+		    // 실행 순서 재배열 (2026-06-01 사용자 지정): gamma->sharpening->bloom->fog->invert->blur->sobel.
 		    {"gamma",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/gamma.fs",      {{"gamma", 1.0f}}},
 		    {"sharpening", "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
 		    {"bloom",      "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/bloom.fs",
@@ -215,14 +215,14 @@ namespace TopdownShooter
 			// PostFXRegistry::Get().Material("grayscale_vignetting")->Properties 로 도달). pass material 유효 지점.
 			TopdownShooter::Playable::PostFXRegistry::Get().Register("grayscale_vignetting", FindPassMaterial("grayscale_vignetting"));
 
-			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
+			// ── stages 컬렉션 — World -> Particle -> Screen -> ScreenQuad 순 ─────────
 			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
 			// 카메라 stages 를 *ScreenQuadStage 앞* 에 insert + ParticleStage 는
 			// 아래 별도 블록에서 begin()+1 위치에 삽입 — 최종 순서:
-			//   [0] worldCam      → sceneFB clear + 3D WorldMesh
-			//   [1] ParticleStage → sceneFB (NoClear) + Effekseer 합성   (※ 아래 블록)
-			//   [2] screenCam     → PassComponent 체인 (NoClear)
-			//   [3] ScreenQuadStage → backbuffer 합성
+			//   [0] worldCam      -> sceneFB clear + 3D WorldMesh
+			//   [1] ParticleStage -> sceneFB (NoClear) + Effekseer 합성   (※ 아래 블록)
+			//   [2] screenCam     -> PassComponent 체인 (NoClear)
+			//   [3] ScreenQuadStage -> backbuffer 합성
 			mStages.insert(
 			    mStages.begin(),
 			    std::make_unique<SJH::CameraStage>(&Manager::Get().SceneRenderer(), mScreenCamera));
@@ -266,7 +266,7 @@ namespace TopdownShooter
 					if (auto *eff = reg.CreateEffect(vfxs.GetManager(), v.key, v.path))
 					{
 						vfxEntries.push_back({v.key, eff});
-						// 진단 — .efk 가 참조하는 텍스처가 실제 해석되는지 검증 (u16 경로 → ASCII narrow).
+						// 진단 — .efk 가 참조하는 텍스처가 실제 해석되는지 검증 (u16 경로 -> ASCII narrow).
 						std::string narrow;
 						for (const char16_t *p = v.path; *p; ++p)
 							narrow.push_back(static_cast<char>(*p));
@@ -301,7 +301,7 @@ namespace TopdownShooter
 					debugEntries.push_back({POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
 			mImGuiCtx = UI::BuildGameUI({window, &reg, &mImGuiStack, std::move(debugEntries), &mGamma});
 
-			// VFX 테스트 드롭다운 (항상 표시) + 좌클릭 Ground 좌표 → 선택 이펙트 소환.
+			// VFX 테스트 드롭다운 (항상 표시) + 좌클릭 Ground 좌표 -> 선택 이펙트 소환.
 			{
 				auto layer = std::make_unique<UI::VfxSpawnLayer>(std::move(vfxEntries));
 				mVfxLayer  = layer.get();
@@ -310,7 +310,7 @@ namespace TopdownShooter
 			if (mSpriteActor)
 				if (auto *pc = mSpriteActor->GetComponent<Controller::PlayerController>())
 					pc->SetGroundClickCallback([this](const vmath::vec3 &p) {
-						// PlayerController 의 마우스→Ground raycast 결과(p)에 선택 이펙트를 단발 스폰.
+						// PlayerController 의 마우스->Ground raycast 결과(p)에 선택 이펙트를 단발 스폰.
 						if (mVfxLayer && mFxRoot)
 							if (auto *fx = mVfxLayer->GetSelectedEffect())
 								TopdownShooter::Spawns::SpawnVfxInstance(
@@ -346,7 +346,7 @@ namespace TopdownShooter
 					mCamera->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
 				if (mScreenCamera)
 					mScreenCamera->Aspect = static_cast<float>(fbW) / static_cast<float>(fbH);
-				mSceneFB->Resize(fbW, fbH);                       // 교체 → in-place (포인터 안정: 첫 PassComponent.InputFB dangling 해소)
+				mSceneFB->Resize(fbW, fbH);                       // 교체 -> in-place (포인터 안정: 첫 PassComponent.InputFB dangling 해소)
 				for (auto &fb : mPostFXFBs)                       // 중간 FB 동기 리사이즈 (스케일 불일치 해소)
 					if (fb)
 						fb->Resize(fbW, fbH);
@@ -379,7 +379,7 @@ namespace TopdownShooter
 				fogMat->Properties.Mat4s["uInverseProjection"] =
 				    Mat4Inverse(mCamera->GetProjectionMatrix());
 
-			// ── stages 컬렉션 순회 — World → Screen → ScreenQuad ─────────────────
+			// ── stages 컬렉션 순회 — World -> Screen -> ScreenQuad ─────────────────
 			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).
 			{
 				auto *out = Manager::Get().SceneRenderer().GetLastSceneOutput();
@@ -417,7 +417,7 @@ namespace TopdownShooter
 			if (ImGui::GetIO().WantCaptureKeyboard)
 				return;
 
-			// F1 — 에디터 토글 (디버그 UI, 플레이어 입력과 무관 → application 잔류).
+			// F1 — 에디터 토글 (디버그 UI, 플레이어 입력과 무관 -> application 잔류).
 			if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
 				mShowEditor = !mShowEditor;
 
@@ -432,7 +432,7 @@ namespace TopdownShooter
 			if (ImGui::GetIO().WantCaptureMouse)
 				return;
 
-			// 좌클릭(Shot Composite)은 MouseInput → PlayerController fire 콜백이 디스패치.
+			// 좌클릭(Shot Composite)은 MouseInput -> PlayerController fire 콜백이 디스패치.
 			// (콜백 로직은 WramupPlayer 의 onFire 로 이동.) 여기선 raw 버튼만 MouseInput 에 전달.
 			double x = 0.0, y = 0.0;
 			glfwGetCursorPos(window, &x, &y);
@@ -492,7 +492,7 @@ namespace TopdownShooter
 		SJH::MouseInput mMouse;
 
 		// 이름으로 PostFX PassComponent 의 Material 탐색 — POSTFX_PROGRAM_CONFIGS 와 mPassComponents 인덱스 정합.
-		// (PostFXStageConfig::Name 은 std::string → operator==(name) 는 정상 문자열 비교.)
+		// (PostFXStageConfig::Name 은 std::string -> operator==(name) 는 정상 문자열 비교.)
 		SJH::Material *FindPassMaterial(const char *name)
 		{
 			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)

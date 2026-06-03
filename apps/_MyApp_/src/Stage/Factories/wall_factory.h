@@ -28,7 +28,7 @@ namespace TopdownShooter::Stage::Factories
         bc.isSensor      = false;                  // solid — Unity isTrigger OFF
         bc.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Wall);
         bc.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::WallMask);
-        // half = half-extents → BoxBody 는 size(full)*0.5 로 SetAsBox 하므로 half*2 전달(절반크기 보존).
+        // half = half-extents -> BoxBody 는 size(full)*0.5 로 SetAsBox 하므로 half*2 전달(절반크기 보존).
         actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, vmath::vec2(half[0] * 2.0f, half[1] * 2.0f));
 
         return actor;

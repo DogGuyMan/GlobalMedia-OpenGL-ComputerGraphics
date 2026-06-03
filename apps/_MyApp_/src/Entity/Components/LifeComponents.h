@@ -24,7 +24,7 @@ namespace TopdownShooter::Entity::Components
 
 		// === SJH::Timer 자가 보유 (패턴 A) — "없음(미설정)"은 nullopt 로 표현 (VO 정통) ===
 		// Timer 는 항상 유효한 시간값(VO). i-frame/사망지연이 "없는" 엔티티는 Timer 자체가 부재(nullopt).
-		// 장전 시 Tick(base)로 finished 상태로 시작 → 평소 비활성, 피격/사망 시 Reset 으로 발동
+		// 장전 시 Tick(base)로 finished 상태로 시작 -> 평소 비활성, 피격/사망 시 Reset 으로 발동
 		// (생성 직후 passed=0 이면 "스폰 즉시 무적"(§5.1)이 되므로 finished 로 막는다).
 		std::optional<SJH::Timer::Timer> mInvincibleTimer;   // i-frame    (nullopt = 무적 없음)
 		std::optional<SJH::Timer::Timer> mDieTimer;          // 사망 연출 지연 (nullopt = 즉시)
@@ -35,7 +35,7 @@ namespace TopdownShooter::Entity::Components
 			if (s > 0.0f)
 			{
 				slot.emplace(s);
-				slot->Tick(s);   // passed=base → IsTimesUp (평소 비활성; Reset 시 발동)
+				slot->Tick(s);   // passed=base -> IsTimesUp (평소 비활성; Reset 시 발동)
 			}
 			else
 				slot.reset();
@@ -96,7 +96,7 @@ namespace TopdownShooter::Entity::Components
 			if (IsInvincible()) return;              // i-frame early-return (총알+접촉 모두 보호)
 			mCurHp -= damage;
 			if (mSink) mSink->ReactDamaged(damage);  // Template-Method forward
-			if (mInvincibleTimer) mInvincibleTimer->Reset();   // passed=0 → 무적 발동 (없으면 no-op = 무적 없음)
+			if (mInvincibleTimer) mInvincibleTimer->Reset();   // passed=0 -> 무적 발동 (없으면 no-op = 무적 없음)
 			if (!IsAlive())
 			{
 				mCurHp = 0;

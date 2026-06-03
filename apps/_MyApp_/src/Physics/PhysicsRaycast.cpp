@@ -41,7 +41,7 @@ namespace TopdownShooter::Physics
 				if (ignore != nullptr && a == ignore)
 					return -1.0f;
 
-				// 후보 기록 후 fraction 반환 → Box2D 가 더 먼 fixture 를 자동 클립 = 최근접 보장.
+				// 후보 기록 후 fraction 반환 -> Box2D 가 더 먼 fixture 를 자동 클립 = 최근접 보장.
 				result.body     = fx->GetBody();
 				result.actor    = a;
 				result.point    = vmath::vec2(point.x, point.y);

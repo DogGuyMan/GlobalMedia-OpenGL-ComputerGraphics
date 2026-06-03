@@ -37,7 +37,7 @@ namespace TopdownShooter::Entity::Bullet
 
         Physics::Components::BodyConfig bc;
         bc.world          = cfg.world;
-        bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 → 안 떨어짐) — static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
+        bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 -> 안 떨어짐) — static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
         bc.startPosition  = cfg.pos;
         bc.linearVelocity = vmath::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
         bc.density        = 1.0f;

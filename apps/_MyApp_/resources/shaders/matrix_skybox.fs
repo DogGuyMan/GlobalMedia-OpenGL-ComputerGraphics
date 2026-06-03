@@ -15,7 +15,7 @@ const float COLS = 256.0;
 const float ROWS = 128.0;
 
 // characters.png 아틀라스 실측 레이아웃─
-//    글자 10개, 각 글자칸 64x128, 글자간/양끝 여백 4px → 총 폭 4+(64+4)*10 = 684.
+//    글자 10개, 각 글자칸 64x128, 글자간/양끝 여백 4px -> 총 폭 4+(64+4)*10 = 684.
 //    글자 d 의 칸 좌측(px) = MARGIN + d*(CHAR_W + GAP).
 const float CHAR_W = 64.0;
 const float GAP = 4.0; // 글자간 간격 = 양끝 여백

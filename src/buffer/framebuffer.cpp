@@ -73,7 +73,7 @@ namespace SJH
         if (mDepthAttachment)
             mDepthAttachment->Resize(width, height);
 
-        // FBO 핸들·어태치먼트 결합 불변(텍스처/RBO ID 동일) → 재attach 불필요. 상태만 재검증.
+        // FBO 핸들·어태치먼트 결합 불변(텍스처/RBO ID 동일) -> 재attach 불필요. 상태만 재검증.
         glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
         auto result = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (result != GL_FRAMEBUFFER_COMPLETE)

@@ -138,7 +138,7 @@
     MovementComponent ..&gt; IContactable : weak ref (velocity 갱신)
     LifeComponent ..&gt; IContactable : weak ref (OnCollision 콜백 수신)
     WeaponComponent ..&gt; IContactable : weak ref (Projectile 시작 위치)
-    BodyContactComponent ..&gt; LifeComponent : OnCollisionEnter → DoDamaged
+    BodyContactComponent ..&gt; LifeComponent : OnCollisionEnter -> DoDamaged
 
     %% ============ ProjectileActor (Sensor — Weapon 이 Instantiate) ============
     class ProjectileActor {
@@ -168,7 +168,7 @@
     ProjectileActor *-- PhysicsBodyComponent : isSensor=true
     ProjectileActor *-- ProjectileContactComponent : owns
 
-    %% 흐름 — Weapon 이 Projectile 생성 → Projectile 이 주변 Damage 처리
+    %% 흐름 — Weapon 이 Projectile 생성 -> Projectile 이 주변 Damage 처리
     WeaponComponent ..&gt; ProjectileActor : Instantiate / Clone
     ProjectileContactComponent ..&gt; IDamageable : dynamic_cast 후 DoDamaged(mDamage)
 </div>

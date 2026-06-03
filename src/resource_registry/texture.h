@@ -43,7 +43,7 @@ namespace SJH
          * @param format         픽셀 데이터 채널 의미 (@c GL_RGBA, @c GL_DEPTH_STENCIL 등).
          * @param type           원소 타입 (@c GL_UNSIGNED_BYTE, @c GL_UNSIGNED_INT_24_8 등).
          * @return 생성된 텍스처 (@c unique_ptr). 실패 시 @c nullptr.
-         * @note depth/packed 텍스처는 보간/mipmap 부적합 → 본 overload 는 @c GL_NEAREST 필터 + @c GL_CLAMP_TO_EDGE wrap 으로 생성.
+         * @note depth/packed 텍스처는 보간/mipmap 부적합 -> 본 overload 는 @c GL_NEAREST 필터 + @c GL_CLAMP_TO_EDGE wrap 으로 생성.
          */
         static TextureUPtr Create(int width, int height,
                                   uint32_t internalFormat, uint32_t format, uint32_t type);
@@ -77,7 +77,7 @@ namespace SJH
         void SetWrap(GLuint sWrap, GLuint tWrap) const;
 
         /// @brief 같은 GL 핸들을 유지하고 색상 스토리지를 새 크기로 재할당 (FBO 어태치먼트 리사이즈용).
-        /// @details 핸들(@c GetTextureID) 불변 → 이 텍스처를 sampler 로 참조하는 모든 consumer 가
+        /// @details 핸들(@c GetTextureID) 불변 -> 이 텍스처를 sampler 로 참조하는 모든 consumer 가
         ///          재바인딩 없이 새 크기를 인식. 포맷은 기존 @c mFormat 유지.
         /// @param width  새 너비 (픽셀). @param height 새 높이 (픽셀).
         void Resize(int width, int height);

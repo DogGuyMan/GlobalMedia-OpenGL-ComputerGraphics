@@ -84,7 +84,7 @@ namespace TopdownShooter::Physics::Components
 
 		// ── body 생성 (subtype ctor 가 호출, eager). owner 무관 — 등록은 OnEnter. ──
 	  protected:
-		/// @brief b2BodyDef → CreateBody (fixture 없음). subtype ctor 가 호출 후 shape fixture 추가.
+		/// @brief b2BodyDef -> CreateBody (fixture 없음). subtype ctor 가 호출 후 shape fixture 추가.
 		b2Body* MakeBody(const BodyConfig& cfg)
 		{
 			if (cfg.world == nullptr) return nullptr;
@@ -104,7 +104,7 @@ namespace TopdownShooter::Physics::Components
 		}
 
 	  public:
-		/// @brief owner userdata 등록 (ctor 엔 GetOwner=null → 여기서). contact 콜백은 런타임에만 읽음.
+		/// @brief owner userdata 등록 (ctor 엔 GetOwner=null -> 여기서). contact 콜백은 런타임에만 읽음.
 		void OnEnter() override
 		{
 			if (mBody != nullptr)

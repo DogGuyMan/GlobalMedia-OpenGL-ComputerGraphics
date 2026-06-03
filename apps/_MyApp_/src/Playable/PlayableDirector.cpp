@@ -70,7 +70,7 @@ namespace TopdownShooter::Playable
 
 	void PlayableDirector::Apply()
 	{
-		// (mFacing,mPose) 그룹만 활성. SetActive 토글 → 렌더+tick 동시 게이트(2프레임 애니라 freeze 무차별).
+		// (mFacing,mPose) 그룹만 활성. SetActive 토글 -> 렌더+tick 동시 게이트(2프레임 애니라 freeze 무차별).
 		for (int f = 0; f < 4; ++f)
 			for (int p = 0; p < 2; ++p)
 			{

@@ -34,7 +34,7 @@ namespace TopdownShooter::Spawn::Carrier
 		} // C4 — SetOnHitFx 흡수
 
 	  protected:
-		/// @brief C1 배달: target 의 IDamageable→DoDamaged + (있으면) IImpulsable→DoImpulse 넉백 + onHitFx.
+		/// @brief C1 배달: target 의 IDamageable->DoDamaged + (있으면) IImpulsable->DoImpulse 넉백 + onHitFx.
 		void Deliver(SJH::Scene::Actor *target, vmath::vec2 knockbackDir)
 		{
 			if (!target || target == mOwnerEntity || !target->IsActive())
@@ -66,7 +66,7 @@ namespace TopdownShooter::Spawn::Carrier
 		void OnExit() override {}
 		void Update(float /*dt*/) override
 		{
-			// 콜백 중 b2Body 수정 금지 → despawn 은 Update 에서 지연 (BulletContactHandler 패턴).
+			// 콜백 중 b2Body 수정 금지 -> despawn 은 Update 에서 지연 (BulletContactHandler 패턴).
 			if (mPendingDisable && GetOwner())
 				GetOwner()->SetActive(false);
 		}
@@ -82,9 +82,9 @@ namespace TopdownShooter::Spawn::Carrier
 			if (!mAlive || !other || !GetOwner())
 				return;
 			mAlive = false;
-			// 넉백 방향 = 총알 비행 방향(=플레이어→타겟 진행 방향, 안정).
-			// box2d XY(mLaunchDir) → world XZ(x, -y): IImpulsable::DoImpulse 계약이 world XZ in → box2d 변환.
-			// (위치차분(enemy-bullet)은 관통 깊이로 부호가 뒤집혀 "플레이어 쪽 돌진" 버그를 유발 → 폐기.)
+			// 넉백 방향 = 총알 비행 방향(=플레이어->타겟 진행 방향, 안정).
+			// box2d XY(mLaunchDir) -> world XZ(x, -y): IImpulsable::DoImpulse 계약이 world XZ in -> box2d 변환.
+			// (위치차분(enemy-bullet)은 관통 깊이로 부호가 뒤집혀 "플레이어 쪽 돌진" 버그를 유발 -> 폐기.)
 			Deliver(other, vmath::vec2(mLaunchDir[0], -mLaunchDir[1]));
 			DoDie();
 		}

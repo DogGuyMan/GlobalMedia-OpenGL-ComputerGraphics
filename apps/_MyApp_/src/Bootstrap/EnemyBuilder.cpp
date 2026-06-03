@@ -1,4 +1,4 @@
-#include <GL/gl3w.h> // 최상단 — resource_registry.h→framebuffer.h→...→gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 최상단 — resource_registry.h->framebuffer.h->...->gl3w.h 보다 먼저.
 
 #include "Bootstrap/EnemyBuilder.h"
 
@@ -66,7 +66,7 @@ namespace TopdownShooter::Bootstrap
         //    각 child 가 스스로 PingPong 루프한다.
         //    !! 왜 par.SetIsLoop 이 아니라 child.SetIsLoop 인가:
         //       ParallelPlayable 의 loop 재시작은 child->Play() 만 호출하는데, TweenPlayable.Play()(=PlayableBase)
-        //       는 tweeny progress 를 되감지 않는다 → "one-shot child + par 루프" 는 끝값에 고정(깨짐).
+        //       는 tweeny progress 를 되감지 않는다 -> "one-shot child + par 루프" 는 끝값에 고정(깨짐).
         //       그래서 child 를 self-loop(PingPong 자가 왕복) 로 두고, par 는 묶음+동시 Play 만 담당.
         {
             SJH::Scene::Actor* self      = enemy.get();             // 이동 후에도 동일 heap Actor — 댕글링 없음
@@ -104,7 +104,7 @@ namespace TopdownShooter::Bootstrap
         }
 
         // P4 — 적 IActorPresentation [C] 포트: player 와 동일하게 PlayableDirector 부착(액터당 1개).
-        //   Life::DoDamaged→ReactDamaged→Play("hit") / DoDie→ReactDied→Play("death") 가 적 스프라이트 연출 구동.
+        //   Life::DoDamaged->ReactDamaged->Play("hit") / DoDie->ReactDied->Play("death") 가 적 스프라이트 연출 구동.
         //   AddChild(=Enter) 전 부착해야 Life::OnEnter 가 sink 로 캐시. [B] 폭발/spark 는 delegate(onDeathFx)가 별도 트리거(유지).
         //   hit-flash/dissolve 는 Task6(player) 와 동일 Playable 클래스 재사용(target=적 액터 — owner-direct SpriteRenderer).
         {
@@ -113,20 +113,20 @@ namespace TopdownShooter::Bootstrap
             director->Register("death", std::make_unique<TopdownShooter::Playable::SpriteDissolvePlayable>(enemy.get(), 0.6f));
 
             // dissolve 가시화 — 사망 후 0.6s(=dissolve 길이) 비활성 지연. 없으면 Life::DoDie 가 즉시
-            // SetActive(false) → dissolve 무발현. (적은 onDeathFx 미바인딩 → EnemyDeathHandler 부재라 Life 지연만으로 충분.)
+            // SetActive(false) -> dissolve 무발현. (적은 onDeathFx 미바인딩 -> EnemyDeathHandler 부재라 Life 지연만으로 충분.)
             if (auto* life = enemy->GetComponent<TopdownShooter::Entity::Components::Life>())
                 life->SetDeathDelaySeconds(0.6f);
         }
 
         // 머리 위 분절형 체력바 — Enemy Life(ILivable) HP 비율을 uFill 로 구동 (player 와 동일 팩토리 재사용).
-        //   색은 deps.healthBarColor 로 베리에이션 (기본 빨강). AddChild 전 부착 → enemy entry 시 함께 OnEnter.
+        //   색은 deps.healthBarColor 로 베리에이션 (기본 빨강). AddChild 전 부착 -> enemy entry 시 함께 OnEnter.
         {
             TopdownShooter::HUD::HealthBarConfig barCfg;
             barCfg.fillColor = deps.healthBarColor;
             TopdownShooter::HUD::AttachHealthBar(*enemy, barCfg);
         }
 
-        // 5) 씬 트리 부착 (entry → 컴포넌트 OnEnter 캐스케이드)
+        // 5) 씬 트리 부착 (entry -> 컴포넌트 OnEnter 캐스케이드)
         if (!deps.spawnParent) return nullptr;
         return deps.spawnParent->AddChild(std::move(enemy));
     }

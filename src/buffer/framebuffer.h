@@ -56,7 +56,7 @@ namespace SJH
 
         /**
          * @brief 내부 RGBA8 색 텍스처 + depth-stencil *텍스처* 를 생성하는 factory.
-         * @details depth 를 RBO 대신 텍스처로 attach → 셰이더가 @c sampler2D 로 .r=정규화 depth 읽기 가능.
+         * @details depth 를 RBO 대신 텍스처로 attach -> 셰이더가 @c sampler2D 로 .r=정규화 depth 읽기 가능.
          *          @c GL_DEPTH24_STENCIL8 사용 — depth 샘플링 + stencil(Outline) 동시 보존.
          * @return 성공 시 @c FramebufferUPtr, 실패 시 @c nullptr.
          */

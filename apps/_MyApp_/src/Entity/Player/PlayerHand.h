@@ -35,7 +35,7 @@ namespace TopdownShooter::Entity
 		void ApplyLocalOffset();
 	};
 
-	/// @brief 양손 조립 컴포넌트 — player actor 에 부착 → OnEnter 에서 자식 Hand actor 2개 생성·AddChild.
+	/// @brief 양손 조립 컴포넌트 — player actor 에 부착 -> OnEnter 에서 자식 Hand actor 2개 생성·AddChild.
 	/// @details
 	///   각 자식 actor 는 PlayerSingleHand(고정 ±벌림각 local) + 빌보드 SpriteRenderer(HAND_PART) 를 보유.
 	///   부모(player) Y facing 을 상속해 양손 *위치* 가 조준 방향으로 자동 궤도(WorldMatrix 합성). 스프라이트는

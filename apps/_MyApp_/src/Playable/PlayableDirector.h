@@ -17,10 +17,10 @@ namespace TopdownShooter::Playable
 {
 	/// @brief 연출 디렉터 — named Playable 보유 + 중앙 tick (정본 패턴 = src/timer/multiple_timer.h).
 	///        철학: 게임 로직(HP/damage/physics/AI/입력판정)은 별개. 모든 연출/비주얼/사운드는
-	///        이 director 의 named Playable 로만 (verb→Play(key)).
+	///        이 director 의 named Playable 로만 (verb->Play(key)).
 	///        Component + IActorPresentation 다중상속:
 	///          - Component          : 액터에 부착되어 scene tick 을 받아 보유 Playable 을 직접 ->Update.
-	///          - IActorPresentation : Life 의 sink (Life::DoDamaged→ReactDamaged / DoDie→ReactDied).
+	///          - IActorPresentation : Life 의 sink (Life::DoDamaged->ReactDamaged / DoDie->ReactDied).
 	///        보유 Playable 은 AddComponent 하지 않고 director 가 직접 Update(dt) 한다
 	///        (MultipleTimer 가 Timer 를 Tick 하듯). Play() 로 활성화된 슬롯만 tick — 등록 직후
 	///        미재생 슬롯은 tick 제외(자동재생 방지). leaf/Composite Playable 자체는 src/playable + Client.
@@ -49,7 +49,7 @@ namespace TopdownShooter::Playable
 		/// @brief 중앙 tick — Play() 로 활성화되고 미완료인 슬롯만 ->Update(dt).
 		void Update(float dt) override;
 
-		// === IActorPresentation — verb→Play(key) (미등록 키는 silent no-op) ===
+		// === IActorPresentation — verb->Play(key) (미등록 키는 silent no-op) ===
 		void ReactDamaged(int /*dmg*/) override { Play("hit"); }
 		void ReactDied(vmath::vec3 pos) override; // Play("death") 만 (월드점 death FX[B]는 도메인 seam 이 트리거 — 역할별 분리 P2)
 		void ReactAttack(vmath::vec2 /*aimDir*/) override { Play("attack"); }

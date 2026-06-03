@@ -20,7 +20,7 @@ namespace SJH::Timer
     {
       public:
         // === 동적 관리 (Register / Unregister) ===
-        /// @brief timer를 컨테이너로 move 이관하고 핸들 반환. 중복 키 → assert (silent overwrite 금지).
+        /// @brief timer를 컨테이너로 move 이관하고 핸들 반환. 중복 키 -> assert (silent overwrite 금지).
         Timer* Register(const std::string& name, Timer timer)
         {
             assert(timers_.find(name) == timers_.end()

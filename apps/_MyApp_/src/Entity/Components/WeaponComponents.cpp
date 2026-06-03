@@ -25,7 +25,7 @@ namespace TopdownShooter::Entity::Components
 		if (owner == nullptr)
 			return;
 
-		// owner world pos → box2d. PhysicsSystem: box2d→world = (x, h, -y) → box2d = (world.x, -world.z).
+		// owner world pos -> box2d. PhysicsSystem: box2d->world = (x, h, -y) -> box2d = (world.x, -world.z).
 		const vmath::vec3 wp = owner->GetTransform().Translate;
 		const vmath::vec2 b2pos(wp[0], -wp[2]);
 
@@ -37,7 +37,7 @@ namespace TopdownShooter::Entity::Components
 		bc.damage   = static_cast<int>(Damage.GetValue());
 		bc.lifetime = 3.0f;
 
-		// bullet 필터(maskBits = Enemy | Wall)가 Player 를 제외 → 플레이어 중심 스폰이어도 자기충돌 없음.
+		// bullet 필터(maskBits = Enemy | Wall)가 Player 를 제외 -> 플레이어 중심 스폰이어도 자기충돌 없음.
 		SJH::Scene::Director::Get().Root().AddChild(Bullet::CreateBulletActor(bc));
 	}
 } // namespace TopdownShooter::Entity::Components

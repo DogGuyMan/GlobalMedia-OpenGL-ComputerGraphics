@@ -15,7 +15,7 @@ namespace TopdownShooter::Spawns
         auto* a = fxParent.AddChild(std::make_unique<SJH::Scene::Actor>("AudioInstance"));
         // FmodStudioPlayable — 이벤트 instance 생성+start. pos 있으면 3D.
         auto* p = a->AddComponent<TopdownShooter::Audio::FmodStudioPlayable>(desc, pos);
-        // 종료 감지 → 다음 sweep 에서 Actor 파괴 (메모리 자동 관리).
+        // 종료 감지 -> 다음 sweep 에서 Actor 파괴 (메모리 자동 관리).
         a->AddComponent<AutoDespawnOnFinish>(p);
         p->Play();
     }
