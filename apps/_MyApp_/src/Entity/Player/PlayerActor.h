@@ -10,6 +10,7 @@
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/PhysicsMovement.h"
 #include "Playable/Constants.h"   // TopdownShooter::Playable::PlayerTextureConfig / FRONT_MOVE 등
+#include "Entity/Constants.h"      // TopdownShooter::Entity::PLAYER_* / HAND_* (튜닝 단일 소스)
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <cstdint>
@@ -43,11 +44,11 @@ namespace TopdownShooter::Entity::Player
 
 		struct LifeCfg
 		{
-			int hp = 100;
+			int hp = PLAYER_HP;
 		};
 		struct MovementCfg
 		{
-			float speed = 5.0f;
+			float speed = PLAYER_MOVE_SPEED;
 		};
 		struct ControllerCfg
 		{
@@ -65,7 +66,7 @@ namespace TopdownShooter::Entity::Player
 			vmath::vec2 startPosition = vmath::vec2(0.0f, 0.0f);
 			float       density       = 1.0f;
 			float       friction      = 0.3f;
-			float       linearDamping = 5.0f;
+			float       linearDamping = PLAYER_LINEAR_DAMPING;
 			uint16_t    categoryBits  = 0;
 			uint16_t    maskBits      = 0;
 			bool        isSensor      = false;
@@ -73,7 +74,7 @@ namespace TopdownShooter::Entity::Player
 
 		struct WeaponCfg
 		{
-			int      damage = 10;       // bullet 데미지 (Stat base)
+			int      damage = PLAYER_WEAPON_DAMAGE; // bullet 데미지 (Stat base)
 			b2World* world  = nullptr;  // bullet body 생성용 물리 월드 (physics 분기에서만 부착)
 		};
 
@@ -82,7 +83,7 @@ namespace TopdownShooter::Entity::Player
 		{
 			/// @brief 방향 텍스처 세트(예: Playable::FRONT_MOVE). nullptr -> 스프라이트 없음(게임플레이-only).
 			const std::vector<TopdownShooter::Playable::EntityTextureConfig> *direction = nullptr;
-			float fps = 8.0f; ///< 애니 파트(ColCount>1) 의 초당 프레임
+			float fps = PLAYER_SPRITE_FPS; ///< 애니 파트(ColCount>1) 의 초당 프레임
 		};
 
 		LifeCfg       life;

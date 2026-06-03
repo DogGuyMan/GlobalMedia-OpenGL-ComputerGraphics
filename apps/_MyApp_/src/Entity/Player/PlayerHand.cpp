@@ -3,6 +3,7 @@
 #include "Entity/Player/PlayerHand.h"
 
 #include "Playable/Constants.h"                  // TopdownShooter::Playable::HAND_PART
+#include "Entity/Constants.h"                     // HAND_* (배치 튜닝 단일 소스)
 #include "object/transform.h"
 #include "resource_registry/resource_registry.h" // ResourceRegistry / UniformAtlas
 #include "sprite/sprite_component.h"              // SJH::Sprite::SpriteRenderer (빌보드)
@@ -63,15 +64,15 @@ namespace TopdownShooter::Entity
 			SJH::Scene::Actor *hand =
 			    owner->AddChild(std::make_unique<SJH::Scene::Actor>(name));
 			// 크기(kHandScale)는 PlayerSingleHand 가 ApplyLocalOffset 에서 Scale 로 세팅 — Translate(궤도) 와 분리.
-			hand->AddComponent<PlayerSingleHand>(spreadDeg, kRadius, kYOffset, kHandScale);
+			hand->AddComponent<PlayerSingleHand>(spreadDeg, HAND_RADIUS, HAND_Y_OFFSET, HAND_SCALE);
 			if (atlas != nullptr)
 			{
 				auto *spr = hand->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
 				spr->flipX = hp.Flip;
-				spr->QueueOffset = kHandQueueOffset; // 플레이어 몸통 위 레이어 (튜닝 대상)
+				spr->QueueOffset = HAND_QUEUE_OFFSET; // 플레이어 몸통 위 레이어
 			}
 		};
-		makeHand("LeftHand", +kSpreadDeg);
-		makeHand("RightHand", -kSpreadDeg);
+		makeHand("LeftHand", +HAND_SPREAD_DEG);
+		makeHand("RightHand", -HAND_SPREAD_DEG);
 	}
 } // namespace TopdownShooter::Entity

@@ -2,6 +2,7 @@
 #define _TOPDOWNSHOOTER_ENTITY_PLAYER_HAND__
 
 #include "scene/actor.h"
+#include "Entity/Constants.h"
 #include <vmath.h>
 
 namespace TopdownShooter::Entity
@@ -25,7 +26,7 @@ namespace TopdownShooter::Entity
 		/// @param radius    forward 거리 (player local).
 		/// @param yOffset   높이 오프셋.
 		/// @param scale     손 스프라이트 균등 Scale (Translate 와 직교 — 궤도에 영향 없음).
-		explicit PlayerSingleHand(float spreadDeg = 25.0f, float radius = 0.6f, float yOffset = 0.0f, float scale = 1.0f);
+		explicit PlayerSingleHand(float spreadDeg = HAND_SPREAD_DEG, float radius = HAND_RADIUS, float yOffset = HAND_Y_OFFSET, float scale = 1.0f);
 
 		void OnEnter() override;       // 고정 local 위치 1회 세팅
 		void OnExit() override {}
@@ -40,21 +41,13 @@ namespace TopdownShooter::Entity
 	///   각 자식 actor 는 PlayerSingleHand(고정 ±벌림각 local) + 빌보드 SpriteRenderer(HAND_PART) 를 보유.
 	///   부모(player) Y facing 을 상속해 양손 *위치* 가 조준 방향으로 자동 궤도(WorldMatrix 합성). 스프라이트는
 	///   빌보드라 항상 카메라를 향한다. HAND_PART 텍스처는 Playable/Constants.h 정의(양손 공유 atlas 캐시).
-	///   ※ spread/radius/yOffset/QueueOffset 수치는 비주얼 튜닝 대상.
+	///   ※ spread/radius/yOffset/QueueOffset 수치는 Entity/Constants.h(HAND_*) 단일 소스.
 	class PlayerHands : public SJH::Scene::Component
 	{
 	  public:
 		void OnEnter() override;       // 자식 Hand actor 2개 생성·부착 (+ HAND_PART 스프라이트)
 		void OnExit() override {}
 		void Update(float dt) override {}
-
-	  private:
-		// 양손 기본 배치 — forward(-Z) 기준 ±벌림각 + 거리 + 스프라이트 크기. (비주얼 튜닝 대상)
-		static constexpr float kSpreadDeg       = 25.0f;
-		static constexpr float kRadius          = 0.6f;
-		static constexpr float kYOffset         = 0.0f;
-		static constexpr float kHandScale       = 0.25f; // 손 스프라이트가 커서 축소 (Scale 만 — 궤도 무관)
-		static constexpr int   kHandQueueOffset = 10; // 플레이어 몸통 레이어(DrawOrder 0~3) 위 (튜닝 대상)
 	};
 }; // namespace TopdownShooter::Entity
 
