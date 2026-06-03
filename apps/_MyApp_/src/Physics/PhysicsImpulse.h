@@ -4,6 +4,7 @@
 #include "Algebraic/Stat.h"
 #include "Entity/Components/Components.Interfaces.h"
 #include "Physics/PhysicsComponent.h"
+#include "Physics/Constants.h"
 #include "scene/actor.h"
 #include "timer/timer.h"   // SJH::Timer::Timer (header-only)
 #include <cmath>
@@ -17,9 +18,9 @@ namespace TopdownShooter::Physics
 	{
 	public:
 		Impulse()
-		    : mImpulseForce(2.5f, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::DashForce), // 7.5->2.5 (1/3 — 넉백 세기 튜닝)
-		      mCooldown(0.8f, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::CoolDownSpeed),
-		      mActiveTimer(kDurationSec),
+		    : mImpulseForce(IMPULSE_FORCE, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::DashForce),
+		      mCooldown(IMPULSE_COOLDOWN, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::CoolDownSpeed),
+		      mActiveTimer(IMPULSE_DURATION),
 		      mCooldownTimer(mCooldown.GetValue())
 		{
 			// arm-inactive — 생성 직후 finished(비활성). 평소 IsActive=false / 쿨다운 해제. (Reset 으로 발동)
@@ -41,7 +42,7 @@ namespace TopdownShooter::Physics
 			if (!mCooldownTimer.IsTimesUp() || IsActive()) return;   // 쿨다운 중 or 이미 active -> 게이트
 			if (!mBody || !mBody->GetBody()) return;
 			const float len = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
-			if (len <= 0.001f) return;
+			if (len <= IMPULSE_LENGTH_EPS) return;
 			vmath::vec2 n(dir[0] / len, dir[1] / len);
 			const float force = mImpulseForce.GetValue();
 			// XZ -> Box2D XY (Z -> -Y, spec §4.4)
@@ -54,7 +55,6 @@ namespace TopdownShooter::Physics
 		bool IsActive() const { return !mActiveTimer.IsTimesUp(); }    // 버스트 창 진행 중
 
 	private:
-		static constexpr float kDurationSec = 0.3f;   // active 창 (plain — 맞는 enum 없음)
 		Algebraic::Numeric::Stat mImpulseForce;       // Stat(DashForce, base 7.5)
 		Algebraic::Numeric::Stat mCooldown;           // Stat(CoolDownSpeed, base 0.8) — cooldownTimer baseTime 소스
 		SJH::Timer::Timer        mActiveTimer;        // 0.3s 버스트 창
