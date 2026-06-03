@@ -20,31 +20,31 @@ namespace SJH::Playable
         // === IPlayable 4-method + IsFinished ===
         void Play()  override
         {
-            paused_   = false;
-            finished_ = false;
+            mPaused   = false;
+            mIsFinished = false;
             OnPlay();
         }
-        void Pause() override { paused_ = true; }   // OnPause hook 없음 — concrete 가 Pause 자체 override 권장
+        void Pause() override { mPaused = true; }   // OnPause hook 없음 — concrete 가 Pause 자체 override 권장
         void Stop()  override
         {
-            paused_   = false;
-            finished_ = false;
-            elapsed_  = 0.0f;
+            mPaused   = false;
+            mIsFinished = false;
+            mElapsed  = 0.0f;
             OnStop();
         }
-        bool GetIsLoop()  const override { return isLoop_; }
-        bool IsFinished() const override { return finished_; }
+        bool GetIsLoop()  const override { return mIsLoop; }
+        bool IsFinished() const override { return mIsFinished; }
 
         // === Loop setter — 인터페이스 외 추가 (사용자 결정 5-부속) ===
-        void SetIsLoop(bool v) { isLoop_ = v; }
+        void SetIsLoop(bool v) { mIsLoop = v; }
 
         // === Component 3 hook ===
         void OnEnter() override {}
         void OnExit()  override {}
         void Update(float dt) final
         {
-            if (!IsEnabled() || paused_ || finished_) return;
-            elapsed_ += dt;
+            if (!IsEnabled() || mPaused || mIsFinished) return;
+            mElapsed += dt;
             OnUpdate(dt);
         }
 
@@ -55,10 +55,10 @@ namespace SJH::Playable
         virtual void OnUpdate(float dt) = 0;   // 유일 필수
 
         // === 파생 공유 상태 (protected) ===
-        bool  paused_   = false;
-        bool  finished_ = false;
-        bool  isLoop_   = false;
-        float elapsed_  = 0.0f;
+        bool  mPaused   = false;
+        bool  mIsFinished = false;
+        bool  mIsLoop   = false;
+        float mElapsed  = 0.0f;
     };
 }
 

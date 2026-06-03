@@ -21,8 +21,8 @@ namespace SJH::Playable
         SequencePlayable& AppendInterval(float seconds);
 
         // 디버그/관찰
-        std::size_t Size()   const { return children_.size(); }
-        std::size_t Cursor() const { return cursor_; }
+        std::size_t Size()   const { return mPlayableChildrens.size(); }
+        std::size_t Cursor() const { return mPlayableCursor; }
 
       protected:
         void OnPlay()   override;
@@ -30,8 +30,8 @@ namespace SJH::Playable
         void OnUpdate(float dt) override;
 
       private:
-        std::vector<std::unique_ptr<IPlayable>> children_;
-        std::size_t cursor_ = 0;
+        std::vector<std::unique_ptr<IPlayable>> mPlayableChildrens;
+        std::size_t mPlayableCursor = 0;
     };
 
     /// @brief 병렬 — children 모두 동시 Play. 모두 IsFinished 일 때 자기 IsFinished.
@@ -41,7 +41,7 @@ namespace SJH::Playable
       public:
         ParallelPlayable& Join(std::unique_ptr<IPlayable> child);
 
-        std::size_t Size() const { return children_.size(); }
+        std::size_t Size() const { return mPlayableChildren.size(); }
 
       protected:
         void OnPlay()   override;
@@ -49,7 +49,7 @@ namespace SJH::Playable
         void OnUpdate(float dt) override;
 
       private:
-        std::vector<std::unique_ptr<IPlayable>> children_;
+        std::vector<std::unique_ptr<IPlayable>> mPlayableChildren;
     };
 }
 

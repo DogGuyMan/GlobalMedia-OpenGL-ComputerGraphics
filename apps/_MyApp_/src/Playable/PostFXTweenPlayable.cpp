@@ -30,6 +30,6 @@ namespace TopdownShooter::Playable
 			mat->Properties.Floats[mUniformName] = value;
 
 		if (mTween.progress() >= 1.0f)
-			finished_ = true; // one-shot — Composite 안에서 1회 재생 후 종료.
+			mIsFinished = true; // one-shot — Composite 안에서 1회 재생 후 종료.
 	}
 }

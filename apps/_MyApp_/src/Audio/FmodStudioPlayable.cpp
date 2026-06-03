@@ -64,9 +64,9 @@ namespace TopdownShooter::Audio
 		if (!mInstance) return;
 		FMOD_STUDIO_PLAYBACK_STATE state;
 		if (mInstance->getPlaybackState(&state) == FMOD_OK
-		    && state == FMOD_STUDIO_PLAYBACK_STOPPED && !isLoop_)
+		    && state == FMOD_STUDIO_PLAYBACK_STOPPED && !mIsLoop)
 		{
-			finished_ = true;
+			mIsFinished = true;
 		}
 	}
 }

@@ -43,9 +43,9 @@ namespace TopdownShooter::Tween
 			if (mOnStep) mOnStep(value);
 
 			const float p = mTween.progress();
-			if (!isLoop_)
+			if (!mIsLoop)
 			{
-				if (p >= 1.0f) finished_ = true;   // one-shot — 기존 동작 보존
+				if (p >= 1.0f) mIsFinished = true;   // one-shot — 기존 동작 보존
 				return;
 			}
 

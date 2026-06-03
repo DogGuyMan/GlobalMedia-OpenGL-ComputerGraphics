@@ -28,19 +28,19 @@ namespace SJH::SpriteSequence
         SpriteSequencePlayable& RegisterOnClipEnter(int clipIdx, SJH::Playable::IPlayable* sideEffect);
         /// @brief 지정 클립으로 전환 + elapsed_ 리셋 + 등록된 sideEffect Play.
         void PlayClip(int clipIdx);
-        int  CurrentClip() const { return currentClipIdx_; }
+        int  CurrentClip() const { return mCurrentClipIdx; }
 
       protected:
         void OnUpdate(float dt) override;
 
       private:
-        SJH::Sprite::SpriteRenderer* sprite_;
-        SpriteFrameClip               ownedClip_{}; // 값 ctor 사용 시 clip 값 보관 — clip_ 가 이를 가리킴
-        const SpriteFrameClip*        clip_;        // 하위 호환 기본 클립 (clipIdx=0 fallback)
+        SJH::Sprite::SpriteRenderer* mSpritePtr;
+        SpriteFrameClip               mOwnedClip{}; // 값 ctor 사용 시 clip 값 보관 — clip_ 가 이를 가리킴
+        const SpriteFrameClip*        mClipPtr;        // 하위 호환 기본 클립 (clipIdx=0 fallback)
 
-        std::unordered_map<int, const SpriteFrameClip*>              clips_;
-        std::unordered_map<int, std::vector<SJH::Playable::IPlayable*>> onClipEnter_;
-        int currentClipIdx_ = 0;
+        std::unordered_map<int, const SpriteFrameClip*>              mClips;
+        std::unordered_map<int, std::vector<SJH::Playable::IPlayable*>> mOnClipEnter;
+        int mCurrentClipIdx = 0;
     };
 }
 

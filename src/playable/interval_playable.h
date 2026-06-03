@@ -19,7 +19,7 @@ namespace SJH::Playable
         void OnUpdate(float dt) override;
 
       private:
-        float duration_;
+        float mDuration;
     };
 }
 

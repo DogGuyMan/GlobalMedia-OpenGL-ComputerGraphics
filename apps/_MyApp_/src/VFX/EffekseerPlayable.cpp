@@ -60,10 +60,10 @@ namespace TopdownShooter::VFX
 		}
 
 		// 자연 종료 — Effect 가 더 이상 존재 안 하면 finished
-		if (mHandle >= 0 && !mManager->Exists(mHandle) && !isLoop_)
+		if (mHandle >= 0 && !mManager->Exists(mHandle) && !mIsLoop)
 		{
 			mHandle   = -1;
-			finished_ = true;
+			mIsFinished = true;
 		}
 	}
 }

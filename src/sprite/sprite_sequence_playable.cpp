@@ -7,7 +7,7 @@ namespace SJH::SpriteSequence
 {
     SpriteSequencePlayable::SpriteSequencePlayable(SJH::Sprite::SpriteRenderer* spriteRef,
                                                     const SpriteFrameClip*       clip)
-        : sprite_(spriteRef), clip_(clip)
+        : mSpritePtr(spriteRef), mClipPtr(clip)
     {
     }
 
@@ -16,7 +16,7 @@ namespace SJH::SpriteSequence
     // AddComponent 의 make_unique in-place 생성이라 clip_ 댕글링 불가.
     SpriteSequencePlayable::SpriteSequencePlayable(SJH::Sprite::SpriteRenderer* spriteRef,
                                                     SpriteFrameClip              clip)
-        : sprite_(spriteRef), ownedClip_(clip), clip_(&ownedClip_)
+        : mSpritePtr(spriteRef), mOwnedClip(clip), mClipPtr(&mOwnedClip)
     {
     }
 
@@ -25,26 +25,26 @@ namespace SJH::SpriteSequence
     SpriteSequencePlayable& SpriteSequencePlayable::RegisterClip(int clipIdx,
                                                                    const SpriteFrameClip* clip)
     {
-        clips_[clipIdx] = clip;
+        mClips[clipIdx] = clip;
         return *this;
     }
 
     SpriteSequencePlayable& SpriteSequencePlayable::RegisterOnClipEnter(
         int clipIdx, SJH::Playable::IPlayable* sideEffect)
     {
-        onClipEnter_[clipIdx].push_back(sideEffect);
+        mOnClipEnter[clipIdx].push_back(sideEffect);
         return *this;
     }
 
     void SpriteSequencePlayable::PlayClip(int clipIdx)
     {
-        if (currentClipIdx_ == clipIdx) return;
-        currentClipIdx_ = clipIdx;
-        elapsed_        = 0.0f;
-        finished_       = false;
+        if (mCurrentClipIdx == clipIdx) return;
+        mCurrentClipIdx = clipIdx;
+        mElapsed        = 0.0f;
+        mIsFinished       = false;
 
-        auto it = onClipEnter_.find(clipIdx);
-        if (it != onClipEnter_.end())
+        auto it = mOnClipEnter.find(clipIdx);
+        if (it != mOnClipEnter.end())
         {
             for (auto* p : it->second)
                 if (p) { p->Stop(); p->Play(); }
@@ -53,30 +53,30 @@ namespace SJH::SpriteSequence
 
     void SpriteSequencePlayable::OnUpdate(float /*dt*/)
     {
-        if (!sprite_) return;
+        if (!mSpritePtr) return;
 
         // 현재 클립 선택: clips_ 우선, fallback=clip_
         const SpriteFrameClip* clip = nullptr;
-        auto it = clips_.find(currentClipIdx_);
-        if (it != clips_.end())
+        auto it = mClips.find(mCurrentClipIdx);
+        if (it != mClips.end())
             clip = it->second;
         else
-            clip = clip_;
+            clip = mClipPtr;
 
         if (!clip || clip->fps <= 0.0f || clip->frameCount <= 0) return;
 
         const float frameDur = 1.0f / clip->fps;
-        int raw = static_cast<int>(elapsed_ / frameDur);
+        int raw = static_cast<int>(mElapsed / frameDur);
 
-        if (isLoop_)
+        if (mIsLoop)
         {
             raw %= clip->frameCount;
         }
         else if (raw >= clip->frameCount)
         {
             raw       = clip->frameCount - 1;
-            finished_ = true;
+            mIsFinished = true;
         }
-        sprite_->frameIdx = clip->startFrame + raw;
+        mSpritePtr->frameIdx = clip->startFrame + raw;
     }
 }

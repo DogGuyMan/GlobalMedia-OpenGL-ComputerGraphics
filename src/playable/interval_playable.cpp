@@ -2,12 +2,12 @@
 
 namespace SJH::Playable
 {
-    IntervalPlayable::IntervalPlayable(float duration) : duration_(duration) {}
+    IntervalPlayable::IntervalPlayable(float duration) : mDuration(duration) {}
     IntervalPlayable::~IntervalPlayable() = default;
 
     void IntervalPlayable::OnUpdate(float /*dt*/)
     {
-        if (elapsed_ >= duration_)
-            finished_ = true;
+        if (mElapsed >= mDuration)
+            mIsFinished = true;
     }
 }

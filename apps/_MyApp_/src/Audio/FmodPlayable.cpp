@@ -38,6 +38,6 @@ namespace TopdownShooter::Audio
 		if (!mChannel) return;
 		bool playing = false;
 		mChannel->isPlaying(&playing);
-		if (!playing && !isLoop_) finished_ = true;
+		if (!playing && !mIsLoop) mIsFinished = true;
 	}
 }

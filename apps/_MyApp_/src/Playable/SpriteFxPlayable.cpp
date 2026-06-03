@@ -42,10 +42,10 @@ namespace TopdownShooter::Playable
 	void SpriteHitFlashPlayable::OnUpdate(float /*dt*/)
 	{
 		// elapsed_ 는 PlayableBase 가 매 Update 누적. duration 경과 시 플래시 해제 + one-shot 종료.
-		if (elapsed_ >= mDuration)
+		if (mElapsed >= mDuration)
 		{
 			ForEachSpriteRenderer(mTarget, [](SJH::Sprite::SpriteRenderer *r) { r->enableHit = false; });
-			finished_ = true;
+			mIsFinished = true;
 		}
 	}
 
@@ -82,9 +82,9 @@ namespace TopdownShooter::Playable
 	}
 	void SpriteDissolvePlayable::OnUpdate(float /*dt*/)
 	{
-		float t = (mDuration > 0.0f) ? (elapsed_ / mDuration) : 1.0f;
+		float t = (mDuration > 0.0f) ? (mElapsed / mDuration) : 1.0f;
 		if (t > 1.0f) t = 1.0f;
 		ForEachSpriteRenderer(mTarget, [t](SJH::Sprite::SpriteRenderer *r) { r->dissolveThreshold = t; });
-		if (t >= 1.0f) finished_ = true; // dissolved 상태 유지 (액터는 Life 가 비활성/despawn).
+		if (t >= 1.0f) mIsFinished = true; // dissolved 상태 유지 (액터는 Life 가 비활성/despawn).
 	}
 }
