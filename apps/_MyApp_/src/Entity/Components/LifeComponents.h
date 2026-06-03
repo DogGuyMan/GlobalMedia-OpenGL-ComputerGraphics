@@ -3,10 +3,10 @@
 
 #include "Algebraic/Stat.h"
 #include "Components.Interfaces.h"
+#include "Entity/BaseEntity.h"   // BaseEntity::Timers() (MultipleTimer 등록 위탁)
 #include "scene/actor.h"
 #include "timer/timer.h"
 #include <functional>
-#include <optional>
 
 namespace TopdownShooter::Entity::Components
 {
@@ -22,24 +22,13 @@ namespace TopdownShooter::Entity::Components
 		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // spawn-at-point seam
 		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
 
-		// === SJH::Timer 자가 보유 (패턴 A) — "없음(미설정)"은 nullopt 로 표현 (VO 정통) ===
-		// Timer 는 항상 유효한 시간값(VO). i-frame/사망지연이 "없는" 엔티티는 Timer 자체가 부재(nullopt).
-		// 장전 시 Tick(base)로 finished 상태로 시작 -> 평소 비활성, 피격/사망 시 Reset 으로 발동
-		// (생성 직후 passed=0 이면 "스폰 즉시 무적"(§5.1)이 되므로 finished 로 막는다).
-		std::optional<SJH::Timer::Timer> mInvincibleTimer;   // i-frame    (nullopt = 무적 없음)
-		std::optional<SJH::Timer::Timer> mDieTimer;          // 사망 연출 지연 (nullopt = 즉시)
-
-		/// @brief s>0 이면 Timer(s) 를 finished(비활성) 상태로 장전, s<=0 이면 부재(nullopt).
-		static void ArmInactive(std::optional<SJH::Timer::Timer> &slot, float s)
-		{
-			if (s > 0.0f)
-			{
-				slot.emplace(s);
-				slot->Tick(s);   // passed=base -> IsTimesUp (평소 비활성; Reset 시 발동)
-			}
-			else
-				slot.reset();
-		}
+		// === Timer 중앙화 — BaseEntity 의 MultipleTimer 에 위탁, 핸들만 보유 (비소유) ===
+		// "없음(미설정)"은 등록 안 함 = nullptr. 설정값(초)은 OnEnter 전(빌더)에 들어오므로 float 보관 후
+		// OnEnter 에서 Register + arm-inactive(Tick(base)로 finished 시작 — 평소 비활성, Reset 시 발동).
+		SJH::Timer::Timer* mInvincibleTimer = nullptr;   // i-frame    (nullptr = 무적 없음)
+		SJH::Timer::Timer* mDieTimer        = nullptr;   // 사망 연출 지연 (nullptr = 즉시)
+		float              mIFrameSeconds   = 0.0f;       // 등록 대기 설정값 (>0 시 OnEnter 등록)
+		float              mDieDelaySeconds = 0.0f;       // 등록 대기 설정값 (>0 시 OnEnter 등록)
 
 	  public:
 		Life()
@@ -57,29 +46,51 @@ namespace TopdownShooter::Entity::Components
 		    : mMaxHp(static_cast<float>(max_hp), Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::MaxHp),
 		      mCurHp(cur_hp == -1 ? max_hp : cur_hp)
 		{
-			ArmInactive(mInvincibleTimer, iframe);   // iframe>0 일 때만 i-frame Timer 장전
+			mIFrameSeconds = iframe;   // OnEnter 에서 >0 일 때만 i-frame Timer 등록
 		}
 
-		Life &SetIFrameSeconds(float s) { ArmInactive(mInvincibleTimer, s); return *this; }
+		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
-		Life &SetDeathDelaySeconds(float s) { ArmInactive(mDieTimer, s); return *this; }   // Task 6 가 0.5 주입 예정
+		Life &SetDeathDelaySeconds(float s) { mDieDelaySeconds = s; return *this; }
 		bool  IsInvincible() const { return mInvincibleTimer && !mInvincibleTimer->IsTimesUp(); }
 
 		void OnEnter() override
 		{
+			auto* owner = GetOwner();
+			if (owner == nullptr) return;
 			// 핫패스 sink 1회 해소 (ctor 금지 — GetOwner null + dynamic type=base). 없으면 silent no-op.
-			if (GetOwner())
-				mSink = GetOwner()->GetComponent<IActorPresentation>();
-		}
-		void OnExit() override {}
-
-		void Update(float dt) override
-		{
-			if (mInvincibleTimer)
-				mInvincibleTimer->Tick(dt);   // 무적 진행 (IsTimesUp 도달 후엔 [0,base] clamp 로 무해)
-			if (mDeathFxFired && mDieTimer)   // 사망 연출 진행 중 (지연 장전 + 죽음 발화됨)
+			mSink = owner->GetComponent<IActorPresentation>();
+			// i-frame/die timer 를 BaseEntity 중앙 컨테이너에 등록 (>0 일 때만) + arm-inactive.
+			auto* be = owner->GetComponent<BaseEntity>();
+			if (be == nullptr) return;
+			if (mIFrameSeconds > 0.0f)
 			{
-				mDieTimer->Tick(dt);
+				mInvincibleTimer = be->Timers().Register("life.iframe", mIFrameSeconds);
+				mInvincibleTimer->Tick(mInvincibleTimer->GetBaseTime());
+			}
+			if (mDieDelaySeconds > 0.0f)
+			{
+				mDieTimer = be->Timers().Register("life.die", mDieDelaySeconds);
+				mDieTimer->Tick(mDieTimer->GetBaseTime());
+			}
+		}
+		void OnExit() override
+		{
+			if (auto* owner = GetOwner())
+				if (auto* be = owner->GetComponent<BaseEntity>())
+				{
+					be->Timers().Unregister("life.iframe");
+					be->Timers().Unregister("life.die");
+				}
+			mInvincibleTimer = nullptr;
+			mDieTimer        = nullptr;
+		}
+
+		void Update(float /*dt*/) override
+		{
+			// i-frame/die tick 은 BaseEntity::Update 가 일괄 구동 — 여기선 만료 read 만.
+			if (mDeathFxFired && mDieTimer)   // 사망 연출 진행 중 (지연 등록 + 죽음 발화됨)
+			{
 				if (mDieTimer->IsTimesUp() && GetOwner()) GetOwner()->SetActive(false);
 				return;
 			}
