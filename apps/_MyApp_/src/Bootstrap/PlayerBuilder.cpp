@@ -6,7 +6,10 @@
 #include "Audio/FmodPlayable.h"
 #include "Audio/FmodStudioPlayable.h"
 #include "Bootstrap/EntityPresentation.h"  // AttachEntityPresentation — Player/Enemy 공통 연출 클러스터
+#include "Entity/Components/LifeComponents.h"   // GetComponent<Life> (SetOnHitFx seam 주입)
+#include "Entity/Components/WeaponComponents.h" // GetComponent<Weapon> (SetOnFireFx seam 주입)
 #include "Entity/Player/PlayerActor.h"
+#include "Entity/Player/PlayerEntity.h"         // GetComponent<PlayerEntity> (SetOnMoveFx seam 주입)
 #include "Entity/Player/PlayerHand.h"
 #include "Playable/Constants.h"        // TopdownShooter::Playable::FRONT_MOVE
 #include "Playable/HpGrayscalePostFX.h"   // 체력 비율 -> 화면 grayscale (상시 [A] 바인더)
@@ -17,6 +20,7 @@
 #include "InputHandler/ActorFolower.h"
 #include "Manager.h"
 #include "Physics/PhysicsLayer.h"
+#include "Spawns/VfxInstance.h"   // VFX::Spawn 파사드 (seam 주입 람다 본문)
 #include "VFX/EffekseerPlayable.h"
 #include "playable/composite_playable.h"
 #include "resource_registry/resource_registry.h"
@@ -182,6 +186,14 @@ namespace TopdownShooter::Bootstrap
 			controller->SetFireCallback([director] { director->Play("fire"); });
 			controller->SetDamageCallback([director] { director->ReactDamaged(0); });
 		}
+
+		// VFX seam 주입 — 컴포넌트는 VFX 를 모르고, 빌더가 VFX::Spawn 람다를 주입 (director->Play 패턴).
+		if (auto *life = spriteActor->GetComponent<Entity::Components::Life>())
+			life->SetOnHitFx([](const vmath::vec3 &p) { VFX::Spawn("hit", p); });
+		if (auto *player = spriteActor->GetComponent<Entity::PlayerEntity>())
+			player->SetOnMoveFx([](const vmath::vec3 &p) { VFX::Spawn("dust", p); });
+		if (auto *weapon = spriteActor->GetComponent<Entity::Components::Weapon>())
+			weapon->SetOnFireFx([](const vmath::vec3 &p, float yaw) { VFX::Spawn("gunshoot", p, yaw); });
 		// ─────────────────────────────────────────────────────────────────────────
 
 		result.SpriteActor = dir.Root().AddChild(std::move(spriteActor));

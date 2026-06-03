@@ -19,7 +19,7 @@ namespace SJH::Timer
     {
       public:
         explicit Timer(float baseTime)
-            : baseTime_(baseTime)
+            : BASE_TIME(baseTime)
         {
             assert(baseTime > 0.0f && "Timer: baseTime must be > 0");
         }
@@ -27,30 +27,30 @@ namespace SJH::Timer
         // === Fluent Builder (생성 직후 체이닝) ===
         Timer& SetAcceleration(float amount)
         {
-            acceleration_ = (amount < 0.0f) ? 0.0f : amount; // 음수 -> 0 (C# 동일)
+            mAcceleration = (amount < 0.0f) ? 0.0f : amount; // 음수 -> 0 (C# 동일)
             return *this;
         }
         Timer& SetInterval(float interval)
         {
-            intervalTime_ = interval;   // <=0 이면 PollInterval 항상 false (비활성)
-            nextInterval_ = interval;
+            mIntervalTime = interval;   // <=0 이면 PollInterval 항상 false (비활성)
+            mIextInterval = interval;
             return *this;
         }
 
         // === 매 프레임 ===
         void Tick(float dt)
         {
-            if (blocked_) return;
-            passedTime_ += dt * acceleration_;
-            if (passedTime_ < 0.0f)            passedTime_ = 0.0f;       // 음수 dt 가드
-            else if (passedTime_ > baseTime_)  passedTime_ = baseTime_;  // [0,Base] clamp
+            if (mBlocked) return;
+            mPassedTime += dt * mAcceleration;
+            if (mPassedTime < 0.0f)            mPassedTime = 0.0f;       // 음수 dt 가드
+            else if (mPassedTime > BASE_TIME)  mPassedTime = BASE_TIME;  // [0,Base] clamp
         }
 
         // === 조회 ===
-        float GetProgress()   const { return passedTime_ / baseTime_; } // baseTime_>0 보장
-        bool  IsTimesUp()     const { return passedTime_ >= baseTime_; }
-        float GetPassedTime() const { return passedTime_; }
-        float GetBaseTime()   const { return baseTime_; }
+        float GetProgress()   const { return mPassedTime / BASE_TIME; } // baseTime_>0 보장
+        bool  IsTimesUp()     const { return mPassedTime >= BASE_TIME; }
+        float GetPassedTime() const { return mPassedTime; }
+        float GetBaseTime()   const { return BASE_TIME; }
 
         /// @brief non-const — interval 경과 시 true 1회 + nextInterval 누적.
         ///        매 프레임 1회 폴링 가정 (한 Tick에 여러 interval 건너뛰어도 1회만 보고 — C# 동일).
@@ -59,35 +59,35 @@ namespace SJH::Timer
         ///        (catch-up 드레인 아님). "true 1회 = interval 1구간 경과" 로 가정하지 말 것.
         bool PollInterval()
         {
-            if (intervalTime_ <= 0.0f) return false;
-            if (passedTime_ >= nextInterval_)
+            if (mIntervalTime <= 0.0f) return false;
+            if (mPassedTime >= mIextInterval)
             {
-                nextInterval_ += intervalTime_;
+                mIextInterval += mIntervalTime;
                 return true;
             }
             return false;
         }
 
         // === Pause (C# Puase/Continue) ===
-        void Pause()  { blocked_ = true; }
-        void Resume() { blocked_ = false; }
-        bool IsBlocked() const { return blocked_; }
+        void Pause()  { mBlocked = true; }
+        void Resume() { mBlocked = false; }
+        bool IsBlocked() const { return mBlocked; }
 
         // === Reset (C# ResetTimer — accel/interval 설정값은 유지) ===
         void Reset()
         {
-            passedTime_   = 0.0f;
-            blocked_      = false;
-            nextInterval_ = intervalTime_;
+            mPassedTime   = 0.0f;
+            mBlocked      = false;
+            mIextInterval = mIntervalTime;
         }
 
       private:
-        const float baseTime_;            // readonly (C# BaseTime)
-        float       passedTime_   = 0.0f;
-        float       acceleration_ = 1.0f;
-        bool        blocked_      = false;
-        float       intervalTime_ = 0.0f; // <=0 이면 interval 비활성
-        float       nextInterval_ = 0.0f;
+        const float BASE_TIME;            // readonly (C# BaseTime)
+        float       mPassedTime   = 0.0f;
+        float       mAcceleration = 1.0f;
+        bool        mBlocked      = false;
+        float       mIntervalTime = 0.0f; // <=0 이면 interval 비활성
+        float       mIextInterval = 0.0f;
     };
 }
 

@@ -22,7 +22,8 @@ namespace TopdownShooter::VFX
 		EffekseerPlayable(::Effekseer::ManagerRef manager,
 		                  SJH::Effect            *effect,
 		                  const vmath::vec3      &spawnPos = vmath::vec3(0.0f),
-		                  TrackPolicy             track    = TrackPolicy::Static);
+		                  TrackPolicy             track    = TrackPolicy::Static,
+		                  float                   yawRad   = 0.0f);
 		~EffekseerPlayable() override;
 
 	  protected:
@@ -31,11 +32,15 @@ namespace TopdownShooter::VFX
 		void OnUpdate(float dt) override;
 
 	  private:
+		// Play + (yaw!=0) SetRotation 공유 — OnPlay 와 루프 재생(OnUpdate)이 함께 호출.
+		void StartHandle();
+
 		::Effekseer::ManagerRef mManager;
 		SJH::Effect            *mEffect   = nullptr;
 		::Effekseer::Handle     mHandle   = -1;   // -1 = invalid
 		vmath::vec3             mSpawnPos{0.0f};
 		TrackPolicy             mTrack    = TrackPolicy::Static;
+		float                   mYaw      = 0.0f;  // Y축 회전(라디안) — 발사 방향 등. 0 = 회전 없음
 	};
 }
 

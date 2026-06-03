@@ -11,11 +11,18 @@ namespace TopdownShooter::Entity
 	constexpr float PLAYER_SPRITE_FPS     = 8.0f; // C2: SpriteCfg::fps + PlayerBuilder kFps 통합
 
 	// ── Hand (PlayerHands 배치) ──
-	constexpr float HAND_SPREAD_DEG       = 25.0f; // forward(-Z) 기준 좌(+)/우(-) 벌림각
+	constexpr float HAND_SPREAD_DEG       = 25.0f; // 초기 벌림각(첫 프레임). 이후 거리 보간이 매 프레임 덮어씀
 	constexpr float HAND_RADIUS           = 0.6f;  // forward 거리(player local)
 	constexpr float HAND_Y_OFFSET         = 0.0f;
 	constexpr float HAND_SCALE            = 0.25f; // 손 스프라이트 균등 Scale
 	constexpr int   HAND_QUEUE_OFFSET     = 10;    // 몸통 레이어 위
+
+	// 손 spread 화면 거리 보간 — v_c(중심→커서)↔각 손 half-angle 을 *화면(NDC) 거리* t∈[0,1] 로 보간.
+	//   t=0 (커서가 플레이어 화면위치 위) → MAX(90°): 양팔이 서로 180° (활짝)
+	//   t=1 (커서 화면 가장자리)        → MIN(7.5°): 양팔이 서로 15° (좁게)
+	//   t = PlayerController::GetAimScreenT() (화면 가장자리에서 포화).
+	constexpr float HAND_HALF_ANGLE_MIN   = 7.5f;  // 화면 가장자리 half-angle (deg)
+	constexpr float HAND_HALF_ANGLE_MAX   = 90.0f; // 화면 중심 half-angle (deg)
 
 	// ── Enemy (EnemyConfig/EnemyDeps 기본 + factory 물리) ──
 	constexpr int   ENEMY_HP              = 30;

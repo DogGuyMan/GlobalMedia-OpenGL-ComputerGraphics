@@ -72,6 +72,10 @@ namespace TopdownShooter::Controller
 		const vmath::vec3 &GetAimDirection() const { return mAimDirection; }
 		const vmath::vec3 &GetAimPoint() const { return mAimPoint; }
 		float GetAimAngleY() const { return mAimAngleY; }
+		/// @brief player(owner) 중심 → 커서 Ground 의 XZ 거리(world). *거리 의존* 소비자용.
+		float GetAimDistance() const { return mAimDistance; }
+		/// @brief 플레이어 화면위치↔커서의 NDC 거리 — 0(겹침/중심)~1(화면 가장자리, 포화). 손 spread 보간용.
+		float GetAimScreenT() const { return mAimScreenT; }
 
 		virtual void OnEnter() override;
 		virtual void OnExit() override;
@@ -95,6 +99,8 @@ namespace TopdownShooter::Controller
 		vmath::vec3 mAimPoint {0.0f};                  // 커서 Ground 월드 좌표 (y≈0)
 		vmath::vec3 mAimDirection {0.0f, 0.0f, -1.0f}; // player -> 커서 방향 (XZ 평면, 정규화)
 		float       mAimAngleY = 0.0f;                 // facing Y각 (degree) = degrees(atan2(-dir.x,-dir.z))
+		float       mAimDistance = 0.0f;               // player(owner)→커서 Ground 의 XZ 거리 (world)
+		float       mAimScreenT = 0.0f;                // 플레이어 화면위치↔커서 NDC 거리 0(중심)~1(가장자리) — 손 spread 보간용
 		bool        mAimValid  = false;                // 이번 프레임 유효 교차 여부 (false 면 직전값 유지)
 
 		// === RD5: facing/pose 단일 작성자 sink (인터페이스로만 — 구체 PlayableDirector 미참조). ===

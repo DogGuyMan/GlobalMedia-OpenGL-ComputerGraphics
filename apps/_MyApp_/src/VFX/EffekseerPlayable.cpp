@@ -9,8 +9,9 @@ namespace TopdownShooter::VFX
 	EffekseerPlayable::EffekseerPlayable(::Effekseer::ManagerRef manager,
 	                                     SJH::Effect            *effect,
 	                                     const vmath::vec3      &spawnPos,
-	                                     TrackPolicy             track)
-	    : mManager(manager), mEffect(effect), mSpawnPos(spawnPos), mTrack(track)
+	                                     TrackPolicy             track,
+	                                     float                   yawRad)
+	    : mManager(manager), mEffect(effect), mSpawnPos(spawnPos), mTrack(track), mYaw(yawRad)
 	{
 		if (mManager.Get() == nullptr || mEffect == nullptr)
 			spdlog::warn("[EffekseerPlayable] ctor: manager 또는 effect nullptr");
@@ -25,11 +26,19 @@ namespace TopdownShooter::VFX
 		}
 	}
 
+	void EffekseerPlayable::StartHandle()
+	{
+		mHandle = mManager->Play(mEffect->Ref(),
+		                         ::Effekseer::Vector3D(mSpawnPos[0], mSpawnPos[1], mSpawnPos[2]));
+		// Y축 회전 주입(라디안 오일러) — 발사 방향 등. 0 이면 생략.
+		if (mYaw != 0.0f && mHandle >= 0)
+			mManager->SetRotation(mHandle, 0.0f, mYaw, 0.0f);
+	}
+
 	void EffekseerPlayable::OnPlay()
 	{
 		if (mManager.Get() == nullptr || mEffect == nullptr) return;
-		mHandle = mManager->Play(mEffect->Ref(),
-		                         ::Effekseer::Vector3D(mSpawnPos[0], mSpawnPos[1], mSpawnPos[2]));
+		StartHandle();
 		// 진단 — Play 실패(-1) / Play 직후 즉시 종료(빈 이펙트·텍스처 전무) 감지.
 		SJH::Diagnostics::EffekseerDiagnostics::CheckPlayHandle(mHandle, "effekseer");
 		SJH::Diagnostics::EffekseerDiagnostics::CheckHandleAlive(
@@ -59,11 +68,16 @@ namespace TopdownShooter::VFX
 			}
 		}
 
-		// 자연 종료 — Effect 가 더 이상 존재 안 하면 finished
-		if (mHandle >= 0 && !mManager->Exists(mHandle) && !mIsLoop)
+		// 자연 종료 처리 — Effect 가 더 이상 존재 안 함.
+		if (mHandle >= 0 && !mManager->Exists(mHandle))
 		{
-			mHandle   = -1;
-			mIsFinished = true;
+			if (mIsLoop)
+				StartHandle();          // 루프 — 재생 반복 (orbital 상시 회전 등)
+			else
+			{
+				mHandle     = -1;
+				mIsFinished = true;
+			}
 		}
 	}
 }

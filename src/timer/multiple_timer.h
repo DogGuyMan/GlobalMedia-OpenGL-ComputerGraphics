@@ -23,9 +23,9 @@ namespace SJH::Timer
         /// @brief timer를 컨테이너로 move 이관하고 핸들 반환. 중복 키 -> assert (silent overwrite 금지).
         Timer* Register(const std::string& name, Timer timer)
         {
-            assert(timers_.find(name) == timers_.end()
+            assert(mTimers.find(name) == mTimers.end()
                    && "MultipleTimer::Register — duplicate key");
-            auto result = timers_.emplace(name, std::move(timer));
+            auto result = mTimers.emplace(name, std::move(timer));
             return &result.first->second;
         }
         /// @brief 편의 오버로드 — baseTime만으로 생성·등록.
@@ -36,22 +36,22 @@ namespace SJH::Timer
 
         void Unregister(const std::string& name)   // 없으면 no-op
         {
-            timers_.erase(name);
+            mTimers.erase(name);
         }
 
         Timer* Find(const std::string& name)        // 없으면 nullptr
         {
-            auto it = timers_.find(name);
-            return (it == timers_.end()) ? nullptr : &it->second;
+            auto it = mTimers.find(name);
+            return (it == mTimers.end()) ? nullptr : &it->second;
         }
 
         bool Has(const std::string& name) const
         {
-            return timers_.find(name) != timers_.end();
+            return mTimers.find(name) != mTimers.end();
         }
 
-        void        Clear()       { timers_.clear(); }
-        std::size_t Count() const { return timers_.size(); }
+        void        Clear()       { mTimers.clear(); }
+        std::size_t Count() const { return mTimers.size(); }
 
         // === Component hook ===
         void OnEnter() override {}
@@ -59,12 +59,12 @@ namespace SJH::Timer
         void Update(float dt) override
         {
             if (!IsEnabled()) return;
-            for (auto& entry : timers_)
+            for (auto& entry : mTimers)
                 entry.second.Tick(dt);
         }
 
       private:
-        std::unordered_map<std::string, Timer> timers_;
+        std::unordered_map<std::string, Timer> mTimers;
     };
 }
 

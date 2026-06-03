@@ -5,6 +5,11 @@
 #include "Entity/Constants.h"
 #include <vmath.h>
 
+namespace TopdownShooter::Controller
+{
+	class PlayerController; // 손 spread 거리 보간 — aim 거리 읽기용 (포인터 멤버, 전방 선언)
+}
+
 namespace TopdownShooter::Entity
 {
 	/// @brief 손 1개 — owner(자식 Hand actor)의 local Transform 을 forward(-Z) 기준 고정 ±벌림각 위치로 배치.
@@ -30,7 +35,11 @@ namespace TopdownShooter::Entity
 
 		void OnEnter() override;       // 고정 local 위치 1회 세팅
 		void OnExit() override {}
-		void Update(float dt) override {} // 고정 위치 — 궤도는 부모 회전 상속이 담당 (no-op)
+		void Update(float dt) override {} // 위치 갱신은 PlayerHands(부모)가 SetSpreadDeg 로 주도 (no-op)
+
+		/// @brief 벌림각 갱신 — 부호 포함 degree (좌손 +, 우손 -). 즉시 local 위치 재적용.
+		///        거리 보간(PlayerHands)이 매 프레임 호출. Scale/궤도(부모 회전)와 직교.
+		void SetSpreadDeg(float spreadDeg);
 
 	  private:
 		void ApplyLocalOffset();
@@ -47,7 +56,14 @@ namespace TopdownShooter::Entity
 	  public:
 		void OnEnter() override;       // 자식 Hand actor 2개 생성·부착 (+ HAND_PART 스프라이트)
 		void OnExit() override {}
-		void Update(float dt) override {}
+		void Update(float dt) override; // 매 프레임 aim 거리로 양손 spread 보간 (.cpp)
+
+	  private:
+		// OnEnter 에서 생성한 자식 손 컴포넌트 (비소유 — 자식 Actor 가 소유).
+		PlayerSingleHand *mLeft  = nullptr;
+		PlayerSingleHand *mRight = nullptr;
+		// 형제(같은 player actor) PlayerController — aim 거리 출처. lazy 캐시.
+		Controller::PlayerController *mController = nullptr;
 	};
 }; // namespace TopdownShooter::Entity
 

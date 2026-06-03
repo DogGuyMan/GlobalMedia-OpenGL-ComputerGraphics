@@ -1,9 +1,15 @@
-# FMOD Studio API — 학습 노트
+# FMOD API — 학습 노트 (Studio + Core)
 
-`apps/audio_demo/demo1`, `apps/audio_demo/demo2` 에서 실제로 사용한 FMOD API 호출 정리.
-모든 예시는 두 데모의 코드에서 발췌 — 검증된 호출.
+두 출처에서 *실제로 사용한* FMOD API 호출 정리 — 모두 검증된 코드 발췌.
 
-설치/CMake 통합은 [doc/FMOD_Setup.md](FMOD_Setup.md) 참조.
+- **Part A (§1–§11)** — `apps/audio_demo/demo1`·`demo2`. **FMOD Studio 전용** (`.bank` 이벤트/믹서/파라미터).
+- **Part B (§12–§15)** — `apps/_MyApp_` 게임. **Studio + Core API 동시 사용** — `getCoreSystem` 으로
+  Core System 을 끌어와 `.wav` 직접 재생(`createSound`/`playSound`/`Channel`), 3D 공간음향
+  (listener / 3D attributes), 그리고 leaf `Playable` 컴포넌트로 통합.
+  *(공백기간 갱신 2026-06-03 — Context7 `/websites/fmod_2_03` 교차검증.)*
+
+설치/CMake 통합은 [doc/FMOD_Setup.md](FMOD_Setup.md), 엔진 자원 보유(`SJH::ResourceRegistry`)는
+[doc/EngineAPI.md](EngineAPI.md) 참조.
 
 ---
 
@@ -16,7 +22,9 @@ FMOD 는 두 계층:
 | **Core** | `<fmod/fmod.h>`, `<fmod/fmod.hpp>` | 저수준 — 직접 wav/mp3/스트림 재생, DSP, 채널 그룹 |
 | **Studio** | `<fmod/fmod_studio.hpp>` | 고수준 — `.bank` 파일 기반 이벤트/믹서/파라미터 시스템 |
 
-본 데모들은 **Studio 만** 사용 (Core 는 Studio 가 내부에서 가져옴 — `initialize` 인자 분리).
+- **audio_demo (Part A)** — **Studio 만** 사용 (Core 는 Studio 가 내부 보유 — `initialize` 인자만 분리).
+- **_MyApp_ (Part B)** — Studio 초기화 후 **`getCoreSystem` 으로 Core System ptr 을 꺼내 둘 다** 사용.
+  `.wav` 효과음은 Core 로 직접(`createSound`+`playSound`), `.bank` 이벤트는 Studio 로 재생. → §12 이하.
 
 ```cpp
 #include <fmod/fmod_common.h>          // FMOD_RESULT 등 공용 타입
@@ -440,9 +448,244 @@ void shutdown() override {
 
 ---
 
-## 12. 본 프로젝트 코드 위치
+---
+
+# Part B — `_MyApp_` 게임 통합 (Core + 3D + Playable)
+
+> Part A 는 `sb7::application` 한 파일에서 FMOD 를 직접 호출하는 *학습용* 구조였다.
+> `_MyApp_` 는 이를 **3분할**한다 — ① `AudioSystem` (System/Bank/Event 캐시 owner) · ② `SJH::ResourceRegistry`
+> (Core `Sound` 캐시) · ③ leaf `Playable` 컴포넌트 (`FmodPlayable` Core / `FmodStudioPlayable` Studio).
+> 아래는 그 분할 위에서 실제로 호출되는 API 를 Part A 에 *없던 것 위주로* 정리한다.
+
+## 12. _MyApp_ 통합 개요 — Core + Studio 동시 사용
+
+`apps/_MyApp_/src/Audio/AudioSystem.{h,cpp}` 가 FMOD 의 single owner. Studio 를 생성/초기화한 뒤
+**`getCoreSystem` 으로 Core System 포인터를 같이 들고 다닌다**.
+
+```cpp
+// AudioSystem::Init — Studio 생성 → 초기화 → Core System 추출
+::FMOD::Studio::System *mStudioSystem = nullptr;
+::FMOD::System         *mSystem       = nullptr;   // Core (Studio 가 소유 — 별도 release 안 함)
+
+FMOD::Studio::System::create(&mStudioSystem);
+mStudioSystem->initialize(512, FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL, nullptr);
+mStudioSystem->getCoreSystem(&mSystem);             // Core System ptr — 이후 createSound/playSound 에 사용
+```
+
+- `getCoreSystem` 은 Studio init *전/후 모두* 호출 가능 (Context7). 여기선 init 직후 1회 캐시.
+- **Core System 은 Studio 가 소유** — `mSystem` 은 빌려 쓰는 핸들. `release()` 금지, `Shutdown` 에서 nullify 만.
+  Studio 의 `release()` 가 Core 까지 함께 정리.
+
+### 매 프레임 — `update()` 는 Studio 것만
+
+```cpp
+void AudioSystem::Update(float /*dt*/) {
+    if (mStudioSystem) mStudioSystem->update();     // FMOD 가 자체 dt 추적 — dt 인자 불필요
+}
+```
+
+⚠️ **Core System 의 `update()` 를 따로 부르지 않는다.** `Studio::System::update()` 가 내부적으로
+Core 업데이트를 구동하기 때문. (Core 단독 프로그램이라면 `coreSystem->update()` 가 필요하지만,
+Studio 를 쓰는 한 Studio update 하나로 충분.) Part A §3 의 "매 프레임 update 누락 시 무음" 규칙은 동일.
+
+### 셧다운
+
+```cpp
+void AudioSystem::Shutdown() {
+    for (auto *bank : mBanks) if (bank) bank->unload();   // bank 일괄 언로드
+    mStudioSystem->release();                              // Studio → Core 함께 정리
+    mStudioSystem = nullptr;
+    mSystem       = nullptr;                               // 빌린 ptr — nullify 만
+}
+```
+
+---
+
+## 13. Core API 직접 재생 — `createSound` / `playSound` / `Channel`
+
+`.bank` 이벤트를 거치지 않고 `.wav` 를 바로 재생하는 경로. `FmodPlayable` (leaf Playable) 이 사용.
+
+### 로드 — `System::createSound` (→ `SJH::ResourceRegistry::CreateSound`)
+
+```cpp
+// src/resource_registry/resource_registry.cpp — Core Sound 를 *로드*해 캐시
+FMOD_RESULT FMOD::System::createSound(
+    const char *name_or_data,        // 파일 경로 또는 메모리 버퍼
+    FMOD_MODE   mode,                // FMOD_DEFAULT = 2D / 메모리 적재 / 루프 없음
+    FMOD_CREATESOUNDEXINFO *exinfo,  // 보통 nullptr (메모리/콜백 적재 시에만)
+    FMOD_SOUND **sound);             // OUT — 생성된 Sound
+
+::FMOD::Sound *raw = nullptr;
+sys->createSound(path.c_str(), FMOD_DEFAULT, nullptr, &raw);
+auto sound = std::make_unique<SJH::Sound>(raw);   // RAII wrap → registry 캐시에 보관
+```
+
+- **`SJH::Sound` 가 `FMOD::Sound*` 의 RAII owner** — dtor 가 `mRaw->release()` 호출.
+  `ResourceRegistry::Clear()`(셧다운) 시 일괄 정리. 외부(FmodPlayable)는 `Raw()` 로 *빌려 쓰기만*, release 금지.
+- **`FMOD_DEFAULT`** = `FMOD_2D | FMOD_LOOP_OFF | FMOD_CREATESAMPLE` 의 합 — *2D, 비루프, 메모리 적재*.
+  → **3D 음향이 필요하면 `FMOD_3D`**, 스트리밍이면 `FMOD_CREATESTREAM`, 루프는 `FMOD_LOOP_NORMAL` 을 OR.
+- 현재 `_MyApp_` 의 `"shot"` (Laser.wav) 은 `FMOD_DEFAULT` → **2D**. (3D SFX 는 전부 Studio 이벤트 경로 §14·§15.)
+
+### 재생 — `System::playSound`
+
+```cpp
+// FmodPlayable::OnPlay — Core System 으로 직접 재생
+FMOD_RESULT FMOD::System::playSound(
+    FMOD_SOUND        *sound,        // 재생할 Sound
+    FMOD_CHANNELGROUP *channelgroup, // nullptr = master group 으로 출력
+    bool               paused,       // true 로 시작 후 속성 세팅 → setPaused(false) 패턴도 가능
+    FMOD_CHANNEL     **channel);     // OUT — 새로 재생되는 Channel
+
+mSys->playSound(mSound->Raw(), nullptr, /*paused=*/false, &mChannel);
+```
+
+### `Channel` 제어 — 재생 단위
+
+`playSound` 가 돌려준 `FMOD::Channel*` 으로 정지/일시정지/상태조회.
+
+```cpp
+mChannel->stop();                    // 즉시 정지 (Channel 무효화 — 이후 isPlaying=false)
+mChannel->setPaused(true);           // 일시정지 토글 (FmodPlayable::Pause)
+bool playing = false;
+mChannel->isPlaying(&playing);       // 재생 종료 감지 → Playable.IsFinished 마킹
+```
+
+```cpp
+// FmodPlayable::OnUpdate — 끝났는지 폴링해서 finished_ 세팅 (비루프 시)
+void FmodPlayable::OnUpdate(float) {
+    if (!mChannel) return;
+    bool playing = false;
+    mChannel->isPlaying(&playing);
+    if (!playing && !mIsLoop) mIsFinished = true;
+}
+```
+
+- **`Channel` 은 RAII 아님 — 정수 핸들에 가까운 빌림 포인터.** `stop()` 하거나 재생이 끝나면 FMOD 가
+  내부에서 재활용하므로, 끝난 뒤의 `mChannel` 접근은 `isPlaying`/에러 코드로 가드. 직접 delete/release 금지.
+- `EventInstance` (Studio §5) 와 대비: Studio 는 `release()` 책임이 있지만, **Core `Channel` 은 release 없음**.
+
+---
+
+## 14. 3D 공간음향 — listener + 3D attributes
+
+탑다운 시점에서 카메라를 listener 로 두고, 이벤트 발생 위치로 panning/감쇠를 준다.
+
+### Listener — 매 프레임 카메라 Transform 송신 (`AudioSystem::SetListener`)
+
+Studio 와 Core 양쪽 listener 를 모두 갱신한다 (Studio 이벤트 + Core 사운드 둘 다 쓰므로).
+
+```cpp
+// Studio listener — FMOD_3D_ATTRIBUTES (position/velocity/forward/up 4벡터 묶음)
+FMOD_3D_ATTRIBUTES attr = {};
+attr.position = {pos[0], pos[1], pos[2]};
+attr.velocity = {0, 0, 0};                       // 0 → 도플러 없음
+attr.forward  = {forward[0], forward[1], forward[2]};
+attr.up       = {up[0], up[1], up[2]};
+mStudioSystem->setListenerAttributes(0, &attr);  // Studio::System — listener index 0
+
+// Core listener — FMOD_VECTOR 4개 개별 인자
+FMOD_VECTOR p{pos[0],pos[1],pos[2]}, v{0,0,0}, f{...}, u{...};
+mSystem->set3DListenerAttributes(0, &p, &v, &f, &u);
+```
+
+| 함수 | 대상 | 인자 형태 |
+|---|---|---|
+| `Studio::System::setListenerAttributes(idx, FMOD_3D_ATTRIBUTES*)` | Studio 이벤트 | 4벡터 **묶음 struct** |
+| `Core System::set3DListenerAttributes(idx, pos, vel, fwd, up)` | Core 사운드 | `FMOD_VECTOR*` **4개 분리** |
+
+- **velocity 는 units/second** (per-frame 아님) — 0 으로 두면 도플러 비활성 (탑다운엔 불필요).
+- `forward`/`up` 은 *서로 수직 + 단위 길이* 여야 함 (Context7 권고).
+- Context7 노트: "Studio API 사용자는 `setListenerAttributes` 를 쓰라" — 즉 순수 Studio 라면 Core 쪽은
+  생략 가능. `_MyApp_` 가 둘 다 부르는 건 Core `playSound` 도 쓰기 때문(현재 그 사운드가 2D 라 Core
+  listener 는 사실상 no-op — §13 참조). **Core SFX 를 3D 로 승격하려면** `createSound(..., FMOD_3D, ...)`
+  + `Channel::set3DAttributes` 가 추가로 필요.
+
+### 이벤트 인스턴스 위치 — `EventInstance::set3DAttributes`
+
+단발 SFX 를 *월드 좌표* 에서 울리려면 인스턴스에 3D attributes 를 준다 (`FmodStudioPlayable::OnPlay`).
+
+```cpp
+mDesc->createInstance(&mInstance);
+if (mWorldPos) {                                  // std::optional<vec3> — 있으면 3D, 없으면 2D
+    FMOD_3D_ATTRIBUTES attr = {};
+    attr.position = {(*mWorldPos)[0], (*mWorldPos)[1], (*mWorldPos)[2]};
+    attr.forward  = {0, 0, -1};
+    attr.up       = {0, 1, 0};
+    mInstance->set3DAttributes(&attr);            // listener(카메라) 대비 panning/감쇠
+}
+mInstance->start();
+```
+
+---
+
+## 15. leaf `Playable` 통합 + one-shot SFX 자동 정리
+
+FMOD 호출을 `SJH::Playable::PlayableBase` 파생 leaf 로 감싸 씬 그래프의 Component 로 만든 것.
+`Play/Pause/Stop/IsFinished` 계약을 다른 Playable (스프라이트/이펙트/PostFX) 과 동일하게 노출.
+
+| leaf | 계층 | 감싸는 FMOD 객체 | 종료 감지 |
+|---|---|---|---|
+| `Audio::FmodPlayable` | **Core** | `Sound` + `Channel` | `Channel::isPlaying` (§13) |
+| `Audio::FmodStudioPlayable` | **Studio** | `EventDescription`(빌림) + `EventInstance`(소유) | `getPlaybackState` (아래) |
+
+### Studio 인스턴스 종료 감지 — `getPlaybackState`
+
+```cpp
+// FmodStudioPlayable::OnUpdate — STOPPED 면 finished 마킹 (비루프)
+FMOD_STUDIO_PLAYBACK_STATE state;
+if (mInstance->getPlaybackState(&state) == FMOD_OK
+    && state == FMOD_STUDIO_PLAYBACK_STOPPED && !mIsLoop)
+    mIsFinished = true;
+```
+
+`FMOD_STUDIO_PLAYBACK_STATE` enum: `PLAYING` / `SUSTAINING` / `STOPPED` / `STARTING` / `STOPPING`.
+`~FmodStudioPlayable` 는 `stop(FMOD_STUDIO_STOP_IMMEDIATE)` + `release()` 로 인스턴스 정리 (Part A §5 규칙).
+
+### one-shot SFX — 스폰 → 자동 despawn (`SpawnAudioInstance`)
+
+Part A §6 의 "create→start→release" one-shot 을 *Actor 조립* 으로 옮긴 것. 핸들을 들고 있지 않고,
+끝나면 씬에서 자동 제거된다.
+
+```cpp
+// src/Spawns/AudioInstance.cpp — 단발 SFX 프리미티브
+void SpawnAudioInstance(Actor& fxParent, EventDescription* desc, std::optional<vec3> pos) {
+    if (!desc) return;                                       // 이벤트 미존재 → no-op (안전)
+    auto* a = fxParent.AddChild(make_unique<Actor>("AudioInstance"));
+    auto* p = a->AddComponent<FmodStudioPlayable>(desc, pos); // pos 있으면 3D (§14)
+    a->AddComponent<AutoDespawnOnFinish>(p);                  // p->IsFinished() → mDone
+    p->Play();
+}
+// render 루프: SweepFinishedChildren(fxParent) 가 IsDone 자식을 RemoveChild → leaf dtor 가 FMOD 정리.
+```
+
+- **이벤트 미존재 시 `desc == nullptr`** → `SpawnAudioInstance` 가 그냥 return (no-op). `AudioSystem::LoadEvent`
+  가 `.strings.bank` 누락/오타에 `nullptr` 을 돌려주므로(Part A §11), 호출부가 별도 가드 없이 안전.
+- 단발 SFX 는 **Studio 이벤트로 통일** (결정 2026-05-31) — Core `FmodPlayable` 은 BGM/지속음 같이 핸들을
+  들고 제어하는 경우에.
+
+---
+
+## 16. 본 프로젝트 코드 위치
+
+### Part A — audio_demo (Studio 학습용)
 
 | 데모 | 보여주는 패턴 |
 |---|---|
 | [apps/audio_demo/demo1/main.cpp](../apps/audio_demo/demo1/main.cpp) | SDK 샘플 Music.bank — 파라미터 메타데이터 **자동 발견** + ImGui 위젯 자동 매핑 + Master bus 볼륨 |
 | [apps/audio_demo/demo2/main.cpp](../apps/audio_demo/demo2/main.cpp) | 사용자 제작 bank — **명시적** 이벤트 (BGM/Damaged/Slash) + **one-shot** 패턴 + global parameter (Health) + 2개 명명 bus (BGM/SFX) |
+
+### Part B — _MyApp_ 게임 통합
+
+| 파일 | 책임 |
+|---|---|
+| [apps/_MyApp_/src/Audio/AudioSystem.{h,cpp}](../apps/_MyApp_/src/Audio/AudioSystem.h) | FMOD owner — Studio+Core 생성, Bank/Event 캐시, listener 갱신 (§12·§14) |
+| [apps/_MyApp_/src/Audio/FmodPlayable.{h,cpp}](../apps/_MyApp_/src/Audio/FmodPlayable.h) | **Core** leaf — `playSound`+`Channel` 로 `.wav` 직접 재생 (§13) |
+| [apps/_MyApp_/src/Audio/FmodStudioPlayable.{h,cpp}](../apps/_MyApp_/src/Audio/FmodStudioPlayable.h) | **Studio** leaf — `EventInstance` 생성/start + 3D attributes (§14·§15) |
+| [apps/_MyApp_/src/Bootstrap/AudioWarmup.cpp](../apps/_MyApp_/src/Bootstrap/AudioWarmup.cpp) | bank 로드 + BGM 빌드 + `"shot"` Sound 등록 (부트스트랩) |
+| [apps/_MyApp_/src/Spawns/AudioInstance.cpp](../apps/_MyApp_/src/Spawns/AudioInstance.cpp) | 단발 SFX 스폰 (`FmodStudioPlayable` + 자동 despawn 조립, §15) |
+| [src/resource_registry/sound.{h,cpp}](../src/resource_registry/sound.h) | `FMOD::Sound*` RAII wrap — dtor 가 `release()` |
+| [src/resource_registry/resource_registry.cpp](../src/resource_registry/resource_registry.cpp) | `CreateSound` (`createSound` + Sound 캐시) / `FindSound` |
+
+
+
+---

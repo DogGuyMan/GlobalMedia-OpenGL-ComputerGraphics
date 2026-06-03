@@ -1,8 +1,12 @@
+#include <GL/gl3w.h> // 반드시 최상단 — Manager.h→VFXSystem.h→EffekseerRendererGL(시스템 gl3.h) ↔ resource_registry.h→gl3w.h 충돌 회피.
+
 #include "Stage/StageBuilder.h"
 #include "Stage/Components/MaterialTimeComponent.h"
 #include "Stage/Components/StageStateComponent.h"
 #include "Stage/Factories/wall_factory.h"
 
+#include "Manager.h"                    // Manager::Get().VFX() (Orbit 배경 VFX)
+#include "VFX/EffekseerPlayable.h"      // Orbit EffekseerPlayable (Static + loop)
 #include "material/material.h"
 #include "material/material_uniforms.h"
 #include "object/mesh.h"
@@ -176,6 +180,18 @@ namespace TopdownShooter::Stage
 		// ModelSpawner 유틸리티를 사용해 모델의 모든 RenderUnit을 자식 Actor로 펼침
 		SJH::Scene::ModelSpawner::SpawnEntities(*pcbActor, *pcbModel);
 		stage->AddChild(std::move(pcbActor));
+
+		// 5) Orbit 배경 VFX — 아레나 중심(0,0,0)에 orbital_background.efk 상시 루프 (회전은 .efk 내장).
+		//    Effect 미등록(startup Warmup 전/실패)이면 no-op. EffekseerPlayable 의 isLoop 재-Play 로 무한 지속.
+		if (SJH::Effect *orbitEffect = reg.FindEffect("orbital_background"))
+		{
+			auto  orbitActor = std::make_unique<SJH::Scene::Actor>("OrbitVfx");
+			auto *pl         = orbitActor->AddComponent<VFX::EffekseerPlayable>(
+                Manager::Get().VFX().GetManager(), orbitEffect, vmath::vec3(0.0f), VFX::TrackPolicy::Static);
+			pl->SetIsLoop(true);
+			pl->Play();
+			stage->AddChild(std::move(orbitActor));
+		}
 
 		return stage;
 	}

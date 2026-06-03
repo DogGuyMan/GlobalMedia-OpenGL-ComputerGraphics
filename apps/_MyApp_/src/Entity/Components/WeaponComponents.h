@@ -4,7 +4,9 @@
 #include "Algebraic/Stat.h"
 #include "Components.Interfaces.h"
 #include "scene/actor.h"
+#include <functional>
 #include <string>
+#include <utility>
 #include <vmath.h>
 
 // fwd — UseWeapon 이 bullet body 를 생성할 물리 월드 (포인터 멤버 — 전방 선언으로 충분).
@@ -26,6 +28,8 @@ namespace TopdownShooter::Entity::Components
 		Algebraic::Numeric::Stat Damage;
 		const std::string WeaponName;
 		b2World *mWorld = nullptr; // 비소유 — bullet body 생성용 (SetWorld 주입)
+		// 발사 방향 gunshoot FX — pos(총구) + yaw(라디안). 빌더가 VFX::Spawn 주입 (없으면 no-op).
+		std::function<void(const vmath::vec3 &pos, float yaw)> mOnFireFx;
 
 	  public:
 		Weapon(int damage, const char *literal_str)
@@ -38,6 +42,13 @@ namespace TopdownShooter::Entity::Components
 		Weapon &SetWorld(b2World *world)
 		{
 			mWorld = world;
+			return *this;
+		}
+
+		/// @brief 발사 시 총구 위치+방향(yaw 라디안)으로 발동할 FX seam 주입 (빌더 전용 fluent).
+		Weapon &SetOnFireFx(std::function<void(const vmath::vec3 &, float)> fx)
+		{
+			mOnFireFx = std::move(fx);
 			return *this;
 		}
 

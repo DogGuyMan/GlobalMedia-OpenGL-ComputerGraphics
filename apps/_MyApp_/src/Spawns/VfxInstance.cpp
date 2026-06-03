@@ -8,13 +8,13 @@
 namespace TopdownShooter::Spawns
 {
     void SpawnVfxInstance(SJH::Scene::Actor& fxParent, VFX::VFXSystem* vfx,
-                          SJH::Effect* effect, const vmath::vec3& pos)
+                          SJH::Effect* effect, const vmath::vec3& pos, float yaw)
     {
         if (!vfx || !effect) return; // 이펙트/시스템 미존재 — no-op
 
         auto* a = fxParent.AddChild(std::make_unique<SJH::Scene::Actor>("VfxInstance"));
         auto* p = a->AddComponent<VFX::EffekseerPlayable>(
-            vfx->GetManager(), effect, pos, VFX::TrackPolicy::Static);
+            vfx->GetManager(), effect, pos, VFX::TrackPolicy::Static, yaw);
         a->AddComponent<AutoDespawnOnFinish>(p);
         p->Play();
     }

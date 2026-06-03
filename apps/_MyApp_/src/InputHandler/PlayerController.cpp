@@ -279,6 +279,25 @@ namespace TopdownShooter::Controller
 		const vmath::vec3 dir =
 		    normalize(right * (ndcX * aspect * tanHalf) + up * (ndcY * tanHalf) + forward);
 
+		// === 화면(NDC) 정규화 조준 강도 mAimScreenT — 플레이어를 NDC 에 투영해 커서 NDC 와의 거리. ===
+		// 손 spread 보간용. 화면 가장자리(NDC 1.0)에서 포화(1). ground 교차 성공 여부와 무관(여기서 미리 산출).
+		// mat*vec 미지원(vmath) → 커서 ray 와 동일 basis/규약으로 직접 투영:
+		//   depth = dot(rel, forward), ndc = dot(rel, right|up) / (depth * (aspect)tanHalf).
+		if (SJH::Scene::Actor *pl = GetOwner())
+		{
+			const vmath::vec3 rel   = pl->GetTransform().Translate - camPos;
+			const float       depth = vmath::dot(rel, forward); // view forward 깊이 (>0 = 카메라 앞)
+			if (depth > 1e-4f)
+			{
+				const float pNdcX = vmath::dot(rel, right) / (depth * aspect * tanHalf);
+				const float pNdcY = vmath::dot(rel, up) / (depth * tanHalf);
+				const float sdx   = ndcX - pNdcX;
+				const float sdy   = ndcY - pNdcY;
+				const float st    = std::sqrt(sdx * sdx + sdy * sdy);
+				mAimScreenT       = (st > 1.0f) ? 1.0f : st; // 화면 가장자리에서 포화
+			}
+		}
+
 		// y=0 평면과 교차. dir.y ≈ 0 이면 평행, t<0 이면 카메라 뒤 -> 직전값 유지.
 		if (std::fabs(dir[1]) < 1e-5f)
 		{
@@ -301,8 +320,9 @@ namespace TopdownShooter::Controller
 		aim[1] = 0.0f; // 탑다운 조준 — 높이 성분 제거 (XZ 평면)
 		const float dist = vmath::length(aim);
 
-		mAimPoint = hit;
-		mAimValid = true;
+		mAimPoint    = hit;
+		mAimDistance = dist; // 손 spread 보간 등 거리 소비자용 (방향이 무효여도 거리는 유효)
+		mAimValid    = true;
 		if (dist > 1e-4f)
 		{
 			mAimDirection = aim * (1.0f / dist);

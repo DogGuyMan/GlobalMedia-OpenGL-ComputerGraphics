@@ -7,9 +7,11 @@
 #include "Playable/Constants.h"           // ENEMY_FRONT
 #include "Playable/SpriteLayerFactory.h"  // AttachSpriteLayer — 3-빌더 공유 sprite-layer 부착 헬퍼
 #include "Tween/TweenPlayable.h"          // 상시 루프 트윈
+#include "Entity/Components/LifeComponents.h" // GetComponent<Life> (SetOnHitFx seam 주입)
 #include "playable/composite_playable.h"  // SJH::Playable::ParallelPlayable (동시재생 컨테이너)
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
+#include "Spawns/VfxInstance.h"            // VFX::Spawn 파사드 (hit seam 주입 람다 본문)
 #include "Bootstrap/Constants.h"           // ENEMY_DISSOLVE/DELAY/트윈MS
 
 #include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
@@ -92,6 +94,10 @@ namespace TopdownShooter::Bootstrap
             pres.healthBarColor    = deps.healthBarColor;
             AttachEntityPresentation(*enemy, pres);
         }
+
+        // hit FX seam — 적 Life 피격 시 hit.efk (Player 와 공통, 빌더가 VFX::Spawn 주입).
+        if (auto* life = enemy->GetComponent<Entity::Components::Life>())
+            life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); });
 
         // 5) 씬 트리 부착 (entry -> 컴포넌트 OnEnter 캐스케이드)
         if (!deps.spawnParent) return nullptr;

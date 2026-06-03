@@ -20,6 +20,8 @@ target_link_libraries(myapp_stage
         MyApp::Physics    # Stage/Factories/*.h 가 Physics/PhysicsLayer.h + Components.Interfaces.h include
         MyApp::Entity     # Stage/Factories/*.h (CreateWallActor 등) + EnemyFactory 전이 의존
         MyApp::Bootstrap  # WaveController ->Bootstrap::BuildEnemy (적 스프라이트 조립, acyclic)
+        MyApp::Manager    # StageBuilder Orbit VFX — Manager::Get().VFX()
+        MyApp::VFX        # StageBuilder Orbit — VFX::EffekseerPlayable
         project_deps
         game_deps
 )

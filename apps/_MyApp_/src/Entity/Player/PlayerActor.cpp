@@ -106,9 +106,15 @@ namespace TopdownShooter::Entity::Player
 			if (controller == nullptr)
 				return;
 
-			Entity::IMovable *movable = a.GetComponent<Physics::PhysicsMovement>(); // 물리 분기
+			// facade verb(PlayerEntity::DoForward) 경유 — 이동에 묶인 부수효과(dust FX)가 함께 발화.
+			// PlayerEntity 가 내부에서 PhysicsMovement/Movement 로 위임. facade 미부착 시 직접 구현체로 fallback.
+			Entity::IMovable *movable = a.GetComponent<PlayerEntity>();
 			if (movable == nullptr)
-				movable = a.GetComponent<Components::Movement>();                    // 비물리 분기
+			{
+				movable = a.GetComponent<Physics::PhysicsMovement>(); // 물리 분기
+				if (movable == nullptr)
+					movable = a.GetComponent<Components::Movement>(); // 비물리 분기
+			}
 
 			controller->SetKeyboardInput(cfg.controller.keyboard)
 			    .SetMouseInput(cfg.controller.mouse)
@@ -132,12 +138,13 @@ namespace TopdownShooter::Entity::Player
 		InitController(a, cfg);
 		InitSprite(a, cfg);
 
+		// facade 먼저 — WireController 가 PlayerEntity(facade verb)를 IMovable 타겟으로 주입하므로
+		// (PlayerEntity::DoForward 경유 시 dust FX 등 이동 부수효과 발화). OnEnter 캐시는 씬 진입 시이므로 부착 순서 무관.
+		InitFacade(a);
+
 		// [2] 컴포넌트간 의존성 연결 (초기화 끝난 뒤 Set*)
 		WireWeapon(a, cfg);
 		WireController(a, cfg);
-
-		// facade (모든 형제 후 — OnEnter 캐시)
-		InitFacade(a);
 
 		return actor;
 	}

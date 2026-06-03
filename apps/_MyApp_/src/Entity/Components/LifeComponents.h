@@ -19,7 +19,8 @@ namespace TopdownShooter::Entity::Components
 		Algebraic::Numeric::Stat mMaxHp;
 		int   mCurHp;
 		bool  mDeathFxFired = false;  // one-shot death guard (mDead 대체)
-		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // spawn-at-point seam
+		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // 사망 spawn-at-point seam
+		std::function<void(const vmath::vec3 &)> mOnHitFx;     // 피격 spawn-at-point seam (hit FX — 적/플레이어 공통)
 		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
 
 		// === Timer 중앙화 — BaseEntity 의 MultipleTimer 에 위탁, 핸들만 보유 (비소유) ===
@@ -51,6 +52,7 @@ namespace TopdownShooter::Entity::Components
 
 		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
+		Life &SetOnHitFx(std::function<void(const vmath::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
 		Life &SetDeathDelaySeconds(float s) { mDieDelaySeconds = s; return *this; }
 		bool  IsInvincible() const { return mInvincibleTimer && !mInvincibleTimer->IsTimesUp(); }
 
@@ -107,6 +109,8 @@ namespace TopdownShooter::Entity::Components
 			if (IsInvincible()) return;              // i-frame early-return (총알+접촉 모두 보호)
 			mCurHp -= damage;
 			if (mSink) mSink->ReactDamaged(damage);  // Template-Method forward
+			if (mOnHitFx)                            // 피격 위치에 hit FX (mOnDeathFx 대칭 seam — 빌더가 VFX::Spawn 주입)
+				mOnHitFx(GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f));
 			if (mInvincibleTimer) mInvincibleTimer->Reset();   // passed=0 -> 무적 발동 (없으면 no-op = 무적 없음)
 			if (!IsAlive())
 			{

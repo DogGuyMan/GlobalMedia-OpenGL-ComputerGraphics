@@ -2,6 +2,7 @@ add_library(myapp_spawns STATIC
     OneShotSweeper.cpp
     AudioInstance.cpp
     VfxInstance.cpp
+    VfxFacade.cpp              # <- VFX::Spawn 파사드 (gl3w↔EffekseerRendererGL 충돌 회피 위해 별도 TU)
     CombatSequences.cpp
     AmbientSequences.cpp
     WorldTextInstance.cpp      # <- 추가 (T5)
@@ -25,6 +26,7 @@ target_link_libraries(myapp_spawns
         MyApp::VFX
         MyApp::Tween
     PRIVATE
+        SJH::resource_registry   # <- VfxFacade.cpp: ResourceRegistry::Get().FindEffect
         game_deps
 )
 target_compile_features(myapp_spawns PUBLIC cxx_std_17)
