@@ -10,6 +10,7 @@
 #include "playable/composite_playable.h"  // SJH::Playable::ParallelPlayable (동시재생 컨테이너)
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
+#include "Bootstrap/Constants.h"           // ENEMY_DISSOLVE/DELAY/트윈MS
 
 #include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
 #include <vmath.h>                         // vmath::vec3 (Transform.Scale)
@@ -51,7 +52,7 @@ namespace TopdownShooter::Bootstrap
 
             // child A — Y 스케일 펄스 (0.4초 편도, 왕복 0.8초)
             auto scaleTween = tweeny::from(0.85f).to(1.15f)
-                                  .during(400)
+                                  .during(ENEMY_SCALE_PULSE_MS)
                                   .via(tweeny::easing::sinusoidalInOut);
             auto scaleTw = std::make_unique<Tween::TweenPlayable<float>>(
                 std::move(scaleTween),
@@ -63,7 +64,7 @@ namespace TopdownShooter::Bootstrap
 
             // child B — z축 회전 워블 (-30~+30, 2000ms 편도, 왕복 4000ms; 2000ms 왕복은 during(1000))
             auto rotTween = tweeny::from(-30.0f).to(30.0f)
-                                .during(2000)
+                                .during(ENEMY_ROT_WOBBLE_MS)
                                 .via(tweeny::easing::sinusoidalInOut);
             auto rotTw = std::make_unique<Tween::TweenPlayable<float>>(
                 std::move(rotTween),
@@ -86,8 +87,8 @@ namespace TopdownShooter::Bootstrap
         //   [B] 폭발/spark 는 delegate(onDeathFx)가 별도 트리거(유지). director 추가 사용 없음 -> 반환 무시.
         {
             EntityPresentationConfig pres;
-            pres.dissolveSeconds   = 0.6f;
-            pres.deathDelaySeconds = 0.6f;
+            pres.dissolveSeconds   = ENEMY_DISSOLVE_SECONDS;
+            pres.deathDelaySeconds = ENEMY_DEATH_DELAY;
             pres.healthBarColor    = deps.healthBarColor;
             AttachEntityPresentation(*enemy, pres);
         }

@@ -2,6 +2,8 @@
 #define __TOPDOWNSHOOTER_BOOTSTRAP_ENTITY_PRESENTATION_H__
 
 #include <vmath.h>
+#include "Bootstrap/Constants.h"
+#include "HUD/Constants.h"
 
 // fwd-decl — 헤더 표면 최소화 (완전형은 .cpp 에서 해소).
 namespace SJH::Scene
@@ -19,9 +21,9 @@ namespace TopdownShooter::Bootstrap
 	///        Enemy 는 세 필드 모두 override(0.6 / 0.6 / deps 색).
 	struct EntityPresentationConfig
 	{
-		float       dissolveSeconds   = 1.5f;                                 // "death" SpriteDissolve 길이
-		float       deathDelaySeconds = 1.5f;                                 // 사망 후 비활성 지연(=dissolve 가시화 창)
-		vmath::vec4 healthBarColor    = vmath::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 체력바 채움색(기본 녹색 = HealthBarConfig 기본과 동일)
+		float       dissolveSeconds   = PLAYER_DISSOLVE_SECONDS;  // "death" SpriteDissolve 길이
+		float       deathDelaySeconds = PLAYER_DEATH_DELAY;       // 사망 후 비활성 지연(=dissolve 가시화 창)
+		vmath::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 — HUD 단일 소스, C3)
 	};
 
 	/// @brief Player/Enemy 공통 연출 클러스터 부착 — *pre-entry*(AddChild 전) 호출.
