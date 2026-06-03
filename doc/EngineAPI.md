@@ -36,6 +36,7 @@
    - 4.8 [Retina HiDPI / Resize 호환](#48-retina-hidpi--resize-호환)
 5. [빠른 시작 — 새 챕터](#5-빠른-시작--새-챕터)
 6. [빌드 시스템](#6-빌드-시스템)
+7. [클라이언트 게임 아키텍처 — TopdownShooter (`_MyApp_`)](#7-클라이언트-게임-아키텍처--topdownshooter-_myapp_) *(2026-06-03 Entity facade)*
 
 ---
 
@@ -1576,6 +1577,173 @@ cmake --build --preset msvc-2022 --target <chapter>
 
 ---
 
+## 7. 클라이언트 게임 아키텍처 — TopdownShooter (`_MyApp_`)
+
+> **범위**: `apps/_MyApp_/src/` (코어 `src/` 아님 — *클라이언트* 게임 코드). 다른 AI 에이전트/개발자 인수인계용.
+> **반영**: 2026-06-03 *Entity Accessor-facade* + *Physics body 컴포넌트화* + *적 넉백(Impulse/Carrier)* 리팩토링.
+> 정본 spec: [`docs/superpowers/specs/2026-06-03-entity-accessor-facade-design.md`](../docs/superpowers/specs/2026-06-03-entity-accessor-facade-design.md) (gitignore 로컬).
+
+### 7.0 좌표계 (필독 — 모든 물리/이동 버그의 근원)
+
+| 공간 | 축 | 변환 |
+|---|---|---|
+| **World** (렌더) | XZ 평면, Y=up, **forward = −Z** (W키) | — |
+| **Box2D** (물리) | XY 평면 | `box2d.x = world.x`, `box2d.y = −world.z` |
+
+- world XZ `(x, z)` ↔ box2d `(x, −z)`. 왕복 시 **Z 부호 한 번만** 뒤집어야 한다 (이중 적용 = Z 반전 버그).
+- `IMovable::DoForward` / `IImpulsable::DoImpulse` 의 **계약 = world XZ 입력** → 컴포넌트 내부가 box2d 로 변환(`SetLinearVelocity(x, -z)`). **호출자는 world XZ 를 넘긴다** (box2d 로 미리 변환 금지).
+
+### 7.1 Entity Accessor-facade (`BaseEntity` ← `PlayerEntity` / `EnemyEntity`)
+
+**동기**: 외부(적 AI / HUD / `Carrier` / 디버그)가 엔티티 능력에 `actor->GetComponent<각각>()` 으로 *상시 접근* → 장황 + O(N) dynamic_cast 반복. → **facade 1개를 1회 resolve** 해 캐시된 형제에 cheap accessor/verb 로 접근.
+
+```
+외부 → GetComponent<PlayerEntity|EnemyEntity>() 1회 → cheap accessor/verb
+PlayerEntity : BaseEntity, IMovable      EnemyEntity : BaseEntity  (header-only, 추가 멤버 0)
+  +GetMovement()/GetWeapon()
+  +Dash()/Attack()
+            └─ is-a ─┐
+BaseEntity (공유) : Component, ILivable, IDieable, IDamageable, IImpulsable
+  OnEnter() 에서 형제 4개 비소유 캐시: Life / Physics / PlayableDirector / Impulse
+  IsAlive/GetHp/GetMaxHp/DoDamaged/DoDie(→Life) · DoImpulse/IsImpulseActive(→Impulse)
+  GetPhysics()(→Physics body) · GetDirector()/Play(key)(→연출+Audio)
+```
+
+facade 는 **로직 0** — `OnEnter` 캐시 + 위임/노출만. Cocos `cc.Component` / Unity `[SerializeField]+GetComponent` 캐싱 정통. C# 레퍼런스(ProjectLamb_Sophia): `Entity`(base) ↔ `BaseEntity`, `Player`/`Monster` ↔ `PlayerEntity`/`EnemyEntity`, `entityRigidbody/Collider` ↔ `GetPhysics()`.
+
+```cpp
+// Entity/BaseEntity.h  — 공유 facade (Player·Enemy 공통)
+class BaseEntity : public SJH::Scene::Component,
+                   public ILivable, public IDieable, public IDamageable, public IImpulsable {
+  protected:                                  // 모두 비소유 포인터 (헤더는 fwd-decl)
+    Components::Life*                    mLife;
+    Physics::Components::Physics*        mPhysics;    // = entityRigidbody/Collider
+    Playable::PlayableDirector*         mDirector;   // 연출+Audio (named playable)
+    Physics::Impulse*                   mImpulse;    // 넉백/대시 (없으면 null → no-op)
+  public:
+    void OnEnter() override;  // 4캐시 (.cpp — GetComponent/FindPhysics 완전형 필요)
+    bool IsAlive() const override; int GetHp() const override; int GetMaxHp() const override;
+    void DoDamaged(int) override; void DoDie() override;        // → Life (i-frame 은 Life 내부)
+    void DoImpulse(vmath::vec2 worldXZ) override;               // → Impulse
+    bool IsImpulseActive() const;                              // 버스트 활성 창 = 이동 suppress 게이트
+    Physics::Components::Physics* GetPhysics() const;
+    Playable::PlayableDirector*  GetDirector() const;
+    void Play(const std::string& key);                         // → director->Play
+};
+
+// Entity/Player/PlayerEntity.h — 얇음
+class PlayerEntity : public BaseEntity, public IMovable {
+    IMovable* mMovement; Components::Weapon* mWeapon;          // OnEnter 에서 캐시
+  public:
+    IMovable* GetMovement() const; Components::Weapon* GetWeapon() const;
+    void DoForward(vmath::vec2 worldXZ, float dt) override;    // → mMovement
+    void Dash(vmath::vec2 worldXZ);                            // → DoImpulse (BaseEntity)
+    void Attack(vmath::vec2 box2dAim);                         // → Weapon::UseWeapon
+};
+
+// Entity/Enemy/EnemyEntity.h — 베이스만으로 충분 (header-only)
+class EnemyEntity : public TopdownShooter::Entity::BaseEntity {};
+```
+
+**부착**: `CreatePlayerActor`/`CreateEnemyActor` 의 **끝**(모든 형제 부착 후)에서 `AddComponent<PlayerEntity>()` / `AddComponent<EnemyEntity>()`. OnEnter 캐싱은 액터가 씬 진입 시 일괄 발화.
+
+**⚠ 함정 — 인터페이스 자기매칭**: `PlayerEntity` 자신이 `IMovable` 라 `GetComponent<IMovable>()` 는 자기를 매칭할 위험. **구체 타입** `GetComponent<Physics::PhysicsMovement>()` 로 캐시(typeid fast-path → 자기 배제). 동일 원리로 BaseEntity 는 `GetComponent<Life/PlayableDirector/Impulse>()`(구체) + `FindPhysics`(dynamic_cast, base 안전) 사용.
+
+**중복 인터페이스(무해)**: `Life` 도 `IDamageable`, facade 도 `IDamageable`(→Life 위임). 한 액터에 2개지만 `Carrier` 의 `GetComponent<IDamageable>` 가 어느 쪽을 찾아도 결국 Life 로 흘러 동일. (적 Impulse 도 동일 — facade `IImpulsable` ∥ `Physics::Impulse` 둘 다 같은 Impulse 로 수렴.)
+
+**Before/After**:
+```cpp
+// Before — GetComponent 산재
+auto* life=a->GetComponent<Components::Life>(); if(life&&life->IsAlive()){...}
+auto* mv  =a->GetComponent<Physics::PhysicsMovement>(); if(mv) mv->DoForward(d,dt);
+// After — facade 1회
+auto* pe=a->GetComponent<PlayerEntity>();   // 또는 BaseEntity (Player/Enemy 공통)
+if(pe->IsAlive()){...}  pe->GetMovement()->DoForward(d,dt);  pe->Attack(aim);
+```
+
+### 7.2 Physics body 컴포넌트화 (`BodyConfig` + `BoxBody`/`CircleBody`)
+
+b2Body 생성을 **인라인 외부 생성 + `SetBody()` 주입** → **컴포넌트 ctor(eager) 내부**로 이관. (= C# `entityRigidbody`/`entityCollider` 가 컴포넌트인 것과 동형.)
+
+```cpp
+// Physics/PhysicsComponent.h
+struct BodyConfig {                  // 5 call-site 모두 커버
+    b2World*    world;
+    b2BodyType  bodyType = b2_dynamicBody;   // Wall/Pickup=static, Bullet=kinematic→dynamic
+    vmath::vec2 startPosition, linearVelocity;
+    float       linearDamping=0, density=1, friction=0.2; // friction 0.2 = b2 기본(미설정 site 보존)
+    bool        isSensor=false;
+    uint16_t    categoryBits, maskBits;  float heightOffset=0;
+};
+class Physics : public Component, public IContactable {   // abstract base (b2Body* 비소유 — b2World 소유)
+  protected:
+    b2Body* MakeBody(const BodyConfig&);     // b2BodyDef→CreateBody (owner 무관)
+    void    InitBody(b2Body*, const BodyConfig&);
+  public:
+    void OnEnter() override;  // ⬅ owner userdata 등록 (ctor 엔 GetOwner=null → 여기서). contact 콜백은 런타임에만 읽음
+    b2Body* GetBody() const;  bool IsSensor() const; ...
+};
+class BoxBody : public Physics    { BoxBody(const BodyConfig&, vmath::vec2 size); };   // ctor 에서 SetAsBox+fixture
+class CircleBody : public Physics { CircleBody(const BodyConfig&, float radius); };
+```
+
+**불변식**: body 는 **eager(ctor) 생성** — `SimplePursueAI` 가 ctor 에서 `b2Body*` 수령, 형제가 `OnEnter` 에서 `FindPhysics`. owner userdata 등록만 `OnEnter` 로 지연(런타임 contact 전).
+
+**5 call-site** (전부 BodyConfig+ctor 로 전환): `PlayerActor.cpp`(Box,dynamic) / `EnemyFactory.h`(Circle,dynamic) / `wall_factory.h`(Box,**static**) / `pickup_factory.h`(Box,static+sensor) / `bullet_factory.h`(Circle,**kinematic→dynamic+sensor**).
+
+> ⚠ **총알 = dynamic+sensor**: 구 kinematic 은 **static 벽과 접촉 0**(Box2D `ShouldCollide`: 최소 한쪽 dynamic 필요) → 벽 명중 despawn 안 됨. dynamic(중력 0 라 안 떨어짐)+sensor(밀어내기 없이 trigger) 로 벽/적 모두 `OnTriggerEnter`.
+
+### 7.3 `Impulse` (SJH::Timer) + `IsImpulseActive` 이동 게이트
+
+```cpp
+// Physics/PhysicsImpulse.h — 넉백(적)/대시(플레이어) 공용
+class Impulse : public Component, public Entity::IImpulsable {
+    Algebraic::Numeric::Stat mImpulseForce;  // 힘 (DashForce 7.5)
+    SJH::Timer::Timer mActiveTimer{0.3f}, mCooldownTimer{0.8f};  // arm-inactive (ctor 에서 Tick(base)→finished)
+  public:
+    void DoImpulse(vmath::vec2 worldXZ) override;  // 게이트(쿨다운/active) → SetLinearVelocity + 타이머 Reset
+    bool IsActive() const;                         // = !mActiveTimer.IsTimesUp()  (버스트 0.3s 창)
+};
+```
+
+**공통 패턴 (이동 덮어쓰기 방지)** — C# `Player.MoveTick(): if(GetIsDashState()) return;` 정통:
+- 이동 로직(`SimplePursueAI`/`PlayerController`)이 매 프레임 `entity->IsImpulseActive()` 를 게이트로 **자유이동 skip**(`return`) → 버스트 0.3s 가 덮어쓰이지 않음.
+- **적 넉백 = live**: 총알 명중 → `Impulse` 활성 → `SimplePursueAI` 0.3s 추적 멈춤 → 밀려난 뒤 재개.
+- **플레이어 대시 = dormant**: `PlayerController` 가 같은 게이트를 *미리 박아둠*. dash 입력 미배선이라 발화 0(행동 변화 0). dash 입력 도입 시 즉시 동작.
+- ⚠ 입력 0 이어도 `DoForward(0)` 이 속도를 0 으로 만들어 버스트를 죽이므로 **게이트는 DoForward 호출 자체를 skip**(0 설정 아님).
+
+### 7.4 `Carrier` 데미지 배달 + 넉백 방향 (`Spawns/Carrier.h`)
+
+```cpp
+class CarrierBase : Component, Physics::IContactable {
+  protected:
+    void Deliver(Actor* target, vmath::vec2 knockbackWorldXZ);  // IDamageable→DoDamaged + IImpulsable→DoImpulse + onHitFx
+};
+class Projectile : CarrierBase, Entity::IDieable {   // 총알 (bullet_factory)
+    void SetLaunchDir(vmath::vec2 box2dDir);          // 넉백 방향 소스
+    // OnTrigger/CollisionEnter → HandleHit → Deliver(other, 비행방향) → DoDie(지연 despawn)
+};
+class ContactCarrier : CarrierBase {};               // 적 접촉 (EnemyFactory) — Deliver(other, 0)
+```
+
+**⚠ 넉백 방향 = 총알 비행방향**(`SetLaunchDir(cfg.dir)`, box2d XY) → `HandleHit` 이 world XZ `(x, -y)` 로 변환해 `Deliver`. **위치차분(enemy−bullet) 금지** — 접촉 시 관통 깊이로 부호가 뒤집혀 "플레이어 쪽 돌진/무작위" 버그 유발(2026-06-03 수정). 비행방향은 안정 + "플레이어로부터 멀어짐" 의미와 일치.
+
+### 7.5 파일 맵 + 빌드 주의
+
+| 파일 | 책임 |
+|---|---|
+| `Entity/BaseEntity.{h,cpp}` | 공유 facade (4캐시 + 인터페이스 포워딩) |
+| `Entity/Player/PlayerEntity.{h,cpp}` / `Entity/Enemy/EnemyEntity.h` | Player(얇음) / Enemy(베이스만) facade |
+| `Entity/Player/PlayerActor.cpp` / `Entity/Enemy/EnemyFactory.h` | 도메인 factory (Life/Physics/Movement/Weapon/AI + facade 부착) |
+| `Physics/PhysicsComponent.{h,Imp.h}` | `BodyConfig` + `Physics`/`BoxBody`/`CircleBody` |
+| `Physics/PhysicsImpulse.h` / `PhysicsMovement.h` | Impulse(Timer) / 연속이동 (둘 다 `IImpulsable`/`IMovable`, world XZ 계약) |
+| `Spawns/Carrier.h` | 데미지 배달 + 넉백 |
+| `Bootstrap/{PlayerBuilder,EnemyBuilder}.cpp` | Composition Root — factory + 연출(Director)/HUD/Audio/Camera 와이어링 |
+
+> ⚠ **CMake 순환 회피 (Entity ↔ Playable)**: `BaseEntity.cpp` 가 `PlayableDirector`(MyApp::Playable) 사용 → `myapp_entity → MyApp::Playable` 링크 필요. 한편 `MyApp::Playable` 의 `IActorPresentation`(Entity 헤더) 의존은 **헤더-only(컴파일 심볼 0)** 라 Playable 의 `..` include 경로로 해소됨 → **`Playable/CMakeLists.txt` 에서 `MyApp::Entity` 링크 제거** + `Entity/CMakeLists.txt` 에 `MyApp::Playable` **PRIVATE**(.cpp 전용) 추가 = 단방향. 빌드로 검증됨.
+
+---
+
 ## 부록: 변경 이력 (Sprint 단위)
 
 | Sprint | 핵심 변경 |
@@ -1599,6 +1767,7 @@ cmake --build --preset msvc-2022 --target <chapter>
 | M1 (2026-05-24) | **`SJH::sprite` 모듈 신설** — 등간격 N×M `UniformAtlas` Fluent Builder (`LoadFromPNG().SetGrid()`) + `SpriteRenderer` (MeshRenderer 상속 billboard + per-instance Material 자동 셋업, `_sprite_*` 공유 자원 lazy 해결) + `SpriteComponent` POD. stb_image 직접 호출 금지 (`SJH::Image::Load` 위임). 모듈 카운트 12 → 13 |
 | M2 (2026-05-25) | **`SJH::fsm` 모듈 신설** — 4 stage 진화 후 `StateMachine<TState, TOwner>` (Aggregate Root + Component 상속) + `IFsmState<TOwner>` (Entity, self-identifying `GetStateFlag`/`GetTransitFlag`) 그래프 응집 패턴 정착. TTransit template parameter 폐기. spec `2026-05-25-fsm-object-state-machine-design.md`. 모듈 카운트 13 → 14 |
 | M3.5 (2026-05-26) | **`SJH::playable` 모듈 신설 + `sprite_sequence` 통합** — IPlayable spec 7 결정 정착. `IPlayable` pure interface + `PlayableBase : IPlayable, Component` abstract (다중 상속) + `SequencePlayable`/`ParallelPlayable` Composite (`vector<unique_ptr<IPlayable>>` + Tweeny/DOTween 정통 fluent Builder Append/Insert/Join + 무제한 계층 중첩). spec §1.6 `SJH::sprite_sequence` 별도 모듈 안 되고 **`SJH::sprite` 안에 통합** (`sprite_sequence_playable` + `sprite_frame_clip`). spec §1.5 `PlayablePlayerComponent` + `PlayableTickSystem` 자유함수 폐기 (Component 시스템이 동일 역할). `SpriteAnimator` 폐기 → `SpriteSequencePlayable` 상위 호환. spec `2026-05-26-playable-component-interface-design.md`. 모듈 카운트 14 → 15 |
+| Entity facade (2026-06-03) | **클라이언트(`_MyApp_`) Entity Accessor-facade** (§7) — `BaseEntity`(공유 4캐시 Life/Physics/Director/Impulse + 인터페이스 포워딩) ← `PlayerEntity`(Movement/Weapon + Dash/Attack) / `EnemyEntity`(베이스만, header-only). **Physics body 컴포넌트화** (`BodyConfig` + `BoxBody`/`CircleBody` ctor eager 생성 + `Physics::OnEnter` owner 등록, 5 call-site 전환). **적 넉백 활성화** (`Impulse` SJH::Timer 化 + 적 Impulse 부착 + `SimplePursueAI`/`PlayerController` `IsImpulseActive` 이동 게이트 = C# `MoveTick(GetIsDashState)` 정통; 넉백 방향 = 총알 비행방향). 총알 kinematic→**dynamic+sensor** (벽 명중 despawn — kinematic-static 무접촉 fix). Entity↔Playable CMake 순환 회피(Playable→Entity 링크 제거 + Entity→Playable PRIVATE). spec `2026-06-03-entity-accessor-facade-design.md` |
 
 ---
 

@@ -2,25 +2,19 @@
 
 #include "Bootstrap/EnemyBuilder.h"
 
-#include "Entity/Components/LifeComponents.h" // Components::Life — 사망 지연(dissolve 가시화)
+#include "Bootstrap/EntityPresentation.h"  // AttachEntityPresentation — Player/Enemy 공통 연출 클러스터
 #include "Entity/Enemy/EnemyFactory.h"   // CreateEnemyActor / EnemyConfig (+box2d)
-#include "HUD/HealthBarFactory.h"          // 머리 위 분절형 체력바 (AttachHealthBar + HealthBarConfig)
 #include "Playable/Constants.h"           // ENEMY_FRONT
-#include "Playable/PlayableDirector.h"    // P4 — 적 IActorPresentation [C] sink
-#include "Playable/SpriteFxPlayable.h"    // P4 — hit-flash / dissolve (player 와 동일 클래스 재사용)
+#include "Playable/SpriteLayerFactory.h"  // AttachSpriteLayer — 3-빌더 공유 sprite-layer 부착 헬퍼
 #include "Tween/TweenPlayable.h"          // 상시 루프 트윈
 #include "playable/composite_playable.h"  // SJH::Playable::ParallelPlayable (동시재생 컨테이너)
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
-#include "sprite/sprite_component.h"
-#include "sprite/sprite_frame_clip.h"
-#include "sprite/sprite_sequence_playable.h"
 
 #include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
 #include <vmath.h>                         // vmath::vec3 (Transform.Scale)
 
 #include <memory>  // std::make_unique (Join 자식 생성)
-#include <spdlog/spdlog.h>
 #include <utility> // std::move
 
 namespace TopdownShooter::Bootstrap
@@ -38,28 +32,11 @@ namespace TopdownShooter::Bootstrap
         cfg.onDeathFx    = deps.onDeathFx;
         auto enemy = Entity::Enemy::CreateEnemyActor(cfg);   // unique_ptr<Actor> (미부착)
 
-        // 2) ENEMY_FRONT[variant] 스프라이트 + 2프레임 애니 (owner-direct, 단일 레이어)
+        // 2) ENEMY_FRONT[variant] 스프라이트 + 2프레임 애니 — owner-direct(child 없음, 단일 레이어).
+        //    공유 헬퍼로 atlas+SpriteRenderer(+애니) 부착. QueueOffset=DrawOrder(=0, 기본값과 동일·무해).
         const auto& tex = Playable::ENEMY_FRONT[deps.variant % 3];
         auto& reg = SJH::ResourceRegistry::Get();
-        auto* atlas = reg.FindUniformAtlas(tex.TexturePath);
-        if (!atlas)
-            atlas = reg.CreateUniformAtlas(tex.TexturePath, tex.TexturePath, tex.ColCount, tex.RowCount);
-        if (atlas)
-        {
-            auto* spr = enemy->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
-            spr->flipX = tex.Flip;
-            if (tex.ColCount > 1)   // 애니 (2프레임 walk)
-            {
-                auto* seq = enemy->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
-                    spr, SJH::SpriteSequence::SpriteFrameClip{0, tex.ColCount, deps.spriteFps});
-                seq->SetIsLoop(true);
-                seq->Play();
-            }
-        }
-        else
-        {
-            spdlog::error("[enemy] atlas load 실패: {}", tex.TexturePath);
-        }
+        Playable::AttachSpriteLayer(*enemy, reg, tex, deps.spriteFps);
 
         // 4) 상시 루프 트윈 — ParallelPlayable 로 *동시재생* (스케일 펄스 ∥ z축 회전 워블).
         //    composite 모듈(SJH::Playable::ParallelPlayable, EngineAPI.md §ParallelPlayable)을 컨테이너로 쓰고
@@ -103,27 +80,16 @@ namespace TopdownShooter::Bootstrap
             par->Play();
         }
 
-        // P4 — 적 IActorPresentation [C] 포트: player 와 동일하게 PlayableDirector 부착(액터당 1개).
-        //   Life::DoDamaged->ReactDamaged->Play("hit") / DoDie->ReactDied->Play("death") 가 적 스프라이트 연출 구동.
-        //   AddChild(=Enter) 전 부착해야 Life::OnEnter 가 sink 로 캐시. [B] 폭발/spark 는 delegate(onDeathFx)가 별도 트리거(유지).
-        //   hit-flash/dissolve 는 Task6(player) 와 동일 Playable 클래스 재사용(target=적 액터 — owner-direct SpriteRenderer).
+        // P4 — 적 IActorPresentation [C] 공통 연출 클러스터 (player 와 동일 헬퍼):
+        //   PlayableDirector 부착(=Life sink) + "hit"=SpriteHitFlash/"death"=SpriteDissolve(0.6) 기본 등록 +
+        //   SetDeathDelaySeconds(0.6, dissolve 가시화 창) + 체력바(deps 색, 기본 빨강). 전부 AddChild 전(pre-entry).
+        //   [B] 폭발/spark 는 delegate(onDeathFx)가 별도 트리거(유지). director 추가 사용 없음 -> 반환 무시.
         {
-            auto* director = enemy->AddComponent<TopdownShooter::Playable::PlayableDirector>();
-            director->Register("hit", std::make_unique<TopdownShooter::Playable::SpriteHitFlashPlayable>(enemy.get()));
-            director->Register("death", std::make_unique<TopdownShooter::Playable::SpriteDissolvePlayable>(enemy.get(), 0.6f));
-
-            // dissolve 가시화 — 사망 후 0.6s(=dissolve 길이) 비활성 지연. 없으면 Life::DoDie 가 즉시
-            // SetActive(false) -> dissolve 무발현. (적은 onDeathFx 미바인딩 -> EnemyDeathHandler 부재라 Life 지연만으로 충분.)
-            if (auto* life = enemy->GetComponent<TopdownShooter::Entity::Components::Life>())
-                life->SetDeathDelaySeconds(0.6f);
-        }
-
-        // 머리 위 분절형 체력바 — Enemy Life(ILivable) HP 비율을 uFill 로 구동 (player 와 동일 팩토리 재사용).
-        //   색은 deps.healthBarColor 로 베리에이션 (기본 빨강). AddChild 전 부착 -> enemy entry 시 함께 OnEnter.
-        {
-            TopdownShooter::HUD::HealthBarConfig barCfg;
-            barCfg.fillColor = deps.healthBarColor;
-            TopdownShooter::HUD::AttachHealthBar(*enemy, barCfg);
+            EntityPresentationConfig pres;
+            pres.dissolveSeconds   = 0.6f;
+            pres.deathDelaySeconds = 0.6f;
+            pres.healthBarColor    = deps.healthBarColor;
+            AttachEntityPresentation(*enemy, pres);
         }
 
         // 5) 씬 트리 부착 (entry -> 컴포넌트 OnEnter 캐스케이드)

@@ -5,15 +5,15 @@
 #include "Audio/AudioSystem.h"
 #include "Audio/FmodPlayable.h"
 #include "Audio/FmodStudioPlayable.h"
-#include "Entity/Components/LifeComponents.h" // Components::Life — 사망 지연(SetDeathDelaySeconds) set
+#include "Bootstrap/EntityPresentation.h"  // AttachEntityPresentation — Player/Enemy 공통 연출 클러스터
 #include "Entity/Player/PlayerActor.h"
 #include "Entity/Player/PlayerHand.h"
 #include "Playable/Constants.h"        // TopdownShooter::Playable::FRONT_MOVE
 #include "Playable/HpGrayscalePostFX.h"   // 체력 비율 -> 화면 grayscale (상시 [A] 바인더)
-#include "Playable/PlayableDirector.h"   // 연출 foundation — onFire/onDamage 이관 대상
+#include "Playable/PlayableDirector.h"   // RegisterGroup/DirGroup + "fire"/"hit" Register + RefreshDirectional
 #include "Playable/PostFXTweenPlayable.h" // hit PostFX 연출(비네팅)
-#include "Playable/SpriteFxPlayable.h"    // hit-flash / dissolve 스프라이트 연출(Task6)
-#include "HUD/HealthBarFactory.h"          // 머리 위 분절형 체력바 (AttachHealthBar)
+#include "Playable/SpriteFxPlayable.h"    // "hit" Parallel 의 SpriteHitFlashPlayable
+#include "Playable/SpriteLayerFactory.h"  // AttachSpriteLayer — 3-빌더 공유 sprite-layer 부착 헬퍼
 #include "InputHandler/ActorFolower.h"
 #include "Manager.h"
 #include "Physics/PhysicsLayer.h"
@@ -22,8 +22,6 @@
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/scene.h"
-#include "sprite/sprite_component.h"
-#include "sprite/sprite_sequence_playable.h"
 
 #include <spdlog/spdlog.h>
 #include <tweeny/tweeny.h>
@@ -33,6 +31,97 @@
 
 namespace TopdownShooter::Bootstrap
 {
+	namespace
+	{
+		/// @brief [분할] directional 8그룹(4방향×2포즈) child 빌드 + RegisterGroup.
+		/// @details 각 그룹 = 4-레이어 child Actor(공유 헬퍼로 atlas+SpriteRenderer+애니) + DirGroup 핸들 등록.
+		///          spriteActor 에 child 부착, director 에 그룹 등록. (가시성은 caller 의 RefreshDirectional 이 확정.)
+		void BuildPlayerDirectionalGroups(SJH::Scene::Actor &spriteActor, Playable::PlayableDirector &director)
+		{
+			namespace P = TopdownShooter::Playable;
+			using TopdownShooter::Entity::EFacing;
+			using TopdownShooter::Entity::EPose;
+			struct GrpSrc { EFacing f; EPose p; const std::vector<P::EntityTextureConfig> *layers; };
+			const GrpSrc kGroups[] = {
+			    {EFacing::Front, EPose::Idle, &P::PLAYER_FRONT_IDLE}, {EFacing::Back, EPose::Idle, &P::PLAYER_BACK_IDLE},
+			    {EFacing::Left, EPose::Idle, &P::PLAYER_LEFT_IDLE},   {EFacing::Right, EPose::Idle, &P::PLAYER_RIGHT_IDLE},
+			    {EFacing::Front, EPose::Move, &P::PLAYER_FRONT_MOVE}, {EFacing::Back, EPose::Move, &P::PLAYER_BACK_MOVE},
+			    {EFacing::Left, EPose::Move, &P::PLAYER_LEFT_MOVE},   {EFacing::Right, EPose::Move, &P::PLAYER_RIGHT_MOVE},
+			};
+			auto &reg = SJH::ResourceRegistry::Get();
+			for (const auto &grp : kGroups)
+			{
+				P::PlayableDirector::DirGroup dg{};
+				std::size_t                   li = 0; // std::array 인덱스 — size_type 일치(-Wconversion 회피)
+				for (const auto &t : *grp.layers)
+				{
+					// child(방향별 네이밍) 생성 후 공유 헬퍼로 atlas+SpriteRenderer(+애니) 부착.
+					auto  child = std::make_unique<SJH::Scene::Actor>(
+					    "player_dir_" + std::to_string(static_cast<int>(grp.f)) + "_" +
+					    std::to_string(static_cast<int>(grp.p)) + "_L" + std::to_string(t.DrawOrder));
+					auto *cp  = spriteActor.AddChild(std::move(child));
+					auto *spr = P::AttachSpriteLayer(*cp, reg, t, P::PLAYER_ANIM_FPS); // QueueOffset/flipX/애니 일임
+					if (!spr)
+						continue; // atlas 실패 — li 미소비(빈 child 는 무해, 렌더 0)
+					if (li < 4) dg.layers[li] = spr; // [A] scene-tick 은 헬퍼가 child 에 부착 (DirGroup 미보유)
+					++li;
+				}
+				director.RegisterGroup(grp.f, grp.p, dg);
+			}
+		}
+
+		/// @brief [분할] Player 전투 연출 등록 — "fire"(좌클릭) + "hit"(피격).
+		/// @details "fire" = Sequence(Effekseer muzzle -> Parallel(Fmod.shot ∥ FmodStudio.Slash)). 자원 미확보 시 미등록(guard).
+		///          "hit"  = Parallel(화면 비네팅 ∥ 스프라이트 hit-flash ∥ Damaged 사운드). 헬퍼 기본 "hit"(SpriteHitFlash)을
+		///                   director 동일키 덮어쓰기(Register overwrite). 자원은 startup Warmup 에서 이미 로드 -> build-time 해소.
+		void RegisterPlayerCombatPlayables(SJH::Scene::Actor &spriteActor, Playable::PlayableDirector &director)
+		{
+			// "fire" — 좌클릭: Sequence( Effekseer muzzle -> Parallel( Fmod.shot ∥ FmodStudio.Slash ) ).
+			// 가드(shot&&muzzle&&slashEvt) 결과는 fire-time 해소와 동일 (자원은 1회 로드 후 안정).
+			{
+				auto &reg      = SJH::ResourceRegistry::Get();
+				auto &audio    = TopdownShooter::Manager::Get().Audio();
+				auto &vfx      = TopdownShooter::Manager::Get().VFX();
+				auto *shot     = reg.FindSound("shoot"); //!
+				auto *muzzle   = reg.FindEffect("muzzle"); //!
+				auto *slashEvt = audio.LoadEvent("event:/Slash"); //!
+
+				if (shot && muzzle && slashEvt)
+				{
+					auto seq = std::make_unique<SJH::Playable::SequencePlayable>();
+					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
+					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
+					    TopdownShooter::VFX::TrackPolicy::Static));
+
+					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
+					par->Join(std::make_unique<TopdownShooter::Audio::FmodPlayable>(audio.GetSystem(), shot));
+					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(slashEvt));
+					seq->Append(std::move(par));
+
+					director.Register("fire", std::move(seq));
+				}
+			}
+
+			// "hit" — 실제 피격(Life::DoDamaged->ReactDamaged->Play("hit")) 연출:
+			//          Parallel( 화면 비네팅 플래시[PostFX] ∥ 스프라이트 hit-flash[Task6] ∥ Damaged 사운드 ).
+			//          비네팅 = grayscale_vignetting.uVignetteAmount 0.45->0; hit-flash = SpriteRenderer.enableHit 0.18s.
+			{
+				auto &audio      = TopdownShooter::Manager::Get().Audio();
+				auto *damagedEvt = audio.LoadEvent("event:/Damaged");
+
+				auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
+				par->Join(std::make_unique<TopdownShooter::Playable::PostFXTweenPlayable>(
+				    "grayscale_vignetting", "uVignetteAmount",
+				    tweeny::from(0.45f).to(0.0f).during(300).via(tweeny::easing::sinusoidalInOut)));
+				par->Join(std::make_unique<TopdownShooter::Playable::SpriteHitFlashPlayable>(&spriteActor));
+				if (damagedEvt)
+					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(damagedEvt));
+
+				director.Register("hit", std::move(par));
+			}
+		}
+	} // namespace
+
 	PlayerResult BuildPlayer(const PlayerDeps &deps)
 	{
 		auto &dir = SJH::Scene::Director::Get();
@@ -68,120 +157,26 @@ namespace TopdownShooter::Bootstrap
 		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
 		spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
 
-		// ─── PlayableDirector 연출 foundation ───────────────────────────────────
-		// 게임 로직(HP/물리/입력)은 그대로 — 모든 연출/사운드는 director 의 named Playable 로.
-		// 루트 액터에 1개 부착 = Life 의 IActorPresentation sink (Life::OnEnter 가 GetComponent 로 캐시).
-		// AddChild(=Enter) 보다 먼저 부착해야 sink 가 해소된다.
-		auto *director = spriteActor->AddComponent<TopdownShooter::Playable::PlayableDirector>();
+		// ─── 공통 연출 클러스터 (Player/Enemy 공유 헬퍼) ─────────────────────────
+		// director 부착(=Life 의 IActorPresentation sink, AddChild 전) + "death"=SpriteDissolve(1.5) +
+		// SetDeathDelaySeconds(1.5) + 체력바(기본 녹색). "hit" 기본 SpriteHitFlash 는 아래 Parallel 로 overwrite.
+		// 전부 pre-entry. 반환 director 로 이어서 8그룹 RegisterGroup + "fire"/"hit" 추가 등록.
+		auto *director = AttachEntityPresentation(*spriteActor); // cfg 기본 = Player 값(dissolve/delay 1.5, 녹색)
 
-		// ─── directional 8그룹(4방향×2포즈) child 빌드 + RegisterGroup (분해 Task6) ───
-		{
-			namespace P = TopdownShooter::Playable;
-			using TopdownShooter::Entity::EFacing;
-			using TopdownShooter::Entity::EPose;
-			struct GrpSrc { EFacing f; EPose p; const std::vector<P::EntityTextureConfig> *layers; };
-			const GrpSrc kGroups[] = {
-			    {EFacing::Front, EPose::Idle, &P::PLAYER_FRONT_IDLE}, {EFacing::Back, EPose::Idle, &P::PLAYER_BACK_IDLE},
-			    {EFacing::Left, EPose::Idle, &P::PLAYER_LEFT_IDLE},   {EFacing::Right, EPose::Idle, &P::PLAYER_RIGHT_IDLE},
-			    {EFacing::Front, EPose::Move, &P::PLAYER_FRONT_MOVE}, {EFacing::Back, EPose::Move, &P::PLAYER_BACK_MOVE},
-			    {EFacing::Left, EPose::Move, &P::PLAYER_LEFT_MOVE},   {EFacing::Right, EPose::Move, &P::PLAYER_RIGHT_MOVE},
-			};
-			auto           &reg  = SJH::ResourceRegistry::Get();
-			constexpr float kFps = 8.0f; // 애니(ColCount>1) 초당 프레임 (SpriteCfg 기본과 동일)
-			for (const auto &grp : kGroups)
-			{
-				P::PlayableDirector::DirGroup dg{};
-				std::size_t                   li = 0;   // std::array 인덱스 — size_type 일치(-Wconversion 회피)
-				for (const auto &t : *grp.layers)
-				{
-					auto *atlas = reg.FindUniformAtlas(t.TexturePath); // 공유 PNG 중복키 nullptr 회피
-					if (!atlas)
-						atlas = reg.CreateUniformAtlas(t.TexturePath, t.TexturePath, t.ColCount, t.RowCount);
-					if (!atlas)
-					{
-						spdlog::error("[8layer] atlas 실패: {}", t.TexturePath);
-						continue;
-					}
-					auto  child = std::make_unique<SJH::Scene::Actor>(
-					    "player_dir_" + std::to_string(static_cast<int>(grp.f)) + "_" +
-					    std::to_string(static_cast<int>(grp.p)) + "_L" + std::to_string(t.DrawOrder));
-					auto *cp = spriteActor->AddChild(std::move(child));
-					auto *spr = cp->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
-					spr->flipX       = t.Flip;
-					spr->QueueOffset = t.DrawOrder; // 초기 가시성 안 건드림 — RefreshDirectional 이 처리
-					if (li < 4) dg.layers[li] = spr;
-					if (t.ColCount > 1) // 걷기 애니(B) — t.ColCount 로만 판정
-					{
-						auto *seq = cp->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
-						    spr, SJH::SpriteSequence::SpriteFrameClip{0, t.ColCount, kFps});
-						seq->SetIsLoop(true);
-						seq->Play(); // [A] scene-tick (child 소유, DirGroup 미보유)
-					}
-					++li;
-				}
-				director->RegisterGroup(grp.f, grp.p, dg);
-			}
-		}
+		// directional 8그룹(4방향×2포즈) child 빌드 + RegisterGroup (분할 자유함수).
+		BuildPlayerDirectionalGroups(*spriteActor, *director);
 
 		// 체력 비율 -> 화면 grayscale ([A] 상시 바인더, director 무관). HP 닳을수록 무채색, HP0 시 완전 무채색.
 		spriteActor->AddComponent<TopdownShooter::Playable::HpGrayscalePostFX>("grayscale_vignetting", "uGrayscaleAmount");
 
-		// 사망 dissolve 가 보이도록 사망 후 1.5s 비활성 지연 — 그동안 director "death" Playable 이 dissolve 구동.
-		// (지연 없으면 Life::DoDie 가 즉시 SetActive(false) -> dissolve 무발현. SetDeathDelaySeconds 는 Life 공개 API.)
-		if (auto *life = spriteActor->GetComponent<TopdownShooter::Entity::Components::Life>())
-			life->SetDeathDelaySeconds(1.5f);
+		// (사망 후 1.5s 비활성 지연 SetDeathDelaySeconds 는 위 AttachEntityPresentation 헬퍼가 처리.)
 
-		// "fire" — 좌클릭: Sequence( Effekseer muzzle -> Parallel( Fmod.shot ∥ FmodStudio.Slash ) ).
-		// 자원은 startup 의 WarmupAudio(shot/Slash) + CreateEffect(muzzle) 에서 이미 로드 -> build-time 해소.
-		// 가드(shot&&muzzle&&slashEvt) 결과는 fire-time 해소와 동일 (자원은 1회 로드 후 안정).
-		{
-			auto &reg      = SJH::ResourceRegistry::Get();
-			auto &audio    = TopdownShooter::Manager::Get().Audio();
-			auto &vfx      = TopdownShooter::Manager::Get().VFX();
-			auto *shot     = reg.FindSound("shot");
-			auto *muzzle   = reg.FindEffect("muzzle");
-			auto *slashEvt = audio.LoadEvent("event:/Slash");
+		// "fire"(좌클릭) + "hit"(피격) 전투 연출 등록 (분할 자유함수). "hit" 은 헬퍼 기본 SpriteHitFlash overwrite.
+		RegisterPlayerCombatPlayables(*spriteActor, *director);
 
-			if (shot && muzzle && slashEvt)
-			{
-				auto seq = std::make_unique<SJH::Playable::SequencePlayable>();
-				seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
-				    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
-				    TopdownShooter::VFX::TrackPolicy::Static));
-
-				auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
-				par->Join(std::make_unique<TopdownShooter::Audio::FmodPlayable>(audio.GetSystem(), shot));
-				par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(slashEvt));
-				seq->Append(std::move(par));
-
-				director->Register("fire", std::move(seq));
-			}
-		}
-
-		// "hit" — 실제 피격(Life::DoDamaged->ReactDamaged->Play("hit")) 연출:
-		//          Parallel( 화면 비네팅 플래시[PostFX] ∥ 스프라이트 hit-flash[Task6] ∥ Damaged 사운드 ).
-		//          비네팅 = grayscale_vignetting.uVignetteAmount 0.45->0 (테두리 붉은 플래시);
-		//          hit-flash = 플레이어 4-레이어 SpriteRenderer.enableHit 0.18s on (셰이더 uTime 애니).
-		{
-			auto &audio      = TopdownShooter::Manager::Get().Audio();
-			auto *damagedEvt = audio.LoadEvent("event:/Damaged");
-
-			auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
-			par->Join(std::make_unique<TopdownShooter::Playable::PostFXTweenPlayable>(
-			    "grayscale_vignetting", "uVignetteAmount",
-			    tweeny::from(0.45f).to(0.0f).during(300).via(tweeny::easing::sinusoidalInOut)));
-			par->Join(std::make_unique<TopdownShooter::Playable::SpriteHitFlashPlayable>(spriteActor.get()));
-			if (damagedEvt)
-				par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(damagedEvt));
-
-			director->Register("hit", std::move(par));
-		}
-
-		// "death" — 사망(Life::DoDie->ReactDied->Play("death")) 연출: 스프라이트 dissolve(1.5s) 만.
-		//           화면 grayscale 은 HpGrayscalePostFX 가 HP 비율로 상시 구동(사망=HP0 시 자동 완전 무채색)하므로
-		//           death 컴포지트에서 제거(둘이 같은 uGrayscaleAmount 를 쓰면 충돌). 월드점 폭발은 [B] delegate.
-		//           ⚠ 가시화 전제 = 위 SetDeathDelaySeconds(1.5s) (없으면 즉시 비활성 -> dissolve 무발현).
-		director->Register("death", std::make_unique<TopdownShooter::Playable::SpriteDissolvePlayable>(spriteActor.get(), 1.5f));
+		// ("death"=SpriteDissolve(1.5s) 등록은 위 AttachEntityPresentation 헬퍼가 처리 — Enemy 와 공통.
+		//  화면 grayscale 은 HpGrayscalePostFX 가 HP 비율로 상시 구동하므로 death 컴포지트에 미포함.
+		//  월드점 폭발은 [B] delegate. 가시화 전제 = 헬퍼의 SetDeathDelaySeconds(1.5s).)
 
 		// 입력 콜백 -> director 경유 (PlayerController 는 여전히 audio/vfx 를 모름).
 		// G키 = 피격 연출 테스트 — 실제 Life::DoDamaged 와 동일 경로(ReactDamaged->Play("hit"))로 흘려
@@ -193,26 +188,14 @@ namespace TopdownShooter::Bootstrap
 		}
 		// ─────────────────────────────────────────────────────────────────────────
 
-		// 4-레이어 바디는 CreatePlayerActor 가 child 로 생성 (spec §6.3).
-		// PlayerResult.Sprite/SpriteSeq 는 애니(B) 레이어의 컴포넌트를 가리킨다 (호환용 — 없으면 nullptr).
-		for (const auto &child : spriteActor->GetChildren())
-		{
-			if (auto *seq = child->GetComponent<SJH::SpriteSequence::SpriteSequencePlayable>())
-			{
-				result.Sprite    = child->GetComponent<SJH::Sprite::SpriteRenderer>();
-				result.SpriteSeq = seq;
-				break;
-			}
-		}
-
 		result.SpriteActor = dir.Root().AddChild(std::move(spriteActor));
 
 		// 손 — PlayerHands::OnEnter 가 자식 Hand actor 2개를 생성·부착 (player Y facing 상속 궤도).
 		// SpriteActor 는 이미 entered -> 부착 즉시 OnEnter 실행. (손 스프라이트 비주얼은 사용자 WIP)
 		result.SpriteActor->AddComponent<TopdownShooter::Entity::PlayerHands>();
 
-		// 머리 위 분절형 체력바 — Life(ILivable) HP 비율을 uFill 로 구동 (월드 빌보드, Transparent).
-		TopdownShooter::HUD::AttachHealthBar(*result.SpriteActor);
+		// (머리 위 체력바 AttachHealthBar 는 위 AttachEntityPresentation 헬퍼가 pre-entry 로 처리 — Enemy 와 공통.
+		//  pre/post-entry 동작 동등: OnEnter 가 씬 진입 시 발화하므로 부착 시점 무관.)
 
 		deps.worldCamera
 		    ->GetOwner()

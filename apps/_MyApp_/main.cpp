@@ -48,8 +48,6 @@
 #include "scene/camera.h"
 #include "scene/compound_actor.h"
 #include "scene/scene.h"
-#include "sprite/sprite_component.h"
-#include "sprite/sprite_sequence_playable.h"
 
 #include <cstring>
 #include <memory>
@@ -285,8 +283,6 @@ namespace TopdownShooter
 			mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("FxRoot"));
 
 			auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
-			mSprite      = player.Sprite;
-			mSpriteSeq   = player.SpriteSeq;
 			mSpriteActor = player.SpriteActor;
 
 			// 적 웨이브 스폰 트리거 — player(mSpriteActor) 생성 이후라야 SimplePursueAI 타깃 유효.
@@ -406,8 +402,6 @@ namespace TopdownShooter
 			mFxRoot = nullptr;
 			mStages.clear();
 			mDefaultTarget.reset();
-			mSprite = nullptr;
-			mSpriteSeq = nullptr;
 			TopdownShooter::Manager::Get().Shutdown();
 		}
 
@@ -486,8 +480,6 @@ namespace TopdownShooter
 		SJH::Scene::Actor *mFxRoot = nullptr; // 단발 시퀀스 전용 부모 (sweep 대상)
 		SJH::Scene::Camera *mCamera = nullptr;
 		SJH::Scene::Camera *mScreenCamera = nullptr;
-		SJH::SpriteSequence::SpriteSequencePlayable *mSpriteSeq = nullptr;
-		SJH::Sprite::SpriteRenderer *mSprite = nullptr;
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
 		SJH::MouseInput mMouse;
 

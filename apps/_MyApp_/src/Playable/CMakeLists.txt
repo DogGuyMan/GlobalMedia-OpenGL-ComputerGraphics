@@ -7,6 +7,7 @@ add_library(myapp_playable STATIC
     PostFXTweenPlayable.cpp
     SpriteFxPlayable.cpp
     HpGrayscalePostFX.cpp
+    SpriteLayerFactory.cpp   # 3-빌더 공유 sprite-layer 부착 헬퍼 (atlas + SpriteRenderer + 옵션 애니)
 )
 add_library(MyApp::Playable ALIAS myapp_playable)
 

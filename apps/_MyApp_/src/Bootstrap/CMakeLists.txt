@@ -6,6 +6,7 @@ add_library(myapp_bootstrap STATIC
     PlayerBuilder.cpp
     AudioWarmup.cpp
     EnemyBuilder.cpp
+    EntityPresentation.cpp   # Player/Enemy 공통 연출 클러스터 부착 헬퍼 (director+hit/death+deathDelay+healthbar)
 )
 add_library(MyApp::Bootstrap ALIAS myapp_bootstrap)
 

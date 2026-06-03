@@ -7,7 +7,7 @@
 add_library(myapp_vfx STATIC
     VFXSystem.cpp             # M5 CL2 — Effekseer Manager+Renderer owner
     EffekseerPlayable.cpp
-    ParticleStage.cpp         # SP-ParticleStage — Effekseer→sceneFB 합성 stage
+    ParticleStage.cpp         # SP-ParticleStage — Effekseer->sceneFB 합성 stage
 )
 add_library(MyApp::VFX ALIAS myapp_vfx)
 

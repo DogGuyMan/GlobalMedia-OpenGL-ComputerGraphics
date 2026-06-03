@@ -15,6 +15,10 @@ namespace TopdownShooter::Playable
 		const bool Flip = false;
 	};
 
+	// 플레이어 방향 스프라이트 걷기 애니(ColCount>1) 초당 프레임 — presentation 단일 소스.
+	// (도메인 PlayerActorConfig::SpriteCfg::fps 는 별개 레이어의 기본값 — 레이어 분리상 교차 참조하지 않는다.)
+	constexpr float PLAYER_ANIM_FPS = 8.0f;
+
 	// 방향 판정 임계 각도 (degree, [0,360), 0°=오른쪽(+X), 반시계 +). 각 vec2 = {start, end};
 	// start>end 면 0°를 가로질러 wrap (Right). 360° 를 빈틈없이 덮어야 결정적.
 	// 매핑: Back=화면 위(Up, ~90°), Front=화면 아래(Down, ~270°). 순서 = Up,Down,Left,Right.

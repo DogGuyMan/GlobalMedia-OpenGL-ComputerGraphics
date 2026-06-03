@@ -4,14 +4,11 @@
 #include "Entity/Player/PlayerEntity.h"
 
 #include "Physics/PhysicsImpulse.h"
+#include "Playable/SpriteLayerFactory.h" // AttachSpriteLayer — 3-빌더 공유 sprite-layer 부착 헬퍼
 
 #include "resource_registry/resource_registry.h"
-#include "sprite/sprite_component.h"
-#include "sprite/sprite_frame_clip.h"
-#include "sprite/sprite_sequence_playable.h"
 
 #include <box2d/box2d.h>
-#include <spdlog/spdlog.h>
 #include <string>
 
 namespace TopdownShooter::Entity::Player
@@ -76,31 +73,13 @@ namespace TopdownShooter::Entity::Player
 			auto &reg = SJH::ResourceRegistry::Get();
 			for (const auto &t : *cfg.sprite.direction)
 			{
-				// atlas 먼저 (child 생성 전) — key=path. 있으면 재사용(Find), 없으면 생성(Create).
-				auto *atlas = reg.FindUniformAtlas(t.TexturePath);
-				if (!atlas)
-					atlas = reg.CreateUniformAtlas(t.TexturePath, t.TexturePath, t.ColCount, t.RowCount);
-				if (!atlas)
-				{
-					spdlog::error("[4layer] atlas load 실패: {}", t.TexturePath);
-					continue; // child 미생성 — 빈 child 를 트리에 남기지 않음
-				}
-
+				// child(DrawOrder 네이밍) 생성 후 공유 헬퍼로 atlas+SpriteRenderer(+애니) 부착.
 				auto child = std::make_unique<SJH::Scene::Actor>(
 				    cfg.name + "_L" + std::to_string(t.DrawOrder));
 				SJH::Scene::Actor *childPtr = a.AddChild(std::move(child));
-
-				auto *spr        = childPtr->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
-				spr->flipX       = t.Flip;
-				spr->QueueOffset = t.DrawOrder; // 2450+DrawOrder → distinct 층
-
-				if (t.ColCount > 1) // 애니 파트 (가로 N프레임 스트립)
-				{
-					auto *seq = childPtr->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(
-					    spr, SJH::SpriteSequence::SpriteFrameClip{0, t.ColCount, cfg.sprite.fps});
-					seq->SetIsLoop(true);
-					seq->Play();
-				}
+				auto *spr = TopdownShooter::Playable::AttachSpriteLayer(*childPtr, reg, t, cfg.sprite.fps);
+				if (!spr)
+					continue; // atlas 실패 — PlayerBuilder 8그룹과 동일 에러 처리(빈 child 무해, 렌더 0)
 			}
 		}
 

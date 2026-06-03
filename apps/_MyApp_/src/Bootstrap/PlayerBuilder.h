@@ -35,15 +35,13 @@ namespace TopdownShooter::Bootstrap
 	/// @brief main 이 멤버로 보유할 산출 포인터.
 	struct PlayerResult
 	{
-		SJH::Sprite::SpriteRenderer                  *Sprite      = nullptr;
-		SJH::SpriteSequence::SpriteSequencePlayable  *SpriteSeq   = nullptr;
-		SJH::Scene::Actor                            *SpriteActor = nullptr;
+		SJH::Scene::Actor *SpriteActor = nullptr; ///< main → mSpriteActor (WaveController 타깃 + GroundClick).
 	};
 
 	/// @brief 플레이어 액터 구성 — PlayerActorConfig(Life/Movement/Controller/Physics/Weapon) +
 	///        좌클릭(onFire) / G키(onDamage) Composite 콜백 + FRONT_MOVE 4-레이어 스프라이트(CreatePlayerActor)
 	///        + WorldCamera ActorFolower follow-target wiring.
-	/// @return 구성된 PlayerResult (SpriteActor = root 부착 플레이어; Sprite/SpriteSeq = 애니 레이어 또는 nullptr).
+	/// @return 구성된 PlayerResult (SpriteActor = root 부착 플레이어).
 	PlayerResult BuildPlayer(const PlayerDeps &deps);
 }
 
