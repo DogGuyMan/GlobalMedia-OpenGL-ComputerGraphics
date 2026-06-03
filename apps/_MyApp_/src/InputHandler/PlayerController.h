@@ -14,6 +14,7 @@ namespace SJH::Scene
 	class Camera; // 마우스->Ground raycast 용 (포인터 멤버 — 전방 선언으로 충분)
 }
 
+namespace SJH::Timer { class Timer; }
 namespace TopdownShooter::Entity { class BaseEntity; }
 
 namespace TopdownShooter::Controller
@@ -99,8 +100,8 @@ namespace TopdownShooter::Controller
 		// === RD5: facing/pose 단일 작성자 sink (인터페이스로만 — 구체 PlayableDirector 미참조). ===
 		TopdownShooter::Entity::IActorPresentation *mSink = nullptr; // = PlayableDirector(인터페이스로만, lazy)
 		TopdownShooter::Entity::EFacing             mLastFacing = TopdownShooter::Entity::EFacing::Front;
-		float                                       mAttackWindowSec = 0.15f; // 발사 후 "조준 응시" 윈도
-		float                                       mAttackTimer     = 0.0f;
+		float                                       mAttackWindowSec = 0.15f; // 발사 후 "조준 응시" 윈도 (Register base)
+		SJH::Timer::Timer*                          mAttackTimer     = nullptr; // 중앙 컨테이너 핸들 (비소유)
 
 		void RegisterBindings();
 		void UnregisterBindings();

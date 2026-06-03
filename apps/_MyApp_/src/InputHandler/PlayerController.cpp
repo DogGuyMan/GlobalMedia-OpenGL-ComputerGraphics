@@ -164,12 +164,25 @@ namespace TopdownShooter::Controller
 	{
 		if (!mIsInitialized)
 			return;
+		// attack 윈도 timer 를 BaseEntity 중앙 컨테이너에 등록 + arm-inactive (발사 시 Reset 으로 발동).
+		if (auto* owner = GetOwner())
+		{
+			mEntity = owner->GetComponent<TopdownShooter::Entity::BaseEntity>();
+			if (mEntity != nullptr)
+			{
+				mAttackTimer = mEntity->Timers().Register("player.attack", mAttackWindowSec);
+				mAttackTimer->Tick(mAttackTimer->GetBaseTime());
+			}
+		}
 	}
 
 	void PlayerController::OnExit()
 	{
 		if (!mIsInitialized)
 			return;
+		if (mEntity != nullptr)
+			mEntity->Timers().Unregister("player.attack");
+		mAttackTimer = nullptr;
 		UnregisterBindings();
 		mKeyboardInput = nullptr;
 		mIsInitialized = false;
@@ -206,8 +219,7 @@ namespace TopdownShooter::Controller
 		if (mSink != nullptr)
 		{
 			namespace E = TopdownShooter::Entity;
-			if (mAttackTimer > 0.0f) mAttackTimer -= dt;
-			const bool        attacking = (mAttackTimer > 0.0f);
+			const bool        attacking = (mAttackTimer != nullptr && !mAttackTimer->IsTimesUp()); // tick은 BaseEntity가
 			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]); // ★ 리셋 전
 			const bool        moving = (velXZ[0] * velXZ[0] + velXZ[1] * velXZ[1]) > 0.001f;
 			const vmath::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
@@ -306,7 +318,7 @@ namespace TopdownShooter::Controller
 		// 클릭 직전 조준 갱신 — 입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값으로 재산출.
 		UpdateAim();
 
-		mAttackTimer = mAttackWindowSec; // 발사 후 0.15s 동안 facing=조준 (하이브리드)
+		if (mAttackTimer) mAttackTimer->Reset(); // 발사 후 0.15s 동안 facing=조준 (하이브리드)
 
 		spdlog::info("[fire] ground=({:.2f},{:.2f},{:.2f}) dir=({:.2f},{:.2f},{:.2f}) angleY={:.1f}",
 		             mAimPoint[0], mAimPoint[1], mAimPoint[2],
