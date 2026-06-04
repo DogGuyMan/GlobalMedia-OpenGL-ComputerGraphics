@@ -30,6 +30,7 @@ target_link_libraries(myapp_input_handler
     PRIVATE SJH::object
             SJH::sprite
             MyApp::Entity
+            MyApp::Spawns   # PlayerController.cpp: VFX::Spawn (R키 laser VFX 테스트)
 )
 
 target_compile_features(myapp_input_handler PUBLIC cxx_std_17)

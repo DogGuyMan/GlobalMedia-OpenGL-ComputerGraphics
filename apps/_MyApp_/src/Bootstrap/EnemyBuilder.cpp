@@ -6,8 +6,14 @@
 #include "Entity/Enemy/EnemyFactory.h"   // CreateEnemyActor / EnemyConfig (+box2d)
 #include "Playable/Constants.h"           // ENEMY_FRONT
 #include "Playable/SpriteLayerFactory.h"  // AttachSpriteLayer — 3-빌더 공유 sprite-layer 부착 헬퍼
+#include "Playable/SpriteFxPlayable.h"    // SpriteHitFlashPlayable ("hit" 덮어쓰기)
+#include "Playable/PlayableDirector.h"    // director->Register("hit", ...) 덮어쓰기
 #include "Tween/TweenPlayable.h"          // 상시 루프 트윈
 #include "Entity/Components/LifeComponents.h" // GetComponent<Life> (SetOnHitFx seam 주입)
+#include "Audio/AudioSystem.h"            // 적 피격음 — Manager().Audio().LoadEvent
+#include "Audio/Constants.h"              // EVENT_DAMAGED (적 hit 재사용)
+#include "Audio/FmodStudioPlayable.h"     // 적 "hit" Parallel 의 Damaged 사운드
+#include "Manager.h"                      // TopdownShooter::Manager::Get().Audio()
 #include "playable/composite_playable.h"  // SJH::Playable::ParallelPlayable (동시재생 컨테이너)
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
@@ -223,7 +229,21 @@ namespace TopdownShooter::Bootstrap
             pres.dissolveSeconds   = ENEMY_DISSOLVE_SECONDS;
             pres.deathDelaySeconds = ENEMY_DEATH_DELAY;
             pres.healthBarColor    = deps.healthBarColor;
-            AttachEntityPresentation(*enemy, pres);
+            auto *director = AttachEntityPresentation(*enemy, pres);
+
+            // 적 "hit" 에 피격음 추가 — 헬퍼 기본(SpriteHitFlash flash-only)을 Parallel(flash ∥ Damaged)로 덮어쓰기.
+            //   Player 는 PlayerBuilder 가 비네팅 포함으로 덮어씀; 적은 전면 비네팅 제외(피해자가 적이라 화면효과 부적합) —
+            //   flash + 사운드만. bank 에 적 전용 hurt 이벤트가 없어 event:/Damaged 재사용
+            //   (별도 event:/EnemyHurt 추가 시 Audio::EVENT_DAMAGED 한 곳만 교체).
+            if (director)
+            {
+                auto *damagedEvt = TopdownShooter::Manager::Get().Audio().LoadEvent(Audio::EVENT_DAMAGED);
+                auto  par        = std::make_unique<SJH::Playable::ParallelPlayable>();
+                par->Join(std::make_unique<TopdownShooter::Playable::SpriteHitFlashPlayable>(enemy.get()));
+                if (damagedEvt)
+                    par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(damagedEvt));
+                director->Register("hit", std::move(par));
+            }
         }
 
         // hit FX seam — 적 Life 피격 시 hit.efk (Player 와 공통, 빌더가 VFX::Spawn 주입).

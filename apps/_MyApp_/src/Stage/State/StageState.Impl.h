@@ -7,6 +7,7 @@
 #include "Stage/Components/GameContextComponent.h"
 #include "UI/StateOverlayLayer.h"
 #include "Audio/FmodStudioPlayable.h"           // BGM_STATE 파라미터 / pause / stop
+#include "Audio/Constants.h"                    // BUS_BGM / BUS_SFX (Pause 볼륨 슬라이더)
 #include "Entity/Components/LifeComponents.h"   // Player HP → FMOD "Health" 파라미터
 #include "Tween/TweenPlayable.h"                // GameOver Health 0→1.0 ramp (tweeny 포함)
 #include "Manager.h"          // TopdownShooter::Manager::Get()
@@ -136,11 +137,31 @@ namespace TopdownShooter::Stage
 				if (ctx->overlay) ctx->overlay->Show(ctx->pauseTex);
 				// [FMOD] BGM 일시정지 (instance 보존 — resume 은 CombatPlay::OnEnter).
 				if (ctx->bgmPlayable) ctx->bgmPlayable->SetPaused(true);
+				if (ctx->blurPass) ctx->blurPass->Enabled = true; // Title 동안 blur ON
+				// 볼륨 슬라이더 UI 활성 — 현재 bus 볼륨으로 슬라이더 초기화 (Pause 동안만 표시).
+				if (ctx->audio)
+				{
+					mBgmVolume = ctx->audio->GetBusVolume(Audio::BUS_BGM);
+					mSfxVolume = ctx->audio->GetBusVolume(Audio::BUS_SFX);
+				}
+				mShowVolumeUI = true;
 			}
 		}
-		void OnUpdate(SJH::Scene::Actor & /*root*/, float /*dt*/) override
+		void OnUpdate(SJH::Scene::Actor &root, float /*dt*/) override
 		{
-			// 화면 아무 곳(위젯 제외) 클릭 → 재개. Pause 버튼 위 클릭은 버튼 토글이 재개 처리.
+			// 볼륨 슬라이더 (Enter→활성/Exit→비활성) — BGM/SFX bus 볼륨만 조절. 변경 시 즉시 setVolume.
+			if (mShowVolumeUI)
+				if (auto *ctx = GetCtx(root); ctx && ctx->audio)
+				{
+					ImGui::Begin("Volume");
+					if (ImGui::SliderFloat("BGM", &mBgmVolume, 0.0f, 1.0f, "%.2f"))
+						ctx->audio->SetBusVolume(Audio::BUS_BGM, mBgmVolume);
+					if (ImGui::SliderFloat("SFX", &mSfxVolume, 0.0f, 1.0f, "%.2f"))
+						ctx->audio->SetBusVolume(Audio::BUS_SFX, mSfxVolume);
+					ImGui::End();
+				}
+
+			// 화면 아무 곳(위젯 제외) 클릭 → 재개. Pause 버튼/슬라이더 위 클릭은 위젯이 처리(WantCaptureMouse).
 			if ((ImGui::IsMouseClicked(0, false) || ImGui::IsMouseClicked(1, false)) &&
 			    !ImGui::GetIO().WantCaptureMouse)
 				mFsm->TryTransit(EStageStatus::CombatPlay);
@@ -148,10 +169,18 @@ namespace TopdownShooter::Stage
 		}
 		void OnExit(SJH::Scene::Actor &root) override
 		{
-			if (auto *ctx = GetCtx(root))
+			if (auto *ctx = GetCtx(root)){
 				if (ctx->overlay) ctx->overlay->Hide();
+				if (ctx->blurPass) ctx->blurPass->Enabled = false; // Title 동안 blur ON
+			}
+			mShowVolumeUI = false; // 볼륨 슬라이더 UI 비활성 (Pause 이탈)
 			// [FMOD] BGM resume 은 CombatPlay::OnEnter 가 단일 담당 (여기선 안 함 — 중복 회피).
 		}
+
+	  private:
+		bool  mShowVolumeUI = false;   // Pause Enter→true / Exit→false (슬라이더 표시 게이트)
+		float mBgmVolume     = 1.0f;   // BGM Bus 볼륨 슬라이더 값 (OnEnter 에서 실제 bus 볼륨으로 초기화)
+		float mSfxVolume     = 1.0f;   // SFX Bus 볼륨 슬라이더 값
 	};
 
 	// ── GameOverState ─────────────────────────────────────────────

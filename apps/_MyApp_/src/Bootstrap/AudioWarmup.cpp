@@ -23,7 +23,5 @@ namespace TopdownShooter::Bootstrap
 		bgmCtx.audio     = &audio;
 		bgmCtx.sceneRoot = &dir.Root();
 		TopdownShooter::Spawns::BuildBGM(bgmCtx);
-
-		reg.CreateSound(audio.GetSystem(), "shot", "resources/audio/Laser.wav");
 	}
 }

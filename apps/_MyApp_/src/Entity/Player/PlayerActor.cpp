@@ -5,6 +5,7 @@
 
 #include "Entity/Components/PlayerLifeComponents.h" // 플레이어 전용 Life (i-frame 0.8s + 자동 회복)
 
+#include "Physics/Constants.h"
 #include "Physics/PhysicsImpulse.h"
 #include "Playable/SpriteLayerFactory.h" // AttachSpriteLayer — 3-빌더 공유 sprite-layer 부착 헬퍼
 
@@ -46,7 +47,7 @@ namespace TopdownShooter::Entity::Player
 			a.AddComponent<Physics::Components::BoxBody>(bc, cfg.physics.size);
 
 			a.AddComponent<Physics::PhysicsMovement>(cfg.movement.speed);
-			a.AddComponent<Physics::Impulse>(); // Dash/Knockback 속도버스트 (dash 입력 미배선이라 dormant)
+			a.AddComponent<Physics::Impulse>(TopdownShooter::Physics::IMPULSE_PLAYER_FORCE); // Dash/Knockback 속도버스트 (dash 입력 미배선이라 dormant)
 			a.AddComponent<Components::Weapon>(cfg.weapon.damage, "default"); // bullet 스폰 box2d 의존 → physics 분기만
 		}
 

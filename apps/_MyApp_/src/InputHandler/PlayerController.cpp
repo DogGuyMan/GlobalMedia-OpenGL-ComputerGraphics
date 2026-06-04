@@ -19,6 +19,7 @@
 #include "object/mesh.h"
 #include "program/program.h"
 #include "render/mesh_renderer.h"
+#include "Spawns/VfxInstance.h" // VFX::Spawn (R키 laser VFX 테스트)
 #include "resource_registry/resource_registry.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
@@ -95,7 +96,15 @@ namespace TopdownShooter::Controller
 			}
 			spdlog::error("NO FIND IMPULSE");
 		});
-		mKeyboardInput->BindHeldHandler(Action::Ultimate, [] { spdlog::info("Click Ult"); });
+		// R(Ultimate) — 단순 VFX 테스트: 플레이어 위치에 blue_laser(Constants.h "laser" 키) 스폰.
+		// held 가 아니라 press(이산 1회) — 단발 이펙트라 매 프레임 폭주 방지 (좌클릭 발사와 동일 결).
+		mKeyboardInput->BindPressHandler(Action::Ultimate, [this] {
+			if (auto *owner = GetOwner())
+			{
+				spdlog::info("[input] R (Ultimate) — laser VFX 테스트");
+				VFX::Spawn("laser", owner->GetTransform().Translate);
+			}
+		});
 
 		// 좌클릭 (이산 press) — 발사. MouseInput 미주입이면 바인딩 생략.
 		if (mMouseInput)

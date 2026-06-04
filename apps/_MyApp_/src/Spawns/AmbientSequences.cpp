@@ -1,5 +1,6 @@
 #include "Spawns/AmbientSequences.h"
 #include "Audio/AudioSystem.h"
+#include "Audio/Constants.h"          // EVENT_BGM (이벤트 경로 상수)
 #include "Audio/FmodStudioPlayable.h"
 #include "scene/actor.h"
 #include <memory>
@@ -9,7 +10,7 @@ namespace TopdownShooter::Spawns
     void BuildBGM(const SequenceContext& ctx)
     {
         if (!ctx.audio || !ctx.sceneRoot) return;
-        auto* evt = ctx.audio->LoadEvent("event:/BGM");
+        auto* evt = ctx.audio->LoadEvent(Audio::EVENT_BGM);
         if (!evt) return; // 이벤트 미존재 — no-op
 
         auto* bgmActor = ctx.sceneRoot->AddChild(std::make_unique<SJH::Scene::Actor>("BgmActor"));

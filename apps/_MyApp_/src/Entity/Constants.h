@@ -7,7 +7,7 @@ namespace TopdownShooter::Entity
 	constexpr int   PLAYER_HP             = 100;
 	constexpr float PLAYER_MOVE_SPEED     = 3.0f; // C1: struct 기본(5.0)↔Builder(3.0) 불일치 -> 실값 3.0
 	constexpr float PLAYER_LINEAR_DAMPING = 5.0f;
-	constexpr int   PLAYER_WEAPON_DAMAGE  = 10;
+	constexpr int   PLAYER_WEAPON_DAMAGE  = 5;
 	constexpr float PLAYER_SPRITE_FPS     = 8.0f; // C2: SpriteCfg::fps + PlayerBuilder kFps 통합
 
 	// ── Hand (PlayerHands 배치) ──
@@ -35,7 +35,7 @@ namespace TopdownShooter::Entity
 	constexpr float ENEMY_SPRITE_FPS      = 6.0f; // 2프레임 walk 애니 속도
 
 	// ── Bullet (BulletConfig 기본 + 물리/시각 반지름) ──
-	constexpr float BULLET_SPEED          = 15.0f;
+	constexpr float BULLET_SPEED          = 30.0f;
 	constexpr int   BULLET_DAMAGE         = 10;
 	constexpr float BULLET_LIFETIME       = 3.0f;
 	constexpr float BULLET_RADIUS         = 0.15f; // C5: 물리 CircleBody + 시각 Sphere mesh 동기

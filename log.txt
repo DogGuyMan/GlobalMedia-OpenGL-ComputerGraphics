@@ -1,3 +1,0 @@
-playable behaviour 제거
-@doc/handoff/2026-06-01-timer-migration-agent-prompt.md 
-@doc/handoff/2026-06-01-wave-enemy-session-context-handoff.md 

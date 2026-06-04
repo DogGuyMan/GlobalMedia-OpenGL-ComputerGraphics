@@ -3,7 +3,7 @@
 #include "Bootstrap/PlayerBuilder.h"
 
 #include "Audio/AudioSystem.h"
-#include "Audio/FmodPlayable.h"
+#include "Audio/Constants.h"          // EVENT_SLASH / EVENT_DAMAGED / EVENT_SHOOT
 #include "Audio/FmodStudioPlayable.h"
 #include "Bootstrap/EntityPresentation.h"  // AttachEntityPresentation — Player/Enemy 공통 연출 클러스터
 #include "Entity/Components/LifeComponents.h"   // GetComponent<Life> (SetOnHitFx seam 주입)
@@ -22,7 +22,6 @@
 #include "Manager.h"
 #include "Physics/PhysicsLayer.h"
 #include "Spawns/VfxInstance.h"   // VFX::Spawn 파사드 (seam 주입 람다 본문)
-#include "VFX/EffekseerPlayable.h"
 #include "playable/composite_playable.h"
 #include "resource_registry/resource_registry.h"
 #include "object/mesh.h"              // SJH::Mesh::CreatePlane
@@ -83,36 +82,30 @@ namespace TopdownShooter::Bootstrap
 			}
 		}
 
-		/// @brief [분할] Player 전투 연출 등록 — "fire"(좌클릭) + "hit"(피격).
-		/// @details "fire" = Sequence(Effekseer muzzle -> Parallel(Fmod.shot ∥ FmodStudio.Slash)). 자원 미확보 시 미등록(guard).
+		/// @brief [분할] Player 전투 연출 등록 — "fire"(좌클릭) + "dash"(Shift) + "hit"(피격).
+		/// @details "fire" = FmodStudio.Shoot 단독(발사음). "dash" = FmodStudio.Dash 단독(대시음, PlayerEntity::Dash rising-edge 발동).
 		///          "hit"  = Parallel(화면 비네팅 ∥ 스프라이트 hit-flash ∥ Damaged 사운드). 헬퍼 기본 "hit"(SpriteHitFlash)을
 		///                   director 동일키 덮어쓰기(Register overwrite). 자원은 startup Warmup 에서 이미 로드 -> build-time 해소.
 		void RegisterPlayerCombatPlayables(SJH::Scene::Actor &spriteActor, Playable::PlayableDirector &director)
 		{
-			// "fire" — 좌클릭: Sequence( Effekseer muzzle -> Parallel( Fmod.shot ∥ FmodStudio.Slash ) ).
-			// 가드(shot&&muzzle&&slashEvt) 결과는 fire-time 해소와 동일 (자원은 1회 로드 후 안정).
+			// "fire" — 좌클릭: 발사음(event:/Shoot)만 재생. muzzle VFX 는 weapon onFireFx 의 "gunshoot" 가 별도 담당.
 			{
-				auto &reg      = SJH::ResourceRegistry::Get();
 				auto &audio    = TopdownShooter::Manager::Get().Audio();
-				auto &vfx      = TopdownShooter::Manager::Get().VFX();
-				auto *shot     = reg.FindSound("shoot"); //!
-				auto *muzzle   = reg.FindEffect("muzzle"); //!
-				auto *slashEvt = audio.LoadEvent("event:/Slash"); //!
+				auto *shootEvt = audio.LoadEvent(Audio::EVENT_SHOOT); // 발사 SFX (Studio 이벤트)
+				if (shootEvt)
+					director.Register("fire", std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(shootEvt));
+				else
+					spdlog::warn("[BuildPlayer] event:/Shoot 미로드 — 발사음 없음 (bank 이벤트/재export 확인)");
+			}
 
-				if (shot && muzzle && slashEvt)
-				{
-					auto seq = std::make_unique<SJH::Playable::SequencePlayable>();
-					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
-					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
-					    TopdownShooter::VFX::TrackPolicy::Static));
-
-					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodPlayable>(audio.GetSystem(), shot));
-					par->Join(std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(slashEvt));
-					seq->Append(std::move(par));
-
-					director.Register("fire", std::move(seq));
-				}
+			// "dash" — Shift 대시: 대시음(event:/Dash)만 재생. PlayerEntity::Dash 가 실제 발동(rising edge)에서 Play("dash").
+			{
+				auto &audio   = TopdownShooter::Manager::Get().Audio();
+				auto *dashEvt = audio.LoadEvent(Audio::EVENT_DASH); // 대시 SFX (Studio 이벤트)
+				if (dashEvt)
+					director.Register("dash", std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(dashEvt));
+				else
+					spdlog::warn("[BuildPlayer] event:/Dash 미로드 — 대시음 없음 (bank 이벤트/재export 확인)");
 			}
 
 			// "hit" — 실제 피격(Life::DoDamaged->ReactDamaged->Play("hit")) 연출:
@@ -120,7 +113,7 @@ namespace TopdownShooter::Bootstrap
 			//          비네팅 = grayscale_vignetting.uVignetteAmount 0.45->0; hit-flash = SpriteRenderer.enableHit 0.18s.
 			{
 				auto &audio      = TopdownShooter::Manager::Get().Audio();
-				auto *damagedEvt = audio.LoadEvent("event:/Damaged");
+				auto *damagedEvt = audio.LoadEvent(Audio::EVENT_DAMAGED);
 
 				auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
 				par->Join(std::make_unique<TopdownShooter::Playable::PostFXTweenPlayable>(
@@ -284,6 +277,11 @@ namespace TopdownShooter::Bootstrap
 		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
 		spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
 
+		// depth+1: renderActor(방향 스프라이트) + aimPivot(조준 회전·손 궤도) — root는 비회전(데칼 spin 분리).
+		// 둘 다 std::move 후에도 주소 안정(spriteActor children 보유). groundActor 는 AttachGroundDecals 가 root 직속에 부착.
+		auto *renderActor = spriteActor->AddChild(std::make_unique<SJH::Scene::Actor>("renderActor"));
+		auto *aimPivot    = spriteActor->AddChild(std::make_unique<SJH::Scene::Actor>("aimPivot"));
+
 		// ─── 공통 연출 클러스터 (Player/Enemy 공유 헬퍼) ─────────────────────────
 		// director 부착(=Life 의 IActorPresentation sink, AddChild 전) + "death"=SpriteDissolve(1.5) +
 		// SetDeathDelaySeconds(1.5) + 체력바(기본 녹색). "hit" 기본 SpriteHitFlash 는 아래 Parallel 로 overwrite.
@@ -291,7 +289,8 @@ namespace TopdownShooter::Bootstrap
 		auto *director = AttachEntityPresentation(*spriteActor); // cfg 기본 = Player 값(dissolve/delay 1.5, 녹색)
 
 		// directional 8그룹(4방향×2포즈) child 빌드 + RegisterGroup (분할 자유함수).
-		BuildPlayerDirectionalGroups(*spriteActor, *director);
+		// renderActor 하위에 부착 — root 비회전이라도 빌보드 스프라이트는 무영향, hit-flash/dissolve 는 재귀 ForEach 로 도달.
+		BuildPlayerDirectionalGroups(*renderActor, *director);
 
 		// 체력 비율 -> 화면 grayscale ([A] 상시 바인더, director 무관). HP 닳을수록 무채색, HP0 시 완전 무채색.
 		spriteActor->AddComponent<TopdownShooter::Playable::HpGrayscalePostFX>("grayscale_vignetting", "uGrayscaleAmount");
@@ -312,6 +311,7 @@ namespace TopdownShooter::Bootstrap
 		{
 			controller->SetFireCallback([director] { director->Play("fire"); });
 			controller->SetDamageCallback([director] { director->ReactDamaged(0); });
+			controller->SetFacingPivot(aimPivot); // facing 회전을 root 대신 aimPivot에 — 데칼 spin 분리(손은 aimPivot 궤도)
 		}
 
 		// VFX seam 주입 — 컴포넌트는 VFX 를 모르고, 빌더가 VFX::Spawn 람다를 주입 (director->Play 패턴).
@@ -330,7 +330,7 @@ namespace TopdownShooter::Bootstrap
 
 		// 손 — PlayerHands::OnEnter 가 자식 Hand actor 2개를 생성·부착 (player Y facing 상속 궤도).
 		// SpriteActor 는 이미 entered -> 부착 즉시 OnEnter 실행. (손 스프라이트 비주얼은 사용자 WIP)
-		result.SpriteActor->AddComponent<TopdownShooter::Entity::PlayerHands>();
+		result.SpriteActor->AddComponent<TopdownShooter::Entity::PlayerHands>(aimPivot); // 손 child는 aimPivot 아래 → 조준 궤도 유지
 
 		// (머리 위 체력바 AttachHealthBar 는 위 AttachEntityPresentation 헬퍼가 pre-entry 로 처리 — Enemy 와 공통.
 		//  pre/post-entry 동작 동등: OnEnter 가 씬 진입 시 발화하므로 부착 시점 무관.)

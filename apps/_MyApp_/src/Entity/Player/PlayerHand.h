@@ -56,6 +56,10 @@ namespace TopdownShooter::Entity
 	class PlayerHands : public SJH::Scene::Component
 	{
 	  public:
+		/// @brief 손 child 액터를 부착할 orbit parent 주입 (선택적). 미주입이면 owner(root).
+		///        aimPivot 주입 시 손이 root 대신 aimPivot 회전을 상속(데칼 spin 분리 후에도 궤도 유지).
+		explicit PlayerHands(SJH::Scene::Actor *orbitParent = nullptr) : mOrbitParent(orbitParent) {}
+
 		void OnEnter() override;       // 자식 Hand actor 2개 생성·부착 (+ HAND_PART 스프라이트)
 		void OnExit() override {}
 		void Update(float dt) override; // 매 프레임 aim 거리로 양손 spread 보간 + 발사 핀치 블렌드 (.cpp)
@@ -65,6 +69,7 @@ namespace TopdownShooter::Entity
 		void TriggerFire();
 
 	  private:
+		SJH::Scene::Actor *mOrbitParent = nullptr; // 손 child 부착 대상 (미주입 시 owner) — 데칼 spin 분리 후 손 궤도 유지
 		// OnEnter 에서 생성한 자식 손 컴포넌트 (비소유 — 자식 Actor 가 소유).
 		PlayerSingleHand *mLeft  = nullptr;
 		PlayerSingleHand *mRight = nullptr;

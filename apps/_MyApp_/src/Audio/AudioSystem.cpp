@@ -85,6 +85,24 @@ namespace TopdownShooter::Audio
 		if (mStudioSystem) mStudioSystem->setParameterByName(name.c_str(), value);
 	}
 
+	void AudioSystem::SetBusVolume(const std::string &busPath, float volume)
+	{
+		if (!mStudioSystem) return;
+		::FMOD::Studio::Bus *bus = nullptr;
+		if (mStudioSystem->getBus(busPath.c_str(), &bus) == FMOD_OK && bus)
+			bus->setVolume(volume);
+	}
+
+	float AudioSystem::GetBusVolume(const std::string &busPath)
+	{
+		if (!mStudioSystem) return 1.0f;
+		::FMOD::Studio::Bus *bus = nullptr;
+		float vol = 1.0f, finalVol = 1.0f; // finalVol = 페이드/automation 반영 — 슬라이더엔 raw vol 사용
+		if (mStudioSystem->getBus(busPath.c_str(), &bus) == FMOD_OK && bus)
+			bus->getVolume(&vol, &finalVol);
+		return vol;
+	}
+
 	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
 	{
 		FMOD_3D_ATTRIBUTES attr = {};

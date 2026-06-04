@@ -53,6 +53,11 @@ namespace TopdownShooter::Audio
 		/// @brief Studio global parameter 설정 (System 스코프 — 예: "Health"). 미초기화 시 no-op.
 		void SetGlobalParameter(const std::string &name, float value);
 
+		/// @brief bus (예: "bus:/BGM Bus") 볼륨 설정 [0..1]. 미초기화/미존재 시 no-op.
+		void  SetBusVolume(const std::string &busPath, float volume);
+		/// @brief bus 현재 볼륨 조회 (슬라이더 초기값). 미초기화/미존재 시 1.0.
+		float GetBusVolume(const std::string &busPath);
+
 	  private:
 		::FMOD::System         *mSystem       = nullptr;
 		::FMOD::Studio::System *mStudioSystem = nullptr;

@@ -73,9 +73,12 @@ namespace TopdownShooter::Entity
 		//  가드 덕에 player OnEnter 중 부착해도 이중 OnEnter 없음.)
 		// 크기(HAND_SCALE)는 PlayerSingleHand 가 ApplyLocalOffset 에서 Scale 로 세팅 — Translate(궤도) 와 분리.
 		// 반환된 컴포넌트 포인터를 보관 → Update 에서 거리 보간으로 spread 갱신.
+		// 손 child 는 orbit parent(주입 시 aimPivot)에 부착 — 미주입이면 owner(root).
+		// (PlayerHands 컴포넌트는 root 유지 → controller↔hands 양방향 조회 무수정. 손 위치만 aimPivot 궤도.)
+		SJH::Scene::Actor *handParent = (mOrbitParent != nullptr) ? mOrbitParent : owner;
 		auto makeHand = [&](const char *name, float spreadDeg) -> PlayerSingleHand * {
 			SJH::Scene::Actor *hand =
-			    owner->AddChild(std::make_unique<SJH::Scene::Actor>(name));
+			    handParent->AddChild(std::make_unique<SJH::Scene::Actor>(name));
 			auto *hc = hand->AddComponent<PlayerSingleHand>(spreadDeg, HAND_RADIUS, HAND_Y_OFFSET, HAND_SCALE);
 			if (atlas != nullptr)
 			{

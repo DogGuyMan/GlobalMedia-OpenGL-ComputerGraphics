@@ -4,6 +4,7 @@
 #include "Entity/Components/LifeComponents.h"
 #include "Entity/Enemy/EnemyEntity.h"
 #include "Entity/Enemy/SimplePursueAI.h"
+#include "Physics/Constants.h"
 #include "Spawns/Carrier.h"
 #include "Physics/PhysicsComponent.Imp.h"
 #include "Physics/PhysicsImpulse.h"
@@ -46,7 +47,7 @@ namespace TopdownShooter::Entity::Enemy
         actor->AddComponent<Spawn::Carrier::ContactCarrier>(cfg.damage)
 		->SetOwnerEntity(actor.get());
 
-        actor->AddComponent<Physics::Impulse>();   // 넉백 타겟 (Carrier::Projectile 이 DoImpulse 배달)
+        actor->AddComponent<Physics::Impulse>(TopdownShooter::Physics::IMPULSE_ENEMY_FORCE);   // 넉백 타겟 (Carrier::Projectile 이 DoImpulse 배달)
         actor->AddComponent<EnemyEntity>();   // 적 Accessor-facade (Life/Physics/Director/Impulse 캐시)
         return actor;
     }

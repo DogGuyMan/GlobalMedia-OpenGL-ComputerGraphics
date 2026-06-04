@@ -53,6 +53,7 @@ namespace TopdownShooter::Playable
 		void ReactDamaged(int /*dmg*/) override { Play("hit"); }
 		void ReactDied(vmath::vec3 pos) override; // Play("death") 만 (월드점 death FX[B]는 도메인 seam 이 트리거 — 역할별 분리 P2)
 		void ReactAttack(vmath::vec2 /*aimDir*/) override { Play("attack"); }
+
 		// SetFacing/SetPose — controller(RD5) 가 계산한 facing/pose 로 8그룹 가시성 토글.
 		void SetFacing(Entity::EFacing f) override; // 본문 .cpp
 		void SetPose(Entity::EPose p) override;     // 본문 .cpp

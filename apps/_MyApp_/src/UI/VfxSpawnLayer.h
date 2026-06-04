@@ -41,23 +41,23 @@ namespace TopdownShooter::UI
 
 		void OnBuildUI() override
 		{
-			ImGui::Begin("VFX Test");
-			if (mEntries.empty())
-			{
-				ImGui::TextUnformatted("(no effects loaded)");
-				ImGui::End();
-				return;
-			}
+			// ImGui::Begin("VFX Test");
+			// if (mEntries.empty())
+			// {
+			// 	ImGui::TextUnformatted("(no effects loaded)");
+			// 	ImGui::End();
+			// 	return;
+			// }
 
-			// std::string -> const char* 배열 (매 프레임, 항목 소수라 무해).
-			std::vector<const char *> names;
-			names.reserve(mEntries.size());
-			for (const auto &e : mEntries)
-				names.push_back(e.name.c_str());
+			// // std::string -> const char* 배열 (매 프레임, 항목 소수라 무해).
+			// std::vector<const char *> names;
+			// names.reserve(mEntries.size());
+			// for (const auto &e : mEntries)
+			// 	names.push_back(e.name.c_str());
 
-			ImGui::Combo("Effect", &mSelected, names.data(), static_cast<int>(names.size()));
-			ImGui::TextUnformatted("Left-click on ground to spawn");
-			ImGui::End();
+			// ImGui::Combo("Effect", &mSelected, names.data(), static_cast<int>(names.size()));
+			// ImGui::TextUnformatted("Left-click on ground to spawn");
+			// ImGui::End();
 		}
 
 		/// @brief 현재 선택된 이펙트 (없으면 nullptr).

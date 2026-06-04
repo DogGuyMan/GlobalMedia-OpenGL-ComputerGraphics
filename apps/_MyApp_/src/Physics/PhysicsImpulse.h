@@ -19,8 +19,8 @@ namespace TopdownShooter::Physics
 	                public Entity::IImpulsable
 	{
 	public:
-		Impulse()
-		    : mImpulseForce(IMPULSE_FORCE, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::DashForce),
+		Impulse(float impulseForce)
+		    : mImpulseForce(impulseForce, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::DashForce),
 		      mCooldown(IMPULSE_COOLDOWN, Algebraic::ENumericStatUseType::Natural, Algebraic::ENumericStatType::CoolDownSpeed)
 		{
 			// timer 는 OnEnter 에서 중앙 컨테이너에 Register + arm-inactive.

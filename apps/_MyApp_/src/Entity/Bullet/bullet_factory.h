@@ -92,8 +92,8 @@ namespace TopdownShooter::Entity::Bullet
                 }
             }
 
-            if (prog != nullptr && mesh != nullptr && mat != nullptr)
-                actor->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
+        //     if (prog != nullptr && mesh != nullptr && mat != nullptr)
+        //         actor->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
         }
 
         return actor;
