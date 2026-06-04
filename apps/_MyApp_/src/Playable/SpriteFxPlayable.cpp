@@ -12,15 +12,16 @@ namespace TopdownShooter::Playable
 		// 디졸브 노이즈 텍스처 — 모든 dissolve 가 공유 (ResourceRegistry 키, 1회 로드 후 캐시).
 		constexpr const char *kDissolveTexKey = "_dissolve_noise";
 
-		// 대상 액터 자신 + 직속 자식의 SpriteRenderer 에 fn 적용.
-		// (player = 4-레이어 자식 / enemy = 자기 또는 자식 — 둘 다 커버, P4 재사용.)
+		// 대상 액터 + 서브트리 전체(손자 이하 포함)의 SpriteRenderer 에 fn 적용.
+		// (renderActor 하위로 내려간 32 스프라이트 + aimPivot 하위 손까지 도달 — Round 2.
+		//  영향 집합은 현행과 동일: groundActor 데칼은 SpriteRenderer 없어 자동 skip.)
 		template <typename Fn>
 		void ForEachSpriteRenderer(SJH::Scene::Actor *root, Fn &&fn)
 		{
 			if (!root) return;
 			if (auto *r = root->GetComponent<SJH::Sprite::SpriteRenderer>()) fn(r);
 			for (const auto &child : root->GetChildren())
-				if (auto *r = child->GetComponent<SJH::Sprite::SpriteRenderer>()) fn(r);
+				ForEachSpriteRenderer(child.get(), fn); // 손자 이하까지 재귀
 		}
 	}
 
