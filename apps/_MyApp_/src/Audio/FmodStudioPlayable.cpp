@@ -4,6 +4,7 @@
 #include <fmod/fmod_studio.hpp>
 #include <spdlog/spdlog.h>
 #include <optional>
+#include <string>
 #include <vmath.h>
 
 namespace TopdownShooter::Audio
@@ -31,9 +32,26 @@ namespace TopdownShooter::Audio
 		if (mInstance) mInstance->setPaused(true);
 	}
 
+	void FmodStudioPlayable::SetParameter(const std::string &name, float value)
+	{
+		if (mInstance) mInstance->setParameterByName(name.c_str(), value);
+	}
+
+	void FmodStudioPlayable::SetPaused(bool paused)
+	{
+		if (mInstance) mInstance->setPaused(paused);
+	}
+
 	void FmodStudioPlayable::OnPlay()
 	{
 		if (!mDesc) return;
+		// 이미 재생 중이면 먼저 정리 — Play() 재호출 시 instance 가 겹쳐 쌓이는 것 방지.
+		if (mInstance)
+		{
+			mInstance->stop(FMOD_STUDIO_STOP_IMMEDIATE);
+			mInstance->release();
+			mInstance = nullptr;
+		}
 		mDesc->createInstance(&mInstance);
 		if (mInstance)
 		{

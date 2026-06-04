@@ -3,6 +3,7 @@
 
 #include "playable/playable_base.h"
 #include <optional>
+#include <string>
 #include <vmath.h>
 
 namespace FMOD::Studio { class EventDescription; class EventInstance; }
@@ -21,6 +22,13 @@ namespace TopdownShooter::Audio
 		~FmodStudioPlayable() override;
 
 		void Pause() override;
+
+		/// @brief 재생 중 instance 파라미터 설정 (FMOD setParameterByName). instance 없으면 no-op.
+		///        BGM_STATE(Title=0/Combat=1) 전환에 사용 (Stage FSM).
+		void SetParameter(const std::string &name, float value);
+		/// @brief instance pause/resume 토글. Pause() 와 달리 Playable mPaused 상태는 건드리지 않음
+		///        (Pause State 일시정지 ↔ Combat 복귀 resume 용).
+		void SetPaused(bool paused);
 
 	  protected:
 		void OnPlay() override;

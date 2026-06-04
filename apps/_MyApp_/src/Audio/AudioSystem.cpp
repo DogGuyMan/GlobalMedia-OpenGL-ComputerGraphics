@@ -80,6 +80,11 @@ namespace TopdownShooter::Audio
 		return desc;
 	}
 
+	void AudioSystem::SetGlobalParameter(const std::string &name, float value)
+	{
+		if (mStudioSystem) mStudioSystem->setParameterByName(name.c_str(), value);
+	}
+
 	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
 	{
 		FMOD_3D_ATTRIBUTES attr = {};

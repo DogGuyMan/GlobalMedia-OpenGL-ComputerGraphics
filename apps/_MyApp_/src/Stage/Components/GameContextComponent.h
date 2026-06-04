@@ -8,6 +8,8 @@
 // 실제 멤버 역참조(overlay->Show / waveCtrl->WaveLevel)는 사용처(StageState.Impl.h)가 헤더 include.
 namespace TopdownShooter::UI { class StateOverlayLayer; }
 namespace TopdownShooter::Stage { class WaveController; }
+namespace TopdownShooter::Audio { class AudioSystem; class FmodStudioPlayable; }
+namespace TopdownShooter::Entity::Components { class Life; }
 namespace SJH::Scene { class PassComponent; }
 
 namespace TopdownShooter::Stage::Components
@@ -36,6 +38,15 @@ namespace TopdownShooter::Stage::Components
 
 		// Title 동안 blur PostFX ON (TitleState OnEnter/OnExit 에서 Enabled 토글)
 		SJH::Scene::PassComponent *blurPass = nullptr;
+
+		// FMOD 재생 레퍼런스 — State 는 Manager 싱글톤이 아니라 ctx 를 통해 오디오 접근.
+		//   audio        = AudioSystem (global parameter "Health" 등 System 스코프 호출)
+		//   bgmPlayable  = BGM EventInstance wrap (Play/BGM_STATE/pause/stop — handoff §2)
+		// 둘 다 비소유 raw — Manager(audio) / BgmActor(bgmPlayable) 가 소유. startup 에서 주입.
+		Audio::AudioSystem        *audio       = nullptr;
+		Audio::FmodStudioPlayable *bgmPlayable = nullptr;
+		// Player Life — CombatPlay 가 HP 비율을 FMOD global "Health" 파라미터로 송신 (§2).
+		Entity::Components::Life *playerLife = nullptr;
 	};
 } // namespace TopdownShooter::Stage::Components
 

@@ -50,6 +50,9 @@ namespace TopdownShooter::Audio
 		///        Studio bank 가 사전에 LoadBank 로 로드된 상태여야 한다. 못 찾으면 nullptr.
 		::FMOD::Studio::EventDescription *LoadEvent(const std::string &eventPath);
 
+		/// @brief Studio global parameter 설정 (System 스코프 — 예: "Health"). 미초기화 시 no-op.
+		void SetGlobalParameter(const std::string &name, float value);
+
 	  private:
 		::FMOD::System         *mSystem       = nullptr;
 		::FMOD::Studio::System *mStudioSystem = nullptr;

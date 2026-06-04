@@ -23,7 +23,10 @@ namespace SJH::FSM
 	/// ### 불변식 (Aggregate Root 책임)
 	/// - I1: current ∈ Registered(states_) ∪ {NONE}
 	/// - I2: TryTransit 성공 ⟺ (current.GetTransitFlag() & target_bit) == target_bit AND target 등록됨
-	/// - I3: 전이 시 항상 OnExit(current)  current = target  OnEnter(current) 순서
+	/// - I3: 전이 시 항상 OnExit(current)  current = target  OnEnter(current) 순서.
+	///       단 적용은 *재진입이 아니라* `Update` 경계의 `ApplyPending()` 에서 (deferred 전이).
+	///       TryTransit 은 검증만 즉시 수행하고 OnExit/OnEnter 는 다음 Update 시작에 큐잉 적용 →
+	///       어떤 State 의 OnUpdate 도중 전이가 요청돼도 그 OnUpdate 잔여 코드가 새 State 위에서 도는 일이 없다.
 	///
 	/// ### 자가 검증
 	/// `RegisterState(unique_ptr<IFsmState>)` 는 *id 매개변수 없음* — state 가 알아서 자기 ID 노출.
@@ -102,9 +105,12 @@ namespace SJH::FSM
 				it->second->OnExit(*mOwner);
 		}
 
-		/// @brief 매 프레임 — 현재 state 의 OnUpdate 위임 (Godot _state.physics_process 정통).
+		/// @brief 매 프레임 — (1) 지난 tick 에 큐잉된 전이 적용 → (2) 현재 state OnUpdate 디스패치.
+		/// @details OnUpdate 도중 TryTransit 가 호출되면 pending 에만 기록되어, 이번 OnUpdate 는 현재 state 로
+		///          끝까지 실행되고 전이는 다음 Update 의 (1)에서 일어난다 (재진입 제거 — Aggregate invariant 보존).
 		void Update(float dt) override
 		{
+			ApplyPending();
 			auto it = mStates.find((StateU)curState);
 			if (it != mStates.end() && it->second)
 				it->second->OnUpdate(*mOwner, dt);
@@ -119,23 +125,49 @@ namespace SJH::FSM
 			auto curIt = mStates.find(curr);
 			// current state 미등록 — 계약 위반
 			if (curIt == mStates.end() || !curIt->second)
-				return false; 
-			// 현재 state 가 target 으로 갈 수 있는가?
+				return false;
+			// 현재 state 가 target 으로 갈 수 있는가? (검증은 *즉시* — ForceTransit 의 즉시 abort 의미 보존)
 			if ((curIt->second->GetTransitFlag() & targetBit) != targetBit)
 				return false;
 			auto targetIt = mStates.find(targetBit);
 			// target 미등록
 			if (targetIt == mStates.end() || !targetIt->second)
-				return false; 
-			curIt->second->OnExit(*mOwner);
-			curState = (TState)targetBit;
-			targetIt->second->OnEnter(*mOwner);
+				return false;
+			// ★ 즉시 OnExit/OnEnter 하지 않는다 — pending 으로 큐잉. 같은 tick 내 복수 호출 시 마지막이 이김
+			//   (모두 동일한 현재 state 기준으로 검증되므로 안전). 실제 전이는 ApplyPending()(Update 경계).
+			mPendingState = (TState)targetBit;
+			mHasPending   = true;
 			return true;
+		}
+
+		/// @brief 큐잉된 전이를 안전한 경계(Update 시작)에서 적용 — OnExit(cur) → curState=target → OnEnter(target).
+		/// @details I3 보존: 전이는 항상 이 순서. 단 *재진입이 아닌* 통제된 지점에서만 일어난다.
+		///          OnEnter 안에서 또 TryTransit 하면 그 전이는 다음 Update 의 ApplyPending 에서 처리(tick 당 1단계).
+		void ApplyPending()
+		{
+			if (!mHasPending)
+				return;
+			mHasPending = false;
+			const StateU from = (StateU)curState;
+			const StateU to   = (StateU)mPendingState;
+			auto fromIt = mStates.find(from);
+			if (fromIt != mStates.end() && fromIt->second)
+				fromIt->second->OnExit(*mOwner);
+			curState = mPendingState;
+			auto toIt = mStates.find(to);
+			if (toIt != mStates.end() && toIt->second)
+				toIt->second->OnEnter(*mOwner);
 		}
 
 		TOwner *mOwner;
 		TState curState = TState::NONE;
 		std::unordered_map<StateU, std::unique_ptr<IFsmState<TOwner>>> mStates;
+
+		// 지연 전이 — TryTransit 은 검증만 즉시, 실제 OnExit/OnEnter 적용은 ApplyPending()(Update 경계).
+		//   재진입 방지: OnUpdate 도중 전이가 요청돼도 이번 tick 의 OnUpdate 는 현재 State 로 끝까지 실행되고,
+		//   전이는 다음 Update 의 ApplyPending 에서 원자적으로 일어난다 (Aggregate invariant 보존).
+		bool   mHasPending   = false;
+		TState mPendingState = TState::NONE;
 	};
 
 } // namespace SJH::FSM
