@@ -2,6 +2,7 @@
 #define _TOPDOWNSHOOTER_PHYSICS_RAYCAST__
 #include "Physics/PhysicsLayer.h"
 #include <box2d/box2d.h>
+#include <vector>
 #include <vmath.h>
 
 namespace SJH::Scene { class Actor; }
@@ -37,6 +38,16 @@ namespace TopdownShooter::Physics
 	                          PhysicsLayer mask,
 	                          SJH::Scene::Actor* ignore = nullptr,
 	                          bool hitSensors = false);
+
+	/// @brief 월드 전체 관통 질의 — 경로상 모든 fixture 수집 (Unity Physics.RaycastAll 정통).
+	/// @details ClosestCallback(fraction 반환=clip)과 달리 AllCallback 이 1.0 반환 → 더 먼 fixture 도 계속 수집.
+	///          body 단위 dedup (한 body 가 여러 fixture 여도 1회) + 거리(fraction) 오름차순 정렬.
+	/// @param mask  맞출 레이어 (예: PhysicsLayer::Enemy — 벽 무시 관통)
+	std::vector<RaycastHit> RaycastAll(b2World& world,
+	                                   vmath::vec2 start, vmath::vec2 dir, float maxDistance,
+	                                   PhysicsLayer mask,
+	                                   SJH::Scene::Actor* ignore = nullptr,
+	                                   bool hitSensors = false);
 }; // namespace TopdownShooter::Physics
 
 #endif //_TOPDOWNSHOOTER_PHYSICS_RAYCAST__

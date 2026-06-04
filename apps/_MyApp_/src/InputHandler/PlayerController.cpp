@@ -19,7 +19,7 @@
 #include "object/mesh.h"
 #include "program/program.h"
 #include "render/mesh_renderer.h"
-#include "Spawns/VfxInstance.h" // VFX::Spawn (R키 laser VFX 테스트)
+#include "Spawns/UltimateLaser.h" // Spawns::SpawnUltimateLaser (R키 궁극기 회전 히트스캔 레이저)
 #include "resource_registry/resource_registry.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
@@ -96,13 +96,16 @@ namespace TopdownShooter::Controller
 			}
 			spdlog::error("NO FIND IMPULSE");
 		});
-		// R(Ultimate) — 단순 VFX 테스트: 플레이어 위치에 blue_laser(Constants.h "laser" 키) 스폰.
-		// held 가 아니라 press(이산 1회) — 단발 이펙트라 매 프레임 폭주 방지 (좌클릭 발사와 동일 결).
+		// R(Ultimate) — 플레이어 중심 회전 히트스캔 레이저 궁극기 (3초 유지 + 1초당 1회전 + 자동 파괴).
+		// 시작각 = 마우스 조준. 매 프레임 RaycastAll 로 경로상 적에 적별 0.2s 틱 데미지. press(이산 1회).
 		mKeyboardInput->BindPressHandler(Action::Ultimate, [this] {
+			UpdateAim(); // 최신 조준 (입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값 재산출)
 			if (auto *owner = GetOwner())
 			{
-				spdlog::info("[input] R (Ultimate) — laser VFX 테스트");
-				VFX::Spawn("laser", owner->GetTransform().Translate);
+				// box2d forward = (aimDir.x, -aimDir.z) → 시작 회전각 = atan2(fwd.y, fwd.x).
+				const float startAngle = std::atan2(-mAimDirection[2], mAimDirection[0]);
+				spdlog::info("[input] R (Ultimate) — 회전 레이저 발동 angle={:.1f}deg", startAngle * 57.29578f);
+				Spawns::SpawnUltimateLaser(mWorld, owner->GetTransform().Translate, startAngle, owner);
 			}
 		});
 
@@ -180,6 +183,14 @@ namespace TopdownShooter::Controller
 		// 멱등 — 첫 비-null 주입 후 무시.
 		if (mFacingPivot == nullptr)
 			mFacingPivot = pivot;
+		return *this;
+	}
+
+	PlayerController &PlayerController::SetWorld(b2World *world)
+	{
+		// 멱등 — 첫 비-null 주입 후 무시. 미주입이면 R 궁극기 no-op (SpawnUltimateLaser 내부 guard).
+		if (mWorld == nullptr)
+			mWorld = world;
 		return *this;
 	}
 

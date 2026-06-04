@@ -29,6 +29,10 @@ namespace TopdownShooter::VFX
     /// @param yaw Y축 회전(라디안) — 발사 방향 등. 기본 0(회전 없음).
     void SetSpawnContext(SJH::Scene::Actor* fxRoot, VFXSystem* vfx);
     void Spawn(const char* key, const vmath::vec3& pos, float yaw = 0.0f);
+
+    /// @brief 등록된 spawn context 조회 — 단발 Spawn 으로 안 되는 합성(회전/지속 VFX, UltimateLaser)용. 미등록 시 nullptr.
+    SJH::Scene::Actor* GetSpawnFxRoot();
+    VFXSystem*         GetSpawnVfx();
 }
 
 #endif // __TOPDOWNSHOOTER_SPAWNS_VFX_INSTANCE_H__

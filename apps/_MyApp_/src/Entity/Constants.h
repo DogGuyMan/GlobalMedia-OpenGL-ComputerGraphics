@@ -39,6 +39,13 @@ namespace TopdownShooter::Entity
 	constexpr int   BULLET_DAMAGE         = 10;
 	constexpr float BULLET_LIFETIME       = 3.0f;
 	constexpr float BULLET_RADIUS         = 0.15f; // C5: 물리 CircleBody + 시각 Sphere mesh 동기
+
+	// ── Ultimate (R키 — 플레이어 중심 회전 히트스캔 레이저) ──
+	constexpr int   ULTIMATE_DAMAGE       = 50;    // 적별 틱당 데미지 (Enemy HP=30 → 1틱 살살)
+	constexpr float ULTIMATE_DURATION     = 3.0f;  // 유지 시간(초) — 이후 자동 파괴
+	constexpr float ULTIMATE_ROT_PER_SEC  = 6.283185307179586f; // 2π rad/s = 1초당 1회전 (3초간 3회전)
+	constexpr float ULTIMATE_RANGE        = 14.15f; // 아레나 끝 = √2 × Stage::ARENA_HALF_EXTENT(10) ≈ 14.14
+	constexpr float ULTIMATE_TICK         = 0.2f;  // 적별 데미지 재적용 간격(초) — 빔에 머무는 동안 DoT
 } // namespace TopdownShooter::Entity
 
 #endif //_TOPDOWNSHOOTER_ENTITY_CONSTANTS__

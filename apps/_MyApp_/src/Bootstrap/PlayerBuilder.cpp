@@ -313,6 +313,7 @@ namespace TopdownShooter::Bootstrap
 			controller->SetFireCallback([director] { director->Play("fire"); });
 			controller->SetDamageCallback([director] { director->ReactDamaged(0); });
 			controller->SetFacingPivot(aimPivot); // facing 회전을 root 대신 aimPivot에 — 데칼 spin 분리(손은 aimPivot 궤도)
+			controller->SetWorld(deps.physicsWorld); // R 궁극기 회전 히트스캔 레이저 레이캐스트용
 		}
 
 		// VFX seam 주입 — 컴포넌트는 VFX 를 모르고, 빌더가 VFX::Spawn 람다를 주입 (director->Play 패턴).

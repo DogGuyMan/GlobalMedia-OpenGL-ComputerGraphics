@@ -26,6 +26,12 @@ namespace TopdownShooter::VFX
 		                  float                   yawRad   = 0.0f);
 		~EffekseerPlayable() override;
 
+	  public:
+		/// @brief 매 프레임 Y축 회전 속도(rad/sec). 0=비회전. OnUpdate 가 yaw = mYaw + mSpin×elapsed 적용 (궁극기 회전 레이저).
+		void SetSpinRadPerSec(float v) { mSpinRadPerSec = v; }
+		/// @brief 최대 지속(초). >0 이면 경과 시 StopEffect + finished (AutoDespawnOnFinish 트리거). 0=무제한.
+		void SetMaxDurationSec(float v) { mMaxDurationSec = v; }
+
 	  protected:
 		void OnPlay() override;
 		void OnStop() override;
@@ -36,11 +42,13 @@ namespace TopdownShooter::VFX
 		void StartHandle();
 
 		::Effekseer::ManagerRef mManager;
-		SJH::Effect            *mEffect   = nullptr;
-		::Effekseer::Handle     mHandle   = -1;   // -1 = invalid
+		SJH::Effect            *mEffect         = nullptr;
+		::Effekseer::Handle     mHandle         = -1;   // -1 = invalid
 		vmath::vec3             mSpawnPos{0.0f};
-		TrackPolicy             mTrack    = TrackPolicy::Static;
-		float                   mYaw      = 0.0f;  // Y축 회전(라디안) — 발사 방향 등. 0 = 회전 없음
+		TrackPolicy             mTrack          = TrackPolicy::Static;
+		float                   mYaw            = 0.0f; // Y축 시작 회전(라디안). 0 = 회전 없음
+		float                   mSpinRadPerSec  = 0.0f; // 매 프레임 회전 속도(rad/sec). 0 = 비회전
+		float                   mMaxDurationSec = 0.0f; // 최대 지속(초). >0 이면 경과 시 자동 종료. 0=무제한
 	};
 }
 

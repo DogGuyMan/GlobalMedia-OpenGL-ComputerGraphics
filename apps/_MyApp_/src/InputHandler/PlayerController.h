@@ -18,6 +18,8 @@ namespace SJH::Timer { class Timer; }
 namespace TopdownShooter::Entity { class BaseEntity; }
 namespace TopdownShooter::Entity { class PlayerHands; } // 발사 핀치 통지용 (포인터 멤버)
 
+class b2World; // 궁극기(R) 회전 히트스캔 레이저 발동용 물리 월드 (포인터 멤버 — 전방 선언)
+
 namespace TopdownShooter::Controller
 {
 	/// @brief Top-down 게임의 Player 이동 컨트롤러 — WASD  Owner Transform.Translate XZ 이동.
@@ -69,6 +71,9 @@ namespace TopdownShooter::Controller
 		///        aimPivot만 회전시켜 손 궤도는 aimPivot 상속으로 유지.
 		PlayerController &SetFacingPivot(SJH::Scene::Actor *pivot);
 
+		/// @brief 궁극기(R) 회전 히트스캔 레이저 발동용 물리 월드 주입 (선택적, 멱등). 미주입이면 R 궁극기 no-op.
+		PlayerController &SetWorld(b2World *world);
+
 
 		/// @brief 조준 정보 — 매 프레임 마우스->Ground raycast 로 갱신 (PlayerActor(owner)->커서 Ground).
 		/// @details `mAimDirection` 은 XZ 평면 정규화 방향(발사/회전 방향). `mAimPoint` 는 커서 월드 좌표.
@@ -90,6 +95,7 @@ namespace TopdownShooter::Controller
 		SJH::KeyboardInput<Action> *mKeyboardInput   = nullptr;
 		SJH::MouseInput *mMouseInput                 = nullptr;
 		SJH::Scene::Camera *mCamera                  = nullptr; // 마우스->Ground raycast 용 (비소유)
+		b2World *mWorld                              = nullptr; // 궁극기(R) 레이캐스트용 물리 월드 (비소유)
 		SJH::Scene::Actor *mFacingPivot = nullptr; // facing 회전 대상 (미주입 시 owner) — 데칼 spin 분리
 		Entity::IMovable* mMovementPtr = nullptr;
 		TopdownShooter::Entity::BaseEntity* mEntity = nullptr; // 대시 중 이동 suppress 게이트(IsImpulseActive)
