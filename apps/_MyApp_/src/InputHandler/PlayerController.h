@@ -64,6 +64,11 @@ namespace TopdownShooter::Controller
 		/// @brief G키 press 시 실행할 콜백 (Damage Composite 등). 미주입이면 G키 무시.
 		PlayerController &SetDamageCallback(std::function<void()> cb);
 
+		/// @brief facing 회전(EulerRot[1]=aimAngleY)을 적용할 pivot 주입 (선택적, 멱등).
+		///        미주입이면 owner(root) 회전(하위호환). 데칼 spin 분리용 — root는 비회전,
+		///        aimPivot만 회전시켜 손 궤도는 aimPivot 상속으로 유지.
+		PlayerController &SetFacingPivot(SJH::Scene::Actor *pivot);
+
 
 		/// @brief 조준 정보 — 매 프레임 마우스->Ground raycast 로 갱신 (PlayerActor(owner)->커서 Ground).
 		/// @details `mAimDirection` 은 XZ 평면 정규화 방향(발사/회전 방향). `mAimPoint` 는 커서 월드 좌표.
@@ -85,6 +90,7 @@ namespace TopdownShooter::Controller
 		SJH::KeyboardInput<Action> *mKeyboardInput   = nullptr;
 		SJH::MouseInput *mMouseInput                 = nullptr;
 		SJH::Scene::Camera *mCamera                  = nullptr; // 마우스->Ground raycast 용 (비소유)
+		SJH::Scene::Actor *mFacingPivot = nullptr; // facing 회전 대상 (미주입 시 owner) — 데칼 spin 분리
 		Entity::IMovable* mMovementPtr = nullptr;
 		TopdownShooter::Entity::BaseEntity* mEntity = nullptr; // 대시 중 이동 suppress 게이트(IsImpulseActive)
 

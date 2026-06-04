@@ -166,6 +166,14 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
+	PlayerController &PlayerController::SetFacingPivot(SJH::Scene::Actor *pivot)
+	{
+		// 멱등 — 첫 비-null 주입 후 무시.
+		if (mFacingPivot == nullptr)
+			mFacingPivot = pivot;
+		return *this;
+	}
+
 	PlayerController &PlayerController::SetFireCallback(std::function<void()> cb)
 	{
 		mFireCallback = std::move(cb);
@@ -228,7 +236,12 @@ namespace TopdownShooter::Controller
 		// mAimAngleY/mAimDirection 은 직전 유효값을 유지하므로 mAimValid 와 무관하게 매 프레임 반영.
 		SJH::Scene::Actor *owner = GetOwner();
 		if (owner != nullptr)
-			owner->GetTransform().EulerRot[1] = mAimAngleY; // 논리 facing — 자식 손이 WorldMatrix 로 상속
+		{
+			// facing 회전은 pivot(주입 시)에만 적용 — root는 비회전(데칼 spin 분리).
+			// 미주입이면 owner(하위호환). aimPivot 하위 손이 WorldMatrix 로 회전 상속.
+			SJH::Scene::Actor *pivot = (mFacingPivot != nullptr) ? mFacingPivot : owner;
+			pivot->GetTransform().EulerRot[1] = mAimAngleY;
+		}
 
 		// === RD5: facing/pose 단일 작성자 (controller 계산 -> sink 토글) ===
 		if (mSink == nullptr && owner != nullptr)
@@ -367,9 +380,9 @@ namespace TopdownShooter::Controller
 		SJH::Scene::Actor *owner = GetOwner();
 		if (owner != nullptr)
 		{
-			auto *weapon = owner->GetComponent<Entity::Components::Weapon>();
-			if (weapon != nullptr)
-				weapon->UseWeapon(vmath::vec2(mAimDirection[0], -mAimDirection[2]));
+			auto *pe = owner->GetComponent<Entity::PlayerEntity>();
+			if (pe != nullptr)
+				pe->UseWeapon(vmath::vec2(mAimDirection[0], -mAimDirection[2]));
 		}
 
 		// 오디오/VFX Composite (onFire) — 주입됐으면.
