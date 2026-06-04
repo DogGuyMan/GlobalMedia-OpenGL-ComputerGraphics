@@ -1,6 +1,7 @@
 
 // PlayerController.h -> input/mouse_input.h 가 <GLFW/glfw3.h> 를 끌어오므로, GLFW 가 자체 GL 헤더를
 // 포함해 엔진 gl3w 와 PFNGL* 가 충돌하지 않도록 *모든 include 이전* 에 NONE 을 선언한다.
+#include "Entity/Player/PlayerEntity.h"
 #define GLFW_INCLUDE_NONE
 
 #include "PlayerController.h"
@@ -12,7 +13,7 @@
 #include "Entity/BaseEntity.h"
 #include "Entity/Components/WeaponComponents.h"
 #include "Entity/Player/PlayerHand.h" // 발사 핀치 — 좌클릭 바인딩에서 PlayerHands::TriggerFire 통지
-#include "Playable/Constants.h" // FacingThresholdConfig / PLAYER_FACING_THRESHOLD (헤더-only 데이터)
+#include "Playable/Constants.h"       // FacingThresholdConfig / PLAYER_FACING_THRESHOLD (헤더-only 데이터)
 #include "material/material.h"
 #include "material/material_uniforms.h"
 #include "object/mesh.h"
@@ -44,11 +45,16 @@ namespace TopdownShooter::Controller
 	{
 		namespace E = TopdownShooter::Entity;
 		float deg = std::atan2(-dir[1], dir[0]) * 57.29578f; // rad->deg, screen-up=-Z
-		if (deg < 0.0f) deg += 360.0f;
-		if (InRange(deg, cfg.Back)) return E::EFacing::Back;
-		if (InRange(deg, cfg.Front)) return E::EFacing::Front;
-		if (InRange(deg, cfg.Left)) return E::EFacing::Left;
-		if (InRange(deg, cfg.Right)) return E::EFacing::Right;
+		if (deg < 0.0f)
+			deg += 360.0f;
+		if (InRange(deg, cfg.Back))
+			return E::EFacing::Back;
+		if (InRange(deg, cfg.Front))
+			return E::EFacing::Front;
+		if (InRange(deg, cfg.Left))
+			return E::EFacing::Left;
+		if (InRange(deg, cfg.Right))
+			return E::EFacing::Right;
 		return fallback;
 	}
 
@@ -59,15 +65,37 @@ namespace TopdownShooter::Controller
 		mKeyboardInput->BindKey(Action::MoveBack, GLFW_KEY_S);
 		mKeyboardInput->BindKey(Action::MoveLeft, GLFW_KEY_A);
 		mKeyboardInput->BindKey(Action::MoveRight, GLFW_KEY_D);
+		mKeyboardInput->BindKey(Action::DashImpulse, GLFW_KEY_LEFT_SHIFT);
+		mKeyboardInput->BindKey(Action::Ultimate, GLFW_KEY_R);
 
 		// W = 앞 = -Z (OpenGL forward 컨벤션).
 		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
 		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
 		// (held 핸들러는 매 프레임 호출 -> 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec §2.)
-		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); });
-		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
-		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
-		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
+		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { 
+			mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); 
+		});
+		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { 
+			mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); 
+		});
+		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { 
+			mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); 
+		});
+		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { 
+			mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); 
+		});
+		mKeyboardInput->BindHeldHandler(Action::DashImpulse, [this] {
+			if (auto *owner = GetOwner())
+			{
+				const vmath::vec2 aimXZ(mPrevInputValue[0], mPrevInputValue[2]);
+				if(auto* pe = owner->GetComponent<Entity::PlayerEntity>()) {
+					pe->Dash(aimXZ); 
+					return;
+				}
+			}
+			spdlog::error("NO FIND IMPULSE");
+		});
+		mKeyboardInput->BindHeldHandler(Action::Ultimate, [] { spdlog::info("Click Ult"); });
 
 		// 좌클릭 (이산 press) — 발사. MouseInput 미주입이면 바인딩 생략.
 		if (mMouseInput)
@@ -154,7 +182,7 @@ namespace TopdownShooter::Controller
 		if (!mIsInitialized)
 			return;
 		// attack 윈도 timer 를 BaseEntity 중앙 컨테이너에 등록 + arm-inactive (발사 시 Reset 으로 발동).
-		if (auto* owner = GetOwner())
+		if (auto *owner = GetOwner())
 		{
 			mEntity = owner->GetComponent<TopdownShooter::Entity::BaseEntity>();
 			if (mEntity != nullptr)
@@ -208,13 +236,13 @@ namespace TopdownShooter::Controller
 		if (mSink != nullptr)
 		{
 			namespace E = TopdownShooter::Entity;
-			const bool        attacking = (mAttackTimer != nullptr && !mAttackTimer->IsTimesUp()); // tick은 BaseEntity가
-			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]); // ★ 리셋 전
-			const bool        moving = (velXZ[0] * velXZ[0] + velXZ[1] * velXZ[1]) > 0.001f;
+			const bool attacking = (mAttackTimer != nullptr && !mAttackTimer->IsTimesUp()); // tick은 BaseEntity가
+			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]);                        // ★ 리셋 전
+			const bool moving = (velXZ[0] * velXZ[0] + velXZ[1] * velXZ[1]) > 0.001f;
 			const vmath::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
 
 			E::EFacing facing = attacking ? QuantizeByThreshold(aimXZ, TopdownShooter::Playable::PLAYER_FACING_THRESHOLD, mLastFacing)
-			                  : moving    ? QuantizeByThreshold(velXZ, TopdownShooter::Playable::PLAYER_FACING_THRESHOLD, mLastFacing)
+			                    : moving  ? QuantizeByThreshold(velXZ, TopdownShooter::Playable::PLAYER_FACING_THRESHOLD, mLastFacing)
 			                              : mLastFacing;
 			E::EPose pose = (attacking || moving) ? E::EPose::Move : E::EPose::Idle;
 			mSink->SetFacing(facing);
@@ -223,6 +251,7 @@ namespace TopdownShooter::Controller
 		}
 
 		// 누적값 리셋.
+		mPrevInputValue = mInputValue;
 		mInputValue = vmath::vec3(0.0f);
 	}
 
@@ -274,16 +303,16 @@ namespace TopdownShooter::Controller
 		//   depth = dot(rel, forward), ndc = dot(rel, right|up) / (depth * (aspect)tanHalf).
 		if (SJH::Scene::Actor *pl = GetOwner())
 		{
-			const vmath::vec3 rel   = pl->GetTransform().Translate - camPos;
-			const float       depth = vmath::dot(rel, forward); // view forward 깊이 (>0 = 카메라 앞)
+			const vmath::vec3 rel = pl->GetTransform().Translate - camPos;
+			const float depth = vmath::dot(rel, forward); // view forward 깊이 (>0 = 카메라 앞)
 			if (depth > 1e-4f)
 			{
 				const float pNdcX = vmath::dot(rel, right) / (depth * aspect * tanHalf);
 				const float pNdcY = vmath::dot(rel, up) / (depth * tanHalf);
-				const float sdx   = ndcX - pNdcX;
-				const float sdy   = ndcY - pNdcY;
-				const float st    = std::sqrt(sdx * sdx + sdy * sdy);
-				mAimScreenT       = (st > 1.0f) ? 1.0f : st; // 화면 가장자리에서 포화
+				const float sdx = ndcX - pNdcX;
+				const float sdy = ndcY - pNdcY;
+				const float st = std::sqrt(sdx * sdx + sdy * sdy);
+				mAimScreenT = (st > 1.0f) ? 1.0f : st; // 화면 가장자리에서 포화
 			}
 		}
 
@@ -309,9 +338,9 @@ namespace TopdownShooter::Controller
 		aim[1] = 0.0f; // 탑다운 조준 — 높이 성분 제거 (XZ 평면)
 		const float dist = vmath::length(aim);
 
-		mAimPoint    = hit;
+		mAimPoint = hit;
 		mAimDistance = dist; // 손 spread 보간 등 거리 소비자용 (방향이 무효여도 거리는 유효)
-		mAimValid    = true;
+		mAimValid = true;
 		if (dist > 1e-4f)
 		{
 			mAimDirection = aim * (1.0f / dist);
@@ -327,7 +356,8 @@ namespace TopdownShooter::Controller
 		// 클릭 직전 조준 갱신 — 입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값으로 재산출.
 		UpdateAim();
 
-		if (mAttackTimer) mAttackTimer->Reset(); // 발사 후 0.15s 동안 facing=조준 (하이브리드)
+		if (mAttackTimer)
+			mAttackTimer->Reset(); // 발사 후 0.15s 동안 facing=조준 (하이브리드)
 
 		spdlog::info("[fire] ground=({:.2f},{:.2f},{:.2f}) dir=({:.2f},{:.2f},{:.2f}) angleY={:.1f}",
 		             mAimPoint[0], mAimPoint[1], mAimPoint[2],

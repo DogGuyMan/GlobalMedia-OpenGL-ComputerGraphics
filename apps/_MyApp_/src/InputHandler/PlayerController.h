@@ -35,7 +35,8 @@ namespace TopdownShooter::Controller
 			MoveBack,        // S
 			MoveLeft,        // A
 			MoveRight,       // D
-			Damage,          // G (이산 press — Damage Composite 트리거)
+			DashImpulse,	 // Shift
+			Ultimate, 	 // R
 		};
 
 		PlayerController()                                    = default;
@@ -90,6 +91,7 @@ namespace TopdownShooter::Controller
 		std::function<void()> mFireCallback;   // 좌클릭
 
 		vmath::vec3 mInputValue {0.0f};
+		vmath::vec3 mPrevInputValue {0.0f};
 
 		// 매 프레임 마우스->Ground raycast 로 갱신되는 조준 정보 — PlayerActor(owner) 위치 + 커서 Ground 좌표.
 		vmath::vec3 mAimPoint {0.0f};                  // 커서 Ground 월드 좌표 (y≈0)

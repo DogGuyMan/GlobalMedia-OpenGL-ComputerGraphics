@@ -15,6 +15,7 @@ namespace TopdownShooter::Spawns
         auto* bgmActor = ctx.sceneRoot->AddChild(std::make_unique<SJH::Scene::Actor>("BgmActor"));
         auto* bgm = bgmActor->AddComponent<TopdownShooter::Audio::FmodStudioPlayable>(evt);
         bgm->SetIsLoop(true);
-        bgm->Play();
+        // Play() 는 여기서 안 함 — Stage FSM 의 TitleState::OnEnter 가 재생 시작을 소유.
+        //   (startup 에서 미리 틀면 Title 진입 Play 와 겹쳐 두 겹 재생됨.)
     }
 }

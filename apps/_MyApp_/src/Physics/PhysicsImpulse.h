@@ -5,6 +5,7 @@
 #include "Entity/Components/Components.Interfaces.h"
 #include "Physics/PhysicsComponent.h"
 #include "Physics/Constants.h"
+#include "Entity/Player/PlayerEntity.h"
 #include "Entity/BaseEntity.h"   // Entity::BaseEntity::Timers() (MultipleTimer 등록 위탁)
 #include "scene/actor.h"
 #include "timer/timer.h"   // SJH::Timer::Timer (header-only)
