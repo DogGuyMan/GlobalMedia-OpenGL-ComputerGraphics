@@ -13,15 +13,131 @@
 #include "scene/actor.h"
 #include "Spawns/VfxInstance.h"            // VFX::Spawn 파사드 (hit seam 주입 람다 본문)
 #include "Bootstrap/Constants.h"           // ENEMY_DISSOLVE/DELAY/트윈MS
+#include "object/mesh.h"               // SJH::Mesh::CreatePlane
+#include "render/mesh_renderer.h"      // SJH::Scene::MeshRenderer
+#include "material/material.h"         // SJH::Material
+#include "material/pass.h"             // SJH::Pass::Kind::Transparent
+#include "resource_registry/image.h"  // SJH::Image::Load
+#include "Physics/PhysicsComponent.h"  // FindPhysics / Physics::GetBody
 
 #include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
+#include <box2d/box2d.h>               // b2Shape / b2PolygonShape / b2Fixture
+#include <spdlog/spdlog.h>             // spdlog::error (자원 로드 실패 가드)
 #include <vmath.h>                         // vmath::vec3 (Transform.Scale)
 
+#include <algorithm>                   // std::max
 #include <memory>  // std::make_unique (Join 자식 생성)
 #include <utility> // std::move
 
 namespace TopdownShooter::Bootstrap
 {
+	namespace
+	{
+		/// @brief [데칼] 엔티티 발밑 그림자 + 피격범위 원 — groundActor 자식 1개 아래 MeshRenderer 2장.
+		/// @details depth+1: root.groundActor.{decal_shadow, decal_hitrange}. 워블/스케일과 독립 Transform.
+		///          공유 자원은 find-or-create (스폰마다 호출돼도 1회 생성). 크기는 첫 fixture 반경 자동.
+		void AttachGroundDecals(SJH::Scene::Actor &root)
+		{
+			auto &reg = SJH::ResourceRegistry::Get();
+
+			// ── 공유 자원 (find-or-create) ──
+			SJH::Program *prog = reg.FindProgram("simple_texture");
+			if (!prog)
+				prog = reg.CreateProgram("simple_texture",
+				    "./resources/shaders/simple_texture.vs",
+				    "./resources/shaders/simple_texture.fs");
+			if (!prog)
+			{
+				spdlog::error("AttachGroundDecals: simple_texture program 생성 실패 — 데칼 생략");
+				return;
+			}
+
+			SJH::Mesh *plane = reg.FindMesh("_ground_plane");
+			if (!plane)
+				plane = reg.RegisterMesh("_ground_plane", SJH::Mesh::CreatePlane());
+
+			SJH::Texture *shadowTex = reg.FindTexture("entity_shadow");
+			if (!shadowTex)
+			{
+				auto img = SJH::Image::Load("entity_shadow", "resources/texture/EntityShadow.png");
+				if (img)
+					shadowTex = reg.CreateTexture("entity_shadow", img.get());
+			}
+
+			SJH::Texture *circleTex = reg.FindTexture("hit_range_circle");
+			if (!circleTex)
+			{
+				auto img = SJH::Image::Load("hit_range_circle", "resources/texture/Circle_albedo.png");
+				if (img)
+					circleTex = reg.CreateTexture("hit_range_circle", img.get());
+			}
+			if (!shadowTex || !circleTex)
+			{
+				spdlog::error("AttachGroundDecals: 데칼 텍스처 로드 실패 — 데칼 생략");
+				return;
+			}
+
+			SJH::Material *shadowMat = reg.FindSharedMaterial("shadow_decal_mat");
+			if (!shadowMat)
+			{
+				shadowMat = reg.CreateSharedMaterial("shadow_decal_mat");
+				shadowMat->SetProgram(prog);
+				shadowMat->SetPass(SJH::Pass::Kind::Transparent);
+				shadowMat->Properties.Textures["uTex"]   = {shadowTex, 0};
+				shadowMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 1.0f, 1.0f, 0.5f);
+			}
+			SJH::Material *hitMat = reg.FindSharedMaterial("hitrange_decal_mat");
+			if (!hitMat)
+			{
+				hitMat = reg.CreateSharedMaterial("hitrange_decal_mat");
+				hitMat->SetProgram(prog);
+				hitMat->SetPass(SJH::Pass::Kind::Transparent);
+				hitMat->Properties.Textures["uTex"]   = {circleTex, 0};
+				hitMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 0.0f, 0.0f, 0.45f);
+			}
+
+			// ── 충돌 반경 (첫 fixture) ──
+			float hitRadius = 0.5f;
+			if (auto *phys = TopdownShooter::Physics::Components::FindPhysics(&root))
+			{
+				if (b2Body *body = phys->GetBody())
+				{
+					if (b2Fixture *fx = body->GetFixtureList())
+					{
+						const b2Shape *sh = fx->GetShape();
+						if (sh->GetType() == b2Shape::e_circle)
+							hitRadius = sh->m_radius;
+						else if (sh->GetType() == b2Shape::e_polygon)
+						{
+							const auto *poly   = static_cast<const b2PolygonShape *>(sh);
+							float        maxExt = 0.0f;
+							for (int32 i = 0; i < poly->m_count; ++i)
+								maxExt = std::max(maxExt, poly->m_vertices[i].Length());
+							hitRadius = maxExt;
+						}
+					}
+				}
+			}
+			const float hitD    = hitRadius * 2.0f;
+			const float shadowD = hitRadius * 2.0f * 1.2f;
+
+			// ── groundActor + 데칼 2장 ──
+			auto *ground = root.AddChild(std::make_unique<SJH::Scene::Actor>("groundActor"));
+
+			auto *shadow = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_shadow"));
+			shadow->AddComponent<SJH::Scene::MeshRenderer>(plane, shadowMat, /*queueOffset*/ 0);
+			shadow->GetTransform().EulerRot[0] = -90.0f;                        // XY → XZ 눕힘
+			shadow->GetTransform().Scale       = vmath::vec3(shadowD, 1.0f, shadowD);
+			shadow->GetTransform().Translate   = vmath::vec3(0.0f, 0.02f, 0.0f); // z-fight 회피
+
+			auto *circle = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_hitrange"));
+			circle->AddComponent<SJH::Scene::MeshRenderer>(plane, hitMat, /*queueOffset*/ 1);
+			circle->GetTransform().EulerRot[0] = -90.0f;
+			circle->GetTransform().Scale       = vmath::vec3(hitD, 1.0f, hitD);
+			circle->GetTransform().Translate   = vmath::vec3(0.0f, 0.03f, 0.0f);
+		}
+	} // namespace
+
     SJH::Scene::Actor* BuildEnemy(const EnemyDeps& deps)
     {
         // 1) 물리+Life+AI+contact = 기존 factory (무변경)
@@ -98,6 +214,9 @@ namespace TopdownShooter::Bootstrap
         // hit FX seam — 적 Life 피격 시 hit.efk (Player 와 공통, 빌더가 VFX::Spawn 주입).
         if (auto* life = enemy->GetComponent<Entity::Components::Life>())
             life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); });
+
+        // 발밑 그림자 + 피격범위 원 (groundActor 자식, renderActor 와 형제). AddChild 전 = pre-entry.
+        AttachGroundDecals(*enemy);
 
         // 5) 씬 트리 부착 (entry -> 컴포넌트 OnEnter 캐스케이드)
         if (!deps.spawnParent) return nullptr;
