@@ -58,6 +58,10 @@ namespace TopdownShooter::VFX
 	{
 		if (mManager.Get() == nullptr) return;
 
+		// 회전 — 매 프레임 yaw 갱신 (시작각 mYaw + 회전속도×경과). 궁극기 회전 레이저 등.
+		if (mSpinRadPerSec != 0.0f && mHandle >= 0)
+			mManager->SetRotation(mHandle, 0.0f, mYaw + mSpinRadPerSec * mElapsed, 0.0f);
+
 		// FollowOwner — Actor 의 Transform.Translate 를 매 frame 추적
 		if (mTrack == TrackPolicy::FollowOwner && mHandle >= 0)
 		{
@@ -68,11 +72,23 @@ namespace TopdownShooter::VFX
 			}
 		}
 
+		// 최대 지속 경과 — 강제 종료 + finished (AutoDespawnOnFinish 가 sweep). 루프 재생보다 우선.
+		if (mMaxDurationSec > 0.0f && mElapsed >= mMaxDurationSec)
+		{
+			if (mHandle >= 0)
+			{
+				mManager->StopEffect(mHandle);
+				mHandle = -1;
+			}
+			mIsFinished = true;
+			return;
+		}
+
 		// 자연 종료 처리 — Effect 가 더 이상 존재 안 함.
 		if (mHandle >= 0 && !mManager->Exists(mHandle))
 		{
 			if (mIsLoop)
-				StartHandle();          // 루프 — 재생 반복 (orbital 상시 회전 등)
+				StartHandle();          // 루프 — 재생 반복 (orbital 상시 회전 / 3초 미만 laser 반복 등)
 			else
 			{
 				mHandle     = -1;

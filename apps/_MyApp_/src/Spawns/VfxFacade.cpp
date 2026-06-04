@@ -29,4 +29,7 @@ namespace TopdownShooter::VFX
         SJH::Effect* fx = SJH::ResourceRegistry::Get().FindEffect(key);
         Spawns::SpawnVfxInstance(*gFxRoot, gVfx, fx, pos, yaw); // fx nullptr 면 SpawnVfxInstance 내부 guard
     }
+
+    SJH::Scene::Actor* GetSpawnFxRoot() { return gFxRoot; }
+    VFXSystem*         GetSpawnVfx()    { return gVfx; }
 }

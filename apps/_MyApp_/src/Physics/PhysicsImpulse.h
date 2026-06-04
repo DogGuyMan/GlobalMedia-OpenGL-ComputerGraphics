@@ -14,7 +14,7 @@
 namespace TopdownShooter::Physics
 {
 	/// @brief 범용 물리 속도 버스트 — Player Dash + Monster Knockback.
-	/// @details 시간 로직은 SJH::Timer (active/cooldown). 이동자(Controller/AI)는 IsActive() 게이트로 자유이동 skip.
+	/// @details 시간 로직은 SJH::Timer (active/adown). 이동자(Controller/AI)는 IsActive() 게이트로 자유이동 skip.
 	class Impulse : public SJH::Scene::Component,
 	                public Entity::IImpulsable
 	{

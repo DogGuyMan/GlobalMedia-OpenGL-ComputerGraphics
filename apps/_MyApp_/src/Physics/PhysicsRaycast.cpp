@@ -1,4 +1,5 @@
 #include "Physics/PhysicsRaycast.h"
+#include <algorithm>
 #include <cmath>
 
 namespace TopdownShooter::Physics
@@ -49,6 +50,38 @@ namespace TopdownShooter::Physics
 				result.fraction = fraction;
 				result.hit      = true;
 				return fraction;
+			}
+		};
+
+		// b2World::RayCast 전체수집 콜백 — ReportFixture 가 1.0 반환해 더 먼 fixture 도 계속 수집(관통).
+		class AllCallback : public b2RayCastCallback
+		{
+		  public:
+			uint16_t                maskBits   = 0;
+			SJH::Scene::Actor*      ignore     = nullptr;
+			bool                    hitSensors = false;
+			std::vector<RaycastHit> results;
+
+			float ReportFixture(b2Fixture* fx, const b2Vec2& point,
+			                    const b2Vec2& normal, float fraction) override
+			{
+				if (!hitSensors && fx->IsSensor())
+					return -1.0f;
+				if ((fx->GetFilterData().categoryBits & maskBits) == 0)
+					return -1.0f;
+				SJH::Scene::Actor* a = ActorOf(fx->GetBody());
+				if (ignore != nullptr && a == ignore)
+					return -1.0f;
+
+				RaycastHit h;
+				h.body     = fx->GetBody();
+				h.actor    = a;
+				h.point    = vmath::vec2(point.x, point.y);
+				h.normal   = vmath::vec2(normal.x, normal.y);
+				h.fraction = fraction;
+				h.hit      = true;
+				results.push_back(h);
+				return 1.0f; // 계속 — 더 먼 fixture 도 수집 (최근접 clip 안 함)
 			}
 		};
 	} // anonymous namespace
@@ -122,5 +155,42 @@ namespace TopdownShooter::Physics
 			                                 start[1] + d[1] * cb.result.distance);
 		}
 		return cb.result;
+	}
+
+	std::vector<RaycastHit> RaycastAll(b2World& world, vmath::vec2 start, vmath::vec2 dir,
+	                                   float maxDistance, PhysicsLayer mask,
+	                                   SJH::Scene::Actor* ignore, bool hitSensors)
+	{
+		std::vector<RaycastHit> out;
+		vmath::vec2 d;
+		if (maxDistance <= 0.0f || !NormalizeDir(dir, d))
+			return out;
+
+		AllCallback cb;
+		cb.maskBits   = ToBits(mask);
+		cb.ignore     = ignore;
+		cb.hitSensors = hitSensors;
+
+		b2Vec2 p1(start[0], start[1]);
+		b2Vec2 p2(start[0] + d[0] * maxDistance, start[1] + d[1] * maxDistance);
+		world.RayCast(&cb, p1, p2);
+
+		// 거리(fraction) 오름차순 정렬.
+		std::sort(cb.results.begin(), cb.results.end(),
+		          [](const RaycastHit& a, const RaycastHit& b) { return a.fraction < b.fraction; });
+
+		// body 단위 dedup (가장 가까운 hit 1개만 유지) + distance/point 보정.
+		out.reserve(cb.results.size());
+		for (auto& h : cb.results)
+		{
+			bool dup = false;
+			for (const auto& kept : out)
+				if (kept.body == h.body) { dup = true; break; }
+			if (dup) continue;
+			h.distance = maxDistance * h.fraction;
+			h.point    = vmath::vec2(start[0] + d[0] * h.distance, start[1] + d[1] * h.distance);
+			out.push_back(h);
+		}
+		return out;
 	}
 }; // namespace TopdownShooter::Physics
