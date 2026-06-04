@@ -154,6 +154,11 @@ namespace TopdownShooter::Bootstrap
 			SJH::Mesh *plane = reg.FindMesh("_ground_plane");
 			if (!plane)
 				plane = reg.RegisterMesh("_ground_plane", SJH::Mesh::CreatePlane());
+			if (!plane)
+			{
+				spdlog::error("AttachGroundDecals: _ground_plane 메시 생성 실패 — 데칼 생략");
+				return;
+			}
 
 			SJH::Texture *shadowTex = reg.FindTexture("entity_shadow");
 			if (!shadowTex)
@@ -180,6 +185,11 @@ namespace TopdownShooter::Bootstrap
 			if (!shadowMat)
 			{
 				shadowMat = reg.CreateSharedMaterial("shadow_decal_mat");
+				if (!shadowMat)
+				{
+					spdlog::error("AttachGroundDecals: shadow_decal_mat 생성 실패 — 데칼 생략");
+					return;
+				}
 				shadowMat->SetProgram(prog);
 				shadowMat->SetPass(SJH::Pass::Kind::Transparent);
 				shadowMat->Properties.Textures["uTex"]   = {shadowTex, 0};
@@ -189,6 +199,11 @@ namespace TopdownShooter::Bootstrap
 			if (!hitMat)
 			{
 				hitMat = reg.CreateSharedMaterial("hitrange_decal_mat");
+				if (!hitMat)
+				{
+					spdlog::error("AttachGroundDecals: hitrange_decal_mat 생성 실패 — 데칼 생략");
+					return;
+				}
 				hitMat->SetProgram(prog);
 				hitMat->SetPass(SJH::Pass::Kind::Transparent);
 				hitMat->Properties.Textures["uTex"]   = {circleTex, 0};
