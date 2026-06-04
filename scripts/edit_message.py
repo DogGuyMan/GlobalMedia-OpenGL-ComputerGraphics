@@ -120,10 +120,23 @@ def main():
     # 해당 쉘 커맨드 실행: 파이썬이 모든 걸 통제하며 VSCode를 띄우기 시작합니다.
     result = subprocess.run(f"git rebase -i {base_commit}", shell=True, env=env)
     
+    # 중복/빈 커밋으로 인해 Rebase가 멈췄을 때 자동으로 skip 하도록 처리
+    while result.returncode != 0:
+        try:
+            git_dir = subprocess.check_output("git rev-parse --git-dir", shell=True, text=True, stderr=subprocess.DEVNULL).strip()
+            is_rebasing = os.path.exists(os.path.join(git_dir, "rebase-merge")) or os.path.exists(os.path.join(git_dir, "rebase-apply"))
+        except Exception:
+            is_rebasing = False
+            
+        if is_rebasing:
+            print("\n[자동화] 중복/빈 커밋으로 인한 충돌 감지! 'git rebase --skip'을 자동으로 실행합니다...")
+            result = subprocess.run("git rebase --skip", shell=True, env=env)
+        else:
+            print("\n[!] Rebase가 알 수 없는 이유로 중단되었습니다.")
+            break
+
     if result.returncode == 0:
         print("\n=== 모든 대상 커밋의 메시지 수정이 순차적으로 완료되었습니다! ===")
-    else:
-        print("\n[!] Rebase 중 중단이 발생했습니다. 터미널을 확인해주세요.")
 
 if __name__ == "__main__":
     main()
