@@ -11,6 +11,7 @@
 #include "Entity/Player/PlayerActor.h"
 #include "Entity/Player/PlayerEntity.h"         // GetComponent<PlayerEntity> (SetOnMoveFx seam 주입)
 #include "Entity/Player/PlayerHand.h"
+#include "Bootstrap/Constants.h"  // PLAYER_DECAL_Y / DECAL_CIRCLE_Y_DELTA
 #include "Playable/Constants.h"        // TopdownShooter::Playable::FRONT_MOVE
 #include "Playable/HpGrayscalePostFX.h"   // 체력 비율 -> 화면 grayscale (상시 [A] 바인더)
 #include "Playable/PlayableDirector.h"   // RegisterGroup/DirGroup + "fire"/"hit" Register + RefreshDirectional
@@ -135,7 +136,7 @@ namespace TopdownShooter::Bootstrap
 		/// @brief [데칼] 엔티티 발밑 그림자 + 피격범위 원 — groundActor 자식 1개 아래 MeshRenderer 2장.
 		/// @details depth+1: root.groundActor.{decal_shadow, decal_hitrange}. 워블/스케일과 독립 Transform.
 		///          공유 자원은 find-or-create (스폰마다 호출돼도 1회 생성). 크기는 첫 fixture 반경 자동.
-		void AttachGroundDecals(SJH::Scene::Actor &root)
+		void AttachGroundDecals(SJH::Scene::Actor &root, float baseY)
 		{
 			auto &reg = SJH::ResourceRegistry::Get();
 
@@ -242,13 +243,13 @@ namespace TopdownShooter::Bootstrap
 			shadow->AddComponent<SJH::Scene::MeshRenderer>(plane, shadowMat, /*queueOffset*/ 0);
 			shadow->GetTransform().EulerRot[0] = -90.0f;                        // XY → XZ 눕힘
 			shadow->GetTransform().Scale       = vmath::vec3(shadowD, 1.0f, shadowD);
-			shadow->GetTransform().Translate   = vmath::vec3(0.0f, 0.02f, 0.0f); // z-fight 회피
+			shadow->GetTransform().Translate   = vmath::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
 
 			auto *circle = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_hitrange"));
 			circle->AddComponent<SJH::Scene::MeshRenderer>(plane, hitMat, /*queueOffset*/ 1);
 			circle->GetTransform().EulerRot[0] = -90.0f;
 			circle->GetTransform().Scale       = vmath::vec3(hitD, 1.0f, hitD);
-			circle->GetTransform().Translate   = vmath::vec3(0.0f, 0.03f, 0.0f);
+			circle->GetTransform().Translate   = vmath::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
 		}
 	} // namespace
 
@@ -323,7 +324,7 @@ namespace TopdownShooter::Bootstrap
 		// ─────────────────────────────────────────────────────────────────────────
 
 		// 발밑 그림자 + 피격범위 원 (groundActor 자식). std::move 전 = pre-entry.
-		AttachGroundDecals(*spriteActor);
+		AttachGroundDecals(*spriteActor, PLAYER_DECAL_Y);
 
 		result.SpriteActor = dir.Root().AddChild(std::move(spriteActor));
 
