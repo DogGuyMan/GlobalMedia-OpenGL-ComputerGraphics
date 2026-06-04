@@ -84,6 +84,12 @@ namespace TopdownShooter
 			info.minorVersion = 1;
 			info.flags.debug = 1;
 
+			// 기본 창을 16:9 창모드로 (sb7 기본 800×600=4:3 덮어쓰기).
+			// macOS Retina 는 실제 framebuffer 가 2배(2560×1440)지만 비율은 16:9 유지.
+			// fullscreen 은 기본 0(windowed). GLFW 3.0 이라 aspect 하드락 API(3.2+) 는 없음 — 초기 크기만 지정.
+			info.windowWidth  = 1280;
+			info.windowHeight = 720;
+
 			SJH::CrossPlatformDir();
 		}
 
@@ -272,7 +278,15 @@ namespace TopdownShooter
 			if (mCtx->waveCtrl)
 				mCtx->waveCtrl->SetStageStateMachine(mStageFsm.get());
 
-			mStageFsm->OnEnter(); // curState=Title → TitleState::OnEnter (overlay->Show(titleTex))
+			// FMOD — Stage State 가 구동할 핸들 주입 (OnEnter 전에 세팅 필수).
+			//   BgmActor 는 WarmupAudio→BuildBGM 이 Root 직속으로 생성 (이미 존재).
+			mCtx->audio = &TopdownShooter::Manager::Get().Audio();
+			if (auto *bgmActor = dir.Root().FindChild("BgmActor"))
+				mCtx->bgmPlayable = bgmActor->GetComponent<Audio::FmodStudioPlayable>();
+			if (mSpriteActor)
+				mCtx->playerLife = mSpriteActor->GetComponent<Entity::Components::Life>();
+
+			mStageFsm->OnEnter(); // curState=Title → TitleState::OnEnter (overlay->Show(titleTex) + BGM_STATE=0)
 		}
 
 		void render(double currentTime) override
@@ -310,6 +324,11 @@ namespace TopdownShooter
 			//   NewFrame(260) 직후라 State 의 ImGui::IsKeyPressed/IsMouseClicked(frame-edge) 유효.
 			if (mStageFsm)
 				mStageFsm->Update(dt);
+
+			// 오디오 펌프 — 게임 sim freeze 와 무관하게 매 프레임(ungated). 이게 없으면 Title/Pause 에서
+			// FMOD Studio update 가 안 돌아 Play()/setParameter(BGM_STATE/Health) 명령이 처리되지 않음
+			// (Title BGM 무음 버그의 원인). FSM Update 뒤에 둬 listener/파라미터 갱신을 함께 flush.
+			TopdownShooter::Manager::Get().Audio().Update(dt);
 
 			if (mFxRoot) TopdownShooter::Spawns::SweepFinishedChildren(*mFxRoot);
 			// 디졸브 끝난 사망 적을 RemoveChild -> OnExit -> Physics::OnExit::DestroyBody (deferred — Director.Update 밖이라 iterator 안전).

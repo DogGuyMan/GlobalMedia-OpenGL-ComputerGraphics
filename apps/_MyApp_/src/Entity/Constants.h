@@ -13,7 +13,7 @@ namespace TopdownShooter::Entity
 	// ── Hand (PlayerHands 배치) ──
 	constexpr float HAND_SPREAD_DEG       = 25.0f; // 초기 벌림각(첫 프레임). 이후 거리 보간이 매 프레임 덮어씀
 	constexpr float HAND_RADIUS           = 0.3f;  // forward 거리(player local) — 팔 길이 (절반으로 축소)
-	constexpr float HAND_Y_OFFSET         = 0.0f;
+	constexpr float HAND_Y_OFFSET         = -0.1f;
 	constexpr float HAND_SCALE            = 0.25f; // 손 스프라이트 균등 Scale
 	constexpr int   HAND_QUEUE_OFFSET     = 10;    // 몸통 레이어 위
 	constexpr int   HAND_FIRE_PINCH_MS    = 500;   // 발사 핀치 복귀 시간(ms) — 클릭 시 15°로 좁혔다 원래로
