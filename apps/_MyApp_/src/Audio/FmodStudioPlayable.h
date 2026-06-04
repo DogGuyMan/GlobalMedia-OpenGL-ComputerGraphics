@@ -37,7 +37,9 @@ namespace TopdownShooter::Audio
 
 	  private:
 		::FMOD::Studio::EventDescription *mDesc     = nullptr;
-		::FMOD::Studio::EventInstance    *mInstance = nullptr;
+		// [[maybe_unused]] — FMOD 미빌드 시 사용처가 #ifdef 로 빠져 clang
+		// -Werror=unused-private-field 에 걸리는 것을 방지 (raw 포인터 멤버 한정).
+		[[maybe_unused]] ::FMOD::Studio::EventInstance *mInstance = nullptr;
 		std::optional<vmath::vec3>        mWorldPos;
 	};
 }

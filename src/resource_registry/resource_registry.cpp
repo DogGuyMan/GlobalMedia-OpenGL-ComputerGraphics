@@ -8,7 +8,9 @@
  *          Image 는 스코프 한정 — GPU 업로드 후 Create* 스택 프레임을 벗어나면 즉시 소멸.
  */
 #include "resource_registry.h"
+#ifdef SJH_HAS_FMOD
 #include <fmod/fmod.hpp>      // M5 — CreateSound 의 createSound 호출
+#endif
 #include <spdlog/spdlog.h>
 
 namespace SJH
@@ -233,6 +235,7 @@ namespace SJH
 			return nullptr;
 		}
 
+#ifdef SJH_HAS_FMOD
 		::FMOD::Sound *raw = nullptr;
 		FMOD_RESULT r = sys->createSound(path.c_str(), FMOD_DEFAULT, nullptr, &raw);
 		if (r != FMOD_OK || !raw)
@@ -245,6 +248,11 @@ namespace SJH
 		Sound *ret = sound.get();
 		mSounds.emplace(key, std::move(sound));
 		return ret;
+#else
+		(void)path;
+		spdlog::warn("[ResourceRegistry::CreateSound] FMOD 미빌드 — nullptr 스텁 (key={})", key);
+		return nullptr;
+#endif
 	}
 
 	Sound *ResourceRegistry::FindSound(const std::string &key)

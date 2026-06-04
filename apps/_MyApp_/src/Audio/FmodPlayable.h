@@ -25,7 +25,9 @@ namespace TopdownShooter::Audio
 	  private:
 		::FMOD::System  *mSys     = nullptr;
 		SJH::Sound      *mSound   = nullptr;
-		::FMOD::Channel *mChannel = nullptr;
+		// [[maybe_unused]] — FMOD 미빌드(SJH_HAS_FMOD 미정의) 시 모든 사용처가 #ifdef 로 빠져
+		// clang -Werror=unused-private-field 에 걸리는 것을 방지.
+		[[maybe_unused]] ::FMOD::Channel *mChannel = nullptr;
 	};
 }
 

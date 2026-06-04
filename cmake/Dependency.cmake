@@ -188,6 +188,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include/fmod/fmod.h")
             IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libfmodL.dylib)
     endif()
     target_link_libraries(game_deps INTERFACE fmod)
+    # FMOD 존재 시에만 SJH_HAS_FMOD 정의 — game_deps 경유로 모든 consumer
+    # (core resource_registry + client _MyApp_ Audio) 에 전파.
+    # 미설치(CI 등)면 fmod 타겟 자체가 없어 매크로 미정의 → FMOD 의존 .cpp 는
+    # #ifdef SJH_HAS_FMOD 로 no-op 스텁 컴파일 (헤더는 전방선언만 써 FMOD-free).
+    target_compile_definitions(fmod INTERFACE SJH_HAS_FMOD=1)
 else()
     message(STATUS "FMOD 미설치 — 오디오 비활성. doc/FMOD_Setup.md 참조")
 endif()
