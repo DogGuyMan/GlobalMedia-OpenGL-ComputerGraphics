@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 namespace TopdownShooter::Spawns
 {
@@ -43,5 +44,31 @@ namespace TopdownShooter::Spawns
 
         a->AddComponent<AutoDespawnOnFinish>(tw);       // 종료 감지 (기존 sweeper 가 RemoveChild)
         tw->Play();
+    }
+}
+
+// ── 전투 배선 파사드 (VFX::Spawn 대칭) — Life seam 이 fxRoot/font 없이 데미지 숫자 spawn ──
+//    GL 충돌 없어 별도 TU 불필요 (VfxFacade 와 달리 Effekseer 비의존).
+namespace TopdownShooter::WorldText
+{
+    namespace
+    {
+        SJH::Scene::Actor*     gFxRoot = nullptr;   // main 등록 — Director.Root() 자식 "FxRoot"
+        SJH::Text::BitmapFont* gFont   = nullptr;   // main 등록 — Manager.WorldText().GetFont()
+    }
+
+    void SetSpawnContext(SJH::Scene::Actor* fxRoot, SJH::Text::BitmapFont* font)
+    {
+        gFxRoot = fxRoot;
+        gFont   = font;
+    }
+
+    void SpawnDamage(int damage, const vmath::vec3& pos)
+    {
+        if (gFxRoot == nullptr || gFont == nullptr) return;   // 미등록 — no-op (VFX::Spawn 동일)
+        Spawns::WorldTextStyle style;
+        style.color = vmath::vec4(1.0f, 0.2f, 0.2f, 1.0f);    // 빨강 (피해 강조)
+        style.scale = 0.5f;
+        Spawns::SpawnWorldText(*gFxRoot, gFont, pos, "-" + std::to_string(damage), style);
     }
 }

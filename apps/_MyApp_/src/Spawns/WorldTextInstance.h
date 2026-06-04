@@ -31,4 +31,15 @@ namespace TopdownShooter::Spawns
                         const WorldTextStyle& style);
 }
 
+namespace TopdownShooter::WorldText
+{
+    /// @brief 전역 spawn 컨텍스트 등록 (main startup). VFX::SetSpawnContext 대칭 —
+    ///        Life seam 이 fxRoot/font 를 직접 들지 않고 SpawnDamage 만 호출 가능하게.
+    void SetSpawnContext(SJH::Scene::Actor* fxRoot, SJH::Text::BitmapFont* font);
+
+    /// @brief 데미지 숫자 단발 spawn ("-N" 빨강 0.5배). 컨텍스트 미등록/폰트 없음 → no-op.
+    ///        VFX::Spawn 대칭 — 빌더가 Life::SetOnDamageNumber seam 에 주입.
+    void SpawnDamage(int damage, const vmath::vec3& pos);
+}
+
 #endif // __TOPDOWNSHOOTER_SPAWNS_WORLD_TEXT_INSTANCE_H__

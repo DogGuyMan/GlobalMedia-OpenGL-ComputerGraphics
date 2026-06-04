@@ -219,6 +219,8 @@ namespace TopdownShooter
 
 			// VFX::Spawn 파사드 컨텍스트 등록 — seam(dust/hit/gunshoot)이 이 fxRoot+VFXSystem 으로 단발 스폰.
 			VFX::SetSpawnContext(mFxRoot, &vfxs);
+			// World Text 파사드 컨텍스트 — Life::SetOnDamageNumber seam 이 이 fxRoot+폰트로 데미지 숫자 스폰.
+			WorldText::SetSpawnContext(mFxRoot, TopdownShooter::Manager::Get().WorldText().GetFont());
 
 			auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
 			mSpriteActor = player.SpriteActor;

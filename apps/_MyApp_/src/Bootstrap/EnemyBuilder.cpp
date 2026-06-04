@@ -18,6 +18,7 @@
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "Spawns/VfxInstance.h"            // VFX::Spawn 파사드 (hit seam 주입 람다 본문)
+#include "Spawns/WorldTextInstance.h"      // WorldText::SpawnDamage 파사드 (데미지 숫자 seam 주입)
 #include "Bootstrap/Constants.h"           // ENEMY_DISSOLVE/DELAY/트윈MS
 #include "object/mesh.h"               // SJH::Mesh::CreatePlane
 #include "render/mesh_renderer.h"      // SJH::Scene::MeshRenderer
@@ -248,7 +249,8 @@ namespace TopdownShooter::Bootstrap
 
         // hit FX seam — 적 Life 피격 시 hit.efk (Player 와 공통, 빌더가 VFX::Spawn 주입).
         if (auto* life = enemy->GetComponent<Entity::Components::Life>())
-            life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); });
+            life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); })
+                .SetOnDamageNumber([](int d, const vmath::vec3& p) { WorldText::SpawnDamage(d, p); });
 
         // 발밑 그림자 + 피격범위 원 (groundActor 자식, renderActor 와 형제). AddChild 전 = pre-entry.
 		AttachGroundDecals(*enemy, ENEMY_DECAL_Y);

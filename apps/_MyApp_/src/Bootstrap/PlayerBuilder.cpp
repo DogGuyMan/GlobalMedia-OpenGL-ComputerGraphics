@@ -22,6 +22,7 @@
 #include "Manager.h"
 #include "Physics/PhysicsLayer.h"
 #include "Spawns/VfxInstance.h"   // VFX::Spawn 파사드 (seam 주입 람다 본문)
+#include "Spawns/WorldTextInstance.h"   // WorldText::SpawnDamage 파사드 (데미지 숫자 seam 주입)
 #include "playable/composite_playable.h"
 #include "resource_registry/resource_registry.h"
 #include "object/mesh.h"              // SJH::Mesh::CreatePlane
@@ -316,7 +317,8 @@ namespace TopdownShooter::Bootstrap
 
 		// VFX seam 주입 — 컴포넌트는 VFX 를 모르고, 빌더가 VFX::Spawn 람다를 주입 (director->Play 패턴).
 		if (auto *life = spriteActor->GetComponent<Entity::Components::Life>())
-			life->SetOnHitFx([](const vmath::vec3 &p) { VFX::Spawn("hit", p); });
+			life->SetOnHitFx([](const vmath::vec3 &p) { VFX::Spawn("hit", p); })
+				.SetOnDamageNumber([](int d, const vmath::vec3 &p) { WorldText::SpawnDamage(d, p); });
 		if (auto *player = spriteActor->GetComponent<Entity::PlayerEntity>())
 			player->SetOnMoveFx([](const vmath::vec3 &p) { VFX::Spawn("dust", p); });
 		if (auto *weapon = spriteActor->GetComponent<Entity::Components::Weapon>())
