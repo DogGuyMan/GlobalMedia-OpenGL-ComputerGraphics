@@ -3,6 +3,8 @@
 #include "Entity/Player/PlayerActor.h"
 #include "Entity/Player/PlayerEntity.h"
 
+#include "Entity/Components/PlayerLifeComponents.h" // 플레이어 전용 Life (i-frame 0.8s + 자동 회복)
+
 #include "Physics/PhysicsImpulse.h"
 #include "Playable/SpriteLayerFactory.h" // AttachSpriteLayer — 3-빌더 공유 sprite-layer 부착 헬퍼
 
@@ -17,10 +19,11 @@ namespace TopdownShooter::Entity::Player
 	{
 		// ════════════ [1] 컴포넌트 초기화 (AddComponent 전용 — Set* 없음) ════════════
 
-		/// @brief Life — 항상.
+		/// @brief Life — 항상. 플레이어는 전용 PlayerLifeComponent (i-frame 0.8s + 초당 5 자동 회복).
+		///        GetComponent<Components::Life> 는 slow-path dynamic_cast 로 본 파생을 그대로 찾는다.
 		void InitLife(SJH::Scene::Actor &a, const PlayerActorConfig &cfg)
 		{
-			a.AddComponent<Components::Life>(cfg.life.hp);
+			a.AddComponent<Components::PlayerLifeComponent>(cfg.life.hp);
 		}
 
 		/// @brief [if/else 분할] 물리 분기 — BoxBody(eager) + PhysicsMovement + Impulse + Weapon.

@@ -1,6 +1,7 @@
 #ifndef _TOPDOWNSHOOTER_ENTITY_PLAYER__
 #define _TOPDOWNSHOOTER_ENTITY_PLAYER__
 
+#include "Entity/Components/PlayerLifeComponents.h"
 #include "Entity/BaseEntity.h"
 #include "Entity/Components/Components.Interfaces.h"   // IMovable
 #include "Entity/Components/WeaponComponents.h"        // Components::Weapon (UseWeapon 호출 — 완전형)
@@ -48,7 +49,11 @@ namespace TopdownShooter::Entity
 				mDustTimer->Reset();
 			}
 		}
-		void Dash(vmath::vec2 dir)   { DoImpulse(dir); }                       // BaseEntity 기반(대시)
+		void Dash(vmath::vec2 dir)   { 
+			auto* plife = dynamic_cast<Components::PlayerLifeComponent*>(mLife);
+			plife->DoInvincible();
+			DoImpulse(dir); 
+		}                       // BaseEntity 기반(대시)
 		void Attack(vmath::vec2 aim) { if (mWeapon) mWeapon->UseWeapon(aim); } // ranged bullet
 	};
 } // namespace TopdownShooter::Entity
