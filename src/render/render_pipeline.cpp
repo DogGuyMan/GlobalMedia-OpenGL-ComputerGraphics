@@ -1,3 +1,21 @@
+/**
+ * @file render_pipeline.cpp
+ * @brief SetupDefaultPipeline / BuildPostFXChain 구현.
+ *
+ * @details
+ *  ### 책임
+ *  - @c SetupDefaultPipeline - passthrough 셰이더/Mesh/bypass Material 을 ResourceRegistry 에 등록하고,
+ *    ScreenQuadStage 를 생성해 반환 (Pure Factory).
+ *  - @c BuildPostFXChain - 복수 PostFX 스테이지를 체인 연결:
+ *    각 스테이지마다 Program + Material + Framebuffer 생성 -> PassActor + PassComponent 구성 -> screenCamActor 자식 추가.
+ *
+ *  ### 비-책임
+ *  - [X] Stage 수명 관리 / 실행 순서 - Application 의 @c mStages 벡터 책임.
+ *  - [X] 생성된 Framebuffer 보유 - @c PostFXChainResult::Framebuffers 를 caller 가 멤버로 보관.
+ *
+ * @note 두 함수 모두 *실패 시* 해당 자원 skip + @c spdlog::error 출력 후 계속.
+ *       @c SetupDefaultPipeline 은 어느 단계든 실패하면 @c nullptr 반환.
+ */
 #include "render/render_pipeline.h"
 
 #include "object/mesh.h"
@@ -92,7 +110,7 @@ namespace SJH::Render
 			}
 			mat->SetProgram(prog);
 
-			// D-6 data-driven — InitFloats 가 mat->Properties.Floats 로 복사.
+			// D-6 data-driven - InitFloats 가 mat->Properties.Floats 로 복사.
 			for (const auto& [name, value] : def.InitFloats)
 			{
 				mat->Properties.Floats[name] = value;

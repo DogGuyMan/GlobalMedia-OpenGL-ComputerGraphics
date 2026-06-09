@@ -1,15 +1,22 @@
 /**
  * @file resource_registry.cpp
- * @brief Create* / Register* — 캐시-미스 경로에서 새 자원을 생성,등록.
- *        Find*               — 캐시-히트 경로에서 기존 인스턴스를 즉시 반환.
+ * @brief @c ResourceRegistry 메서드 정의 - 캐시 miss/hit 경로 구현.
  *
- * @details emplace 결과의 iterator 로 raw 포인터를 꺼내 반환 — 매니저 보관 인스턴스를 가리키므로
- *          호출자에게 노출되는 lifetime 은 매니저 자신의 lifetime 과 동일하다.
- *          Image 는 스코프 한정 — GPU 업로드 후 Create* 스택 프레임을 벗어나면 즉시 소멸.
+ * @details
+ *  ### 구현 원칙
+ *  - @c Create* / @c Register* - 캐시-미스 경로에서 새 자원을 생성/등록.
+ *    @c emplace 결과 iterator 로 raw 포인터를 꺼내 반환 - 매니저 보관 인스턴스를 가리키므로
+ *    호출자에게 노출되는 lifetime 은 매니저 자신의 lifetime 과 동일하다.
+ *  - @c Find* - 캐시-히트 경로에서 기존 인스턴스를 즉시 반환.
+ *  - Image 는 스코프 한정 - GPU 업로드 후 @c Create* 스택 프레임을 벗어나면 즉시 소멸.
+ *
+ *  ### FMOD 옵셔널 컴파일 가드
+ *  @c CreateSound 는 @c SJH_HAS_FMOD 가드 - FMOD 미설치 환경에서도 링크 에러 없이 스텁 반환.
+ *  @c CreateEffect 는 Effekseer 헤더가 항상 포함되므로 가드 없음.
  */
 #include "resource_registry.h"
 #ifdef SJH_HAS_FMOD
-#include <fmod/fmod.hpp>      // M5 — CreateSound 의 createSound 호출
+#include <fmod/fmod.hpp>      // M5 - CreateSound 의 createSound 호출
 #endif
 #include <spdlog/spdlog.h>
 
@@ -30,13 +37,13 @@ namespace SJH
 	{
 		if (mTextures.find(key) != mTextures.end())
 		{
-			spdlog::warn("CreateTexture: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+			spdlog::warn("CreateTexture: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
 			return nullptr;
 		}
 		auto texture = Texture::CreateTexture(image);
 		if (texture == nullptr)
 		{
-			spdlog::error("CreateTexture: GPU 텍스처 생성 실패 — key '{}'", key);
+			spdlog::error("CreateTexture: GPU 텍스처 생성 실패 - key '{}'", key);
 			return nullptr;
 		}
 		auto insertedIt = mTextures.emplace(key, std::move(texture)).first;
@@ -51,10 +58,10 @@ namespace SJH
 
 	Material *ResourceRegistry::CreateSharedMaterial(const std::string &key)
 	{
-		// 텍스처 독립 — 빈 Material 만 생성,캐시. 텍스처/프로그램 배선은 호출자 책임.
+		// 텍스처 독립 - 빈 Material 만 생성,캐시. 텍스처/프로그램 배선은 호출자 책임.
 		if (mSharedMaterials.find(key) != mSharedMaterials.end())
 		{
-			spdlog::warn("CreateSharedMaterial: 키 '{}' 가 이미 존재 — FindSharedMaterial 을 먼저 호출하라", key);
+			spdlog::warn("CreateSharedMaterial: 키 '{}' 가 이미 존재 - FindSharedMaterial 을 먼저 호출하라", key);
 			return nullptr;
 		}
 		auto insertedIt = mSharedMaterials.emplace(key, Material::Create()).first;
@@ -71,12 +78,12 @@ namespace SJH
 	{
 		if (!template_)
 		{
-			spdlog::warn("CreateMaterialInstanceFrom: 키 '{}' template_ 가 nullptr — 거부", key);
+			spdlog::warn("CreateMaterialInstanceFrom: 키 '{}' template_ 가 nullptr - 거부", key);
 			return nullptr;
 		}
 		if (mMaterialInstances.find(key) != mMaterialInstances.end())
 		{
-			spdlog::warn("CreateMaterialInstanceFrom: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+			spdlog::warn("CreateMaterialInstanceFrom: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
 			return nullptr;
 		}
 		// template_->Clone() 이 IsInstance=true + OriginalMaterial=template_ 자동 설정 (Material::Clone).
@@ -95,13 +102,13 @@ namespace SJH
 	{
 		if (mModels.find(key) != mModels.end())
 		{
-			spdlog::warn("CreateModel: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+			spdlog::warn("CreateModel: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
 			return nullptr;
 		}
 		auto model = Model::Load(filename);
 		if (model == nullptr)
 		{
-			spdlog::error("CreateModel: 모델 로드 실패 — key '{}', file '{}'", key, filename);
+			spdlog::error("CreateModel: 모델 로드 실패 - key '{}', file '{}'", key, filename);
 			return nullptr;
 		}
 		auto insertedIt = mModels.emplace(key, std::move(model)).first;
@@ -120,13 +127,13 @@ namespace SJH
 	{
 		if (mPrograms.find(key) != mPrograms.end())
 		{
-			spdlog::warn("CreateProgram: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+			spdlog::warn("CreateProgram: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
 			return nullptr;
 		}
 		auto program = Program::CreateWithVSFS(vertShaderFilename, fragShaderFilename);
 		if (program == nullptr)
 		{
-			spdlog::error("CreateProgram: 셰이더 컴파일/링크 실패 — key '{}', vs '{}', fs '{}'",
+			spdlog::error("CreateProgram: 셰이더 컴파일/링크 실패 - key '{}', vs '{}', fs '{}'",
 			              key, vertShaderFilename, fragShaderFilename);
 			return nullptr;
 		}
@@ -153,12 +160,12 @@ namespace SJH
 	{
 		if (mesh == nullptr)
 		{
-			spdlog::warn("RegisterMesh: 키 '{}' 에 nullptr Mesh 위탁 요청 — 거부", key);
+			spdlog::warn("RegisterMesh: 키 '{}' 에 nullptr Mesh 위탁 요청 - 거부", key);
 			return nullptr;
 		}
 		if (mMeshes.find(key) != mMeshes.end())
 		{
-			spdlog::warn("RegisterMesh: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+			spdlog::warn("RegisterMesh: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
 			return nullptr;
 		}
 		auto insertedIt = mMeshes.emplace(key, std::move(mesh)).first;
@@ -175,13 +182,13 @@ namespace SJH
 	{
 		if (mFramebuffers.find(key) != mFramebuffers.end())
 		{
-			spdlog::warn("CreateFramebuffer: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+			spdlog::warn("CreateFramebuffer: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
 			return nullptr;
 		}
 		auto fb = Framebuffer::Create(width, height);
 		if (fb == nullptr)
 		{
-			spdlog::error("CreateFramebuffer: FBO 생성 실패 — key '{}', {}x{}", key, width, height);
+			spdlog::error("CreateFramebuffer: FBO 생성 실패 - key '{}', {}x{}", key, width, height);
 			return nullptr;
 		}
 		auto insertedIt = mFramebuffers.emplace(key, std::move(fb)).first;
@@ -200,14 +207,14 @@ namespace SJH
 	{
 		if (mAtlas.find(key) != mAtlas.end())
 		{
-			spdlog::warn("CreateUniformAtlas: 키 '{}' 가 이미 존재 — Find 를 먼저 호출하라", key);
+			spdlog::warn("CreateUniformAtlas: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
 			return nullptr;
 		}
 		auto atlas = std::make_unique<Sprite::UniformAtlas>();
 		atlas->LoadFromPNG(pngPath.c_str()).SetGrid(cols, rows);
 		if (!atlas->IsValid())
 		{
-			spdlog::error("CreateUniformAtlas: PNG 로드/grid 검증 실패 — key '{}', png '{}', grid {}x{}",
+			spdlog::error("CreateUniformAtlas: PNG 로드/grid 검증 실패 - key '{}', png '{}', grid {}x{}",
 			              key, pngPath, cols, rows);
 			return nullptr;
 		}
@@ -221,7 +228,7 @@ namespace SJH
 		return (it != mAtlas.end()) ? it->second.get() : nullptr;
 	}
 
-	// M5 — FMOD Sound
+	// M5 - FMOD Sound
 	Sound *ResourceRegistry::CreateSound(::FMOD::System *sys, const std::string &key, const std::string &path)
 	{
 		if (!sys)
@@ -250,7 +257,7 @@ namespace SJH
 		return ret;
 #else
 		(void)path;
-		spdlog::warn("[ResourceRegistry::CreateSound] FMOD 미빌드 — nullptr 스텁 (key={})", key);
+		spdlog::warn("[ResourceRegistry::CreateSound] FMOD 미빌드 - nullptr 스텁 (key={})", key);
 		return nullptr;
 #endif
 	}
@@ -261,10 +268,10 @@ namespace SJH
 		return (it != mSounds.end()) ? it->second.get() : nullptr;
 	}
 
-	// M5 — Effekseer Effect
+	// M5 - Effekseer Effect
 	Effect *ResourceRegistry::CreateEffect(::Effekseer::ManagerRef manager, const std::string &key, const char16_t *path)
 	{
-		// ※ Effekseer::RefPtr 은 operator! / operator bool 미지원 — Get() 으로 nullptr 비교
+		// * Effekseer::RefPtr 은 operator! / operator bool 미지원 - Get() 으로 nullptr 비교
 		if (manager.Get() == nullptr)
 		{
 			spdlog::error("[ResourceRegistry::CreateEffect] manager=null (key={})", key);
@@ -297,17 +304,17 @@ namespace SJH
 
 	void ResourceRegistry::Clear()
 	{
-		// * SP-MaterialMetadata — Material 의 OriginalMaterial dangling 차단:
+		// * SP-MaterialMetadata - Material 의 OriginalMaterial dangling 차단:
 		//   Instance 가 *항상 Shared 보다 먼저* 소멸하도록 명시 순서 (Unreal `UMaterialInstanceDynamic::Parent` 안전).
-		mMaterialInstances.clear(); // * Instance 먼저 — OriginalMaterial 참조 객체들 소멸
-		mSharedMaterials.clear();   // * Shared 나중 — 참조 대상 소멸
+		mMaterialInstances.clear(); // * Instance 먼저 - OriginalMaterial 참조 객체들 소멸
+		mSharedMaterials.clear();   // * Shared 나중 - 참조 대상 소멸
 		mTextures.clear();
 		mModels.clear();
 		mPrograms.clear();
 		mMeshes.clear();
 		mFramebuffers.clear();
 		mAtlas.clear();
-		mSounds.clear();    // M5 — Sound dtor 가 FMOD::Sound::release() 호출
-		mEffects.clear();   // M5 — EffectRef shared_ptr 자동 정리
+		mSounds.clear();    // M5 - Sound dtor 가 FMOD::Sound::release() 호출
+		mEffects.clear();   // M5 - EffectRef shared_ptr 자동 정리
 	}
 } // namespace SJH

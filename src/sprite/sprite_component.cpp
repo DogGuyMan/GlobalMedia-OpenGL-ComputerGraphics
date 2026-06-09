@@ -1,13 +1,20 @@
 /**
  * @file sprite_component.cpp
- * @brief SpriteRenderer 구현 — ResourceRegistry 경유 공유 자원 해결 + per-instance Material + uniform sync.
+ * @brief SpriteRenderer 구현 - ResourceRegistry 경유 공유 자원 lazy 해결 + per-instance Material 생성 + uniform 동기화.
  *
  * @details
- *   ResourceRegistry 키 컨벤션 ('_' 접두 — 사용자 namespace 격리):
- *     - "_sprite_plane"               (Mesh)
- *     - "_sprite_billboard_program"   (Program)
- *     - "_sprite_billboard"           (template SharedMaterial)
- *     - "_sprite_inst_<N>"            (per-instance MaterialInstance)
+ *  ### 책임
+ *  - 익명 namespace 헬퍼 3종:
+ *    - @c EnsureSharedPlane()      - @c _sprite_plane (Mesh) 최초 1회 생성/등록.
+ *    - @c EnsureTemplateMaterial() - @c _sprite_billboard_program (Program) + @c _sprite_billboard (SharedMaterial) 최초 1회.
+ *    - @c CreateInstanceMaterial() - @c _sprite_inst_N (MaterialInstance) per-SpriteRenderer 생성.
+ *  - @c SpriteRenderer::Update : atlas UV / tint / flipX / roll / 피격 / 디졸브 uniform 매 프레임 동기화.
+ *
+ *  ### ResourceRegistry 키 컨벤션 ('_' 접두 - 사용자 namespace 격리)
+ *  - @c "_sprite_plane"             (Mesh)
+ *  - @c "_sprite_billboard_program" (Program)
+ *  - @c "_sprite_billboard"         (template SharedMaterial)
+ *  - @c "_sprite_inst_N"            (per-instance MaterialInstance, N = 단조 증가 counter)
  */
 #include "sprite/sprite_component.h"
 
@@ -75,7 +82,7 @@ namespace SJH::Sprite
 			if (!tpl)
 				return nullptr;
 
-			// 단조 증가 — 동일 프로세스 안 unique. ResourceRegistry::Clear 이후에도 충돌 없음.
+			// 단조 증가 - 동일 프로세스 안 unique. ResourceRegistry::Clear 이후에도 충돌 없음.
 			static int counter = 0;
 			const std::string key = std::string("_sprite_inst_") + std::to_string(++counter);
 			auto *inst = reg.CreateMaterialInstanceFrom(key, tpl);
@@ -106,7 +113,7 @@ namespace SJH::Sprite
 		Uniforms::SetFloat(*Material, "uFlipX", flipX ? -1.0f : 1.0f);
 		Uniforms::SetVec4(*Material, "uTint", tint);
 
-		// === billboard roll — owner Transform.EulerRot.z(degree) 만 송신 (pitch/yaw 무시) ===
+		// === billboard roll - owner Transform.EulerRot.z(degree) 만 송신 (pitch/yaw 무시) ===
 		// 빌보드 셰이더는 uModel 회전을 버리므로, z축 roll 은 별도 uniform 으로 전달해야 반영된다.
 		float rollDeg = 0.0f;
 		if (auto *owner = GetOwner())

@@ -6,73 +6,93 @@ C++17 / CMake 단독 빌드. macOS·Linux (Ninja) + Windows (MSVC) 크로스 플
 > **교수 제출용 — vcpkg 미사용.** 모든 서드파티는 `lib/`·`include/` 사전 빌드 산출물을 체크인해 CMake 단독으로 완결된다.
 > 재빌드는 `shell/BuildExternLibs.{sh,bat}`. 본 문서는 `src/` 코어 모듈 16종 + `doc/pages/` 가이드를 대상으로 한다 (`apps/` 데모는 범위 외).
 
-## 모듈 레이어 다이어그램
+## 모듈 의존 그래프 (`src/` 내부)
 
-> 개념적 레이어 뷰. 정확한 클래스 단위 관계는 각 클래스 페이지의 자동 collaboration graph 참조.
-> 16개 코어 모듈은 INTERFACE 우산 `SJH::engine` 으로 묶여 한 줄 link 된다
-> (`target_link_libraries(<demo> PRIVATE project_deps SJH::engine)`).
+> `src/<module>/` 코드의 **실제 인스턴스 의존**만 표시한다 — `A → B` 는 *A 가 B 의 클래스 인스턴스를 소유·보유·생성하거나, B 인스턴스의 비-static 멤버를 호출/상속* 함을 뜻한다.
+>
+> **노이즈 제외 규칙** (의존 엣지를 그리지 않는 경우):
+> ① **static 전용 유틸 클래스** 접근 (예: `diagnostics` 의 `GLObjectLog::Check*` 등)
+> ② **namespace free function** 호출 (예: `Uniforms::Set*`, `Geometry::*`, `LoadTextFile`)
+> ③ **매크로** (`CLASS_PTR`)
+>
+> (산출: `src/*/CMakeLists.txt` link + cross-module `#include` + 사용 형태(인스턴스 vs static/free-func) 분석. 클래스 단위 관계는 각 클래스 페이지의 자동 collaboration graph 참조.)
 
 \dot
-digraph EngineArchitecture {
-  rankdir=BT;
-  node [shape=box, style=rounded, fontname="Helvetica"];
-  compound=true;
+digraph ModuleDeps {
+  rankdir=TB;
+  node [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
+  edge [color="#5b6b80", arrowsize=0.7];
 
-  subgraph cluster_app {
-    label="앱 (Client — 라이프 사이클)"; style=dashed;
-    MyApp [label="apps/_MyApp_\n(탑다운 슈터)", style="rounded,filled", fillcolor="#fff7d6"];
+  // 기반 유틸 — static/macro/free-func 라 의존 엣지를 의도적으로 생략 (분리 박스)
+  subgraph cluster_util {
+    label="기반 유틸 — 의존 엣지 생략 (static · macro · free-func)";
+    style=filled; fillcolor="#f4f4f4"; fontsize=10;
+    node [style="rounded,filled", fillcolor="#eaeaea"];
+    common      [label="common\nCLASS_PTR 매크로 · LoadTextFile()"];
+    diagnostics [label="diagnostics\nGL* / Effekseer static 진단"];
+    input       [label="input\nKeyboardInput<T> · MouseInput (leaf)"];
   }
 
-  subgraph cluster_umbrella {
-    label="우산 (INTERFACE)"; style=dashed;
-    engine [label="SJH::engine", style="rounded,filled", fillcolor="#e8f5e9"];
-  }
+  // 인스턴스 의존 노드
+  node [style=rounded];
+  shader; program; layout; material; object; buffer;
+  scene; render; resource_registry; sprite; playable; fsm; timer; text;
 
-  subgraph cluster_content {
-    label="콘텐츠 / 게임플레이"; style=dashed;
-    sprite; fsm; playable; input; resource_registry; timer;
-  }
+  // ── 상호 의존 (응집 핫스팟) — 빨강 양방향 ──
+  edge [color="#c0392b", dir=both, penwidth=1.3];
+  scene  -> object            [label="Transform ↔ Light:Component"];
+  scene  -> render            [label="comp 생성 ↔ comp 수집"];
+  buffer -> resource_registry [label="Framebuffer ↔ Texture 캐시"];
 
-  subgraph cluster_scene {
-    label="씬 / 렌더"; style=dashed;
-    scene; render;
-  }
-
-  subgraph cluster_gl {
-    label="GL 자원 / 머티리얼"; style=dashed;
-    buffer; shader; program; layout; material; object;
-  }
-
-  subgraph cluster_base {
-    label="기반"; style=dashed;
-    common; diagnostics;
-  }
-
-  subgraph cluster_project_deps {
-    label="project_deps (GL/윈도우)"; style=filled; fillcolor="#f0f0f0";
-    sb7; glfw3; OpenGL;
-  }
-
-  subgraph cluster_game_deps {
-    label="game_deps (게임/엔진)"; style=filled; fillcolor="#eef3fb";
-    box2d; Effekseer; assimp; spdlog; tweeny; stb; FMOD [label="fmod\n(조건부)"];
-  }
-
-  // 앱 -> 우산 -> 모듈 그룹 (레이어 흐름)
-  MyApp   -> engine;
-  MyApp   -> FMOD [lhead=cluster_game_deps, style=dashed, label="POST_BUILD dll copy"];
-  engine  -> sprite    [lhead=cluster_content];
-  engine  -> scene     [lhead=cluster_scene];
-  engine  -> buffer    [lhead=cluster_gl];
-  engine  -> common    [lhead=cluster_base];
-
-  // 코어 모듈 -> 외부
-  buffer  -> sb7    [ltail=cluster_gl, lhead=cluster_project_deps];
-  scene   -> sb7    [ltail=cluster_scene, lhead=cluster_project_deps];
-  resource_registry -> box2d [lhead=cluster_game_deps, label="PUBLIC\n(FMOD/Effekseer/stb)"];
-  diagnostics -> spdlog [style=dotted];
+  // ── 단방향 인스턴스 의존 ──
+  edge [color="#5b6b80", dir=forward, penwidth=1.0];
+  program -> shader;
+  material -> program;
+  object -> buffer;
+  object -> layout;
+  object -> material;
+  object -> resource_registry;
+  buffer -> render;
+  resource_registry -> material;
+  resource_registry -> object;
+  resource_registry -> program;
+  resource_registry -> sprite;
+  scene -> buffer;
+  scene -> material;
+  render -> buffer;
+  render -> material;
+  render -> object;
+  render -> program;
+  render -> resource_registry;
+  sprite -> material;
+  sprite -> object;
+  sprite -> playable;
+  sprite -> render;
+  sprite -> resource_registry;
+  playable -> scene;
+  fsm -> scene;
+  timer -> scene;
+  text -> resource_registry;
+  text -> scene;
+  text -> sprite;
 }
 \enddot
+
+**범례**
+
+| 표기 | 의미 |
+|---|---|
+| A → B (회색) | A 가 B 의 인스턴스를 소유·보유·생성하거나 비-static 멤버 호출/상속 (실제 결합) |
+| A ↔ B (빨강) | 상호 의존 — 응집 핫스팟 (리팩토링 후보) |
+| 기반 유틸 박스 | `common`·`diagnostics`·`input` — 의존 엣지를 **의도적으로 생략** |
+
+**의도적으로 제외한 노이즈 엣지:**
+- `→ diagnostics` — 전부 `static` 진단 호출 (`GLObjectLog::Check*`, `GLDebug::*`, `GLValidate::*`, `EffekseerDiagnostics`)
+- `→ common` — `CLASS_PTR` 매크로 + `LoadTextFile()` free function 뿐 (인스턴스 클래스 없음)
+- `program → object` — 오직 `program_uniforms.cpp` 의 `Uniforms::Set*Light()` **free function** 인자로 `object::Light` 사용
+- `sprite·object → program` — 오직 `Uniforms::Set*()` **free function** 호출 (직접 `#include "program/"` 없음)
+
+> ⚠️ **레이어링 이상:** `common/layer.h` 가 `scene/layer.h` 를 re-export (`common → scene`, 역방향). 의존 그래프에선 제외했으나 정리 후보.
 
 ## 빌드 / 실행 흐름 (high-level)
 

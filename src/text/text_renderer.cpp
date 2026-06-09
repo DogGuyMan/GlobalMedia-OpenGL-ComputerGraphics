@@ -1,3 +1,19 @@
+/**
+ * @file text_renderer.cpp
+ * @brief TextRenderer 구현 - 글리프 child Actor 재구성, tint/alpha 일괄 갱신.
+ *
+ * @details
+ *  ### 책임
+ *  - @c SetText -> @c Rebuild: owner 의 기존 글리프 child 제거 -> center offset 산출 ->
+ *    문자별 child Actor + @c SpriteRenderer 추가.
+ *  - @c SetColor / @c SetAlpha: @c mGlyphs 벡터를 순회해 각 @c SpriteRenderer 의 tint 갱신.
+ *
+ *  ### 비-책임
+ *  - [X] 글리프 child 소유 - owner Actor 의 children 트리가 소유.
+ *  - [X] Tween 구동 - Client 에서 @c SetAlpha / @c SetColor 를 직접 호출.
+ *
+ * @note @c Rebuild 는 Update 트리 순회 *밖*에서 호출해야 iterator 안전 (AddChild/RemoveChild 무효화 방지).
+ */
 #include "text/text_renderer.h"
 
 #include "text/bitmap_font.h"
@@ -35,7 +51,7 @@ namespace SJH::Text
         auto* owner = GetOwner();
         if (!owner) return;
 
-        // 기존 글리프 제거 (re-SetText) — 스폰/SetText 시점(Update 트리 순회 밖, iterator 안전)
+        // 기존 글리프 제거 (re-SetText) - 스폰/SetText 시점(Update 트리 순회 밖, iterator 안전)
         for (auto* g : mGlyphs) owner->RemoveChild(g);
         mGlyphs.clear();
 

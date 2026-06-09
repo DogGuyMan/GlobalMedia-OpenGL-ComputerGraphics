@@ -1,6 +1,13 @@
 /**
  * @file uniform_diagnostics.cpp
- * @brief @c UniformDiagnostics 구현 — 내부 program-키 글로벌 트래커.
+ * @brief @c UniformDiagnostics 구현 - program 키 기반 글로벌 warn-once 트래커.
+ *
+ * @details
+ *  ### 구현 노트
+ *  - 익명 네임스페이스 @c detail - @c warnedMissing / @c warnedTypeMismatch :
+ *    `unordered_map<GLuint, unordered_set<string>>` 구조로 (program, name) 중복 제거.
+ *  - @c insert().second 패턴 - 집합에 처음 삽입될 때만 @c true 반환 -> 최초 1회만 warn.
+ *  - @c Invalidate - @c erase(program) 으로 두 맵에서 모두 제거. @c Program::~Program 짝꿍.
  */
 
 #include "uniform_diagnostics.h"
@@ -34,7 +41,7 @@ namespace SJH::Diagnostics
                                                 GLenum expected, GLenum actual)
     {
         if (actual == 0)
-            return; // active 정보 없음 (lazy 보강 케이스) — 검증 skip
+            return; // active 정보 없음 (lazy 보강 케이스) - 검증 skip
         if (actual == expected)
             return; // 일치 -> no-op
 

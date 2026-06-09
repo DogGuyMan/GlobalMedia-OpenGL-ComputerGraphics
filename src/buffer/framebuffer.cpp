@@ -1,3 +1,22 @@
+/**
+ * @file framebuffer.cpp
+ * @brief Framebuffer factory/Init 변형/소멸자/Bind/Resize 구현.
+ *
+ * @details
+ *  ### 책임
+ *  - 세 가지 factory (@c Create(TexturePtr) / @c Create(int,int) / @c CreateWithDepthTexture) 의
+ *    힙 할당 -> 대응 @c Init* 위임 -> 실패 시 @c nullptr 반환 패턴.
+ *  - @c InitWithColorAttachment: FBO gen -> color tex attach -> RBO depth/stencil gen+attach ->
+ *    @c glCheckFramebufferStatus 검증.
+ *  - @c InitWithSize: 내부 RGBA8 텍스처 생성 후 @c InitWithColorAttachment 위임.
+ *  - @c InitWithSizeAndDepthTexture: RGBA8 color + @c GL_DEPTH24_STENCIL8 depth 텍스처 생성 ->
+ *    두 어태치먼트 직접 attach -> 상태 검증.
+ *  - @c Resize: color/depth 스토리지 in-place 재할당 + FBO 완결성 재검증.
+ *  - 소멸자: RBO -> FBO 순으로 GL 자원 해제.
+ *
+ *  ### 비-책임
+ *  - [X] 텍스처 소멸 - @c mColorAttachment/@c mDepthAttachment 는 @c shared_ptr, 소멸은 마지막 holder 책임.
+ */
 #include "framebuffer.h"
 #include <spdlog/spdlog.h>
 
@@ -47,7 +66,7 @@ namespace SJH
 
     void Framebuffer::Bind()
     {
-        // RenderTarget contract — glBindFramebuffer + glViewport. SP4 멀티패스에서
+        // RenderTarget contract - glBindFramebuffer + glViewport. SP4 멀티패스에서
         // DeviceContext::BeginFrame(target&) 이 default backbuffer 와 FBO 둘 다 동일 코드로 처리.
         glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
         glViewport(0, 0, GetWidth(), GetHeight());
@@ -55,11 +74,11 @@ namespace SJH
 
     void Framebuffer::Resize(int width, int height)
     {
-        // color 어태치먼트 — 같은 텍스처 핸들로 in-place 재할당 (Texture::Resize).
+        // color 어태치먼트 - 같은 텍스처 핸들로 in-place 재할당 (Texture::Resize).
         if (mColorAttachment)
             mColorAttachment->Resize(width, height);
 
-        // depth/stencil RBO — 같은 RBO 핸들로 스토리지 재할당.
+        // depth/stencil RBO - 같은 RBO 핸들로 스토리지 재할당.
         if (mRBODepthStencilBuffer)
         {
             glBindRenderbuffer(GL_RENDERBUFFER, mRBODepthStencilBuffer);
@@ -67,13 +86,13 @@ namespace SJH
             glBindRenderbuffer(GL_RENDERBUFFER, 0);
         }
 
-        // depth/stencil 텍스처 모드(CreateWithDepthTexture) — 같은 텍스처 핸들로 스토리지 재할당.
+        // depth/stencil 텍스처 모드(CreateWithDepthTexture) - 같은 텍스처 핸들로 스토리지 재할당.
         // Texture::Resize 가 저장된 format/type triple(GL_DEPTH_STENCIL/GL_UNSIGNED_INT_24_8)로 정확히 재할당.
-        // RBO 분기와 상호배타 — 텍스처 모드면 mRBODepthStencilBuffer==0.
+        // RBO 분기와 상호배타 - 텍스처 모드면 mRBODepthStencilBuffer==0.
         if (mDepthAttachment)
             mDepthAttachment->Resize(width, height);
 
-        // FBO 핸들·어태치먼트 결합 불변(텍스처/RBO ID 동일) -> 재attach 불필요. 상태만 재검증.
+        // FBO 핸들/어태치먼트 결합 불변(텍스처/RBO ID 동일) -> 재attach 불필요. 상태만 재검증.
         glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
         auto result = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (result != GL_FRAMEBUFFER_COMPLETE)
@@ -127,12 +146,12 @@ namespace SJH
 
     bool Framebuffer::InitWithSize(int width, int height)
     {
-        // 내부 RGBA8 텍스처 생성 — Texture::Create(w,h,format) 가 TextureUPtr 반환 ->
+        // 내부 RGBA8 텍스처 생성 - Texture::Create(w,h,format) 가 TextureUPtr 반환 ->
         // shared_ptr 로 transfer (unique->shared move 변환). 이후 mColorAttachment 공유 소유.
         auto textureU = Texture::Create(width, height, GL_RGBA);
         if (!textureU)
         {
-            spdlog::error("Framebuffer::Create(w,h): 내부 텍스처 생성 실패 — {}x{}", width, height);
+            spdlog::error("Framebuffer::Create(w,h): 내부 텍스처 생성 실패 - {}x{}", width, height);
             return false;
         }
         return InitWithColorAttachment(TexturePtr(std::move(textureU)));
@@ -140,21 +159,21 @@ namespace SJH
 
     bool Framebuffer::InitWithSizeAndDepthTexture(int width, int height)
     {
-        // 색 RGBA8 텍스처 (기존 3-arg) — GL_COLOR_ATTACHMENT0.
+        // 색 RGBA8 텍스처 (기존 3-arg) - GL_COLOR_ATTACHMENT0.
         auto colorU = Texture::Create(width, height, GL_RGBA);
         if (!colorU)
         {
-            spdlog::error("Framebuffer::CreateWithDepthTexture: color 텍스처 생성 실패 — {}x{}", width, height);
+            spdlog::error("Framebuffer::CreateWithDepthTexture: color 텍스처 생성 실패 - {}x{}", width, height);
             return false;
         }
         mColorAttachment = TexturePtr(std::move(colorU));
 
-        // depth-stencil 텍스처 (5-arg) — sampler2D 로 .r=depth, stencil 보존.
+        // depth-stencil 텍스처 (5-arg) - sampler2D 로 .r=depth, stencil 보존.
         auto depthU = Texture::Create(width, height,
                                       GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8);
         if (!depthU)
         {
-            spdlog::error("Framebuffer::CreateWithDepthTexture: depth 텍스처 생성 실패 — {}x{}", width, height);
+            spdlog::error("Framebuffer::CreateWithDepthTexture: depth 텍스처 생성 실패 - {}x{}", width, height);
             return false;
         }
         mDepthAttachment = TexturePtr(std::move(depthU));
@@ -170,7 +189,7 @@ namespace SJH
         auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (status != GL_FRAMEBUFFER_COMPLETE)
         {
-            spdlog::error("Framebuffer::CreateWithDepthTexture: incomplete — {}", status);
+            spdlog::error("Framebuffer::CreateWithDepthTexture: incomplete - {}", status);
             return false;
         }
 

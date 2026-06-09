@@ -1,9 +1,26 @@
+/**
+ * @file actor.cpp
+ * @brief @c Actor / @c Component 생명주기 구현 - 트리 삽입/제거, Component 추가/제거, Update 재귀.
+ *
+ * @details
+ *  ### 책임
+ *  - @c Actor::AddChild / @c DetachChild / @c RemoveChild - 트리 편집 + OnEnter/OnExit 대칭 보장.
+ *  - @c Actor::AddComponent / @c RemoveComponent / @c RemoveAllComponents - Component 생명주기.
+ *  - @c Actor::GetWorldMatrix - 부모 chain 행렬 합성.
+ *  - @c Actor::OnEnter / @c OnExit / @c Update - 재귀 트리 lifecycle 전파.
+ *
+ *  ### 비-책임
+ *  - [X] Template 구현 - @c actor.h 에 인라인 정의.
+ *  - [X] 렌더링 / 물리 / 입력.
+ *
+ * @note 파일 최상단 @c static_assert 3종으로 Actor 비복사/비이동 + Component 가상 소멸자를 컴파일 타임 검증.
+ */
 #include "scene/actor.h"
 #include <algorithm>
 #include <memory>
 #include <type_traits>
 
-// SP3 — Actor/Component 비복사,비이동 컴파일 타임 검증
+// SP3 - Actor/Component 비복사,비이동 컴파일 타임 검증
 static_assert(!std::is_copy_constructible_v<SJH::Scene::Actor>,
               "SJH::Scene::Actor must be non-copy-constructible");
 static_assert(!std::is_move_constructible_v<SJH::Scene::Actor>,
@@ -21,7 +38,7 @@ namespace SJH::Scene
 	Actor *Actor::AddChild(std::unique_ptr<Actor> child)
 	{
 		if (!child)
-			return nullptr; // ddd Early Return — nullptr 방어
+			return nullptr; // ddd Early Return - nullptr 방어
 		child->mParent = this;
 		Actor *raw = child.get();
 		mChildren.push_back(std::move(child));

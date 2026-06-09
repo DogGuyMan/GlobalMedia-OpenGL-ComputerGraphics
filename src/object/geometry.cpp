@@ -1,3 +1,18 @@
+/**
+ * @file geometry.cpp
+ * @brief 절차적 도형 빌더 및 Assimp 변환기 구현.
+ * @details
+ *  ### 구현 전략
+ *  - 내부 익명 네임스페이스에 13-float interleaved(pos4+color4+normal3+uv2) 빌더를 구현하고,
+ *    `FromInterleaved` 가 @c SJH::Vertex(pos3+normal3+uv2) 로 최종 변환 (color/pos.w 폐기).
+ *  - 인덱스드 빌더(`BuildQuadIndexed` / `BuildTriangleIndexed`)가 4 unique 정점 dedup 을 수행
+ *    - winding 반전은 `face_idxs` 재정렬로 처리.
+ *  - 파라메트릭 서피스(Disk/Cylinder/HemiSphere/Sphere)는 grid(rowxcol) 방식으로 정점 생성 후
+ *    인덱스를 직접 계산.
+ *
+ * @note `BuildQuadIndexed` 의 4-unique dedup 배열(`seenPos[4]` / `seenUv[4]`)은 표준 평면 quad 를
+ *       전제 - 비표준 입력에서 5+ unique 가 나오면 OOB. 현재 모든 호출처는 표준 패턴만 사용.
+ */
 #include "object/geometry.h"
 #include "common/constants.h"
 #include <vmath.h>
@@ -8,7 +23,7 @@ namespace SJH
 {
     namespace
     {
-        // 익명 네임스페이스 — 절차적 도형 빌더는 외부 노출 X (geometry.cpp 내부 한정).
+        // 익명 네임스페이스 - 절차적 도형 빌더는 외부 노출 X (geometry.cpp 내부 한정).
         // 13-float interleaved(pos4 + color4 + normal3 + uv2) 출력으로 통일, FromInterleaved 가
         // SJH::Vertex(pos3 + normal3 + uv2) 로 변환 (color 폐기).
         using namespace Const::GEOMETRY;
@@ -95,7 +110,7 @@ namespace SJH
             const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
 
             // 펼친 6 정점을 순회하며 (position_idxs[k], QUAD_MESH_UVS_FAN[k]) 쌍을 키로 dedupe.
-            // FRONT/BACK 모두 자동 처리 — winding 반전은 face_idxs reorder 가 인덱스 순서를 바꿔서 해결.
+            // FRONT/BACK 모두 자동 처리 - winding 반전은 face_idxs reorder 가 인덱스 순서를 바꿔서 해결.
             // 전제: face_idxs / position_idxs / QUAD_MESH_UVS_FAN 조합이 평면 quad 의 표준 패턴
             //       (6 -> 4 unique). 비표준 입력으로 5+ unique 가 나오면 seenPos[4]/seenUv[4] 가 overrun.
             int localIdx[6];
@@ -122,7 +137,7 @@ namespace SJH
                     seenPos[uniqueCount] = pkey;
                     seenUv[uniqueCount] = ukey;
                     uniqueCount++;
-                    // 첫 등장의 colors[k] 만 저장 — 같은 (pkey, ukey) 쌍이 다른 color 라면 무시.
+                    // 첫 등장의 colors[k] 만 저장 - 같은 (pkey, ukey) 쌍이 다른 color 라면 무시.
                     // 현 사용처는 모두 COLOR_ALL_WHITE_* 이라 영향 없음.
                     PushVertex(vertices, positions[pkey], colors[k], faceNormal, uvs[ukey], offset);
                 }
@@ -234,7 +249,7 @@ namespace SJH
                 }
             }
 
-            // Disk 는 cylinder/hemisphere 와 달리 normal 이 ±Y (라디알 아님). 위치식 z=-sin(θ) 는
+            // Disk 는 cylinder/hemisphere 와 달리 normal 이 +/-Y (라디알 아님). 위치식 z=-sin(theta) 는
             // +Y 에서 봤을 때 CW 회전이라, 표준 winding {p0,p1,p2,p0,p2,p3} 는 cross=-Y 가 된다.
             // -> +Y 외향(back_face=false)을 보장하려면 인덱스를 뒤집어야 함.
             for (int row = 0; row < vRes; row++)
@@ -515,7 +530,7 @@ namespace SJH
 
         MeshData ScreenQuad()
         {
-            // NDC clip-space 화면 가득 quad — postprocess.vs 가 model/view/proj 우회.
+            // NDC clip-space 화면 가득 quad - postprocess.vs 가 model/view/proj 우회.
             // position 은 NDC 좌표, UV 는 화면 매핑 (좌하단 0,0 -> 우상단 1,1).
             // normal 은 +Z (사용 안 함, Vertex 구조체 충족).
             MeshData data;
@@ -535,7 +550,7 @@ namespace SJH
             std::vector<GLfloat> raw;
             std::vector<GLuint> idx;
             // BuildPlaneIndexed 가 없어 저수준 BuildQuadIndexed 를 QUAD_BASE_POSITION(z=0 XY quad)
-            // 으로 직접 호출 — Cone 바닥 quad 와 동일 패턴.
+            // 으로 직접 호출 - Cone 바닥 quad 와 동일 패턴.
             BuildQuadIndexed(
                 raw, idx,
                 QUAD_BASE_POSITION, COLOR_ALL_WHITE_6, QUAD_BASE_MESH_UVS,
@@ -622,7 +637,7 @@ namespace SJH
 
         MeshData FromAssimp(const aiMesh *mesh)
         {
-            // assimp Triangulate 전처리 가정 — 모든 face 는 3 인덱스. position/normal/texCoord
+            // assimp Triangulate 전처리 가정 - 모든 face 는 3 인덱스. position/normal/texCoord
             // 채널을 1:1 로 복사. UV 는 채널 0 (mTextureCoords[0]) 만 사용.
             MeshData data;
             data.vertices.resize(mesh->mNumVertices);

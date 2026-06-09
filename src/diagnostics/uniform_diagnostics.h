@@ -1,28 +1,25 @@
 /**
  * @file uniform_diagnostics.h
- * @brief uniform 관련 warn-once 진단 — *프로세스 단일* static 인터페이스.
+ * @brief uniform warn-once 진단 - program 별 누락/타입불일치 중복 제거.
  *
  * @details
  *  ### 책임
- *  - 누락 uniform 의 첫 호출만 warn, 이후 silent — program 단위 deduplication.
- *  - 타입 불일치 첫 호출만 warn (@c actual==0 즉 active 정보 없음 경우 skip).
- *  - program 파괴 시 해당 키의 트래커 정리 (@c Invalidate).
- *
- *  ### 설계 — 왜 static (인스턴스 X)
- *  - 본 클래스 자체에 *인스턴스 상태가 필요 없음* — program 별 dedup 은 내부 map 으로.
- *  - @c SJH::Uniforms 자유 함수 family 가 본 헤더를 *include 하지 않아도* 되게 함 ->
- *    diagnostics 의존성을 cpp 차원으로 가둠
- *    ([architecture.md §4](../../.claude/architecture.md) PRIVATE link 일관).
- *  - 기존 @c GLObjectLog::CheckExpectedUniforms 도 동일 패턴 (static + 내부 program 키 map).
+ *  - 누락 uniform(@c NotifyMissing): (program, name) 조합 첫 호출만 @c spdlog::warn, 이후 silent.
+ *  - 타입 불일치(@c NotifyTypeMismatch): 동일 중복 제거. @c actual==0 (active 정보 없음) 은 skip.
+ *  - program 파괴 시 트래커 정리(@c Invalidate) - 같은 @c GLuint 재발급 시 stale 방지.
  *
  *  ### 비-책임
- *  - ❌ uniform 값 setter — @c SJH::Uniforms 자유 함수 family 에서 (@c program/ 모듈).
- *  - ❌ location 캐싱 — @c Program::mUniformCache (멤버, resource-attached, SP2).
+ *  - [X] uniform 값 setter - @c SJH::Uniforms 자유 함수 family (@c src/program/ 모듈).
+ *  - [X] location 캐싱 - @c Program::mUniformCache (멤버, SP2).
+ *
+ *  ### 설계 - 왜 static (인스턴스 X)
+ *  본 클래스 자체에 *인스턴스 상태가 필요 없음* - program 별 dedup 은 익명 네임스페이스
+ *  내부 @c unordered_map 으로. @c SJH::Uniforms 자유 함수가 본 헤더를 include 하지 않아도 되도록
+ *  diagnostics 의존성을 @c .cpp 차원으로 가둠 (@c .claude/architecture.md sec.4 PRIVATE link 일관).
  *
  *  ### Lifecycle
- *  - 호출자(@c SJH::Program::~Program())가 파괴 시 @c Invalidate(mProgramAddr) 명시 호출 필요.
- *    안 부르면 같은 @c GLuint 가 재발급될 때 stale 트래커 -> 기대 warn 이 silently 묻힐 수 있음.
- *  - 짝꿍: @c Program::~Program 가 @c Invalidate 호출 — @c mUniformCache 는 멤버 destroy.
+ *  @c Program::~Program() 에서 반드시 @c Invalidate(handle) 을 명시 호출해야 함.
+ *  누락 시 같은 @c GLuint 재발급 때 stale 트래커 -> 기대 warn 이 silently 묻힘.
  */
 
 #ifndef __SJH_DIAGNOSTICS_UNIFORM_DIAGNOSTICS_H__
@@ -34,6 +31,12 @@
 
 namespace SJH::Diagnostics
 {
+    /**
+     * @brief uniform warn-once 진단 - 누락/타입불일치를 program 별로 최초 1회만 보고.
+     * @details
+     *  순수 static 유틸 클래스. 내부 익명 네임스페이스 @c detail 맵이 (program -> 이름 집합) 으로
+     *  중복을 제거한다. 인스턴스화 금지(@c GLObjectLog, @c EffekseerDiagnostics 컨벤션과 동일).
+     */
     class UniformDiagnostics
     {
     public:
@@ -41,17 +44,25 @@ namespace SJH::Diagnostics
         UniformDiagnostics(const UniformDiagnostics &)               = delete;
         UniformDiagnostics &operator=(const UniformDiagnostics &)    = delete;
 
-        /// @brief 누락 uniform 보고. (program, name) 조합 첫 호출만 spdlog::warn.
+        /// @brief 누락 uniform 최초 1회 보고.
+        /// @details (@p program, @p name) 조합이 처음 보고될 때만 @c spdlog::warn. 이후 silent.
+        /// @param program 해당 GL 프로그램 핸들.
+        /// @param name    누락된 uniform 이름.
         static void NotifyMissing(GLuint program, const char *name);
 
-        /// @brief 타입 불일치 보고. (program, name) 조합 첫 호출만 spdlog::warn.
-        /// @param expected 호출자(setter)가 *기대* 한 GL 타입 (예: @c GL_FLOAT_MAT4).
-        /// @param actual   셰이더에서 *실제로* 선언된 타입. @c 0 이면 active 정보 없음 -> 검증 skip.
+        /// @brief uniform 타입 불일치 최초 1회 보고.
+        /// @details (@p program, @p name) 조합이 처음 불일치 시에만 @c spdlog::warn.
+        ///          @p actual == @c 0 (active 정보 없음 - lazy 보강 케이스) 이면 검증 skip.
+        /// @param program  해당 GL 프로그램 핸들.
+        /// @param name     uniform 이름.
+        /// @param expected 호출자(setter)가 기대한 GL 타입 (예: @c GL_FLOAT_MAT4).
+        /// @param actual   셰이더에서 실제로 선언된 타입. @c 0 이면 skip.
         static void NotifyTypeMismatch(GLuint program, const char *name,
                                        GLenum expected, GLenum actual);
 
         /// @brief 해당 program 의 모든 warn-once 트래커 정리.
-        /// @note @c Program 소멸자에서 호출. 안 부르면 같은 GLuint 재발급 시 stale.
+        /// @details @c Program 소멸자에서 반드시 호출. 누락 시 같은 @c GLuint 재발급 때 stale.
+        /// @param program 정리할 GL 프로그램 핸들.
         static void Invalidate(GLuint program);
     };
 }

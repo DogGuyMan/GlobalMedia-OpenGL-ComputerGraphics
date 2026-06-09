@@ -1,6 +1,14 @@
 /**
  * @file gl_state_log.cpp
- * @brief @c GLStateLog 구현 — Dump + EnableAutoOnError.
+ * @brief @c GLStateLog 구현 - @c Dump + @c EnableAutoOnError.
+ *
+ * @details
+ *  ### 구현 노트
+ *  - @c Dump - @c CaptureGLState() 호출 후 @c FieldsToString() 멀티라인을 @c spdlog::info 로 출력.
+ *    @p tag 비어있으면 @c "[GLStateLog]", 아니면 @c "[GLStateLog/<tag>]" 프리픽스.
+ *  - @c EnableAutoOnError - @c GL_VERSION_4_3 또는 @c GL_KHR_debug 정의 환경에서만
+ *    @c glDebugMessageCallback 존재 검사. macOS GL 3.3 은 미지원 ->
+ *    @c std::once_flag 로 1회 warn 후 no-op (매 호출 noise 방지).
  */
 
 #include "diagnostics/gl_state_log.h"
@@ -26,17 +34,17 @@ namespace SJH::Diagnostics
     {
 #if defined(GL_VERSION_4_3) || defined(GL_KHR_debug)
         if (glDebugMessageCallback != nullptr) {
-            // TODO(future): KHR_debug callback 등록. 현재는 macOS 우선 — 미구현.
-            // 구현 시 기존 GLDebug::Init과 통합 (architecture.md §6 Layer 1).
+            // TODO(future): KHR_debug callback 등록. 현재는 macOS 우선 - 미구현.
+            // 구현 시 기존 GLDebug::Init과 통합 (architecture.md sec.6 Layer 1).
             spdlog::info("[GLStateLog] EnableAutoOnError: KHR_debug 콜백 등록 (TODO)");
             return;
         }
 #endif
         // macOS arm64 GL 3.3 등 KHR_debug 미지원 환경
-        // std::call_once로 1회만 warn — 매 호출마다 noise 방지
+        // std::call_once로 1회만 warn - 매 호출마다 noise 방지
         static std::once_flag warned;
         std::call_once(warned, []() {
-            spdlog::warn("[GLStateLog] EnableAutoOnError: KHR_debug 미지원 환경 — no-op");
+            spdlog::warn("[GLStateLog] EnableAutoOnError: KHR_debug 미지원 환경 - no-op");
         });
     }
 }

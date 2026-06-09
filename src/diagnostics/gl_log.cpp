@@ -1,3 +1,15 @@
+/**
+ * @file gl_log.cpp
+ * @brief @c GLObjectLog / @c GLDebug 구현 - InfoLog 조회 + GL 호출별 에러 분기.
+ *
+ * @details
+ *  ### 구현 노트
+ *  - 익명 네임스페이스 @c detail - @c uniformChecked / @c attribChecked : program 별 1회 검사 캐시.
+ *  - 익명 함수 @c FetchShaderInfoLog / @c FetchProgramInfoLog - @c GL_INFO_LOG_LENGTH 로
+ *    버퍼 크기를 먼저 조회한 뒤 정확한 크기의 @c std::string 을 채워 반환.
+ *  - @c GLErrorString - @c glGetError 반환 GLenum 을 사람이 읽는 이름으로 변환. 미적중 시 @c "GL_UNKNOWN".
+ */
+
 #include "gl_log.h"
 
 #include <GL/glcorearb.h>
@@ -11,7 +23,7 @@ namespace
 {
     namespace detail
     {
-        // 프로그램별 1회 검사 캐시 — true 면 모든 기대 uniform/attribute 존재.
+        // 프로그램별 1회 검사 캐시 - true 면 모든 기대 uniform/attribute 존재.
         std::unordered_map<GLuint, bool> uniformChecked;
         std::unordered_map<GLuint, bool> attribChecked;
     }
@@ -124,7 +136,7 @@ namespace SJH::Diagnostics
     {
         const auto it = detail::uniformChecked.find(program);
         if (it != detail::uniformChecked.end())
-            return it->second; // 캐시 히트 — 로그 없이 반환
+            return it->second; // 캐시 히트 - 로그 없이 반환
 
         std::vector<const char *> missing;
         for (const char *name : names)
@@ -206,7 +218,7 @@ namespace SJH::Diagnostics
         case GL_NO_ERROR:
             return true;
         case GL_INVALID_OPERATION:
-            spdlog::error("glBindVertexArray: 유효하지 않은 VAO 핸들 ({}) — "
+            spdlog::error("glBindVertexArray: 유효하지 않은 VAO 핸들 ({}) - "
                           "glGenVertexArrays 미반환 또는 이미 삭제됨",
                           vao);
             return false;

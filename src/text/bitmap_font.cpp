@@ -1,3 +1,20 @@
+/**
+ * @file bitmap_font.cpp
+ * @brief BitmapFont 구현 - BMFont XML 파싱, UniformAtlas 위탁, Glyph 맵 구축.
+ *
+ * @details
+ *  ### 책임
+ *  - XML 라인 파싱 전용 내부 헬퍼 @c AttrInt (익명 네임스페이스).
+ *  - @c LoadFromBMFont: XML 스트림 파싱 -> cols/rows 산출 -> UniformAtlas 등록 ->
+ *    V-flip 보정(frameRow = (rows-1) - pngRow) -> Glyph 맵 구축.
+ *  - @c Find / @c FrameOf / @c AdvanceOf: codepoint 조회 + @c '?' / @c ' ' 순 fallback.
+ *
+ *  ### 비-책임
+ *  - [X] UniformAtlas 소유 - ResourceRegistry 가 owner.
+ *  - [X] 렌더링 quad 발행 - TextRenderer 책임.
+ *
+ * @note 파일 I/O 는 크로스플랫폼 안전을 위해 @c std::ios::binary 모드 사용.
+ */
 #include "text/bitmap_font.h"
 
 #include "resource_registry/resource_registry.h"
@@ -14,7 +31,12 @@ namespace SJH::Text
 {
     namespace
     {
-        // BMFont 속성 추출 — `name="123"` 의 정수. atoi 가 닫는 따옴표에서 멈춤.
+        /// @brief BMFont XML 라인에서 @p name 속성의 정수값 추출.
+        /// @details @c name="123" 패턴에서 @c std::atoi 로 추출 - atoi 가 닫는 따옴표에서 멈춤.
+        /// @param s    XML 원본 라인 문자열.
+        /// @param name 속성 이름 (예: "scaleW", "xadvance").
+        /// @param def  속성이 없을 때 반환할 기본값.
+        /// @return 파싱된 정수 또는 @p def.
         int AttrInt(const std::string& s, const char* name, int def = 0)
         {
             const std::string key = std::string(name) + "=\"";
@@ -81,7 +103,7 @@ namespace SJH::Text
         const int cols = scaleW / font.mCellW;
         const int rows = scaleH / font.mCellH;
 
-        // UniformAtlas — Find 우선(중복키 공유), 없으면 Create
+        // UniformAtlas - Find 우선(중복키 공유), 없으면 Create
         font.mAtlas = reg.FindUniformAtlas(key);
         if (!font.mAtlas) font.mAtlas = reg.CreateUniformAtlas(key, pngPath, cols, rows);
         if (!font.mAtlas)
@@ -92,10 +114,10 @@ namespace SJH::Text
 
         for (const auto& r : chars)
         {
-            // 텍스처 V-flip 보정 — SJH::Image::Load 가 PNG 를 상하 반전해 GL 업로드하므로
+            // 텍스처 V-flip 보정 - SJH::Image::Load 가 PNG 를 상하 반전해 GL 업로드하므로
             // (texture V=0 = PNG 맨 아래 행), BMFont 의 y(위->아래) 를 그대로 frame 행으로 쓰면
             // 행이 뒤집혀 엉뚱한 글자가 샘플링된다. frameRow = (rows-1) - PNG행 으로 보정.
-            // (minogram = 이 엔진 첫 다중행 atlas 라 여기서 발견 — Nx1 스트립은 row=0 뿐이라 무관했음.)
+            // (minogram = 이 엔진 첫 다중행 atlas 라 여기서 발견 - Nx1 스트립은 row=0 뿐이라 무관했음.)
             const int frameRow = (rows - 1) - (r.y / font.mCellH);
             const int frame    = frameRow * cols + (r.x / font.mCellW);
             font.mGlyphs[r.id] = Glyph{frame, r.adv};

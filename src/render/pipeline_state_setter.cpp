@@ -1,6 +1,27 @@
 /**
  * @file pipeline_state_setter.cpp
- * @brief GL state machine 전환 — 9 helper (Stencil 4 + Depth 3 + Blend 2) + Set + RestoreDefaults.
+ * @brief GL state machine 전환 구현 - 10 결정 단위 helper (Stencil 4 + Depth 3 + Cull 1 + Blend 2).
+ *
+ * @details
+ *  ### 구현 구조
+ *  anonymous namespace 안에 결정 단위 헬퍼를 두고 @c PipelineStateSetter::Set 이 호출:
+ *  - **Stencil 4**: @c SetStencilToggle / @c SetStencilFunc / @c SetStencilOp / @c SetStencilMask
+ *    -> @c ApplyStencil 으로 묶음. StencilEnable=false 이면 sub-state 호출 early return.
+ *  - **Depth 3**: @c SetDepthToggle / @c SetDepthMask / @c SetDepthFunc -> @c ApplyDepth.
+ *  - **Cull 1**: @c ApplyCull - @c cullMode == 0 이면 face culling disable (sentinel).
+ *  - **Blend 2**: @c SetBlendToggle / @c SetBlendFunc -> @c ApplyBlend.
+ *    BlendEnable=false 이면 @c SetBlendFunc 호출 생략.
+ *
+ *  각 헬퍼는 @c mInitialized + @c mLast 비교로 dirty check - 변경된 state 만 GL 호출.
+ *
+ *  ### RestoreDefaults
+ *  다음 Flush 가 표준 opaque 상태에서 시작하도록 복원:
+ *  stencil off / glStencilMask(0xFF) / depth on + write on + func LESS / cull back / blend off.
+ *  @c mInitialized = false 로 리셋하여 다음 @c Set 이 first-call 처럼 전체 강제 적용.
+ *
+ *  ### 비-책임
+ *  - [X] 언제 호출할지 결정 -> @c MeshPassProcessor 담당.
+ *  - [X] Material uniform 송신 -> @c PropertyBlockSetter 담당.
  */
 #include "render/pipeline_state_setter.h"
 #include "GL/gl3w.h"
@@ -9,10 +30,10 @@ namespace SJH
 {
 	namespace
 	{
-		// ─── Stencil 4 결정 단위 (= 4 GL 호출에 1:1 매핑) ─────────────────
-		// SP-MaterialSSoT — Pass::PipelineState 안의 Stencil 필드를 *직접* 사용 (Scene::StencilState 의존 제거)
+		// --- Stencil 4 결정 단위 (= 4 GL 호출에 1:1 매핑) -----------------
+		// SP-MaterialSSoT - Pass::PipelineState 안의 Stencil 필드를 *직접* 사용 (Scene::StencilState 의존 제거)
 
-		/// @brief 결정 1 — GL_STENCIL_TEST 토글.
+		/// @brief 결정 1 - GL_STENCIL_TEST 토글.
 		void SetStencilToggle(bool want, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && last.StencilEnable == want)
@@ -21,7 +42,7 @@ namespace SJH
 			last.StencilEnable = want;
 		}
 
-		/// @brief 결정 2 — `glStencilFunc(Func, Ref, ReadMask)` 한 호출의 3 인자 묶음.
+		/// @brief 결정 2 - `glStencilFunc(Func, Ref, ReadMask)` 한 호출의 3 인자 묶음.
 		void SetStencilFunc(const Pass::PipelineState &s, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && last.StencilFunc == s.StencilFunc
@@ -33,7 +54,7 @@ namespace SJH
 			last.StencilReadMask = s.StencilReadMask;
 		}
 
-		/// @brief 결정 3 — `glStencilOp(SFail, DpFail, DpPass)` 한 호출의 3 인자 묶음.
+		/// @brief 결정 3 - `glStencilOp(SFail, DpFail, DpPass)` 한 호출의 3 인자 묶음.
 		void SetStencilOp(const Pass::PipelineState &s, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && last.StencilOpSFail == s.StencilOpSFail
@@ -45,7 +66,7 @@ namespace SJH
 			last.StencilOpDPPass = s.StencilOpDPPass;
 		}
 
-		/// @brief 결정 4 — `glStencilMask(WriteMask)` (0x00 = 읽기 전용).
+		/// @brief 결정 4 - `glStencilMask(WriteMask)` (0x00 = 읽기 전용).
 		void SetStencilMask(const Pass::PipelineState &s, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && last.StencilWriteMask == s.StencilWriteMask)
@@ -54,7 +75,7 @@ namespace SJH
 			last.StencilWriteMask = s.StencilWriteMask;
 		}
 
-		/// @brief Stencil state 일괄 적용 — 결정 순서만 표현.
+		/// @brief Stencil state 일괄 적용 - 결정 순서만 표현.
 		void ApplyStencil(const Pass::PipelineState &s, Pass::PipelineState &last, bool initialized)
 		{
 			SetStencilToggle(s.StencilEnable, last, initialized);
@@ -67,8 +88,8 @@ namespace SJH
 			SetStencilMask(s, last, initialized);
 		}
 
-		// ─── Depth 3 결정 단위 (= 3 GL 호출에 1:1 매핑) ───────────────────
-		/// @brief 결정 1 — GL_DEPTH_TEST 토글.
+		// --- Depth 3 결정 단위 (= 3 GL 호출에 1:1 매핑) -------------------
+		/// @brief 결정 1 - GL_DEPTH_TEST 토글.
 		void SetDepthToggle(bool test, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && test == last.DepthTest)
@@ -77,7 +98,7 @@ namespace SJH
 			last.DepthTest = test;
 		}
 
-		/// @brief 결정 2 — `glDepthMask` (depth buffer 쓰기 마스크). Transparent/Skybox=false 의 핵심.
+		/// @brief 결정 2 - `glDepthMask` (depth buffer 쓰기 마스크). Transparent/Skybox=false 의 핵심.
 		void SetDepthMask(bool write, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && write == last.DepthWrite)
@@ -86,7 +107,7 @@ namespace SJH
 			last.DepthWrite = write;
 		}
 
-		/// @brief 결정 3 — `glDepthFunc` (Skybox 의 GL_LEQUAL / X-Ray outline 의 GL_GREATER 등 자동 전환).
+		/// @brief 결정 3 - `glDepthFunc` (Skybox 의 GL_LEQUAL / X-Ray outline 의 GL_GREATER 등 자동 전환).
 		void SetDepthFunc(GLenum func, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && func == last.DepthFunc)
@@ -103,8 +124,8 @@ namespace SJH
 			SetDepthFunc(want.DepthFunc, last, initialized);
 		}
 
-		// ─── Cull (rasterizer 단계) ───────────────────────────────────────
-		/// @brief Pass 기반 cull state 자동 전환 — Skybox 의 GL_FRONT / 기본 GL_BACK.
+		// --- Cull (rasterizer 단계) ---------------------------------------
+		/// @brief Pass 기반 cull state 자동 전환 - Skybox 의 GL_FRONT / 기본 GL_BACK.
 		/// @details `cullMode == 0` 이면 face culling disable (CullMode 의 sentinel).
 		void ApplyCull(GLenum cullMode, Pass::PipelineState &last, bool initialized)
 		{
@@ -121,8 +142,8 @@ namespace SJH
 			last.CullMode = cullMode;
 		}
 
-		// ─── Blend 2 결정 단위 (= 2 GL 호출에 1:1 매핑) ───────────────────
-		/// @brief 결정 1 — GL_BLEND 토글.
+		// --- Blend 2 결정 단위 (= 2 GL 호출에 1:1 매핑) -------------------
+		/// @brief 결정 1 - GL_BLEND 토글.
 		void SetBlendToggle(bool enable, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && last.BlendEnable == enable)
@@ -131,7 +152,7 @@ namespace SJH
 			last.BlendEnable = enable;
 		}
 
-		/// @brief 결정 2 — `glBlendFunc(src, dst)` (BlendEnable=false 면 호출 의미 없음).
+		/// @brief 결정 2 - `glBlendFunc(src, dst)` (BlendEnable=false 면 호출 의미 없음).
 		void SetBlendFunc(GLenum src, GLenum dst, Pass::PipelineState &last, bool initialized)
 		{
 			if (initialized && last.BlendSrc == src && last.BlendDst == dst)
@@ -174,7 +195,7 @@ namespace SJH
 		glCullFace(GL_BACK); // Skybox 가 FRONT 로 바꾼 상태 복원.
 		glDisable(GL_BLEND); // Pass 가 blend on 한 상태 복원.
 
-		// 캐시 무효화 — 다음 Set 호출이 first-call 처럼 강제 적용.
+		// 캐시 무효화 - 다음 Set 호출이 first-call 처럼 강제 적용.
 		mInitialized = false;
 	}
 } // namespace SJH

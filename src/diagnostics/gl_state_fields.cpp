@@ -1,3 +1,17 @@
+/**
+ * @file gl_state_fields.cpp
+ * @brief @c SymbolicName / @c FieldsToString / @c CaptureGLState 구현.
+ *
+ * @details
+ *  ### 구현 노트
+ *  - @c SymbolicName - @c GL_TEXTURE0..15 동적 영역은 @c thread_local char buf[16] 으로 처리.
+ *    미적중은 @c "0xXXXX" 4자리 대문자 hex.
+ *  - @c FieldsToString - @c fmt::format 으로 멀티라인 조립. 텍스처/attribute 는 0/disabled 항목 생략.
+ *  - @c CaptureGLState - (1) pre-drain (2) 단일값 바인딩 (3) active_texture (4) viewport
+ *    (5) 픽셀 파이프라인 (6) 텍스처 16 유닛(저장/복원) (7) vertex attribute 16 슬롯 (8) post-check 순.
+ *  - 익명 함수 @c QueryAttribInfo - @c glGetVertexAttribiv 6회 호출로 단일 슬롯 layout 조회.
+ */
+
 #include "diagnostics/gl_state_fields.h"
 
 #include <spdlog/fmt/fmt.h>
@@ -9,7 +23,7 @@ namespace SJH::Diagnostics
     {
         // GL_TEXTURE0..GL_TEXTURE15 동적 영역
         if (e >= GL_TEXTURE0 && e <= GL_TEXTURE0 + 15) {
-            // thread_local 정적 버퍼 — caller가 즉시 출력하면 안전, 보관 시엔 std::string 권장
+            // thread_local 정적 버퍼 - caller가 즉시 출력하면 안전, 보관 시엔 std::string 권장
             static thread_local char buf[16];
             snprintf(buf, sizeof(buf), "GL_TEXTURE%d", static_cast<int>(e - GL_TEXTURE0));
             return buf;
@@ -26,8 +40,8 @@ namespace SJH::Diagnostics
             case GL_GEQUAL:   return "GL_GEQUAL";
             case GL_ALWAYS:   return "GL_ALWAYS";
 
-            // blend factor — GL 3.3 core 한정 (SRC1 family는 4.4+ 제외)
-            // 0은 GL_ZERO — blend factor 컨텍스트 가정 (spec 2.1)
+            // blend factor - GL 3.3 core 한정 (SRC1 family는 4.4+ 제외)
+            // 0은 GL_ZERO - blend factor 컨텍스트 가정 (spec 2.1)
             case 0:                              return "GL_ZERO";
             case GL_ONE:                         return "GL_ONE";
             case GL_SRC_COLOR:                   return "GL_SRC_COLOR";
@@ -51,7 +65,7 @@ namespace SJH::Diagnostics
             case GL_CCW:             return "GL_CCW";
             case GL_CW:              return "GL_CW";
 
-            // vertex attribute types (audit 트랙 A) — GL 3.3 core
+            // vertex attribute types (audit 트랙 A) - GL 3.3 core
             case GL_BYTE:            return "GL_BYTE";
             case GL_UNSIGNED_BYTE:   return "GL_UNSIGNED_BYTE";
             case GL_SHORT:           return "GL_SHORT";
@@ -63,7 +77,7 @@ namespace SJH::Diagnostics
             case GL_HALF_FLOAT:      return "GL_HALF_FLOAT";
         }
 
-        // 미적중 — hex fallback. 4자리 대문자 (예: "0xDEAD")
+        // 미적중 - hex fallback. 4자리 대문자 (예: "0xDEAD")
         // thread_local 버퍼: caller가 즉시 출력 가정. 영구 보관 시 fmt::format 사용 권장.
         static thread_local char buf[16];
         snprintf(buf, sizeof(buf), "0x%04X", static_cast<unsigned>(e));
@@ -75,7 +89,7 @@ namespace SJH::Diagnostics
     ///
     /// 포맷 정책:
     /// - enum 필드: SymbolicName (예: "GL_LESS")
-    /// - GLuint 핸들: raw 정수 (의도된 비대칭 — handle은 의미 없는 식별자)
+    /// - GLuint 핸들: raw 정수 (의도된 비대칭 - handle은 의미 없는 식별자)
     /// - VAO=0이면 element_buffer 라인에 주석 ("EBO state is per-VAO; ...")
     /// - texture_2d_per_unit / attribute_layouts: 0이 아닌 / enabled인 항목만 출력 (노이즈 최소화)
     std::string FieldsToString(const GLStateFields& f)
@@ -83,14 +97,14 @@ namespace SJH::Diagnostics
         std::string out;
         out.reserve(512);
 
-        // 헤더 — 비대칭 (enum=symbolic, handle=raw)을 한 줄 설명
+        // 헤더 - 비대칭 (enum=symbolic, handle=raw)을 한 줄 설명
         out += "# GL state (enum=symbolic, handle=raw integer)\n";
 
         out += fmt::format("vao:            {}\n", f.vao);
         out += fmt::format("program:        {}\n", f.program);
         out += fmt::format("array_buffer:   {}\n", f.array_buffer);
 
-        // VAO=0 일 때 element_buffer 라인에 주석 (spec 4.4 — 사용자 EBO incident memory 반영)
+        // VAO=0 일 때 element_buffer 라인에 주석 (spec 4.4 - 사용자 EBO incident memory 반영)
         if (f.vao == 0) {
             out += fmt::format("element_buffer: {}  (note: EBO state is per-VAO; with VAO=0, this is always 0)\n",
                                f.element_buffer);
@@ -102,7 +116,7 @@ namespace SJH::Diagnostics
         out += fmt::format("read_fbo:       {}\n", f.read_fbo);
         out += fmt::format("active_texture: {}\n", SymbolicName(f.active_texture));
 
-        // 텍스처 unit — 0이 아닌 것만 출력 (노이즈 최소화)
+        // 텍스처 unit - 0이 아닌 것만 출력 (노이즈 최소화)
         bool any_unit = false;
         for (int i = 0; i < 16; ++i) {
             if (f.texture_2d_per_unit[i] != 0) {
@@ -138,7 +152,7 @@ namespace SJH::Diagnostics
         out += fmt::format("clear_color:    [{:.3f}, {:.3f}, {:.3f}, {:.3f}]\n",
                            f.clear_color[0], f.clear_color[1], f.clear_color[2], f.clear_color[3]);
 
-        // attribute_layouts (audit 트랙 A) — enabled인 slot만 출력
+        // attribute_layouts (audit 트랙 A) - enabled인 slot만 출력
         bool any_attrib = false;
         for (size_t i = 0; i < f.attribute_layouts.size(); ++i) {
             const auto& a = f.attribute_layouts[i];
@@ -160,7 +174,7 @@ namespace SJH::Diagnostics
     namespace
     {
         /// 단일 attribute slot의 layout을 query.
-        /// glGetVertexAttribiv는 부수효과 0 — rebind 불필요.
+        /// glGetVertexAttribiv는 부수효과 0 - rebind 불필요.
         VertexAttribInfo QueryAttribInfo(GLuint index)
         {
             VertexAttribInfo info;
@@ -191,7 +205,7 @@ namespace SJH::Diagnostics
     /// 현재 GL 상태 캡처. Task 2 Step 4 본 구현 + audit 트랙 A 확장 (vertex attribute layouts).
     GLStateFields CaptureGLState()
     {
-        // 1. drain pre-existing errors — 캡처 자체의 에러를 후속 post-check에서만 잡도록
+        // 1. drain pre-existing errors - 캡처 자체의 에러를 후속 post-check에서만 잡도록
         while (glGetError() != GL_NO_ERROR) {}
 
         GLStateFields f;
@@ -212,7 +226,7 @@ namespace SJH::Diagnostics
         // 4. viewport (4 ints)
         glGetIntegerv(GL_VIEWPORT, f.viewport.data());
 
-        // 5. 픽셀 파이프라인 — glIsEnabled / glGetIntegerv / glGetBooleanv 혼합
+        // 5. 픽셀 파이프라인 - glIsEnabled / glGetIntegerv / glGetBooleanv 혼합
         f.depth_test_enabled = (glIsEnabled(GL_DEPTH_TEST) == GL_TRUE);
         glGetIntegerv(GL_DEPTH_FUNC, &tmp); f.depth_func = static_cast<GLenum>(tmp);
         GLboolean b = GL_FALSE;
@@ -232,7 +246,7 @@ namespace SJH::Diagnostics
 
         glGetFloatv(GL_COLOR_CLEAR_VALUE, f.clear_color.data());
 
-        // 6. 텍스처 unit 16개 — active_texture 보존/복원
+        // 6. 텍스처 unit 16개 - active_texture 보존/복원
         GLint saved_active = 0;
         glGetIntegerv(GL_ACTIVE_TEXTURE, &saved_active);
         for (int i = 0; i < 16; ++i) {
@@ -242,7 +256,7 @@ namespace SJH::Diagnostics
         }
         glActiveTexture(static_cast<GLenum>(saved_active));
 
-        // 7. Vertex attribute layouts — audit 트랙 A 추가
+        // 7. Vertex attribute layouts - audit 트랙 A 추가
         // glGetVertexAttribiv는 부수효과 0; 현재 바인딩된 VAO의 attribute state를 query
         for (GLuint i = 0; i < 16; ++i) {
             f.attribute_layouts[i] = QueryAttribInfo(i);
@@ -251,7 +265,7 @@ namespace SJH::Diagnostics
         // 8. post-check
         GLenum err = glGetError();
         if (err != GL_NO_ERROR) {
-            spdlog::warn("[GLStateLog::Capture] produced GL error 0x{:X} — "
+            spdlog::warn("[GLStateLog::Capture] produced GL error 0x{:X} - "
                          "all fields populated but values may be stale",
                          static_cast<unsigned>(err));
         }

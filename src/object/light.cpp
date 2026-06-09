@@ -1,20 +1,30 @@
 /**
  * @file light.cpp
- * @brief DirLight / PointLight / SpotLight 의 worldPos / worldDir 헬퍼 구현.
- * @details light.h 는 데이터 + Component 상속만 보유 — Actor::GetWorldMatrix() 호출은
- *          link 의존을 일으키므로 cpp 분리. SJH::object -> SJH::scene 의존이 cpp 한정
- *          (헤더는 actor.h 의 Component base 만 사용 — inline).
+ * @brief DirLight / PointLight / SpotLight 의 worldPos / worldDir 헬퍼 구현 +
+ *        SP-SceneContext+ProgramRegistry OnEnter / OnExit lifecycle 구현.
+ * @details
+ *  ### 책임
+ *  - `GetWorldDirection` / `GetWorldPosition` - Owner Actor 의 worldMatrix 에서 방향/위치 추출.
+ *  - `OnEnter` / `OnExit` - Actor 트리 부착/해제 시 `SceneContext::AddLight` / `RemoveLight` 자동 호출.
+ *
+ *  ### 헤더/cpp 분리 이유
+ *  - `light.h` 는 데이터 + `Scene::Component` 상속만 보유 - `Actor::GetWorldMatrix()` 정의 호출은
+ *    link 의존을 유발하므로 cpp 로 격리. `SJH::object -> SJH::scene` 의존은 이 파일 한정.
+ *  - 헤더는 `actor.h` 의 `Component` base 만 사용 (모두 inline -> link 의존 0).
+ *
+ * @note `GetWorldDirection` 은 worldMatrix 의 `-Z 컬럼` 을 forward 로 정의 -
+ *       `Transform::GetForward()` / `Camera::GetViewMatrix` 와 일관 (EulerRot=0 기본 시 (0,0,-1)).
  */
 #include "object/light.h"
 #include "scene/actor.h" // Actor::GetWorldMatrix definition
-#include "scene/scene.h" // SP-SceneContext+ProgramRegistry — Director::Get().GetContext() 접근.
+#include "scene/scene.h" // SP-SceneContext+ProgramRegistry - Director::Get().GetContext() 접근.
 
 namespace SJH
 {
     vmath::vec3 DirLight::GetWorldDirection() const
     {
         // worldMatrix 의 -Z 컬럼 = forward (OpenGL 카메라 응시 방향 정통).
-        // Transform::GetForward() / Camera::GetViewMatrix 와 일관 — EulerRot=(0,0,0) 기본 시 (0,0,-1).
+        // Transform::GetForward() / Camera::GetViewMatrix 와 일관 - EulerRot=(0,0,0) 기본 시 (0,0,-1).
         if (auto* owner = GetOwner())
         {
             const auto m = owner->GetWorldMatrix();
@@ -56,9 +66,9 @@ namespace SJH
         return vmath::vec3(0.0f, 0.0f, -1.0f);
     }
 
-    // ── SP-SceneContext+ProgramRegistry (2026-05-26) — Component lifecycle hook ──────
+    // -- SP-SceneContext+ProgramRegistry (2026-05-26) - Component lifecycle hook ------
     // 광원이 Actor 트리에 부착되면 자동으로 SceneContext 에 등록 (Cocos2D `addChild` 정통).
-    // SceneContext::AddLight 가 DirLight/PointLight/SpotLight 각각 오버로드 — this 그대로 전달.
+    // SceneContext::AddLight 가 DirLight/PointLight/SpotLight 각각 오버로드 - this 그대로 전달.
     void DirLight::OnEnter()
     {
         Scene::Director::Get().GetContext().AddLight(this);

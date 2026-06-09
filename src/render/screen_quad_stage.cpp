@@ -1,6 +1,22 @@
 /**
  * @file screen_quad_stage.cpp
- * @brief ScreenQuadStage — N 개 FBO color attachment ->backbuffer 합성 구현.
+ * @brief ScreenQuadStage - N 개 FBO color attachment -> backbuffer 합성 구현.
+ *
+ * @details
+ *  ### 책임
+ *  - @c Render(target) : backbuffer 바인딩 -> depth/blend 설정 -> passthrough Program 활성화
+ *    -> screen quad VAO 바인딩 -> **EBO 재핀** -> FBO 목록 순서대로 합성.
+ *  - **EBO 재핀 이유**: Effekseer / Box2D 등 서드파티 GL 코드가 VAO 가 바인딩된 상태에서
+ *    @c glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, X) 를 호출하면 VAO 의 EBO 참조가 덮어쓰여
+ *    @c glDrawElements 에서 @c GL_INVALID_OPERATION 이 발생.
+ *    매 프레임 @c ebo->Bind() 로 원상복구.
+ *
+ *  ### 비-책임
+ *  - [X] FBO / Program / Mesh 생성 및 소유 - @c ResourceRegistry 책임.
+ *  - [X] PostFX 셰이더 연산 - passthrough 외의 셰이더 처리는 @c PassComponent 체인.
+ *
+ * @note 합성 상태 복원: @c Render 종료 시 @c SetDepthTest(true) + @c SetBlend(true) 로
+ *       후속 Stage (ImGui 등) 가 기대하는 상태로 되돌린다.
  */
 #include "render/screen_quad_stage.h"
 #include "buffer/framebuffer.h"
@@ -32,7 +48,7 @@ namespace SJH
 	{
 		if (mSources.empty())
 		{
-			spdlog::warn("[ScreenQuadStage] sources empty — skip");
+			spdlog::warn("[ScreenQuadStage] sources empty - skip");
 			return;
 		}
 
@@ -41,7 +57,7 @@ namespace SJH
 		// backbuffer 바인딩 + 클리어 (depth test / blend 는 ScreenQuad 특성에 맞게 직접 설정).
 		rc.BindTarget(target);
 		rc.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		rc.SetDepthTest(false);   // NDC quad — z-buffer 불필요.
+		rc.SetDepthTest(false);   // NDC quad - z-buffer 불필요.
 		rc.SetBlend(false);       // 첫 소스: replace (전 프레임 백버퍼 잔상 차단).
 
 		rc.UseProgram(mProgram);
@@ -66,14 +82,14 @@ namespace SJH
 			rc.BindTexture(0, tex->GetTextureID());
 			Uniforms::SetInt(mProgram, "uScene", 0);
 
-			// 2+ 소스 — 전 pass 위에 alpha blend 합성.
+			// 2+ 소스 - 전 pass 위에 alpha blend 합성.
 			if (i == 1)
 				rc.SetBlend(true);
 
 			rc.DrawIndexed(mMesh.GetIndexCount());
 		}
 
-		// 상태 복원 — 후속 Stage (ImGui 등) 가 blend 를 기대할 수 있으므로.
+		// 상태 복원 - 후속 Stage (ImGui 등) 가 blend 를 기대할 수 있으므로.
 		rc.SetDepthTest(true);
 		rc.SetBlend(true);
 	}

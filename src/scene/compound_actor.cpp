@@ -1,3 +1,19 @@
+/**
+ * @file compound_actor.cpp
+ * @brief Compound Actor 팩토리 free function 구현 - Camera / Light / Skybox / ScreenCamera.
+ *
+ * @details
+ *  ### 책임
+ *  - @c CreateCameraActor / @c CreateScreenCameraActor / @c CreateSkyboxActor 구현.
+ *  - @c CreateDirLightActor / @c CreatePointLightActor / @c CreateSpotLightActor 구현.
+ *  - 파일-스코프 익명 네임스페이스 @c DirectionToEulerDeg - direction -> EulerRot(deg) 변환.
+ *
+ *  ### 비-책임
+ *  - [X] 씬 트리 편입 - 반환된 @c unique_ptr 의 소유권 및 @c AddChild 는 호출자 책임.
+ *
+ * @note @c DirectionToEulerDeg: OpenGL forward(-Z) + ZYX Euler 컨벤션.
+ *       pitch = @c asin(d.y), yaw = @c atan2(d.x, -d.z), roll = 0.
+ */
 #include "scene/compound_actor.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
@@ -19,7 +35,7 @@ namespace SJH::Scene
     namespace
     {
         /// @brief direction vector  Transform.EulerRot (degree).
-        /// @details OpenGL 정통 — Forward = -Z, Up = +Y. EulerRot=(pitch, yaw, 0) 의 ZYX 합성:
+        /// @details OpenGL 정통 - Forward = -Z, Up = +Y. EulerRot=(pitch, yaw, 0) 의 ZYX 합성:
         ///   - pitch = asin(d.y)
         ///   - yaw   = atan2(d.x, -d.z)
         ///   - roll  = 0
@@ -83,7 +99,7 @@ namespace SJH::Scene
         auto* camera = screenCamActor->GetComponent<Camera>();
         camera->IsOrthographic = true;
         camera->OrthoSize      = 1.0f;
-        camera->NoClear        = true; // WorldCamera 출력 보존 — clear 없이 합성
+        camera->NoClear        = true; // WorldCamera 출력 보존 - clear 없이 합성
         camera
             ->SetCullingMask(Layer::UI | Layer::Screen)
             .SetTargetRenderTarget(sceneFB);

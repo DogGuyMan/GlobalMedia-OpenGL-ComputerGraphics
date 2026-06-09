@@ -1,10 +1,18 @@
 /**
  * @file gl_validate.cpp
- * @brief @c GLValidate 6 카테고리 구현.
+ * @brief @c GLValidate 카테고리 A-G 구현.
  *
  * @details
- *  doc/inst.md §6 구현 순서: A -> E -> F -> B -> D -> C (단순 -> 복잡).
- *  본 파일은 같은 순서로 함수 배치.
+ *  ### 구현 순서 (단순 -> 복잡)
+ *  A -> E -> F -> B -> D -> C -> G 순으로 함수 배치.
+ *
+ *  ### 내부 헬퍼
+ *  - @c sReportedErrors - Cat E rate-limit 캐시. @c (에러코드 이름 + "@" + tag) 키. static (GL 단일 스레드 가정).
+ *  - @c GLErrorName - @c GLenum -> 문자열 (Cat E 내부 전용).
+ *  - @c GLTypeComponents - GLSL 타입 -> 컴포넌트 수 (Cat B 비교용).
+ *  - @c IsSamplerType - Cat C/D 에서 sampler2D 계열 판별.
+ *  - @c QueryMaxNameLen - @c GL_ACTIVE_UNIFORM_MAX_LENGTH / @c GL_ACTIVE_ATTRIBUTE_MAX_LENGTH
+ *    사전 조회 후 충분한 버퍼 크기 산출.
  */
 
 #include "diagnostics/gl_validate.h"
@@ -22,8 +30,8 @@ namespace SJH::Diagnostics::GLValidate
 {
     namespace
     {
-        /// Cat E rate-limit 캐시 — (error_code, tag) 쌍이 이미 보고됐는지.
-        /// thread_local 아니라 *static* — 단일 GL thread 가정 (GL 3.3 core).
+        /// Cat E rate-limit 캐시 - (error_code, tag) 쌍이 이미 보고됐는지.
+        /// thread_local 아니라 *static* - 단일 GL thread 가정 (GL 3.3 core).
         std::unordered_set<std::string> sReportedErrors;
 
         const char* GLErrorName(GLenum err)
@@ -72,9 +80,9 @@ namespace SJH::Diagnostics::GLValidate
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Cat A — CheckIndices (CPU only)
-    // ──────────────────────────────────────────────────────────────────────
+    // ----------------------------------------------------------------------
+    // Cat A - CheckIndices (CPU only)
+    // ----------------------------------------------------------------------
     size_t CheckIndices(const std::vector<uint32_t>& indices, size_t vertexCount,
                         const char* tag)
     {
@@ -135,9 +143,9 @@ namespace SJH::Diagnostics::GLValidate
         return violations;
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Cat E — CaptureGLError (rate-limited)
-    // ──────────────────────────────────────────────────────────────────────
+    // ----------------------------------------------------------------------
+    // Cat E - CaptureGLError (rate-limited)
+    // ----------------------------------------------------------------------
     bool CaptureGLError(const char* tag)
     {
         const GLenum err = glGetError();
@@ -148,17 +156,17 @@ namespace SJH::Diagnostics::GLValidate
         std::string key = std::string(GLErrorName(err)) + "@" + (tag ? tag : "");
         if (sReportedErrors.insert(key).second)
         {
-            spdlog::warn("[GLValidate/{}/Cat E] {} (0x{:X}) — first occurrence",
+            spdlog::warn("[GLValidate/{}/Cat E] {} (0x{:X}) - first occurrence",
                          tag ? tag : "", GLErrorName(err), err);
         }
-        // 큐에 다른 에러도 있을 수 있음 — drain (rate-limit 적용)
+        // 큐에 다른 에러도 있을 수 있음 - drain (rate-limit 적용)
         while (true) {
             const GLenum next = glGetError();
             if (next == GL_NO_ERROR) break;
             std::string nextKey = std::string(GLErrorName(next)) + "@" + (tag ? tag : "");
             if (sReportedErrors.insert(nextKey).second)
             {
-                spdlog::warn("[GLValidate/{}/Cat E] {} (0x{:X}) — additional",
+                spdlog::warn("[GLValidate/{}/Cat E] {} (0x{:X}) - additional",
                              tag ? tag : "", GLErrorName(next), next);
             }
         }
@@ -167,9 +175,9 @@ namespace SJH::Diagnostics::GLValidate
 
     void ResetRateLimitCache() { sReportedErrors.clear(); }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Cat F — DumpShaderInfoLogs
-    // ──────────────────────────────────────────────────────────────────────
+    // ----------------------------------------------------------------------
+    // Cat F - DumpShaderInfoLogs
+    // ----------------------------------------------------------------------
     void DumpShaderInfoLogs(GLuint program, const char* tag)
     {
         if (program == 0) return;
@@ -219,9 +227,9 @@ namespace SJH::Diagnostics::GLValidate
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Cat B — CheckAttribLayout (current VAO ↔ program active attributes)
-    // ──────────────────────────────────────────────────────────────────────
+    // ----------------------------------------------------------------------
+    // Cat B - CheckAttribLayout (current VAO <-> program active attributes)
+    // ----------------------------------------------------------------------
     size_t CheckAttribLayout(GLuint program, const char* tag)
     {
         size_t violations = 0;
@@ -268,7 +276,7 @@ namespace SJH::Diagnostics::GLValidate
             }
         }
 
-        // 추가: VAO가 enable 했지만 VS가 안 쓰는 location -> warning (info 레벨 — 의도일 수도)
+        // 추가: VAO가 enable 했지만 VS가 안 쓰는 location -> warning (info 레벨 - 의도일 수도)
         for (GLint loc = 0; loc < 16; ++loc)
         {
             if (usedLocations.count(loc)) continue;
@@ -278,15 +286,15 @@ namespace SJH::Diagnostics::GLValidate
             {
                 spdlog::info("[GLValidate/{}/Cat B] VAO enabled loc {} but VS doesn't use it",
                              tag, loc);
-                // violation 카운트 안 함 — 정보만
+                // violation 카운트 안 함 - 정보만
             }
         }
         return violations;
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Cat D — CheckSamplerBindings
-    // ──────────────────────────────────────────────────────────────────────
+    // ----------------------------------------------------------------------
+    // Cat D - CheckSamplerBindings
+    // ----------------------------------------------------------------------
     size_t CheckSamplerBindings(GLuint program, const char* tag)
     {
         size_t violations = 0;
@@ -323,7 +331,7 @@ namespace SJH::Diagnostics::GLValidate
 
             glActiveTexture(GL_TEXTURE0 + unit);
             GLint texId = 0;
-            // sampler type 에 따라 다른 binding query — 일단 GL_TEXTURE_BINDING_2D 가 가장 흔함
+            // sampler type 에 따라 다른 binding query - 일단 GL_TEXTURE_BINDING_2D 가 가장 흔함
             const GLenum bindingEnum =
                 (type == GL_SAMPLER_CUBE)    ? GL_TEXTURE_BINDING_CUBE_MAP :
                 (type == GL_SAMPLER_3D)      ? GL_TEXTURE_BINDING_3D       :
@@ -341,9 +349,9 @@ namespace SJH::Diagnostics::GLValidate
         return violations;
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Cat C — CheckUniformCoverage (declared but value default-0 의심)
-    // ──────────────────────────────────────────────────────────────────────
+    // ----------------------------------------------------------------------
+    // Cat C - CheckUniformCoverage (declared but value default-0 의심)
+    // ----------------------------------------------------------------------
     size_t CheckUniformCoverage(GLuint program, const char* tag)
     {
         size_t violations = 0;
@@ -364,7 +372,7 @@ namespace SJH::Diagnostics::GLValidate
             const GLint loc = glGetUniformLocation(program, nameBuf.data());
             if (loc < 0) continue;
 
-            // sampler — unit 0이 의도된 default일 수 있으므로 Cat D에서 별도 처리
+            // sampler - unit 0이 의도된 default일 수 있으므로 Cat D에서 별도 처리
             if (IsSamplerType(type)) continue;
 
             // type별 값 query -> 모두 0이면 "값 미설정 의심"
@@ -400,11 +408,11 @@ namespace SJH::Diagnostics::GLValidate
                 GLint v = 0; glGetUniformiv(program, loc, &v);
                 isZero = (v == 0);
             }
-            // 다른 타입 — 보수적으로 skip
+            // 다른 타입 - 보수적으로 skip
 
             if (isZero)
             {
-                spdlog::warn("[GLValidate/{}/Cat C] uniform '{}' value default-zero — "
+                spdlog::warn("[GLValidate/{}/Cat C] uniform '{}' value default-zero - "
                              "CPU 측 setter 호출 누락 의심?",
                              tag, nameBuf.data());
                 ++violations;
@@ -413,19 +421,19 @@ namespace SJH::Diagnostics::GLValidate
         return violations;
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Cat G — CheckViewport (GL viewport ↔ 기대 렌더 타깃 크기)
-    // ──────────────────────────────────────────────────────────────────────
+    // ----------------------------------------------------------------------
+    // Cat G - CheckViewport (GL viewport <-> 기대 렌더 타깃 크기)
+    // ----------------------------------------------------------------------
     size_t CheckViewport(int expectedWidth, int expectedHeight, const char* tag)
     {
         GLint vp[4] = {0, 0, 0, 0};
         glGetIntegerv(GL_VIEWPORT, vp);
 
-        // vp = [x, y, width, height]. 크기(2,3)만 비교 — 원점 오프셋은 정상적으로 0이 아닐 수도.
+        // vp = [x, y, width, height]. 크기(2,3)만 비교 - 원점 오프셋은 정상적으로 0이 아닐 수도.
         if (vp[2] != expectedWidth || vp[3] != expectedHeight)
         {
             spdlog::warn("[GLValidate/{}/Cat G] viewport [{}, {}, {}, {}] != expected {}x{} "
-                         "— viewport 미설정 또는 HiDPI 논리/물리 픽셀 불일치 의심",
+                         "- viewport 미설정 또는 HiDPI 논리/물리 픽셀 불일치 의심",
                          tag, vp[0], vp[1], vp[2], vp[3],
                          expectedWidth, expectedHeight);
             return 1;
@@ -435,9 +443,9 @@ namespace SJH::Diagnostics::GLValidate
         return 0;
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // RunFullSweep — A + B + C + D + F (E는 별도 호출)
-    // ──────────────────────────────────────────────────────────────────────
+    // ----------------------------------------------------------------------
+    // RunFullSweep - A + B + C + D + F (E는 별도 호출)
+    // ----------------------------------------------------------------------
     size_t RunFullSweep(GLuint program, const std::vector<uint32_t>& indices,
                         size_t vertexCount, const char* tag)
     {

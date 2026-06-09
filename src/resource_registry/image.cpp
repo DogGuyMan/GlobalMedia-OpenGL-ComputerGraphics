@@ -1,8 +1,15 @@
 /**
  * @file image.cpp
- * @brief Image 정의 — stb_image implementation 을 *이 TU 에서만* 펼친다.
- * @note  @c STB_IMAGE_IMPLEMENTATION 매크로는 프로젝트 전체에서 정확히 한 번만 정의되어야 한다
- *        (단일 헤더 라이브러리 규칙 — 다른 .cpp 에서 중복 정의 시 링커 duplicate symbol).
+ * @brief @c Image 메서드 정의 - @c stb_image implementation 을 이 TU 에서만 펼친다.
+ *
+ * @details
+ *  ### STB_IMAGE_IMPLEMENTATION 단일 소유
+ *  @c STB_IMAGE_IMPLEMENTATION 매크로는 프로젝트 전체에서 정확히 이 파일 한 곳에서만 정의.
+ *  단일 헤더 라이브러리 규칙 - 다른 @c .cpp 에서 중복 정의 시 링커 duplicate symbol 에러.
+ *  @c stbi_* 직접 호출 금지 - @c SJH::Image::Load / @c SJH::Image::Create 경유.
+ *
+ * @note @c stbi_set_flip_vertically_on_load(true) 는 @c LoadWithStb 에서 매 호출마다 설정 -
+ *       OpenGL UV 좌표(Y=0 하단) 와 PNG(Y=0 상단) 의 방향 불일치 보정.
  */
 #include "image.h"
 
