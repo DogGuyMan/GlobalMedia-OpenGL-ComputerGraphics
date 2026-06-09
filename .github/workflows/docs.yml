@@ -30,6 +30,14 @@ jobs:
       # INPUT 은 src/ + doc/pages/ (모두 체크인) — extern/ 서브모듈 불필요.
       - uses: actions/checkout@v4
 
+      # Pages 를 워크플로에서 직접 활성화 + Source 를 'GitHub Actions' 로 설정.
+      # 수동 Settings→Pages 토글 없이도 deploy-pages 가 동작하게 함 (pages: write 권한 사용).
+      # 전제: 저장소가 Pages 자격 보유 (Free=public / Pro 이상=private 허용).
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - name: Install Doxygen + Graphviz
         run: |
           sudo apt-get update
