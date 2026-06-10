@@ -1,3 +1,26 @@
+/**
+ * @file PlayerHand.cpp
+ * @brief PlayerSingleHand / PlayerHands Component 구현 — 손 배치, spread 보간, 발사 핀치 연출.
+ *
+ * @details
+ *  ### 책임
+ *  - @c PlayerSingleHand::OnEnter / @c ApplyLocalOffset: forward(-Z) 기준 local 위치 공식으로
+ *    owner Transform 을 초기 세팅. SetSpreadDeg 호출마다 즉시 재적용.
+ *  - @c PlayerHands::OnEnter: ResourceRegistry 에서 HAND_PART atlas 를 획득(캐시 우선)한 뒤,
+ *    람다 팩토리로 LeftHand/RightHand actor 를 orbitParent(또는 owner)에 AddChild.
+ *    각 actor 에 PlayerSingleHand + SpriteRenderer 를 부착.
+ *  - @c PlayerHands::Update: 형제 PlayerController lazy 캐시 -> GetAimScreenT 로 half-angle 보간 ->
+ *    발사 핀치 TweenPlayable 구동 -> 좌/우손 SetSpreadDeg.
+ *  - @c PlayerHands::TriggerFire: mFireBlend=1 즉시 설정 + 새 TweenPlayable(1->0, quadraticOut) 생성·Play.
+ *
+ *  ### 비-책임
+ *  - [X] 조준 방향 자체 계산 — 부모 Y 회전(scene graph)이 자동 처리.
+ *  - [X] 스프라이트 렌더링 — SpriteRenderer 가 담당.
+ *
+ * @note GLFW_INCLUDE_NONE 을 모든 include 이전에 선언하는 이유:
+ *       PlayerController.h -> mouse_input.h -> <GLFW/glfw3.h> 가 자체 GL 헤더를 끌어와
+ *       gl3w 와 PFNGL* 심볼 충돌을 일으킨다. NONE 선언으로 GLFW 자체 GL 로딩을 비활성화한다.
+ */
 // PlayerController.h -> mouse_input.h 의 <GLFW/glfw3.h> 가 자체 GL 헤더를 끌어와 gl3w 와 PFNGL* 충돌하지
 // 않도록, *모든 include 이전* 에 NONE 선언.
 #define GLFW_INCLUDE_NONE

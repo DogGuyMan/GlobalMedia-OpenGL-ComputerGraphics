@@ -55,7 +55,7 @@ namespace SJH
 	 *  셰이더 구조체 `DirLight` 와 1:1 매핑.
 	 *
 	 *  SP5 - `Scene::Component` 상속 추가. Owner Actor 의 Transform 이 방향 제공:
-	 *  `GetWorldDirection()` = worldMatrix[2] (forward = +Z) 정규화.
+	 *  `GetWorldDirection()` = worldMatrix 의 -Z 컬럼 (forward, = -worldMatrix[2]) 정규화.
 	 */
 	class DirLight : public Scene::Component
 	{
@@ -69,7 +69,7 @@ namespace SJH
 		/// @brief Specular 항 색상 (RGB, 0~1). 셰이더 uniform `light.specular`.
 		vmath::vec3 Specular{vmath::vec3(1.0f, 1.0f, 1.0f)};
 
-		/// @brief Owner Actor 의 worldMatrix forward(+Z) 컬럼 정규화. Owner 없을 때 (-Z) fallback.
+		/// @brief Owner Actor 의 worldMatrix forward(-Z 컬럼) 정규화. Owner 없을 때 (-Z) fallback.
 		vmath::vec3 GetWorldDirection() const;
 
 		// SP-SceneContext+ProgramRegistry (2026-05-26) - Cocos cc::Light 정통 자동 등록.
@@ -161,8 +161,8 @@ namespace SJH
 	/**
 	 * @brief 도달 거리에서 감쇠 계수 (Kc, Kl, Kq) 를 3차 다항식으로 도출.
 	 * @param distance 빛이 유의미하게 도달하는 최대 거리 (world unit). 권장 범위 @c 7 ~ @c 600.
-	 * @return @c vmath::vec3(Kc, Kl, Kq) - @c Kc=1 (상수항 고정), @c Kl (선형 감쇠), @c Kq (이차 감쇠).
-	 * @note 계수 다항식은 Ogre3D / LearnOpenGL 거리 테이블에서 회귀 도출. Kl, Kq 는 음수 방지 클램프.
+	 * @return @c vmath::vec3(Kc, Kl, Kq^2) - @c Kc=1 (상수항 고정), @c Kl (선형 감쇠), @c Kq^2 (이차 감쇠 회귀값의 *제곱* @c kq*kq).
+	 * @note 계수 다항식은 Ogre3D / LearnOpenGL 거리 테이블에서 회귀 도출. Kl 은 음수 방지 클램프, Kq 항은 제곱(@c kq*kq)이라 항상 양수.
 	 */
 	static vmath::vec3 GetAttenuationCoeff(float distance)
 	{

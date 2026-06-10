@@ -1,3 +1,7 @@
+/**
+ * @file HealthBarFactory.cpp
+ * @brief AttachHealthBar 구현 - 공유 Program/Mesh 확보 + per-instance Material + 체력바 자식 Actor 조립.
+ */
 #include "HUD/HealthBarFactory.h"
 
 #include "HUD/HealthBarDriver.h"
@@ -22,13 +26,13 @@ namespace TopdownShooter::HUD
 {
 	namespace
 	{
-		constexpr char kQuadKey[]    = "ui_quad";
-		constexpr char kProgramKey[] = "healthbar";
-		constexpr char kVsPath[]     = "./resources/shaders/healthbar.vs";
-		constexpr char kFsPath[]     = "./resources/shaders/healthbar.fs";
+		constexpr char kQuadKey[]    = "ui_quad";                          ///< 공유 QuadMesh 레지스트리 키.
+		constexpr char kProgramKey[] = "healthbar";                        ///< 공유 체력바 Program 레지스트리 키.
+		constexpr char kVsPath[]     = "./resources/shaders/healthbar.vs"; ///< 체력바 버텍스 셰이더 경로.
+		constexpr char kFsPath[]     = "./resources/shaders/healthbar.fs"; ///< 체력바 프래그먼트 셰이더 경로.
 
 		// per-instance Material 키 고유화 — 다중 액터/중복 이름 충돌 회피.
-		int gInstanceCounter = 0;
+		int gInstanceCounter = 0; ///< per-instance Material 키 접미사용 단조 증가 카운터.
 	} // namespace
 
 	void AttachHealthBar(SJH::Scene::Actor &target, const HealthBarConfig &cfg)

@@ -55,7 +55,7 @@ namespace SJH
 
 		/// @brief 합성 소스 FBO 목록 교체 - 매 프레임 또는 resize 시 호출.
 		/// @param sources color attachment 를 backbuffer 에 합성할 FBO 포인터 목록 (순서 = 합성 순서).
-		///                nullptr 원소는 자동 skip.
+		///                각 원소는 non-null 이어야 함 (@c assert 로 검사 - skip 아님).
 		void SetSources(std::vector<const Framebuffer *> sources);
 
 		/// @brief IRenderStage - sources 를 target(backbuffer) 에 합성.

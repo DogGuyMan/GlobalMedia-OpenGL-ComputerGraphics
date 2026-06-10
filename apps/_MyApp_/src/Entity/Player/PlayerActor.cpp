@@ -1,3 +1,21 @@
+/**
+ * @file PlayerActor.cpp
+ * @brief CreatePlayerActor 구현 - 2단계 조립(컴포넌트 초기화 -> 의존 wiring).
+ *
+ * @details
+ *  ### 조립 흐름
+ *  - [1] 초기화: Life -> (물리/비물리 분기) -> Controller 생성 -> Sprite 합성 -> facade.
+ *        각 Init 헬퍼가 자체 guard 를 두어 분기 한쪽만 실효된다 (if/else 를 함수로 분리).
+ *  - [2] wiring: WireWeapon(bullet 월드 주입) + WireController(입력/카메라/IMovable 타깃 주입 + SetUp).
+ *
+ *  ### 분기 규칙
+ *  - @c PlayerActorConfig::PhysicsCfg::world 가 비-null 이면 물리 분기(BoxBody + PhysicsMovement),
+ *    null 이면 비물리 분기(Transform 직접 Movement).
+ *  - facade(PlayerEntity) 를 wiring 전에 부착해 Controller 가 facade verb 를 IMovable 타깃으로 받게 한다
+ *    (DoForward 경유 시 dust FX 등 이동 부수효과 발화).
+ *
+ * @note 익명 namespace 의 Init*/Wire* 헬퍼는 본 번역 단위 전용 (외부 노출 없음).
+ */
 #include <GL/gl3w.h> // 반드시 최상단 — resource_registry.h→framebuffer.h→render_target.h→gl3w.h 보다 먼저.
 
 #include "Entity/Player/PlayerActor.h"

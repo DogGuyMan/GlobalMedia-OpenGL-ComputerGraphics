@@ -1,3 +1,22 @@
+/**
+ * @file WorldSceneBuilder.cpp
+ * @brief @c BuildWorldScene 및 내부 분할 자유함수 구현 — 월드 씬 조립 세 단계 처리.
+ *
+ * @details
+ *  ### 책임
+ *  - @c BuildWorldCamera : 45도 FOV Perspective Camera + @c ActorFolower(pan/zoom) 조립.
+ *    카메라 culling mask = Default | Player | Enemy | DebugDraw.
+ *  - @c BuildLighting : 주 방향광(@c DirLight) 생성 + Ambient(0.3)/Diffuse(0.9,0.85)/Specular(0.5) 설정.
+ *  - @c BuildSkybox : Matrix 스타일 스크롤 skybox — chars 텍스처(GL_REPEAT) + noise 텍스처(GL_REPEAT)
+ *    + @c Pass::Kind::Skybox 머티리얼 + Box 메시 + SkyboxActor 등록. 반환된 머티리얼 포인터로
+ *    render() 가 매 프레임 @c u_time 을 갱신해 스크롤 애니메이션을 구동.
+ *
+ *  ### 비-책임
+ *  - [X] 플레이어/적/UI 조립 - @c PlayerBuilder / EnemyBuilder 등 담당.
+ *
+ * @note @c gl3w.h 는 반드시 다른 GL 헤더보다 먼저 포함해야 한다.
+ *       chars/noise 텍스처는 @c GL_REPEAT 이 필수 (기본 CLAMP_TO_EDGE 면 스크롤 아티팩트 발생).
+ */
 #include <GL/gl3w.h> // GL_REPEAT / GL_LINEAR (skybox 텍스처). 반드시 다른 GL 헤더보다 먼저.
 
 #include "Bootstrap/WorldSceneBuilder.h"
@@ -23,6 +42,13 @@ namespace TopdownShooter::Bootstrap
 	namespace
 	{
 		// ── World Camera (Perspective) — 3D 월드 ────────────────────────────
+		/// @brief Perspective WorldCamera Actor 를 생성하고 @c Director::Root() 에 추가한다.
+		/// @details FOV 45도, near 0.1, far 1000, 초기 위치 (0, 3, 6), pitch -30도.
+		///          culling mask = Default | Player | Enemy | DebugDraw.
+		///          @c ActorFolower 를 부착해 pan/zoom 을 마우스로 제어하고, @p deps.sceneFB 를
+		///          RenderTarget 으로 연결한다.
+		/// @param deps @c WorldSceneDeps (aspect / mouse / sceneFB).
+		/// @return 생성된 @c SJH::Scene::Camera 포인터 (Actor 는 @c Root() 가 소유).
 		SJH::Scene::Camera *BuildWorldCamera(const WorldSceneDeps &deps)
 		{
 			auto &dir = SJH::Scene::Director::Get();
@@ -54,6 +80,10 @@ namespace TopdownShooter::Bootstrap
 		}
 
 		// ── DirLight ─────────────────────────────────────────────────────────
+		/// @brief 주 방향광(@c DirLight) Actor 를 생성하고 @c Director::Root() 에 추가한다.
+		/// @details 방향 (-0.4, -1.0, -0.5), Ambient 0.3, Diffuse 0.9/0.85, Specular 0.5.
+		///          @c SceneRenderer 가 OnEnter 훅으로 @c SceneContext 에 자동 등록한다
+		///          (@c scenecontext_auto_register 컨벤션).
 		void BuildLighting()
 		{
 			auto &dir = SJH::Scene::Director::Get();
@@ -68,6 +98,15 @@ namespace TopdownShooter::Bootstrap
 		}
 
 		// ── Matrix Skybox (프로그램 + 텍스처 + 머티리얼 + Actor) ────────────
+		/// @brief Matrix 스타일 스크롤 Skybox 를 조립하고 @c Director::Root() 에 추가한다.
+		/// @details 조립 내용:
+		///  - 프로그램 : matrix_skybox.vs / .fs.
+		///  - chars 텍스처 : GL_REPEAT + GL_LINEAR (기본 CLAMP_TO_EDGE + MIPMAP_LINEAR 덮어씀).
+		///  - noise 텍스처 : GL_REPEAT (NOISE_SCALE 8배 타일링 필수).
+		///  - 머티리얼 : @c Pass::Kind::Skybox (DepthFunc LEQUAL + CullFront + DepthWrite off).
+		///  - 텍스처 유닛 분리 : chars -> unit 0, noise_tex -> unit 1 (같은 유닛이면 한 텍스처만 읽힘).
+		///  - SkyboxActor 스케일 50.
+		/// @return 생성된 Skybox 머티리얼 포인터 (caller 가 매 프레임 @c u_time 갱신).
 		SJH::Material *BuildSkybox()
 		{
 			auto &reg = SJH::ResourceRegistry::Get();

@@ -1,3 +1,16 @@
+/**
+ * @file PostFXTweenPlayable.cpp
+ * @brief PostFXTweenPlayable leaf Playable 구현 -- tweeny step -> PostFX uniform 기록.
+ *
+ * @details
+ *  - ctor    : passName / uniformName / tween 을 std::move 로 이동 저장.
+ *  - OnPlay  : @c mTween.seek(0.0f) 으로 되감기 -- 매 Play 마다 처음부터 재생 보장.
+ *  - OnUpdate: dt(sec) -> int32_t dtMs 변환 -> @c mTween.step(dtMs) -> uniform 기록 ->
+ *              progress >= 1.0 이면 @c mIsFinished = true (one-shot 종료).
+ * @note @c step(int32_t ms) 오버로드를 강제 사용한다. @c float 오버로드([0,1] 비율)에
+ *       dt(ms) 를 넘기면 tween 이 폭주한다 (memory: tweeny_step_overload_trap).
+ *       dtMs 변수를 @c int32_t 로 선언해 컴파일러 오버로드 해소를 보장한다.
+ */
 #include "Playable/PostFXTweenPlayable.h"
 
 #include "Playable/PostFXRegistry.h"

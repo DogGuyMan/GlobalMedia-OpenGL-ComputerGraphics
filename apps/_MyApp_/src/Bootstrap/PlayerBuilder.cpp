@@ -1,3 +1,24 @@
+/**
+ * @file PlayerBuilder.cpp
+ * @brief @c BuildPlayer 및 내부 분할 자유함수 구현 — 플레이어 조립 전 단계 처리.
+ *
+ * @details
+ *  ### 책임
+ *  - @c BuildPlayerDirectionalGroups : 방향별 스프라이트 8그룹(4방향 x 2포즈) 자식 Actor 생성
+ *    + @c PlayableDirector::RegisterGroup 등록.
+ *  - @c RegisterPlayerCombatPlayables : "fire"(발사음) / "dash"(대시음) / "hit"(Parallel 비네팅+HitFlash+사운드)
+ *    @c PlayableDirector::Register.
+ *  - @c AttachGroundDecals : 발밑 그림자(@c shadow_decal_mat) + 피격 범위 원(@c hitrange_decal_mat)
+ *    MeshRenderer 2장을 groundActor 자식으로 부착. 공유 자원은 find-or-create 패턴.
+ *  - @c BuildPlayer (공개 진입점) : 위 세 자유함수를 순서대로 호출해 플레이어를 완성.
+ *
+ *  ### 비-책임
+ *  - [X] 적/파티클/UI 조립 - 각 전용 Builder 담당.
+ *  - [X] GL context / GLFW 초기화 - main 이 보장.
+ *
+ * @note @c gl3w.h 는 Effekseer OpenGL 헤더보다 반드시 먼저 포함해야 한다.
+ *       include 순서를 변경하면 중복 정의 링크 오류가 발생할 수 있다.
+ */
 #include <GL/gl3w.h> // 반드시 최상단 — Manager.h->VFXSystem.h->EffekseerRendererGL.h(시스템 gl3.h)보다 먼저.
 
 #include "Bootstrap/PlayerBuilder.h"

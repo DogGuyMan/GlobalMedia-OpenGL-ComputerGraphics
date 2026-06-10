@@ -1,3 +1,24 @@
+/**
+ * @file PlayerActor.h
+ * @brief 플레이어 Actor 팩토리 - PoD Config(Pattern C) + CreatePlayerActor 선언.
+ *
+ * @details
+ *  ### 책임
+ *  - @c PlayerActorConfig (nested PoD struct) 로 각 Component 생성 인자를 응집해 노출.
+ *  - @c CreatePlayerActor 로 Component 부착 + 의존 wiring 을 한 자리에 묶는다.
+ *
+ *  ### 비-책임
+ *  - [X] Component 구현 - Life/Movement/Weapon/Controller 각 모듈 담당.
+ *  - [X] 튜닝 수치 - @c Entity/Constants.h / @c Playable/Constants.h 단일 소스.
+ *  - [X] facade verb 구현 - @c PlayerEntity 담당.
+ *
+ *  ### 정통 매핑
+ *  - Pattern C (Config Struct + Factory) - Config 는 Value Object, Factory 가 조립/wiring.
+ *  - Compound Actor 컨벤션 (Actor 비상속, 특수 속성은 Component 로만).
+ *
+ * @note 도메인 Compound 라 엔진 코어(src/scene/compound_actor.h) 가 아닌 클라이언트 도메인에 위치한다
+ *       (의존 방향 보존).
+ */
 #ifndef _TOPDOWNSHOOTER_ENTITY_PLAYER_PLAYER_ACTOR__
 #define _TOPDOWNSHOOTER_ENTITY_PLAYER_PLAYER_ACTOR__
 
@@ -42,34 +63,38 @@ namespace TopdownShooter::Entity::Player
 	{
 		std::string name = "Player";
 
+		/// @brief Life Component 생성 인자.
 		struct LifeCfg
 		{
-			int hp = PLAYER_HP;
+			int hp = PLAYER_HP; ///< 초기 체력.
 		};
+		/// @brief Movement/PhysicsMovement 공통 이동 인자.
 		struct MovementCfg
 		{
-			float speed = PLAYER_MOVE_SPEED;
+			float speed = PLAYER_MOVE_SPEED; ///< 이동 속도 (단위/초).
 		};
+		/// @brief PlayerController 입력/조준/콜백 wiring 인자.
 		struct ControllerCfg
 		{
-			SJH::KeyboardInput<Controller::PlayerController::Action> *keyboard = nullptr;
+			SJH::KeyboardInput<Controller::PlayerController::Action> *keyboard = nullptr; ///< WASD 등 키 입력 소스 (null 이면 Controller 미부착).
 			SJH::MouseInput      *mouse    = nullptr;   // 좌클릭 Fire 바인딩용 (선택)
 			SJH::Scene::Camera   *camera   = nullptr;   // 좌클릭 마우스->Ground raycast 용 (선택)
 			std::function<void()> onFire;               // 좌클릭 콜백 (선택)
 			std::function<void()> onDamage;             // G키 콜백 (선택)
 		};
 
+		/// @brief BoxBody 물리 인자. @c world 가 null 이면 비물리 분기(Movement)로 조립된다.
 		struct PhysicsCfg
 		{
-			b2World*    world         = nullptr;
-			vmath::vec2 size          = vmath::vec2(1.0f, 1.0f);
-			vmath::vec2 startPosition = vmath::vec2(0.0f, 0.0f);
-			float       density       = 1.0f;
-			float       friction      = 0.3f;
-			float       linearDamping = PLAYER_LINEAR_DAMPING;
-			uint16_t    categoryBits  = 0;
-			uint16_t    maskBits      = 0;
-			bool        isSensor      = false;
+			b2World*    world         = nullptr;                 ///< 물리 월드 (null 이면 비물리 분기).
+			vmath::vec2 size          = vmath::vec2(1.0f, 1.0f); ///< BoxBody 크기.
+			vmath::vec2 startPosition = vmath::vec2(0.0f, 0.0f); ///< 스폰 위치 (Box2D XY).
+			float       density       = 1.0f;                    ///< 밀도.
+			float       friction      = 0.3f;                    ///< 마찰 계수.
+			float       linearDamping = PLAYER_LINEAR_DAMPING;   ///< 선형 감쇠 (관성 정지감).
+			uint16_t    categoryBits  = 0;                       ///< 충돌 카테고리 비트.
+			uint16_t    maskBits      = 0;                        ///< 충돌 마스크 비트.
+			bool        isSensor      = false;                   ///< 센서(트리거) 여부.
 		};
 
 		struct WeaponCfg
@@ -86,12 +111,12 @@ namespace TopdownShooter::Entity::Player
 			float fps = PLAYER_SPRITE_FPS; ///< 애니 파트(ColCount>1) 의 초당 프레임
 		};
 
-		LifeCfg       life;
-		MovementCfg   movement;
-		ControllerCfg controller;
-		PhysicsCfg    physics;
-		WeaponCfg     weapon;
-		SpriteCfg     sprite;
+		LifeCfg       life;       ///< Life Component 인자.
+		MovementCfg   movement;   ///< 이동 속도 인자.
+		ControllerCfg controller; ///< 입력/조준/콜백 인자 (keyboard null 이면 Controller 미부착).
+		PhysicsCfg    physics;    ///< 물리 인자 (world null 이면 비물리 분기).
+		WeaponCfg     weapon;     ///< 무기/발사 인자 (물리 분기에서만 실효).
+		SpriteCfg     sprite;     ///< 방향 텍스처 합성 인자 (direction null 이면 게임플레이-only).
 	};
 
 	/// @brief PlayerActor 생성 — Compound Actor 컨벤션 (Actor 비상속) + Component 부착.

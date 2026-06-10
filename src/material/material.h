@@ -148,8 +148,8 @@ namespace SJH
 		mutable const Material *OriginalMaterial = nullptr;
 
 		/// @brief Chain of Clones 의 *최상위 root* - direct parent 따라 거슬러 올라감.
-		/// @details 첫 호출에 root 를 OriginalMaterial 슬롯에 *경로 압축* - 다음 호출은 O(1).
-		/// @return 공유 원본 Material 포인터. 본인이 root 이면 nullptr 반환하지 않고 자기 자신을 가리킴.
+		/// @details Clone 체인을 root 까지 거슬러 올라 OriginalMaterial 슬롯에 *경로 압축* (mutable 캐시).
+		/// @return 공유 원본 Material 포인터. @warning 현재 호출자 없음 - 진짜 root(@c OriginalMaterial==nullptr)에서 호출하면 자기참조를 세팅해 *재호출 시 무한루프* 가 되는 잠재 버그 (코드 가드 필요).
 		const Material *GetRootOriginal() const
 		{
 			const Material *p = this;
@@ -178,10 +178,10 @@ namespace SJH
 		}
 
 		/// @brief 복사 생성 헬퍼 - Clone 내부에서만 사용.
-		/// @details Properties(typed map 6종) + PassKind + Program 참조를 일괄 복사.
+		/// @details Properties(typed map 7종) + PassKind + Program 참조를 일괄 복사.
 		void CopyFrom(const Material &other)
 		{
-			Properties = other.Properties; // MaterialPropertyBlock 통째로 복사 (6 typed map 자동)
+			Properties = other.Properties; // MaterialPropertyBlock 통째로 복사 (7 typed map 자동)
 			mPassKind = other.mPassKind;   // Pass 의도 - Clone 시 Transparent 유지.
 			mProgram = other.mProgram;     // Program 참조 승계 (raw pointer - Program 이 더 오래 사는 컨벤션).
 		}

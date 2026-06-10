@@ -1,3 +1,17 @@
+/**
+ * @file CameraController.cpp
+ * @brief CameraController 구현 - 키 held 누적 이동 + 마우스 look 누적 회전.
+ *
+ * @details
+ *  ### 바인딩 패턴
+ *  - @c BindKey 로 Action <-> GLFW 키 매핑, @c BindHeldHandler 로 매 프레임 mMoveDelta 누적.
+ *  - 마우스 look 핸들러는 yaw/pitch 누적, pitch 는 gimbal lock 회피로 클램프.
+ *
+ *  ### Update 흐름
+ *  1. 회전 누적값을 owner Transform.EulerRot 에 반영.
+ *  2. 카메라 로컬 축(right/up/forward) 으로 mMoveDelta 투영해 Translate 갱신.
+ *  3. mMoveDelta 리셋 (다음 프레임 held 누적 준비).
+ */
 
 #include "CameraController.h"
 #include "input/keyboard_input.h"

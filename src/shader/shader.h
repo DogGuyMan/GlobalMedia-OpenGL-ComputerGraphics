@@ -17,8 +17,8 @@
  *  - [X] 셰이더 소스 핫-리로드 - 현재 1회 컴파일 후 핸들 고정.
  *
  * @note 헤더 가드 이름이 @c __SJH_SHADER_H__ 인 이유:
- *       @c sb7code 의 @c include/shader.h 가 동일 가드를 선점하므로, 가드 충돌 시
- *       @c sb7::shader::load 심볼이 숨겨지는 버그를 회피하기 위해 의도적으로 동일한 이름 사용.
+ *       @c sb7code 의 @c include/shader.h 는 @c __SHADER_H__ 가드를 쓰므로, 그와 충돌해
+ *       @c sb7::shader::load 심볼이 숨겨지는 것을 피하려 *고유한 다른 이름* 을 사용.
  *       (sb7 포함 순서 의존성 주의)
  */
 #ifndef __SJH_SHADER_H__

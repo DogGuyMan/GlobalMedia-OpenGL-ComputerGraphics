@@ -1,3 +1,24 @@
+/**
+ * @file SpriteLayerFactory.h
+ * @brief "텍스처 1장 -> atlas find-or-create + SpriteRenderer(+옵션 애니) 부착" 공유 헬퍼.
+ *
+ * @details
+ *  ### 책임
+ *  - @c EntityTextureConfig 설정 한 건에서 @c UniformAtlas find-or-create + @c SpriteRenderer 부착.
+ *  - ColCount > 1 이면 @c SpriteSequencePlayable(loop) 자동 부착 + 즉시 재생.
+ *  - 3곳의 빌더(PlayerBuilder 8그룹 / PlayerActor InitSprite / EnemyBuilder) 의 동일 패턴 dedup.
+ *
+ *  ### 비-책임
+ *  - [X] child/owner 결정 (어느 액터에 부착할지) — caller 가 @p target 으로 결정.
+ *  - [X] SpriteRenderer 후속 설정 (flip 이외 속성) — caller 가 반환된 포인터로 직접 설정.
+ *  - [X] 애니 프레임 클립 범위 설정 (0~ColCount 고정) — 상세 클립은 caller 가 별도 생성.
+ *
+ *  ### 정통 매핑
+ *  - Cocos2D @c Sprite::create(filename) : atlas 조회 + 스프라이트 노드 반환.
+ *
+ * @note atlas 로드/검증 실패 시 @c spdlog::error 로 기록 후 nullptr 반환.
+ *       caller 는 반환값 nullptr 체크 필수.
+ */
 #ifndef _TOPDOWNSHOOTER_PLAYABLE_SPRITE_LAYER_FACTORY__
 #define _TOPDOWNSHOOTER_PLAYABLE_SPRITE_LAYER_FACTORY__
 

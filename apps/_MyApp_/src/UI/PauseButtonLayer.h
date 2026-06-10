@@ -1,3 +1,22 @@
+/**
+ * @file PauseButtonLayer.h
+ * @brief 좌상단에 일시정지 토글 버튼(이미지 버튼)을 그리는 Game kind 레이어.
+ *
+ * @details
+ *  ### 책임
+ *  - 화면 좌상단(64,64)에 48px 투명 배경 이미지 버튼 1개를 그린다.
+ *  - 클릭 시 생성자에서 받은 @c onClick 콜백 호출 (main: Stage FSM Pause/CombatPlay 토글).
+ *
+ *  ### 비-책임
+ *  - [X] 일시정지 상태 보유/전이 - Stage FSM(PauseState) 담당. 본 레이어는 콜백만 발사.
+ *  - [X] 일시정지 중 화면 클릭 resume - PauseState 가 @c !WantCaptureMouse 게이트로 처리.
+ *
+ *  ### 정통 매핑
+ *  - HUD 단일 버튼 위젯 - 게임 일시정지 메뉴 진입 버튼.
+ *
+ * @note 구 ExitButtonLayer 에서 기능 전환(2026-06-04). UiBootstrap 에서 먼저 Push 되어
+ *       Pause 오버레이보다 아래에 그려진다. ImGui v1.53 핀이라 투명 배경은 PushStyleColor 워크어라운드.
+ */
 #ifndef __MYAPP_PAUSE_BUTTON_LAYER_H__
 #define __MYAPP_PAUSE_BUTTON_LAYER_H__
 
@@ -16,13 +35,19 @@ namespace TopdownShooter::UI
 	class PauseButtonLayer : public IImGuiLayer
 	{
 	  public:
+		/// @brief 클릭 콜백과 버튼 텍스처를 주입.
+		/// @param onClick 버튼 클릭 시 호출할 콜백 (예: main 의 TogglePause). null 이면 클릭 무시.
+		/// @param tex     버튼에 그릴 텍스처 (비소유 - lifetime caller-owned). null 이면 버튼 미표시.
 		PauseButtonLayer(std::function<void()> onClick, const SJH::Texture *tex)
 		    : mOnClick(std::move(onClick)), mTex(tex)
 		{
 		}
 
+		/// @brief 항상 표시되는 HUD 요소이므로 Game kind.
+		/// @return @c ImGuiLayerKind::Game.
 		ImGuiLayerKind GetKind() const override { return ImGuiLayerKind::Game; }
 
+		/// @brief 좌상단 투명 윈도우에 48px 이미지 버튼을 그리고, 클릭 시 @c mOnClick 발사.
 		void OnBuildUI() override
 		{
 			ImGui::SetNextWindowPos(ImVec2(64.0f, 64.0f), ImGuiCond_Always);
@@ -58,8 +83,8 @@ namespace TopdownShooter::UI
 		}
 
 	  private:
-		std::function<void()> mOnClick;
-		const SJH::Texture   *mTex;
+		std::function<void()> mOnClick;       ///< 버튼 클릭 콜백 (main 의 Pause 토글).
+		const SJH::Texture   *mTex;           ///< 버튼 텍스처 (비소유).
 	};
 } // namespace TopdownShooter::UI
 

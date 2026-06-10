@@ -1,3 +1,10 @@
+/**
+ * @file EntityPresentation.cpp
+ * @brief @c AttachEntityPresentation 구현 - Player/Enemy 공통 연출 클러스터 부착.
+ * @details 4단계 순서로 부착: (1) PlayableDirector(=Life sink) -> (2) "hit"/"death" 기본 Playable
+ *          등록 -> (3) Life::SetDeathDelaySeconds(Life 있을 때만) -> (4) 머리 위 체력바.
+ *          전부 pre-entry 라야 Life::OnEnter 가 director 를 캐시하고 자식들이 함께 OnEnter 한다.
+ */
 #include <GL/gl3w.h> // 최상단 — resource_registry/scene 헤더가 끌어오는 gl3.h 보다 먼저.
 
 #include "Bootstrap/EntityPresentation.h"

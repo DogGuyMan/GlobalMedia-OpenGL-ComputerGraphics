@@ -1,3 +1,29 @@
+/**
+ * @file StageState.Impl.h
+ * @brief 4개 Stage FSM 구상 State 전체 구현 — TitleState / CombatPlayState / PauseState / GameOverState.
+ *
+ * @details
+ *  ### 책임
+ *  - @c BaseStageFsmState 를 상속한 4개 구상 State 의 OnEnter / OnUpdate / OnExit 구현.
+ *  - @c GetCtx() 헬퍼로 Root Actor 에서 @c GameContextComponent 를 빠르게 조회.
+ *  - 각 State 의 FMOD 상호작용(BGM_STATE 파라미터, Pause/Resume, Health LPF ramp)을 캡슐화.
+ *
+ *  ### 비-책임
+ *  - [X] State 등록 / 전이 트리거 판정 — @c StageStateMachine / @c SJH::FSM::StateMachine 담당.
+ *  - [X] 게임 로직 tick (Physics SyncToTransform, WaveController) — CombatPlayState::OnUpdate 가
+ *    위임 호출하나, 로직 자체는 @c Manager / @c Director 가 담당.
+ *
+ *  ### 상태 전이 요약
+ *  | State       | 진입 조건                  | 전이 조건                                    |
+ *  |-------------|----------------------------|----------------------------------------------|
+ *  | TitleState  | startup (initial)          | 빈 화면 마우스 클릭 -> CombatPlay            |
+ *  | CombatPlay  | Title 클릭 / Pause resume  | PauseButton 클릭 -> Pause / Player 사망 -> GameOver |
+ *  | Pause       | PauseButton 클릭           | 빈 화면 마우스 클릭 -> CombatPlay            |
+ *  | GameOver    | Player 사망                | terminal (전이 없음)                         |
+ *
+ * @note 이 헤더는 구현 포함 헤더 (Impl.h) — 단일 translation unit 에서만 include 할 것.
+ *       여러 TU 에서 include 하면 함수 중복 정의가 발생한다.
+ */
 #ifndef __TOPDOWNSHOOTER_STAGE_STATE_IMPL_H__
 #define __TOPDOWNSHOOTER_STAGE_STATE_IMPL_H__
 
@@ -21,7 +47,11 @@
 
 namespace TopdownShooter::Stage
 {
-	/// @brief Root 에 부착된 GameContextComponent 조회 (GameContext = Root 직속 child).
+	/// @brief Root 에 부착된 @c GameContextComponent 를 조회하는 헬퍼.
+	/// @details Root 직속 "GameContext" 자식 Actor 에서 @c GameContextComponent 를 꺼낸다.
+	///          FindChild 는 비재귀 검색 — Root 직속 자식만 탐색한다.
+	/// @param root 씬 루트 Actor.
+	/// @return GameContextComponent 포인터, 없으면 nullptr.
 	inline Components::GameContextComponent *GetCtx(SJH::Scene::Actor &root)
 	{
 		auto *ctxActor = root.FindChild("GameContext"); // 비재귀 — Root 직속
@@ -29,9 +59,18 @@ namespace TopdownShooter::Stage
 	}
 
 	// ── TitleState ────────────────────────────────────────────────
+	/**
+	 * @brief 타이틀 화면 State — startup initial, 빈 화면 클릭 시 CombatPlay 로 전이.
+	 * @details
+	 *  - OnEnter: overlay 표시 (titleTex), blur PostFX ON, BGM Play + BGM_STATE=0 (Title 분위기).
+	 *  - OnUpdate: 빈 화면 마우스 클릭(ImGui 위젯 제외) -> @c TryTransit(CombatPlay).
+	 *  - OnExit:  overlay Hide, blur PostFX OFF.
+	 */
 	class TitleState : public BaseStageFsmState
 	{
 	  public:
+		/// @brief TitleState 생성자 — StateFlag=Title, TransitFlag=CombatPlay.
+		/// @param fsm 부모 StageStateMachine (역참조, non-owning).
 		explicit TitleState(StageStateMachine *fsm)
 		    : BaseStageFsmState(fsm, EStageStatus::Title, EStageStatus::CombatPlay)
 		{
@@ -69,9 +108,23 @@ namespace TopdownShooter::Stage
 	};
 
 	// ── CombatPlayState ───────────────────────────────────────────
+	/**
+	 * @brief 전투 진행 State — WaveController/Director::Update tick 을 담당하는 게임 루프 허브.
+	 * @details
+	 *  - OnEnter: overlay Hide, BGM_STATE=1 (Combat 분위기), Pause->Resume 시 BGM SetPaused(false).
+	 *  - OnUpdate: Manager::Update + Director::Update + Physics SyncToTransform 순 tick.
+	 *              Player HP 비율 -> FMOD global "Health" 파라미터 실시간 송신.
+	 *              Pause 전이는 PauseButtonLayer 가 구동(여기서 처리 안 함).
+	 *              WaveController 가 Player 사망 감지 시 ApplyPending 경로로 GameOver 전이.
+	 *  - OnExit:   없음.
+	 *
+	 *  TransitFlag = Pause | GameOver (비트 OR 복합 전이).
+	 */
 	class CombatPlayState : public BaseStageFsmState
 	{
 	  public:
+		/// @brief CombatPlayState 생성자 — StateFlag=CombatPlay, TransitFlag=Pause|GameOver.
+		/// @param fsm 부모 StageStateMachine (역참조, non-owning).
 		explicit CombatPlayState(StageStateMachine *fsm)
 		    : BaseStageFsmState(fsm, EStageStatus::CombatPlay,
 		                        static_cast<EStageStatus>(
@@ -122,9 +175,21 @@ namespace TopdownShooter::Stage
 	};
 
 	// ── PauseState ────────────────────────────────────────────────
+	/**
+	 * @brief 일시정지 State — 게임 로직 tick 없음 (D5 freeze), 볼륨 슬라이더 UI 표시.
+	 * @details
+	 *  - OnEnter: overlay 표시 (pauseTex), blur PostFX ON, BGM SetPaused(true),
+	 *             볼륨 슬라이더 초기값 = 현재 bus 볼륨으로 초기화, mShowVolumeUI=true.
+	 *  - OnUpdate: ImGui 볼륨 슬라이더(BGM/SFX) + 빈 화면 클릭 -> TryTransit(CombatPlay).
+	 *              게임 Update 미호출 -> 물리/애니 freeze.
+	 *  - OnExit:  overlay Hide, blur PostFX OFF, mShowVolumeUI=false.
+	 *             BGM resume 은 CombatPlayState::OnEnter 가 단일 담당 (중복 회피).
+	 */
 	class PauseState : public BaseStageFsmState
 	{
 	  public:
+		/// @brief PauseState 생성자 — StateFlag=Pause, TransitFlag=CombatPlay.
+		/// @param fsm 부모 StageStateMachine (역참조, non-owning).
 		explicit PauseState(StageStateMachine *fsm)
 		    : BaseStageFsmState(fsm, EStageStatus::Pause, EStageStatus::CombatPlay)
 		{
@@ -178,15 +243,27 @@ namespace TopdownShooter::Stage
 		}
 
 	  private:
-		bool  mShowVolumeUI = false;   // Pause Enter→true / Exit→false (슬라이더 표시 게이트)
-		float mBgmVolume     = 1.0f;   // BGM Bus 볼륨 슬라이더 값 (OnEnter 에서 실제 bus 볼륨으로 초기화)
-		float mSfxVolume     = 1.0f;   // SFX Bus 볼륨 슬라이더 값
+		bool  mShowVolumeUI = false;   ///< Pause Enter -> true / Exit -> false (슬라이더 표시 게이트).
+		float mBgmVolume     = 1.0f;   ///< BGM Bus 볼륨 슬라이더 값 (OnEnter 에서 실제 bus 볼륨으로 초기화).
+		float mSfxVolume     = 1.0f;   ///< SFX Bus 볼륨 슬라이더 값.
 	};
 
 	// ── GameOverState ─────────────────────────────────────────────
+	/**
+	 * @brief 게임 오버 Terminal State — 전이 없음, Health LPF 점진 해제 연출.
+	 * @details
+	 *  - OnEnter: overlay 표시 (gameOverTex), TweenPlayable 을 생성해 FMOD global "Health"
+	 *             파라미터를 0 -> 1.0 으로 1초 quinticOut 으로 ramp (LPF 서서히 해제).
+	 *  - OnUpdate: mHealthFade tick — IsFinished 후 1.0 고정, State 전이 없음.
+	 *  - OnExit:   없음 (terminal).
+	 *
+	 *  TransitFlag = NONE (transit=0) — terminal.
+	 */
 	class GameOverState : public BaseStageFsmState
 	{
 	  public:
+		/// @brief GameOverState 생성자 — StateFlag=GameOver, TransitFlag=NONE (terminal).
+		/// @param fsm 부모 StageStateMachine (역참조, non-owning).
 		explicit GameOverState(StageStateMachine *fsm)
 		    : BaseStageFsmState(fsm, EStageStatus::GameOver, EStageStatus::NONE) // terminal (transit=0)
 		{
@@ -222,7 +299,7 @@ namespace TopdownShooter::Stage
 		void OnExit(SJH::Scene::Actor &) override {}
 
 	  private:
-		std::unique_ptr<Tween::TweenPlayable<float>> mHealthFade; // GameOver Health ramp (detached, 수동 tick)
+		std::unique_ptr<Tween::TweenPlayable<float>> mHealthFade; ///< GameOver Health 0->1.0 ramp (detached, 수동 tick).
 	};
 } // namespace TopdownShooter::Stage
 

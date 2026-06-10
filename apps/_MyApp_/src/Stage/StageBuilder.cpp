@@ -1,3 +1,22 @@
+/**
+ * @file StageBuilder.cpp
+ * @brief @c CreateStageActor 구현 — 공유 자원 등록(idempotent) + Stage Actor 조립.
+ *
+ * @details
+ *  ### 조립 순서
+ *  1. 익명 네임스페이스 내 @c Ensure* 헬퍼로 공유 자원(Plane/Program/Texture/Material/Model)을
+ *     @c ResourceRegistry 에 idempotent 등록.
+ *  2. Stage @c Actor + @c StageState @c Component 생성.
+ *  3. 벽 4개(상하좌우) — lambda @c spawnWall 로 @c wall_factory + @c MeshRenderer + @c MaterialTime 조합.
+ *  4. PCB 모델 @c Actor 생성 — @c ModelSpawner::SpawnEntities 로 RenderUnit 자식 펼침.
+ *  5. Orbit 배경 VFX — @c EffekseerPlayable loop 설정 후 Play.
+ *
+ *  ### 함정 / 계약
+ *  - @c gl3w.h 는 반드시 최상단 include — EffekseerRendererGL(시스템 gl3.h) 와 충돌 회피.
+ *  - 벽 Material 은 공유 인스턴스(@c wallMat) 에서 벽별 MaterialInstance 를 파생해 uvScale 을 독립 override.
+ *    공유 Material 직접 수정 시 모든 벽에 영향.
+ *  - Orbit VFX 는 @c ResourceRegistry 에 @c "orbital_background" Effect 등록 여부에만 의존 — 없으면 no-op.
+ */
 #include <GL/gl3w.h> // 반드시 최상단 — Manager.h→VFXSystem.h→EffekseerRendererGL(시스템 gl3.h) ↔ resource_registry.h→gl3w.h 충돌 회피.
 
 #include "Stage/StageBuilder.h"
@@ -26,25 +45,30 @@
 
 namespace TopdownShooter::Stage
 {
+	/// @cond INTERNAL
 	namespace
 	{
-		// wall 시각화 자원의 registry key — "stage_" prefix 로 영역 명시.
-		constexpr const char *kPlaneKey = "stage_plane";
-		constexpr const char *kWallMatKey = "stage_wall";
+		// -- ResourceRegistry key 상수 — "stage_" prefix 로 Stage 도메인 영역 명시 --
+
+		constexpr const char *kPlaneKey = "stage_plane";            ///< Plane mesh 등록 key (공유, 벽 시각화용).
+		constexpr const char *kWallMatKey = "stage_wall";           ///< 반투명 벽 공유 Material key.
 
 		// 반투명(Transparent) 벽 — PoliceTape 를 emissive 로 출력하는 unlit 셰이더.
-		constexpr const char *kTransparentProgKey = "stage_transparent";
-		constexpr const char *kTransparentVS = "resources/shaders/transparent.vs";
-		constexpr const char *kTransparentFS = "resources/shaders/transparent.fs";
-		constexpr const char *kWallTexKey = "stage_police_tape";
-		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png";
+		constexpr const char *kTransparentProgKey = "stage_transparent";  ///< 반투명 벽 Program key.
+		constexpr const char *kTransparentVS = "resources/shaders/transparent.vs"; ///< 반투명 벽 VS 경로.
+		constexpr const char *kTransparentFS = "resources/shaders/transparent.fs"; ///< 반투명 벽 FS 경로.
+		constexpr const char *kWallTexKey = "stage_police_tape";    ///< PoliceTape 텍스처 key.
+		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png"; ///< PoliceTape 텍스처 경로.
 
-		constexpr const char *kPcbKey = "stage_pcb";
-		constexpr const char *kPcbModelPath = "resources/model/pcb.fbx";
-		constexpr const char *kPhongAlbedoProgKey = "stage_phong_albedo";
+		constexpr const char *kPcbKey = "stage_pcb";                ///< PCB 모델 key.
+		constexpr const char *kPcbModelPath = "resources/model/pcb.fbx"; ///< PCB 모델 경로.
+		constexpr const char *kPhongAlbedoProgKey = "stage_phong_albedo"; ///< PCB 용 Phong+알베도 Program key.
 		constexpr const char *kPhongAlbedoVS = "resources/shaders/phong_tex.vs"; // VS 공유
-		constexpr const char *kPhongAlbedoFS = "resources/shaders/phong_albedo.fs";
+		constexpr const char *kPhongAlbedoFS = "resources/shaders/phong_albedo.fs"; ///< PCB 용 Phong 알베도 FS 경로.
 
+		/// @brief PCB 모델용 Phong 알베도 Program 을 idempotent 하게 등록/조회.
+		/// @param reg 자원 레지스트리.
+		/// @return 등록된(또는 기존) @c SJH::Program 포인터.
 		SJH::Program *EnsurePhongAlbedoProgram(SJH::ResourceRegistry &reg)
 		{
 			if (auto *existing = reg.FindProgram(kPhongAlbedoProgKey))
@@ -52,6 +76,9 @@ namespace TopdownShooter::Stage
 			return reg.CreateProgram(kPhongAlbedoProgKey, kPhongAlbedoVS, kPhongAlbedoFS);
 		}
 
+		/// @brief 벽 시각화용 Plane mesh 를 idempotent 하게 등록/조회.
+		/// @param reg 자원 레지스트리.
+		/// @return 등록된(또는 기존) @c SJH::Mesh 포인터.
 		SJH::Mesh *EnsurePlane(SJH::ResourceRegistry &reg)
 		{
 			if (auto *existing = reg.FindMesh(kPlaneKey))
@@ -60,6 +87,9 @@ namespace TopdownShooter::Stage
 			return reg.RegisterMesh(kPlaneKey, std::move(planeUPtr));
 		}
 
+		/// @brief 반투명 벽 unlit Program 을 idempotent 하게 등록/조회.
+		/// @param reg 자원 레지스트리.
+		/// @return 등록된(또는 기존) @c SJH::Program 포인터.
 		SJH::Program *EnsureTransparentProgram(SJH::ResourceRegistry &reg)
 		{
 			if (auto *existing = reg.FindProgram(kTransparentProgKey))
@@ -67,6 +97,9 @@ namespace TopdownShooter::Stage
 			return reg.CreateProgram(kTransparentProgKey, kTransparentVS, kTransparentFS);
 		}
 
+		/// @brief PoliceTape 텍스처를 idempotent 하게 등록/조회. GL_REPEAT wrap 설정 포함.
+		/// @param reg 자원 레지스트리.
+		/// @return 등록된(또는 기존) @c SJH::Texture 포인터.
 		SJH::Texture *EnsureWallTexture(SJH::ResourceRegistry &reg)
 		{
 			if (auto *existing = reg.FindTexture(kWallTexKey))
@@ -78,7 +111,12 @@ namespace TopdownShooter::Stage
 			return tex;
 		}
 
-		// 반투명 벽 머티리얼 — Transparent Pass + emissive sampler 에 PoliceTape 바인딩.
+		/// @brief 반투명 벽 공유 Material 을 idempotent 하게 등록/조회.
+		/// @details
+		///   Transparent Pass(blend on, depthWrite off, cull off 양면) + emissive sampler(unit 0) 에
+		///   PoliceTape 바인딩. uvScale / uScrollSpeed 는 공유 기본값 — 벽별 MaterialInstance 가 override.
+		/// @param reg 자원 레지스트리.
+		/// @return 공유 @c SJH::Material 포인터.
 		SJH::Material *EnsureWallMaterial(SJH::ResourceRegistry &reg)
 		{
 			if (auto *existing = reg.FindSharedMaterial(kWallMatKey))
@@ -97,6 +135,9 @@ namespace TopdownShooter::Stage
 			return mat;
 		}
 
+		/// @brief PCB 3D 모델을 idempotent 하게 등록/조회.
+		/// @param reg 자원 레지스트리.
+		/// @return 등록된(또는 기존) @c SJH::Model 포인터.
 		SJH::Model *EnsurePcbModel(SJH::ResourceRegistry &reg)
 		{
 			if (auto *existing = reg.FindModel(kPcbKey))
@@ -104,6 +145,7 @@ namespace TopdownShooter::Stage
 			return reg.CreateModel(kPcbKey, kPcbModelPath);
 		}
 	} // namespace
+	/// @endcond
 
 	std::unique_ptr<SJH::Scene::Actor> CreateStageActor(const StageConfig &cfg)
 	{

@@ -1,3 +1,22 @@
+/**
+ * @file EntityPresentation.h
+ * @brief Player/Enemy 두 빌더가 공유하는 연출 클러스터 부착 헬퍼 + config struct.
+ *
+ * @details
+ *  ### 책임
+ *  - 두 빌더의 공통 5동작(director 부착 / "hit"+"death" 기본 등록 / death delay / 체력바)을 dedup.
+ *  - @c EntityPresentationConfig 로 dissolve/delay/체력바 색 차이만 파라미터화 (기본=Player 값).
+ *
+ *  ### 비-책임([X])
+ *  - [X] "hit" overwrite (Player 비네팅 / Enemy 사운드) - 반환된 director 로 caller 가 추가 Register.
+ *  - [X] 스프라이트/물리 조립 - 각 빌더가 별도로 부착 (본 헬퍼는 연출 레이어만).
+ *
+ *  ### 정통 매핑
+ *  - Unity 의 공통 prefab 변형 베이스 - 차이 필드만 override 하는 config 주입 패턴.
+ *
+ * @note 반드시 *pre-entry*(AddChild 전) 호출 - Life::OnEnter 가 director 를 IActorPresentation
+ *       sink 로 캐시하려면 director 가 entry 시점에 이미 부착돼 있어야 한다.
+ */
 #ifndef __TOPDOWNSHOOTER_BOOTSTRAP_ENTITY_PRESENTATION_H__
 #define __TOPDOWNSHOOTER_BOOTSTRAP_ENTITY_PRESENTATION_H__
 

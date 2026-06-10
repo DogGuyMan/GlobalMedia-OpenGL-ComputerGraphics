@@ -1,3 +1,25 @@
+/**
+ * @file WaveController.cpp
+ * @brief @c WaveController 구현 — 웨이브 스폰 / 사망 observer / deferred sweep.
+ *
+ * @details
+ *  ### 구현 전략
+ *  - 스폰: @c mSpawnTimer(@c SJH::Timer::Timer) tick -> @c IsTimesUp() + 생존 < MAX 조건 시 @c SpawnEnemy().
+ *  - 사망 통지: @c OnEnemyDeath (observer 콜백) 는 enqueue(@c mEnemies -> @c mDying 이동) 만 수행.
+ *    Box2D @c b2World::Step 잠금 중(contact 콜백 경유 @c DoDie) 호출될 수 있으므로
+ *    body 변경(@c SetBodyEnabled / @c DestroyBody) 은 Step 밖(@c SweepDespawned) 에서만 실행.
+ *  - Sweep: @c SweepDespawned 는 main 렌더루프가 @c b2World::Step 종료 후 명시적 호출.
+ *    dying 목록을 순회해 디졸브 완료(@c IsDespawnReady) 시 @c RemoveChild (OnExit 자동 호출 -> DestroyBody),
+ *    아직 디졸브 중이면 @c SetBodyEnabled(false) 로 충돌만 정지(idempotent).
+ *
+ *  ### 웨이브 클리어 로직
+ *  - 조건: @c mWave > 0 && @c mWaveSpawnedAny && @c LiveCount() == 0
+ *  - @c mDying(디졸브 중 corpse) 는 wave-clear 판정에 무관 — 즉시 다음 웨이브 개시.
+ *  - @c mWaveSpawnedAny 가드: 웨이브 시작 직후 아직 스폰 전 프레임에서의 오발화 방지.
+ *
+ * @note @c SweepDespawned 는 반드시 @c Director::Update 밖에서 호출.
+ *       Update 내부(Actor 트리 순회 중) @c RemoveChild 호출 시 iterator 무효화 위험.
+ */
 #include "Stage/WaveController.h"
 #include "Bootstrap/EnemyBuilder.h"
 #include "Stage/Constants.h"

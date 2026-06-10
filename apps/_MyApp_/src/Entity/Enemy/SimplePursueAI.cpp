@@ -1,3 +1,9 @@
+/**
+ * @file SimplePursueAI.cpp
+ * @brief SimplePursueAI 구현 - facade 캐시 + 사망/넉백 게이트 + 타깃 방향 속도 적용.
+ * @details 매 프레임 타깃과 적의 거리 벡터를 정규화해 @c mSpeed 로 스케일한 속도를 body 에 적용한다.
+ *          XZ 월드 좌표를 Box2D XY 로 사상 (Z -> -Y).
+ */
 #include "Entity/Enemy/SimplePursueAI.h"
 #include "Entity/BaseEntity.h"
 #include <box2d/box2d.h>

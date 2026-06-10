@@ -1,3 +1,15 @@
+/**
+ * @file HpGrayscalePostFX.cpp
+ * @brief HpGrayscalePostFX Component 구현 -- HP 비율 -> PostFX float uniform 연속 바인딩.
+ *
+ * @details
+ *  - @c OnEnter : 소유 Actor 에서 @c ILivable 인터페이스를 1회 캐시. GetOwner() null 가드 포함.
+ *  - @c Update  : HP 비율 [0,1] 을 계산하고 @c PostFXRegistry 로 Material 을 조회해
+ *                 @c Properties.Floats[mUniformName] 에 직접 기록한다.
+ *                 maxHp<=0 이면 ZeroDivision 방지를 위해 조기 return.
+ * @note Material uniform 기록은 GL draw 호출 전에 이루어진다 -- Properties.Floats 는
+ *       draw 시점에 @c PropertyBlockSetter 가 @c glUniform1f 로 업로드한다.
+ */
 #include "Playable/HpGrayscalePostFX.h"
 
 #include "Playable/PostFXRegistry.h"

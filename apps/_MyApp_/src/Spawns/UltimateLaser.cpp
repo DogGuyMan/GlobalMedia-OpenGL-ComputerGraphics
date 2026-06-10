@@ -1,4 +1,22 @@
-#include <GL/gl3w.h> // 반드시 최상단 — VFXSystem.h→EffekseerRendererGL(시스템 gl3.h) ↔ resource_registry.h→gl3w.h 충돌 회피.
+/**
+ * @file UltimateLaser.cpp
+ * @brief UltimateLaser.h 구현 — RotatingHitscanLaser 내부 클래스 + SpawnUltimateLaser 본체.
+ *
+ * @details
+ *  ### 내부 구조
+ *  - 익명 네임스페이스 내 @c RotatingHitscanLaser (@c SJH::Scene::Component 상속):
+ *    매 프레임 @c Timer::Tick(dt) 후 경과 각도를 계산해 @c RaycastAll 을 수행.
+ *    적별 마지막 타격 elapsed 를 @c mLastHit (unordered_map) 에 기록해 틱 간격(ULTIMATE_TICK) 을 강제.
+ *    3초(ULTIMATE_DURATION) 경과 시 데미지 루프 중단 — 파괴는 @c AutoDespawnOnFinish 에 위임.
+ *  - @c SpawnUltimateLaser 는 fxRoot 아래 Actor 생성 후 데미지+VFX+AutoDespawn 컴포넌트를 순서대로 부착.
+ *
+ *  ### 좌표계 변환
+ *  - OpenGL world 좌표 (x, h, -z) -> Box2D 평면 (x, -z).
+ *    @c startBox2d = (centerWorld[0], -centerWorld[2]).
+ *
+ * @note GL/gl3w.h 를 최상단에 include — EffekseerRendererGL 의 시스템 gl3.h 와 충돌 방지.
+ */
+#include <GL/gl3w.h> // 반드시 최상단 — VFXSystem.h->EffekseerRendererGL(시스템 gl3.h) <-> resource_registry.h->gl3w.h 충돌 회피.
 
 #include "Spawns/UltimateLaser.h"
 
@@ -23,11 +41,24 @@ namespace TopdownShooter::Spawns
 {
 	namespace
 	{
-		/// @brief 회전 히트스캔 데미지 — 매 프레임 현재 각도로 RaycastAll + 적별 틱 DoDamaged. 3초 후 데미지 중단.
-		///        Timer 자가보유 (BulletLifetime 패턴 — 비-BaseEntity 단발 Actor). 파괴는 EffekseerPlayable+AutoDespawn 담당.
+		/**
+		 * @brief 회전 히트스캔 데미지 컴포넌트 — 매 프레임 현재 각도로 RaycastAll + 적별 틱 DoDamaged.
+		 * @details
+		 *  - @c ULTIMATE_DURATION(3초) 동안 경과 각도(startAngle + ROT_PER_SEC * elapsed) 방향으로 레이캐스트.
+		 *  - 적별 @c mLastHit 에 elapsed 를 기록해 @c ULTIMATE_TICK 간격 내 중복 타격을 억제 (빔 DoT 패턴).
+		 *  - 3초 경과 시 데미지 루프 중단. 파괴는 @c EffekseerPlayable + @c AutoDespawnOnFinish 에 위임.
+		 *  - @c SJH::Timer::Timer 자가 보유 (BulletLifetime 패턴 — @c BaseEntity 비상속 단발 Actor 용).
+		 */
 		class RotatingHitscanLaser : public SJH::Scene::Component
 		{
 		  public:
+			/// @brief 회전 히트스캔 레이저 컴포넌트 초기화.
+			/// @param world      Box2D 물리 월드 (RaycastAll 대상).
+			/// @param startBox2d 레이저 발원점 (box2d 좌표 — OpenGL (x,-z) 변환된 값).
+			/// @param startAngle 시작 회전각 (box2d 라디안).
+			/// @param damage     틱당 데미지.
+			/// @param range      레이캐스트 최대 거리.
+			/// @param ignore     레이캐스트 무시 Actor (발사 주체 자해 방지). nullptr 허용.
 			RotatingHitscanLaser(b2World *world, vmath::vec2 startBox2d, float startAngle,
 			                     int damage, float range, SJH::Scene::Actor *ignore)
 			    : mWorld(world), mStart(startBox2d), mStartAngle(startAngle),
@@ -63,14 +94,14 @@ namespace TopdownShooter::Spawns
 			}
 
 		  private:
-			b2World           *mWorld;
-			vmath::vec2        mStart;      // box2d 시작점(플레이어)
-			float              mStartAngle; // box2d 시작 각도(라디안)
-			float              mRange;
-			int                mDamage;
-			SJH::Scene::Actor *mIgnore;
-			SJH::Timer::Timer  mTimer;      // 3초 (BulletLifetime 패턴)
-			std::unordered_map<SJH::Scene::Actor *, float> mLastHit; // 적별 마지막 타격 elapsed
+			b2World           *mWorld;       ///< Box2D 물리 월드 — RaycastAll 레이캐스트 대상.
+			vmath::vec2        mStart;       ///< box2d 시작점(플레이어). OpenGL (x,-z) 로 변환된 값.
+			float              mStartAngle;  ///< box2d 시작 각도(라디안). 매 프레임 elapsed * ROT_PER_SEC 누적.
+			float              mRange;       ///< 레이캐스트 최대 거리 (ULTIMATE_RANGE 상수).
+			int                mDamage;      ///< 틱당 데미지 (ULTIMATE_DAMAGE 상수).
+			SJH::Scene::Actor *mIgnore;      ///< 레이캐스트 ignore 대상 (플레이어 자신 — 자해 방지).
+			SJH::Timer::Timer  mTimer;       ///< 3초 수명 타이머 (BulletLifetime 패턴). IsTimesUp 후 데미지 중단.
+			std::unordered_map<SJH::Scene::Actor *, float> mLastHit; ///< 적별 마지막 타격 elapsed — 틱 간격(ULTIMATE_TICK) 강제.
 		};
 	} // namespace
 

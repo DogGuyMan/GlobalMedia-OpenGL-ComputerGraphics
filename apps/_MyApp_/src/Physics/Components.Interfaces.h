@@ -1,3 +1,23 @@
+/**
+ * @file Components.Interfaces.h
+ * @brief 물리 접촉 콜백 인터페이스 IContactable - Unity MonoBehaviour 의 OnTrigger / OnCollision 콜백 매핑.
+ *
+ * @details
+ *  ### 책임
+ *  - Component 가 본 인터페이스를 구현하면 PhysicsContactListener 가 접촉 이벤트를 전달받는 진입점이 된다.
+ *  - 4종 콜백(TriggerEnter/Exit, CollisionEnter/Exit) 의 의미와 Box2D 디스패치 규약 정의.
+ *
+ *  ### 비-책임
+ *  - [X] isTrigger 여부 보유 - Components::Physics::IsSensor() 가 유일 source-of-truth (본 인터페이스에 게터 없음).
+ *  - [X] 접촉 판정/디스패치 - PhysicsContactListener(.cpp) 가 b2ContactListener 콜백에서 수행.
+ *
+ *  ### 정통 매핑
+ *  - Unity MonoBehaviour::OnTriggerEnter / OnCollisionEnter.
+ *
+ * @note 본 인터페이스의 콜백은 b2World::Step 잠금 중에 호출된다 (ContactListener 경유).
+ *       따라서 구현체는 콜백 안에서 body 구조 변경(SetEnabled/Destroy/Create)을 하면 안 되고,
+ *       마킹/큐 등록만 한 뒤 Step 밖 deferred sweep 에서 처리해야 한다 (doc/Box2DAPI.md sec 8 참고).
+ */
 #ifndef _TOPDOWNSHOOTER_PHYSICS_COMPONENTS_INTERFACES__
 #define _TOPDOWNSHOOTER_PHYSICS_COMPONENTS_INTERFACES__
 

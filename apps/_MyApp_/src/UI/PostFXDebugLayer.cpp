@@ -1,3 +1,16 @@
+/**
+ * @file PostFXDebugLayer.cpp
+ * @brief PostFXDebugLayer 구현 — 패스별 ImGui 위젯 빌드.
+ *
+ * @details
+ *  ### 구현 요점
+ *  - 생성자: std::move 로 passes 복사 비용 제거, gamma 참조 직결.
+ *  - OnBuildUI: mPasses 순회 -> Component nullptr/Enabled/mMaterial 3단계 가드
+ *    -> entry.Name 분기로 전용 위젯 빌드.
+ *  - gamma 패스: SliderFloat 변경 시 @c mGamma 와 @c props.Floats["gamma"] 동시 갱신
+ *    (셰이더 uniform 은 PropertyBlockSetter 가 props 에서 읽어 전송).
+ *  - fog 패스: uFogMode 0=Linear / 1=Exp / 2=Exp2.
+ */
 #include "UI/PostFXDebugLayer.h"
 #include "material/material.h"
 #include <imgui.h>

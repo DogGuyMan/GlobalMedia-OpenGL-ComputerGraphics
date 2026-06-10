@@ -46,7 +46,7 @@ namespace SJH::Playable
      *  ### Update 흐름
      *  @c Actor::Update(dt) -> @c Component::Update(dt) ->
      *  @c PlayableBase::Update(dt) (@c final) -> @c OnUpdate(dt) hook.
-     *  @c IsEnabled() || @c mPaused || @c mIsFinished 중 하나라도 true 이면 @c OnUpdate 진입 차단.
+     *  @c !IsEnabled() (비활성) || @c mPaused || @c mIsFinished 중 하나라도 true 이면 @c OnUpdate 진입 차단.
      *
      *  ### Composite children 특수 케이스 (spec sec.1 결정 #4)
      *  children 은 @c Actor 에 부착되지 않으므로 @c mOwner == nullptr - Composite (@c SequencePlayable /

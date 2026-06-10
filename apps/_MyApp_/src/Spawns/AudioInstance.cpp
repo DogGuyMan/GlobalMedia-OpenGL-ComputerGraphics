@@ -1,3 +1,12 @@
+/**
+ * @file AudioInstance.cpp
+ * @brief @c SpawnAudioInstance 구현 -- FMOD Studio 단발 SFX Actor 조립.
+ *
+ * @details
+ *  @c FmodStudioPlayable 과 @c AutoDespawnOnFinish 를 새 자식 Actor 에 부착하고
+ *  @c Play() 를 호출해 즉시 이벤트를 시작한다.
+ *  이후 수명 관리는 @c AutoDespawnOnFinish + 부모의 sweep 에 완전 위임.
+ */
 #include "Spawns/AudioInstance.h"
 #include "Spawns/AutoDespawnOnFinish.h"
 #include "Audio/FmodStudioPlayable.h"

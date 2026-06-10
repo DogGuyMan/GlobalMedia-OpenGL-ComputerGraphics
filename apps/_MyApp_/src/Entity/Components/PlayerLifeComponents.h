@@ -1,3 +1,23 @@
+/**
+ * @file PlayerLifeComponents.h
+ * @brief 플레이어 전용 생명력 컴포넌트 - 무적 시간 + 자동 회복 + 피격 후 회복 지연(Halo lockout) 추가.
+ *
+ * @details
+ *  ### 책임
+ *  - base @c Life 에서 확장: 기본 i-frame 0.25초, 피격 후 Halo 식 회복 지연(3초), 자동 regen(0.5s/+1HP).
+ *  - regen/regenDelay 타이머를 @c BaseEntity::Timers() 에 "life.regen" / "life.regenDelay" 키로 위탁.
+ *  - 한 번이라도 사망(@c mDeathFxFired latch)하면 회복 영구 정지 - 부활/언데드 회복 방지.
+ *
+ *  ### 비-책임
+ *  - [X] i-frame/die 타이머 - base @c Life::OnEnter/OnExit 가 처리.
+ *  - [X] Enemy 무적 시간 - base @c Life 사용(0 = 무적 없음). 플레이어 전용 클래스 분리로 공유 방지.
+ *
+ *  ### 정통 매핑
+ *  - Halo 시리즈 "피격 후 N초 동안 회복 잠금" 패턴.
+ *
+ * @note @c GetComponent<Components::Life>() 로 조회 시 typeid 미스 -> slow-path dynamic_cast 로
+ *       본 파생 클래스가 정상 반환됨 - BaseEntity / Carrier 조회 코드 무수정 호환.
+ */
 #ifndef _TOPDOWNSHOOTER_ENTITY_COMPONENTS_PLAYER_LIFE__
 #define _TOPDOWNSHOOTER_ENTITY_COMPONENTS_PLAYER_LIFE__
 
@@ -23,6 +43,10 @@ namespace TopdownShooter::Entity::Components
 	class PlayerLifeComponent : public Life
 	{
 	  public:
+		/// @brief 플레이어 생명력 컴포넌트 생성.
+		/// @details i-frame 0.25초 기본 설정 (base @c Life 기본값 0 과 차별화 - Enemy 무적 미공유).
+		/// @param max_hp 최대 HP.
+		/// @param cur_hp 초기 현재 HP. -1 이면 @p max_hp 와 동일.
 		explicit PlayerLifeComponent(int max_hp, int cur_hp = -1)
 		    : Life(max_hp, cur_hp)
 		{
@@ -49,6 +73,10 @@ namespace TopdownShooter::Entity::Components
 			return *this;
 		}
 
+		/// @brief 씬 진입 시 초기화 - base OnEnter 후 regen/regenDelay 타이머 추가 등록.
+		/// @details @c mRegenInterval > 0 이면 "life.regen", @c mRegenDelaySeconds > 0 이면
+		///          "life.regenDelay" 를 @c BaseEntity::Timers() 에 등록. regenDelay 는 arm-inactive 패턴
+		///          (Tick(base) 로 즉시 만료 = 평소 회복 허용, DoDamaged 시 Reset -> 지연창 발동).
 		void OnEnter() override
 		{
 			Life::OnEnter();   // iframe(>0)/die 타이머 등록 + sink 캐시
@@ -67,6 +95,7 @@ namespace TopdownShooter::Entity::Components
 			}
 		}
 
+		/// @brief 씬 이탈 시 정리 - regen/regenDelay Unregister 후 base OnExit 호출.
 		void OnExit() override
 		{
 			if (auto *owner = GetOwner())
@@ -80,16 +109,24 @@ namespace TopdownShooter::Entity::Components
 			Life::OnExit();    // iframe/die Unregister + 핸들 정리
 		}
 
+		/// @brief i-frame 즉시 발동 (외부 무적 요청). mInvincibleTimer->Reset() 위탁.
 		void DoInvincible() { mInvincibleTimer->Reset();}
 
+		/// @brief 데미지 수신 - base DoDamaged 위임 후 실데미지 시 회복 지연(Halo lockout) 발동.
+		/// @details 무적 중이면 base early-return -> 실데미지 0 -> regenDelay 발동 안 함.
+		/// @param damage 적용할 데미지 양.
 		void DoDamaged(int damage) override
 		{
-			const bool wasInvincible = IsInvincible();   // base 가 무적이면 early-return → 실데미지 0
+			const bool wasInvincible = IsInvincible();   // base 가 무적이면 early-return -> 실데미지 0
 			Life::DoDamaged(damage);                     // HP 차감 + iframe Reset + 사망 처리
 			if (!wasInvincible && mRegenDelayTimer)      // 실제로 맞았을 때만 회복 지연(Halo lockout) 발동
 				mRegenDelayTimer->Reset();
 		}
 
+		/// @brief 프레임 갱신 - base Update 후 자동 regen + Halo lockout 처리.
+		/// @details mDeathFxFired latch 로 사망 후 회복 영구 정지.
+		///          regenDelay 창 중에는 regen 타이머를 Reset 해 틱을 fresh 로 눌러 보류.
+		/// @param dt 직전 프레임 경과 시간(초).
 		void Update(float dt) override
 		{
 			Life::Update(dt);              // 사망 연출 진행 / 안전망(IsAlive 0 시 DoDie)
@@ -111,11 +148,11 @@ namespace TopdownShooter::Entity::Components
 		}
 
 	  private:
-		SJH::Timer::Timer *mRegenTimer        = nullptr;   // 회복 틱 타이머 (BaseEntity MultipleTimer 위탁, 비소유)
-		SJH::Timer::Timer *mRegenDelayTimer   = nullptr;   // 피격 후 회복 지연(Halo lockout) (위탁, 비소유)
-		float              mRegenInterval     = 0.5f;      // 회복 틱 간격(초)
-		int                mRegenAmount       = 1;         // 틱당 +HP (0.5s 간격 * +1 = 초당 2)
-		float              mRegenDelaySeconds = 3.0f;      // 피격 후 회복 보류 시간(초, Halo 식)
+		SJH::Timer::Timer *mRegenTimer        = nullptr;  ///< 회복 틱 타이머 핸들 (BaseEntity MultipleTimer 위탁, 비소유).
+		SJH::Timer::Timer *mRegenDelayTimer   = nullptr;  ///< 피격 후 회복 지연 타이머 핸들 (Halo lockout, 위탁, 비소유).
+		float              mRegenInterval     = 0.5f;     ///< 회복 틱 간격(초). 기본 0.5s = 초당 2HP.
+		int                mRegenAmount       = 1;        ///< 틱당 회복 HP. 기본 +1 (0.5s * +1 = 초당 2).
+		float              mRegenDelaySeconds = 3.0f;     ///< 피격 후 회복 보류 시간(초, Halo 식). 기본 3초.
 	};
 }; // namespace TopdownShooter::Entity::Components
 

@@ -1,3 +1,24 @@
+/**
+ * @file bullet_factory.h
+ * @brief 플레이어 발사 총알 Actor 를 생성하는 인라인 팩토리 함수 모음.
+ *
+ * @details
+ *  ### 책임
+ *  - @c BulletConfig 설정값을 받아 총알 @c SJH::Scene::Actor 를 완성해 반환(@c CreateBulletActor).
+ *  - Box2D @c CircleBody(Sensor), @c Carrier::Projectile(IDamageable 배달 + self-despawn),
+ *    @c BulletLifetime(수명 만료 비활성화) 세 컴포넌트를 조립.
+ *  - 공유 디버그 시각화 자원(Program/Mesh/Material)을 @c ResourceRegistry 에 1회만 등록해
+ *    per-Actor 레지스트리 무한 증식을 방지.
+ *
+ *  ### 비-책임
+ *  - [X] Scene 에 직접 추가 - 호출자(@c Weapon::UseWeapon)가 @c Director::Root().AddChild 로 관리.
+ *  - [X] 물리 레이어 정책 결정 - @c PhysicsLayer 상수로 고정(변경 시 @c PhysicsLayer.h 수정).
+ *  - [X] 비주얼 스프라이트/FX 교체 - 현재는 임시 Magenta 구(정식은 추후 sprite/Effekseer 로 대체).
+ *
+ * @note 헤더 전용(인라인 팩토리)이므로 @c bullet_factory.h 를 include 하면
+ *       box2d + SJH::Scene + SJH::Geometry 등 무거운 헤더가 따라온다.
+ *       @c WeaponComponents.cpp 처럼 .cpp 쪽에서만 include 해 헤더 전파를 최소화할 것.
+ */
 #ifndef __TOPDOWNSHOOTER_ENTITY_BULLET_BULLET_FACTORY_H__
 #define __TOPDOWNSHOOTER_ENTITY_BULLET_BULLET_FACTORY_H__
 
@@ -22,16 +43,32 @@
 
 namespace TopdownShooter::Entity::Bullet
 {
+    /**
+     * @brief 총알 Actor 생성에 필요한 설정 집합(PoD Config).
+     * @details PlayerBuilder(또는 Weapon::UseWeapon) 에서 채워 @c CreateBulletActor 에 전달.
+     *          기본값은 @c Entity::Constants 의 전역 상수(@c BULLET_SPEED 등)로 설정된다.
+     */
     struct BulletConfig
     {
-        b2World*    world;
-        vmath::vec2 pos;
-        vmath::vec2 dir;        // normalized
-        float       speed    = BULLET_SPEED;
-        int         damage   = BULLET_DAMAGE;
-        float       lifetime = BULLET_LIFETIME;
+        b2World*    world;                   ///< 총알 body 를 등록할 Box2D 월드 (비소유).
+        vmath::vec2 pos;                     ///< 스폰 위치(box2d 좌표계).
+        vmath::vec2 dir;                     ///< 발사 방향(정규화된 단위 벡터, box2d 좌표계).
+        float       speed    = BULLET_SPEED;   ///< 총알 초기 속력(units/sec).
+        int         damage   = BULLET_DAMAGE;  ///< 적에게 가할 데미지.
+        float       lifetime = BULLET_LIFETIME; ///< 총알 최대 수명(초). 초과 시 비활성.
     };
 
+    /**
+     * @brief @p cfg 설정값으로 총알 @c Actor 를 조립해 반환하는 인라인 팩토리.
+     * @details 생성 순서:
+     *  1. @c Physics::Components::CircleBody(Sensor) - BulletPlayer 레이어, Enemy|Wall 마스크.
+     *  2. @c Spawn::Carrier::Projectile - IDamageable/IImpulsable 배달 + self-despawn.
+     *  3. @c BulletLifetime - 수명 만료 시 @c Actor::SetActive(false).
+     *  4. 디버그 시각화용 공유 Magenta 구 자원 등록(MeshRenderer 는 현재 주석 처리 - 임시).
+     *
+     * @param cfg 총알 설정 구조체.
+     * @return 씬에 추가 가능한 총알 Actor (unique_ptr 소유권 반환).
+     */
     inline std::unique_ptr<SJH::Scene::Actor> CreateBulletActor(const BulletConfig& cfg)
     {
         auto actor = std::make_unique<SJH::Scene::Actor>("Bullet");

@@ -1,3 +1,16 @@
+/**
+ * @file Stat.cpp
+ * @brief Stat 의 lazy-cache 재계산 로직과 Modifier 관리 구현.
+ *
+ * @details
+ *  ### 책임
+ *  - 생성자에서 캐시를 BaseValue 로 초기화.
+ *  - @c RecalculateStat 의 adder/multiplier 합성.
+ *  - Modifier add/remove/reset 시 dirty 전이.
+ *
+ * @note 잘못된 입력(UseType=None, 다른 StatType Modifier 혼입)은 @c abort() 로 즉시 중단 -
+ *       프로그래밍 계약 위반을 조용히 넘기지 않는다.
+ */
 #include "Stat.h"
 #include <cstdlib>
 
@@ -10,6 +23,8 @@ namespace TopdownShooter::Algebraic::Numeric
 		mIsDirty = false;
 	}
 
+	// 단일 Modifier 를 UseType/CalcType 분기에 따라 adder 또는 multiplier 에 누적한다.
+	// 현재 세 UseType(Natural/Ratio/Percentage) 의 누적 규칙은 동일하며, None 은 계약 위반으로 abort.
 	void Stat::CalculateWithUseAndCalcType(ENumericStatUseType use_type, StatModifier curModifier, float &adder, float &multiplier) const
 	{
 		switch (use_type)

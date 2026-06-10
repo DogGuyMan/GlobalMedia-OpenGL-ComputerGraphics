@@ -89,7 +89,7 @@ namespace SJH
         int GetWidth() const { return mWidth; }
         /// @brief 텍스처 높이 (픽셀).
         int GetHeight() const { return mHeight; }
-        /// @brief GL 내부 포맷 (@c GL_RGBA 등).
+        /// @brief 저장된 포맷 enum - @ref SetTextureFormat 경로는 internalFormat, 이미지 업로드 경로는 채널 data format(@c GL_RGB 등). 이미지 경로의 GPU internalformat 은 항상 @c GL_RGBA.
         uint32_t GetFormat() const { return mFormat; }
         /// @brief GL 텍스처 핸들 - @c glBindTexture / @c glUniform1i 인자. 0 은 invalid.
         GLuint GetTextureID() const { return mTextureID; }
@@ -123,7 +123,7 @@ namespace SJH
         GLuint mTextureID = 0;                ///< GL 텍스처 핸들 - 0 은 invalid.
         int mWidth{0};                        ///< 텍스처 너비 (픽셀). @ref Create / @ref SetTextureFromImage 가 설정.
         int mHeight{0};                       ///< 텍스처 높이 (픽셀).
-        uint32_t mFormat{GL_RGBA};            ///< GL 내부(저장) 포맷. @ref Create 가 설정; @ref CreateTexture 는 채널 수 자동 선택.
+        uint32_t mFormat{GL_RGBA};            ///< 포맷 enum. @ref SetTextureFormat 경로=internalFormat 저장; @ref SetTextureFromImage 경로=채널 data format(@c GL_RGB 등) 저장 (GPU internalformat 은 항상 @c GL_RGBA).
         uint32_t mDataFormat{GL_RGBA};        ///< @c glTexImage2D 의 @c format 인자 (@c GL_DEPTH_STENCIL 등). @c Resize 재할당용.
         uint32_t mDataType{GL_UNSIGNED_BYTE}; ///< @c glTexImage2D 의 @c type 인자 (@c GL_UNSIGNED_INT_24_8 등). @c Resize 재할당용.
     };

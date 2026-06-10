@@ -1,3 +1,22 @@
+/**
+ * @file EnemyBuilder.cpp
+ * @brief @c BuildEnemy 구현 - 적 1체 조립 파이프라인 + 발밑 데칼 헬퍼.
+ *
+ * @details
+ *  ### 책임
+ *  - @c EnemyFactory 코어(물리/Life/AI/contact) 위에 표현 레이어를 누적 부착.
+ *  - 적 전용: renderActor 스프라이트 + 상시 펄스/워블 트윈(@c ParallelPlayable) +
+ *    EntityPresentation 공통 연출 + "hit" 에 Damaged 사운드 추가 + hit FX/데미지 숫자 seam.
+ *  - 익명 namespace @c AttachGroundDecals - 발밑 그림자 + 피격범위 원 데칼 2장.
+ *
+ *  ### 비-책임([X])
+ *  - [X] 적 코어 컴포넌트 생성 - @c Entity::Enemy::CreateEnemyActor 위임 (무변경 호출).
+ *  - [X] VFX/사운드 자원 owner - registry/AudioSystem 보유, 빌더는 seam 람다만 주입.
+ *
+ * @note PlayerBuilder 와 @c AttachGroundDecals 본문이 동일 (각 빌더 익명 namespace 에 별도 사본).
+ *       적 "hit" 은 헬퍼 기본 SpriteHitFlash 를 Parallel(flash + Damaged 사운드)로 덮어쓴다 -
+ *       화면 비네팅은 피해자가 적이라 제외(Player 만 비네팅).
+ */
 #include <GL/gl3w.h> // 최상단 — resource_registry.h->framebuffer.h->...->gl3w.h 보다 먼저.
 
 #include "Bootstrap/EnemyBuilder.h"
@@ -160,6 +179,9 @@ namespace TopdownShooter::Bootstrap
 		}
 	} // namespace
 
+    /// @brief 적 1체 조립 파이프라인 (선언부 doc 은 EnemyBuilder.h 참조).
+    /// @details 단계별 주석은 본문 1)~5) 블록 참조. 코어 factory 호출 후 표현/연출/데칼/seam 을
+    ///          순차 부착하고 마지막에 spawnParent 로 entry 시킨다.
     SJH::Scene::Actor* BuildEnemy(const EnemyDeps& deps)
     {
         // 1) 물리+Life+AI+contact = 기존 factory (무변경)

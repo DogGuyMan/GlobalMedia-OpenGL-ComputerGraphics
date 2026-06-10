@@ -1,3 +1,20 @@
+/**
+ * @file SpriteFxPlayable.cpp
+ * @brief SpriteHitFlashPlayable / SpriteDissolvePlayable 구현.
+ *
+ * @details
+ *  ### 구현 요점
+ *  - 익명 네임스페이스의 @c ForEachSpriteRenderer<Fn> : 루트 액터 + 서브트리를 DFS 순회해
+ *    @c SpriteRenderer 가 있는 노드마다 @p fn 호출.
+ *    groundActor 데칼 등 SpriteRenderer 없는 노드는 자동 skip.
+ *  - @c SpriteDissolvePlayable::OnPlay : noiseTexKey 로 @c ResourceRegistry::FindTexture/CreateTexture
+ *    캐시 패턴 — 동일 텍스처를 인스턴스 간 공유 (중복 로드 방지).
+ *  - @c SpriteDissolvePlayable::OnUpdate : t = clamp(elapsed/duration). t >= 1.0 이면
+ *    @c mIsFinished = true (dissolved 상태 유지, 액터 비활성/despawn 은 Life 책임).
+ *
+ * @note @c PropertyBlockSetter 가 GL_BOOL uniform 디스패치를 지원해야 enableHit/enableDissolve 가
+ *       실제 업로드된다. 미지원 시 FX 완전 무반응 (sprite_component 주석 참조).
+ */
 #include "Playable/SpriteFxPlayable.h"
 
 #include "resource_registry/image.h"             // SJH::Image::Load (dissolve.png)

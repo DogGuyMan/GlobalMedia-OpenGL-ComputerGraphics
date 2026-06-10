@@ -1,3 +1,11 @@
+/**
+ * @file AudioSystem.cpp
+ * @brief AudioSystem 구현 - Studio+Core 부트/셧다운, bank/event 로드, listener/parameter/bus 제어.
+ *
+ * @details 모든 FMOD 호출은 @c SJH_HAS_FMOD 가드 안에 있다. 가드 밖(FMOD 미빌드)에서는
+ *  로그/no-op 로 컴파일되어 오디오만 비활성화된다 (FMOD 헤더 의존 없이 빌드 성립).
+ * @note FMOD 헤더(@c fmod.hpp / @c fmod_studio.hpp)는 본 .cpp 안에서만 include - 헤더 의존 격리.
+ */
 #include "AudioSystem.h"
 
 #ifdef SJH_HAS_FMOD
@@ -14,6 +22,10 @@ namespace TopdownShooter::Audio
 #ifdef SJH_HAS_FMOD
 	namespace
 	{
+		/// @brief FMOD_RESULT 체크 헬퍼 - 실패 시 에러 로그만 남기고 false 반환 (graceful degradation).
+		/// @param r    FMOD 호출 반환 코드.
+		/// @param what 실패 지점 라벨 (로그용).
+		/// @return @c FMOD_OK 면 true, 그 외 false.
 		bool ck(FMOD_RESULT r, const char *what)
 		{
 			if (r != FMOD_OK)
@@ -35,6 +47,7 @@ namespace TopdownShooter::Audio
 		                                  FMOD_INIT_NORMAL,
 		                                  nullptr),
 		        "Studio::System::initialize")) return;
+		// Studio init 직후 1회 Core System 핸들 캐시 - 이후 FmodPlayable 의 createSound/playSound 에 사용.
 		if (!ck(mStudioSystem->getCoreSystem(&mSystem), "Studio::System::getCoreSystem")) return;
 		spdlog::info("[AudioSystem] init OK (Studio + Core)");
 #else
@@ -54,10 +67,10 @@ namespace TopdownShooter::Audio
 #ifdef SJH_HAS_FMOD
 		if (mStudioSystem)
 		{
-			for (auto *bank : mBanks) if (bank) bank->unload();
+			for (auto *bank : mBanks) if (bank) bank->unload();   // bank 일괄 언로드 (FMODAPI.md §4)
 			mBanks.clear();
-			mEventCache.clear();
-			mStudioSystem->release();
+			mEventCache.clear();                                  // EventDescription 은 bank 소유 - 포인터만 비움
+			mStudioSystem->release();                             // Studio release 가 Core + 잔여 인스턴스까지 정리
 			mStudioSystem = nullptr;
 			mSystem       = nullptr;   // Studio 가 Core 소유 — getCoreSystem 으로 받은 ptr 은 별도 release 불요
 		}
@@ -87,6 +100,7 @@ namespace TopdownShooter::Audio
 		if (!mStudioSystem) { spdlog::error("[AudioSystem::LoadEvent] Studio 미초기화"); return nullptr; }
 
 		::FMOD::Studio::EventDescription *desc = nullptr;
+		// getEvent 는 오타/.strings.bank 미로드 시 ERR_EVENT_NOTFOUND 를 *조용히* 반환 (FMODAPI.md §11).
 		FMOD_RESULT r = mStudioSystem->getEvent(eventPath.c_str(), &desc);
 		if (r != FMOD_OK || !desc)
 		{
@@ -141,13 +155,15 @@ namespace TopdownShooter::Audio
 	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
 	{
 #ifdef SJH_HAS_FMOD
+		// Studio listener - position/velocity/forward/up 4벡터를 FMOD_3D_ATTRIBUTES 한 struct 로 묶어 송신.
 		FMOD_3D_ATTRIBUTES attr = {};
 		attr.position = {pos[0], pos[1], pos[2]};
-		attr.velocity = {0.0f, 0.0f, 0.0f};
+		attr.velocity = {0.0f, 0.0f, 0.0f};                 // velocity=0 -> 도플러 비활성 (탑다운엔 불필요)
 		attr.forward  = {forward[0], forward[1], forward[2]};
 		attr.up       = {up[0], up[1], up[2]};
-		if (mStudioSystem) mStudioSystem->setListenerAttributes(0, &attr);
+		if (mStudioSystem) mStudioSystem->setListenerAttributes(0, &attr);   // listener index 0
 
+		// Core listener - 같은 값을 FMOD_VECTOR 4개로 분리 전달 (Core playSound 사운드용, FMODAPI.md §14).
 		if (mSystem)
 		{
 			FMOD_VECTOR p = {pos[0], pos[1], pos[2]};

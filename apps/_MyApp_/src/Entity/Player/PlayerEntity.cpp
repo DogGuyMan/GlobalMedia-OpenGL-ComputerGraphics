@@ -1,3 +1,20 @@
+/**
+ * @file PlayerEntity.cpp
+ * @brief PlayerEntity lifecycle 구현 — OnEnter/OnExit 에서 형제 Component 캐시 + dust timer 관리.
+ *
+ * @details
+ *  ### 책임
+ *  - @c OnEnter: BaseEntity 공통 4캐시(super) 수행 후 @c PhysicsMovement / @c Weapon 추가 캐시.
+ *    dust interval timer 를 "player.dust" 키로 @c BaseEntity::Timers() 에 등록.
+ *  - @c OnExit: "player.dust" timer 를 먼저 Unregister 해 dangling 핸들 방지, 이후 super OnExit.
+ *
+ *  ### 비-책임
+ *  - [X] 이동/발사/대시 로직 — 헤더 인라인 verb 가 담당. 이 파일에는 lifecycle 만 존재.
+ *
+ * @note PhysicsMovement 를 IMovable 인터페이스가 아닌 구체 타입으로 캐시하는 이유:
+ *       PlayerEntity 자신이 IMovable 을 구현하므로, GetComponent<IMovable>() 호출 시
+ *       자기 자신이 매칭될 수 있다. typeid 기반 구체 타입 조회로 자기 매칭을 배제한다.
+ */
 #include "Entity/Player/PlayerEntity.h"
 
 #include "Physics/PhysicsMovement.h"   // PhysicsMovement (IMovable 구현체 — 캐시 대상)

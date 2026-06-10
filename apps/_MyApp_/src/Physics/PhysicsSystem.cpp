@@ -1,3 +1,23 @@
+/**
+ * @file PhysicsSystem.cpp
+ * @brief PhysicsSystem 구현 -- b2World 초기화 / Step / SyncToTransform.
+ *
+ * @details
+ *  ### Init
+ *  - @c b2World(b2Vec2(0,0)): top-down 슈터는 중력 불필요 -> gravity=0.
+ *  - @c PhysicsContactListener 설치 -> BeginContact/EndContact 가 @c IContactable 에 디스패치.
+ *
+ *  ### Step
+ *  - @c b2World::Step(dt, 8, 3): velocityIterations=8, positionIterations=3 (Box2D 공식 권장값).
+ *  - Step 실행 중 @c b2World::IsLocked()==true.
+ *    ContactListener 콜백 내부에서 SetEnabled/DestroyBody/CreateBody 는 abort ->
+ *    콜백에서는 enqueue 만, Step 후 sweep 에서 실행.
+ *
+ *  ### SyncToTransform
+ *  - root 부터 재귀 lambda DFS.
+ *  - @c Components::FindPhysics(actor) 로 @c Physics 파생 컴포넌트 검색.
+ *  - 물리 XY -> 렌더 XZ: tr.Translate = vec3(p.x, heightOffset, -p.y).
+ */
 #include "Physics/PhysicsSystem.h"
 #include "Physics/PhysicsComponent.h"
 #include "Physics/ContactListener.h"

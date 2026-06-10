@@ -1,3 +1,33 @@
+/**
+ * @file PlayerController.cpp
+ * @brief Top-down 플레이어 입력 컨트롤러 구현 - WASD dt-독립 이동 + 마우스 조준/발사 + 대시/궁극기.
+ *
+ * @details
+ *  ### 구현 책임
+ *  - @c RegisterBindings / @c UnregisterBindings -- @c KeyboardInput<Action> + @c MouseInput 에
+ *    액션별 키/버튼을 바인딩/해제.
+ *  - @c Update -- 누적된 @c mInputValue 로 @c IMovable::DoForward 호출(dt 독립 이동) +
+ *    @c UpdateAim 으로 조준 정보 갱신 + facing/pose sink 토글.
+ *  - @c UpdateAim -- 마우스 커서 픽셀 좌표를 NDC 로 변환 -> 카메라 basis 기반 ray 구성 ->
+ *    y=0 Ground 평면 교차 -> @c mAimPoint / @c mAimDirection / @c mAimAngleY 갱신.
+ *  - @c OnFirePressed -- 좌클릭 시 조준 최신화 + Weapon 발사 + @c mFireCallback 실행.
+ *
+ *  ### 이동 흐름
+ *  BindHeldHandler(W/A/S/D) 가 매 프레임 @c mInputValue 에 방향 벡터를 누적. @c Update 말미에
+ *  @c IMovable::DoForward({x, z}, dt) 호출 후 @c mInputValue = 0 리셋. 대각(W+D) 누적은
+ *  DoForward 내부 @c normalize 가 자동 정규화 -> sqrt(2) 가속 없음.
+ *
+ *  ### 조준(raycast) 흐름
+ *  카메라 FOV + aspect 로 view-space ray 직접 구성(proj*view 역행렬 생략) -> y=0 평면과 교차점 t 산출 ->
+ *  player-owner 위치 기준 방향/각도 추출. dist ~= 0 이면 snap 방지를 위해 방향/각도는 직전값 유지.
+ *
+ *  ### 비-책임
+ *  - [X] 발사체/연출 생성 - Weapon Component / Spawns 자유 함수 / 콜백 위임.
+ *  - [X] 타이머 tick - @c BaseEntity 중앙 컨테이너(@c Timers()) 가 유일 tick.
+ *  - [X] facing 스프라이트 교체 - @c IActorPresentation sink(@c PlayableDirector) 위임.
+ *
+ * @note GLFW GL 헤더 충돌 방지를 위해 @c GLFW_INCLUDE_NONE 을 *모든 include 이전* 에 정의 (아래 include 순서 보존 필수).
+ */
 
 // PlayerController.h -> input/mouse_input.h 가 <GLFW/glfw3.h> 를 끌어오므로, GLFW 가 자체 GL 헤더를
 // 포함해 엔진 gl3w 와 PFNGL* 가 충돌하지 않도록 *모든 include 이전* 에 NONE 을 선언한다.
@@ -33,11 +63,26 @@
 
 namespace TopdownShooter::Controller
 {
+	/// @brief 각도 @p deg 가 범위 @p r 안에 포함되는지 판정 (360도 wrap 고려).
+	/// @details r[0] <= r[1] 이면 일반 구간. r[0] > r[1] 이면 0도를 넘는 wrap-around 구간
+	///          (예: [315, 45) -- 후방 범위).
+	/// @param deg 판정할 각도 (degree, 0~360).
+	/// @param r   [min, max) 구간 (r[0]=min, r[1]=max).
+	/// @return @p deg 가 구간 안이면 true.
 	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
 	bool InRange(float deg, const vmath::vec2 &r)
 	{
 		return (r[0] <= r[1]) ? (deg >= r[0] && deg < r[1]) : (deg >= r[0] || deg < r[1]);
 	}
+	/// @brief XZ 방향 벡터를 4방향 @c EFacing 으로 양자화.
+	/// @details
+	///   방향 벡터 @p dir (x, z) 를 각도로 변환 후 @c FacingThresholdConfig 의 4개 구간과 대조.
+	///   dir=(x,z) -> theta = normalize360(degrees(atan2(-z, x))) -> Back/Front/Left/Right 중 포함 반환.
+	///   no-match 이면 @p fallback 반환. wrap-around 구간(후방)은 @c InRange 내부에서 처리.
+	/// @param dir      XZ 방향 벡터 (정규화 여부 무관).
+	/// @param cfg      EFacing 별 [min, max) 각도 구간 설정.
+	/// @param fallback 어떤 구간에도 해당하지 않을 때 반환할 기본 방향.
+	/// @return 판정된 @c EFacing 열거값.
 	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
 	// !dir=(x,z) -> θ=normalize360(deg(atan2(-z,x))) -> 4범위 중 포함 필드. no-match=fallback.
 	TopdownShooter::Entity::EFacing QuantizeByThreshold(
@@ -59,6 +104,12 @@ namespace TopdownShooter::Controller
 		return fallback;
 	}
 
+	/// @brief 키보드/마우스 바인딩 등록 내부 구현.
+	/// @details
+	///   @c mKeyboardInput->BindKey + @c BindHeldHandler 2단 패턴 (CameraController 정통):
+	///   (1) @c BindKey -- GLFW 키 코드를 @c Action 에 매핑.
+	///   (2) @c BindHeldHandler -- 누름 유지 중 매 프레임 호출되는 람다 등록.
+	///   WASD 는 held 방향 누적(mInputValue +=), Shift 는 held 대시, R/클릭은 press(이산) 바인딩.
 	void PlayerController::RegisterBindings()
 	{
 		// CameraController.cpp 의 BindKey + BindHeldHandler 2단 패턴을 그대로 모방.
@@ -120,6 +171,9 @@ namespace TopdownShooter::Controller
 			});
 	}
 
+	/// @brief 키보드/마우스 바인딩 해제 내부 구현.
+	/// @details @c OnExit 의 @c mIsInitialized 가드를 통과한 경우에만 호출됨 -- 입력 의존(non-null) 보장.
+	///   WASD 키 + 좌클릭 버튼의 바인딩을 @c KeyboardInput / @c MouseInput 에서 제거.
 	void PlayerController::UnregisterBindings()
 	{
 		// SetUp 이 성공한 경우만 호출됨 (OnExit 의 mIsInitialized 가드) — 입력 의존은 non-null 보장.
@@ -134,6 +188,11 @@ namespace TopdownShooter::Controller
 			mMouseInput->UnbindButtonPress(GLFW_MOUSE_BUTTON_LEFT);
 	}
 
+	/// @brief 키보드 입력 의존 검증 후 바인딩 등록 (Component lifecycle -- 첫 활성화 전 1회).
+	/// @details @c mKeyboardInput 이 null 이면 error 로그 후 false 반환.
+	///   성공 시 @c RegisterBindings 를 호출하고 @c mIsInitialized = true 로 설정.
+	///   이후 @c Update / @c OnEnter / @c OnExit 는 @c mIsInitialized 가드로 보호됨.
+	/// @return true -- 셋업 성공(이동+입력 정상), false -- KeyboardInput 미주입.
 	bool PlayerController::SetUp()
 	{
 		if (!mKeyboardInput)
@@ -146,6 +205,9 @@ namespace TopdownShooter::Controller
 		return true;
 	}
 
+	/// @brief @c KeyboardInput<Action> 의존 주입 (멱등 -- 첫 null 상태일 때만 저장).
+	/// @param k 주입할 KeyboardInput 포인터. null 허용, 검증은 @c SetUp() 에서 수행.
+	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetKeyboardInput(SJH::KeyboardInput<Action> *k)
 	{
 		// 멱등 — 두 번째 호출은 무시. nullptr 검증은 SetUp() 한 곳에서.
@@ -154,6 +216,9 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
+	/// @brief @c IMovable 구현체 의존 주입 (멱등 -- 첫 null 상태일 때만 저장).
+	/// @param target Movement Component 또는 Entity 자체의 @c IMovable 구현 포인터. null 비허용.
+	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetMovableTarget(Entity::IMovable *target)
 	{
 		// 멱등 — 첫 비-null 주입 후 무시.
@@ -162,6 +227,9 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
+	/// @brief 마우스 입력 의존 주입 (멱등 -- 선택적). 좌클릭 Fire 바인딩에 사용.
+	/// @param m 주입할 MouseInput 포인터. null 이면 좌클릭 바인딩 전체 생략.
+	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetMouseInput(SJH::MouseInput *m)
 	{
 		// 멱등 — 첫 비-null 주입 후 무시. RegisterBindings 가 좌클릭 바인딩 시점에 참조.
@@ -170,6 +238,9 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
+	/// @brief World 카메라 주입 (멱등 -- 선택적). 마우스->Ground raycast 에 사용.
+	/// @param cam 씬 World 카메라 포인터. null 이면 @c UpdateAim 에서 raycast 생략.
+	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetWorldCamera(SJH::Scene::Camera *cam)
 	{
 		// 멱등 — 첫 비-null 주입 후 무시. 미주입이면 좌클릭 raycast 생략.
@@ -178,6 +249,11 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
+	/// @brief facing 회전 pivot Actor 주입 (멱등 -- 선택적).
+	/// @details 미주입이면 owner(root Actor) 에 직접 EulerRot[1] 적용 (하위호환).
+	///   주입 시 root 는 비회전 유지, @p pivot 만 회전 -> 데칼(그림자) spin 분리 가능.
+	/// @param pivot 회전 대상 Actor 포인터.
+	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetFacingPivot(SJH::Scene::Actor *pivot)
 	{
 		// 멱등 — 첫 비-null 주입 후 무시.
@@ -186,6 +262,9 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
+	/// @brief Box2D 물리 월드 주입 (멱등 -- 선택적). 궁극기(R) 회전 히트스캔 레이저용.
+	/// @param world b2World 포인터. null 이면 R 궁극기 @c SpawnUltimateLaser 내부 guard 로 no-op.
+	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetWorld(b2World *world)
 	{
 		// 멱등 — 첫 비-null 주입 후 무시. 미주입이면 R 궁극기 no-op (SpawnUltimateLaser 내부 guard).
@@ -194,17 +273,28 @@ namespace TopdownShooter::Controller
 		return *this;
 	}
 
+	/// @brief 좌클릭(발사) 직후 실행할 콜백 주입. 오디오/VFX Composite 등 연결용.
+	/// @param cb 발사 성공 시 호출될 콜백. null 이면 콜백 무시.
+	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetFireCallback(std::function<void()> cb)
 	{
 		mFireCallback = std::move(cb);
 		return *this;
 	}
 
+	/// @brief G키(피격 테스트) 콜백 주입 -- 현재 미사용(stub).
+	/// @param cb 피격 시 호출될 콜백 (현재 미배선 -- 바디는 no-op).
+	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetDamageCallback(std::function<void()> cb)
 	{
 		return *this;
 	}
 
+	/// @brief Component 활성화 훅 -- attack 윈도 타이머를 @c BaseEntity 중앙 컨테이너에 등록.
+	/// @details @c mIsInitialized 가 false 이면 즉시 반환 (SetUp 미호출 상태 방어).
+	///   owner 에서 @c BaseEntity 를 조회 후 "player.attack" 키로 @c mAttackWindowSec 기반 타이머를
+	///   @c Timers().Register 에 등록. 등록 직후 @c Tick(BaseTime) 으로 arm-inactive 상태로 초기화 --
+	///   발사 시 @c Reset 으로 카운트다운 발동.
 	void PlayerController::OnEnter()
 	{
 		if (!mIsInitialized)
@@ -221,6 +311,10 @@ namespace TopdownShooter::Controller
 		}
 	}
 
+	/// @brief Component 비활성화 훅 -- 타이머 해제 + 바인딩 해제 + 상태 초기화.
+	/// @details @c mIsInitialized 가 false 이면 즉시 반환.
+	///   "player.attack" 타이머를 @c Timers().Unregister 로 해제한 뒤 핸들 null 초기화.
+	///   @c UnregisterBindings 로 WASD/좌클릭 바인딩 해제 후 @c mKeyboardInput / @c mIsInitialized 리셋.
 	void PlayerController::OnExit()
 	{
 		if (!mIsInitialized)
@@ -233,6 +327,15 @@ namespace TopdownShooter::Controller
 		mIsInitialized = false;
 	}
 
+	/// @brief 매 프레임 입력 처리 -- 이동/조준/facing 갱신.
+	/// @details 처리 순서:
+	///   (1) @c mEntity lazy 캐시 -- controller 가 facade 보다 먼저 @c OnEnter 될 수 있어 첫 Update 에서 조회.
+	///   (2) dash(Impulse) 활성 중이면 @c IMovable::DoForward 호출 skip (대시 버스트 보존).
+	///   (3) @c UpdateAim 으로 마우스->Ground raycast 조준 정보 갱신.
+	///   (4) facing pivot 의 EulerRot[1] 에 @c mAimAngleY 적용 (논리 회전).
+	///   (5) attack/move 상태로 @c EFacing/@c EPose 를 산출 -> @c IActorPresentation sink 에 설정.
+	///   (6) @c mPrevInputValue 저장 후 @c mInputValue = 0 리셋.
+	/// @param dt 프레임 델타 타임 (초 단위, dt-독립 이동용).
 	void PlayerController::Update(float dt)
 	{
 		if (!mIsInitialized)
@@ -288,6 +391,22 @@ namespace TopdownShooter::Controller
 		mInputValue = vmath::vec3(0.0f);
 	}
 
+	/// @brief 마우스 커서를 Ground(y=0) 평면에 raycast 해 조준 멤버를 갱신.
+	/// @details
+	///   흐름:
+	///   (1) 사전 조건 확인 -- mCamera null / GLFW window null / window 크기 0 이면 mAimValid=false 로 조기 반환.
+	///   (2) 픽셀 좌표 -> NDC 변환 (ndcX, ndcY). y 는 위=+1 로 뒤집음.
+	///   (3) 카메라 WorldMatrix 컬럼에서 right/up/forward/camPos 추출.
+	///   (4) FOV + aspect 로 view-space ray 를 직접 구성 (proj*view 역행렬 없이도 동일 결과):
+	///       dir = normalize(right*(ndcX*aspect*tanHalf) + up*(ndcY*tanHalf) + forward).
+	///   (5) mAimScreenT 산출 -- player NDC 위치 <-> 커서 NDC 거리 (0=중심, 1=화면 가장자리 포화).
+	///   (6) y=0 평면 교차 -- t = -camPos.y / dir.y. dir.y ~= 0 또는 t < 0 이면 조기 반환.
+	///   (7) hit = camPos + dir*t -- mAimPoint, mAimDistance 갱신.
+	///   (8) dist > 1e-4 이면 mAimDirection / mAimAngleY 갱신. dist ~= 0 이면 직전값 유지 (snap 방지).
+	///
+	/// @note @c Update 및 @c OnFirePressed 에서 각각 1회씩 호출됨 -- 입력 디스패치가 Update 보다
+	///       앞설 수 있어 클릭 직전 최신화 필요.
+	/// @return true -- 유효 교차 성공 / false -- 카메라 미주입 / 윈도우 없음 / ray 평행 / t<0.
 	bool PlayerController::UpdateAim()
 	{
 		// 카메라 미주입 / 윈도우 없음 — 직전 조준 유지 (silent).
@@ -384,6 +503,14 @@ namespace TopdownShooter::Controller
 		return true;
 	}
 
+	/// @brief 좌클릭 발사 액션 처리 -- 조준 최신화 + Weapon 발사 + 콜백 실행.
+	/// @details
+	///   (1) @c UpdateAim 으로 클릭 직전 조준 정보를 최신화 (입력 디스패치가 Update 앞설 수 있음).
+	///   (2) @c mAttackTimer->Reset 으로 "조준 응시 윈도 (0.15s)" 카운트다운 발동.
+	///   (3) spdlog::info 로 ground 좌표/방향/각도 로깅 (디버그).
+	///   (4) owner 의 @c PlayerEntity 를 통해 @c UseWeapon(box2d forward) 호출 --
+	///       box2d forward = (aimDir.x, -aimDir.z) (spec D3, 좌표계 변환).
+	///   (5) @c mFireCallback 실행 (오디오/VFX Composite 등).
 	void PlayerController::OnFirePressed()
 	{
 		// 클릭 직전 조준 갱신 — 입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값으로 재산출.

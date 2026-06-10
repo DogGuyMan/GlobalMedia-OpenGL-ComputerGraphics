@@ -54,7 +54,7 @@ namespace SJH
         /// @brief 기본 박스(큐브) 메시 생성 - 6면 x 2삼각형, 정점 24개, 법선/UV 포함.
         static MeshUPtr CreateBox();
 
-        /// @brief 평면(quad) 메시 생성 - XZ 평면 1x1 사각형. 바닥면 + 포스트프로세스 화면 quad 겸용.
+        /// @brief 평면(quad) 메시 생성 - 원점 중심 단위 XY 평면(z=0) 1x1 사각형. 평면 메시 + 포스트프로세스 화면 quad 겸용.
         static MeshUPtr CreatePlane();
 
         /// @brief NDC clip-space 화면 가득 quad - SP4 post-processing 용.

@@ -1,3 +1,16 @@
+/**
+ * @file ActorFolower.cpp
+ * @brief ActorFolower 구현 - dt 기반 ease 보간 추종 + 마우스 look 누적.
+ *
+ * @details
+ *  ### 추종 흐름 (Update)
+ *  1. target 위치 + offset 으로 이번 프레임 goal 계산.
+ *  2. 첫 프레임은 보간 없이 즉시 스냅 (먼 초기 위치에서의 스월-인 방지).
+ *  3. goal 이 EPS 넘게 이동하면 현재 카메라 위치에서 새 ease 구간 시작 (튐 제거).
+ *  4. dt 로 진행도를 올리고 생성함수 커브로 보간, 도착하면 goal 로 스냅 (떨림 제거).
+ *
+ * @note 마우스 look 은 yaw/pitch 만 누적하며 위치 추종과 독립.
+ */
 
 #include "ActorFolower.h"
 #include "input/mouse_input.h"

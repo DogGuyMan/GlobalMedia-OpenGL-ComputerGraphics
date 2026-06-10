@@ -1,3 +1,18 @@
+/**
+ * @file WorldTextInstance.cpp
+ * @brief @c SpawnWorldText 구현 + @c TopdownShooter::WorldText 전역 파사드 구현.
+ *
+ * @details
+ *  (1) @c SpawnWorldText -- @c TextRenderer + @c TweenPlayable + @c AutoDespawnOnFinish 조립.
+ *      TweenPlayable 콜백에서 easeOutQuad 상승 + 후반 alpha 페이드를 프레임마다 적용.
+ *      트윈 종료(t >= 1) 시 @c AutoDespawnOnFinish.mDone = true -> 부모 sweep 에서 Actor 제거.
+ *
+ *  (2) @c WorldText 파사드 -- @c gFxRoot / @c gFont 정적 변수 보관 + @c SpawnDamage 단발 호출.
+ *      GL 충돌 없어 @c VfxFacade.cpp 와 달리 별도 TU 불필요 (Effekseer 미포함).
+ *
+ * @note tweeny step 오버로드 함정 주의: @c step(int32_t ms) 가 밀리초,
+ *       @c step(float) 가 [0..1] 비율. @c durationSec -> @c int32_t ms 로 변환 필수.
+ */
 #include "Spawns/WorldTextInstance.h"
 
 #include "Spawns/AutoDespawnOnFinish.h"

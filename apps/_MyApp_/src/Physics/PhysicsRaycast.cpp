@@ -1,3 +1,21 @@
+/**
+ * @file PhysicsRaycast.cpp
+ * @brief PhysicsRaycast.h 에 선언된 3종 레이캐스트 함수 구현.
+ *
+ * @details
+ *  ### 내부 구조
+ *  - @c NormalizeDir: dir 정규화 + 영벡터 판정 헬퍼.
+ *  - @c ActorOf: body userdata 포인터 -> @c SJH::Scene::Actor* 복원 헬퍼.
+ *  - @c ClosestCallback: @c b2RayCastCallback 상속 -- @c ReportFixture 가 fraction 반환
+ *    -> Box2D 가 더 먼 fixture 를 자동 clip -> 최근접 1개 보장.
+ *  - @c AllCallback: @c b2RayCastCallback 상속 -- @c ReportFixture 가 1.0 반환
+ *    -> 관통(모든 fixture 수집). 결과는 fraction 오름차순 정렬 + body 단위 dedup.
+ *
+ *  ### 필터 공통 로직 (ClosestCallback / AllCallback 동일)
+ *  1. isSensor 이고 @c hitSensors=false 이면 -1.0 반환(무시, 탐색 계속).
+ *  2. @c categoryBits & @c maskBits == 0 이면 -1.0 반환.
+ *  3. body userdata 의 Actor 가 @c ignore 와 같으면 -1.0 반환(자해 방지).
+ */
 #include "Physics/PhysicsRaycast.h"
 #include <algorithm>
 #include <cmath>

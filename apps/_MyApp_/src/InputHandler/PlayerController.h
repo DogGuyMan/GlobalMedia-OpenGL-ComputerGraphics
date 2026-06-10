@@ -1,3 +1,25 @@
+/**
+ * @file PlayerController.h
+ * @brief Top-down 플레이어 입력 컨트롤러 - WASD 이동 + 마우스 조준/발사 + 대시/궁극기.
+ *
+ * @details
+ *  ### 책임
+ *  - WASD 입력을 모아 @c IMovable 타겟의 XZ 평면 이동 호출 (카메라 회전과 독립).
+ *  - 매 프레임 마우스->Ground raycast 로 조준 정보(방향/지점/각도/거리/화면강도) 산출.
+ *  - 좌클릭 발사(Weapon 경유 + 핀치 통지 + 콜백), Shift 대시, R 궁극기 레이저 발동.
+ *  - 조준 결과로 facing/pose 를 단일 작성자로서 @c IActorPresentation sink 에 송신.
+ *
+ *  ### 비-책임
+ *  - [X] 카메라 추종/이동 - @c ActorFolower / @c CameraController 담당.
+ *  - [X] 발사체/연출 생성 - Weapon Component / 콜백 / Spawns 자유 함수 위임.
+ *  - [X] 타이머 tick - @c BaseEntity 중앙 컨테이너가 유일 tick (여기선 핸들 Reset/조회만).
+ *
+ *  ### 입력 -> 액터 흐름
+ *  키 held 누적(mInputValue) -> Update 에서 IMovable::DoForward 호출 + 마우스 raycast 로
+ *  조준 산출 -> facing 회전(pivot Transform) + presentation sink 토글.
+ *
+ * @note 좌클릭 발사 + 마우스 조준 raycast 에 World 카메라가 필요하며, 미주입 시 raycast 생략.
+ */
 #ifndef _TOPDOWNSHOOTER_INPUT_PLAYER_CONTROLLER__
 #define _TOPDOWNSHOOTER_INPUT_PLAYER_CONTROLLER__
 
@@ -31,20 +53,25 @@ namespace TopdownShooter::Controller
 	class PlayerController : public SJH::Scene::Component
 	{
 	  public:
+		/// @brief 플레이어 액션 식별자 - KeyboardInput<Action> 의 키 바인딩 키.
 		enum class Action : int
 		{
-			MoveForward = 1, // W
-			MoveBack,        // S
-			MoveLeft,        // A
-			MoveRight,       // D
-			DashImpulse,	 // Shift
-			Ultimate, 	 // R
+			MoveForward = 1, ///< W - 전방(-Z).
+			MoveBack,        ///< S - 후방(+Z).
+			MoveLeft,        ///< A - 좌측(-X).
+			MoveRight,       ///< D - 우측(+X).
+			DashImpulse,     ///< Shift - 대시 임펄스.
+			Ultimate,        ///< R - 회전 히트스캔 레이저 궁극기.
 		};
 
+		// Actor::AddComponent<T>() 가 호출 - public default ctor 필수. 복사 금지(입력 바인딩 소유).
 		PlayerController()                                    = default;
 		PlayerController(const PlayerController &)            = delete;
 		PlayerController &operator=(const PlayerController &) = delete;
 
+		/// @brief 주입된 의존을 검증하고 키/마우스 바인딩을 등록.
+		/// @details KeyboardInput 미주입이면 error 로그 후 false. 그 외 의존은 선택적.
+		/// @return 셋업 성공 여부. false 면 Update no-op.
 		bool SetUp();
 
 		//  Builder Pattern — fluent setter (self 반환)
