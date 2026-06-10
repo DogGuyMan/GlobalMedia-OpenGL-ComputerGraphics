@@ -4,7 +4,7 @@
  *
  * @details
  *  ### 책임
- *  - @c EventDescription (외부 owner) 으로부터 @c EventInstance 를 생성·소유·해제.
+ *  - @c EventDescription (외부 owner) 으로부터 @c EventInstance 를 생성/소유/해제.
  *  - @c Play/Pause/Stop 인터페이스를 통해 이벤트 재생 생명주기 관리.
  *  - 3D 공간음향 지원 -- @p worldPos 가 있으면 @c set3DAttributes 로 이벤트 위치 설정.
  *  - @c OnUpdate 마다 @c getPlaybackState 로 재생 종료를 폴링해 @c mIsFinished 마킹.
@@ -46,7 +46,7 @@ namespace FMOD::Studio { class EventDescription; class EventInstance; }
 namespace TopdownShooter::Audio
 {
 	/**
-	 * @brief FMOD Studio @c EventInstance 를 소유·재생·정리하는 leaf Playable 컴포넌트 (M5 T3).
+	 * @brief FMOD Studio @c EventInstance 를 소유/재생/정리하는 leaf Playable 컴포넌트 (M5 T3).
 	 * @details
 	 *  소유 모델:
 	 *  - @c mDesc (EventDescription) -- Bank 소유. 본 클래스는 *빌려 쓰기만* (release 금지).
@@ -92,7 +92,7 @@ namespace TopdownShooter::Audio
 		void SetPaused(bool paused);
 
 	  protected:
-		/// @brief PlayableBase hook -- 이전 instance 정리 후 새 instance 를 생성·시작한다.
+		/// @brief PlayableBase hook -- 이전 instance 정리 후 새 instance 를 생성/시작한다.
 		/// @details
 		///  순서: stop+release 이전 instance -> @c createInstance -> (worldPos 있으면) @c set3DAttributes
 		///  -> @c start. @c mDesc 가 nullptr 이면 즉시 return.

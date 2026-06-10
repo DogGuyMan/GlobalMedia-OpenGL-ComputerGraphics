@@ -1,6 +1,6 @@
 /**
  * @file StageStateComponent.h
- * @brief Stage Actor 에 부착되는 진행 상태 식별 Component — 현재 EStageStatus 를 보유.
+ * @brief Stage Actor 에 부착되는 진행 상태 식별 Component - 현재 EStageStatus 를 보유.
  *
  * @details
  *  ### 책임
@@ -9,8 +9,8 @@
  *  - 이 Component 의 존재 자체가 Actor 가 Stage 임을 식별하는 마커 역할을 한다.
  *
  *  ### 비-책임
- *  - [X] FSM 전이 판정 — @c StageStateMachine 이 담당. M4/M7 이후 FSM 통합 예정.
- *  - [X] 게임 로직 tick — Update/OnEnter/OnExit 는 stub.
+ *  - [X] FSM 전이 판정 - @c StageStateMachine 이 담당. M4/M7 이후 FSM 통합 예정.
+ *  - [X] 게임 로직 tick - Update/OnEnter/OnExit 는 stub.
  *
  * @note 현재는 setter/getter 만 제공하는 단순 상태 보유 Component.
  *       FSM 통합은 M4 / M7 후속 리팩토링에서 진행한다.

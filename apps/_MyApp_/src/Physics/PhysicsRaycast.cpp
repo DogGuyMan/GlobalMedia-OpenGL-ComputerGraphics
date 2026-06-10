@@ -51,7 +51,7 @@ namespace TopdownShooter::Physics
 			float ReportFixture(b2Fixture* fx, const b2Vec2& point,
 			                    const b2Vec2& normal, float fraction) override
 			{
-				// 필터 — 하나라도 걸리면 -1 (이 fixture 무시, 탐색 계속)
+				// 필터 - 하나라도 걸리면 -1 (이 fixture 무시, 탐색 계속)
 				if (!hitSensors && fx->IsSensor())
 					return -1.0f;
 				if ((fx->GetFilterData().categoryBits & maskBits) == 0)
@@ -71,7 +71,7 @@ namespace TopdownShooter::Physics
 			}
 		};
 
-		// b2World::RayCast 전체수집 콜백 — ReportFixture 가 1.0 반환해 더 먼 fixture 도 계속 수집(관통).
+		// b2World::RayCast 전체수집 콜백 - ReportFixture 가 1.0 반환해 더 먼 fixture 도 계속 수집(관통).
 		class AllCallback : public b2RayCastCallback
 		{
 		  public:
@@ -99,7 +99,7 @@ namespace TopdownShooter::Physics
 				h.fraction = fraction;
 				h.hit      = true;
 				results.push_back(h);
-				return 1.0f; // 계속 — 더 먼 fixture 도 수집 (최근접 clip 안 함)
+				return 1.0f; // 계속 - 더 먼 fixture 도 수집 (최근접 clip 안 함)
 			}
 		};
 	} // anonymous namespace

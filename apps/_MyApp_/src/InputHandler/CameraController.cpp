@@ -26,7 +26,7 @@
 
 namespace
 {
-	constexpr float kCameraPitchClampDeg = 89.0f; // gimbal lock 회피 pitch 상한(±)
+	constexpr float kCameraPitchClampDeg = 89.0f; // gimbal lock 회피 pitch 상한(+/-)
 }
 
 namespace TopdownShooter::Controller
@@ -51,7 +51,7 @@ namespace TopdownShooter::Controller
 		mMouseInput->BindLookHandler([this](double dx, double dy) {
 			mYawDeg -= static_cast<float>(dx) * mLookSensitivity;
 			mPitchDeg -= static_cast<float>(dy) * mLookSensitivity;
-			// pitch clamp — gimbal lock 회피
+			// pitch clamp - gimbal lock 회피
 			if (mPitchDeg > kCameraPitchClampDeg)
 				mPitchDeg = kCameraPitchClampDeg;
 			if (mPitchDeg < -kCameraPitchClampDeg)
@@ -61,7 +61,7 @@ namespace TopdownShooter::Controller
 
 	void CameraController::UnregisterBindings()
 	{
-		// SetUp 이 성공한 경우만 호출됨 (OnExit 의 mIsInitialized 가드) — 입력 의존은 non-null 보장.
+		// SetUp 이 성공한 경우만 호출됨 (OnExit 의 mIsInitialized 가드) - 입력 의존은 non-null 보장.
 		assert(this->mKeyboardInput != nullptr);
 		assert(this->mMouseInput != nullptr);
 
@@ -78,7 +78,7 @@ namespace TopdownShooter::Controller
 	{
 		if (!mKeyboardInput || !mMouseInput || !mCamera)
 		{
-			spdlog::error("CameraController::SetUp — 의존 누락 (keyboard={}, mouse={}, camera={})",
+			spdlog::error("CameraController::SetUp - 의존 누락 (keyboard={}, mouse={}, camera={})",
 			              static_cast<void *>(mKeyboardInput),
 			              static_cast<void *>(mMouseInput),
 			              static_cast<void *>(mCamera));
@@ -91,7 +91,7 @@ namespace TopdownShooter::Controller
 
 	CameraController &CameraController::SetKeyboardInput(SJH::KeyboardInput<Action> *k)
 	{
-		// 멱등 — 두 번째 호출은 무시. nullptr 검증은 SetUp() 한 곳에서 처리.
+		// 멱등 - 두 번째 호출은 무시. nullptr 검증은 SetUp() 한 곳에서 처리.
 		if (mKeyboardInput == nullptr)
 			mKeyboardInput = k;
 		return *this;

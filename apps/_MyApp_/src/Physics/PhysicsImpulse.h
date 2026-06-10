@@ -95,7 +95,7 @@ namespace TopdownShooter::Physics
 			if (len <= IMPULSE_LENGTH_EPS) return;
 			vmath::vec2 n(dir[0] / len, dir[1] / len);
 			const float force = mImpulseForce.GetValue();
-			// XZ -> Box2D XY (Z -> -Y, spec §4.4)
+			// XZ -> Box2D XY (Z -> -Y, spec sec.4.4)
 			mBody->GetBody()->SetLinearVelocity(b2Vec2(n[0] * force, -n[1] * force));
 			mActiveTimer->Reset();     // 버스트 창 발동 (0.3s)
 			mCooldownTimer->Reset();   // 쿨다운 발동 (0.8s)

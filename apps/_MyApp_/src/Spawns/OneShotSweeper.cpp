@@ -1,14 +1,14 @@
 /**
  * @file OneShotSweeper.cpp
- * @brief OneShotSweeper.h 구현 — SweepFinishedChildren 본체.
+ * @brief OneShotSweeper.h 구현 - SweepFinishedChildren 본체.
  *
  * @details
  *  @c AutoDespawnOnFinish::IsDone() 술어로 완료된 단발 FX 자식을 찾아 @c RemoveChild 로 파괴한다.
  *
  *  구현 포인트:
- *  - @c Actor::FindChildIf 는 매 호출 새 스캔 → @c RemoveChild 직후 반복자 무효화 없음.
+ *  - @c Actor::FindChildIf 는 매 호출 새 스캔 -> @c RemoveChild 직후 반복자 무효화 없음.
  *  - while + FindChildIf 루프로 완료 Actor 가 0개가 될 때까지 반복 제거.
- *  - @c RemoveChild 는 @c OnExit 후 erase — FMOD/Effekseer 자원 정리는 leaf dtor 에 위임.
+ *  - @c RemoveChild 는 @c OnExit 후 erase - FMOD/Effekseer 자원 정리는 leaf dtor 에 위임.
  *  - 보존+재부착이 필요하면 @c DetachChild 이지만, 여기선 폐기이므로 @c RemoveChild 가 정확.
  */
 #include "Spawns/OneShotSweeper.h"

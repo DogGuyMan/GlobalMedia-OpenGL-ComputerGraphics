@@ -36,7 +36,7 @@ namespace TopdownShooter::Physics
     void PhysicsSystem::Init()
     {
         if (mWorld) {
-            spdlog::warn("[Physics] Init called twice — 무시");
+            spdlog::warn("[Physics] Init called twice - 무시");
             return;
         }
         mWorld = std::make_unique<b2World>(b2Vec2(0.0f, 0.0f));   // top-down: gravity 0
@@ -58,7 +58,7 @@ namespace TopdownShooter::Physics
 
     void PhysicsSystem::SyncToTransform(SJH::Scene::Actor& root)
     {
-        // root 부터 재귀 순회 — Components::Physics (BoxBody/CircleBody) 부착 Actor 의 Transform 갱신.
+        // root 부터 재귀 순회 - Components::Physics (BoxBody/CircleBody) 부착 Actor 의 Transform 갱신.
         auto traverse = [](SJH::Scene::Actor* actor, auto& self) -> void {
             if (!actor) return;
             auto* pb = Components::FindPhysics(actor);

@@ -135,7 +135,7 @@ namespace TopdownShooter::Playable
 	    {0, "./resources/texture/enemy/ENEMY3_FRONT.png", 1, 2, false},
 	};
 
-	// ── 연출 지속시간 / PostFX 튜닝 (분해 Task6) ──
+	// -- 연출 지속시간 / PostFX 튜닝 (분해 Task6) --
 	constexpr float SPRITE_HIT_FLASH_DURATION = 0.18f; // 피격 hit-flash 표시(초)
 	constexpr float SPRITE_DISSOLVE_DURATION  = 1.0f;  // 사망 dissolve 표시 기본(초; Player/Enemy override)
 	constexpr float VIGNETTE_PEAK             = 0.45f; // 피격 비네팅 시작 강도(0.45->0)

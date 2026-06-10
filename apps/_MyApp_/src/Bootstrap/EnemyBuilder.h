@@ -27,7 +27,7 @@ namespace SJH::Scene { class Actor; }
 
 namespace TopdownShooter::Bootstrap
 {
-    /// @brief BuildEnemy 입력 의존 (PlayerDeps 미러 — 비싱글턴만).
+    /// @brief BuildEnemy 입력 의존 (PlayerDeps 미러 - 비싱글턴만).
     /// @details 싱글톤(ResourceRegistry/Director/Manager)은 BuildEnemy 내부에서 ::Get() 조회.
     ///          여기 묶이는 것은 호출자(WaveController)만 아는 비싱글턴 값/포인터.
     struct EnemyDeps
@@ -41,10 +41,10 @@ namespace TopdownShooter::Bootstrap
         int                damage       = Entity::ENEMY_DAMAGE;   ///< 접촉 데미지
         int                variant      = 0;          ///< 0~2 -> ENEMY_FRONT[variant % 3]
         float              spriteFps    = Entity::ENEMY_SPRITE_FPS;        ///< 2프레임 walk 애니 속도
-        vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
+        vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 - 적 베리에이션)
     };
 
-    /// @brief 적 1체 조립 — CreateEnemyActor + ENEMY_FRONT 스프라이트/애니 + spawnParent 부착.
+    /// @brief 적 1체 조립 - CreateEnemyActor + ENEMY_FRONT 스프라이트/애니 + spawnParent 부착.
     /// @details 조립 순서: (1) EnemyFactory 로 물리+Life+AI+contact 코어 생성 ->
     ///          (2) renderActor 에 스프라이트 레이어 + 상시 펄스/워블 트윈(ParallelPlayable) ->
     ///          (3) EntityPresentation 공통 연출(director/hit/death/체력바) + 적 hit 에 Damaged 사운드 ->

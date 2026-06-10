@@ -7,7 +7,7 @@
  *  - Perspective WorldCamera Actor 생성 + @c ActorFolower 부착 + @c SceneFB 연결.
  *  - DirLight Actor 생성 + Ambient/Diffuse/Specular 설정.
  *  - Matrix Skybox Actor 생성 (프로그램/텍스처/머티리얼/메시 조립) + @c SkyboxMat 반환.
- *  - 세 Actor 모두 @c Director::Root().AddChild 까지 수행 (Pure factory — caller 추가 wiring 불필요).
+ *  - 세 Actor 모두 @c Director::Root().AddChild 까지 수행 (Pure factory - caller 추가 wiring 불필요).
  *
  *  ### 비-책임
  *  - [X] 플레이어/적/UI/파티클 조립 - @c PlayerBuilder / EnemyBuilder 등 담당.
@@ -25,7 +25,7 @@
 #ifndef __TOPDOWNSHOOTER_BOOTSTRAP_WORLD_SCENE_BUILDER_H__
 #define __TOPDOWNSHOOTER_BOOTSTRAP_WORLD_SCENE_BUILDER_H__
 
-// fwd — 포인터/참조만 노출 (헤더 의존 격리).
+// fwd - 포인터/참조만 노출 (헤더 의존 격리).
 namespace SJH
 {
 	class MouseInput;
@@ -40,7 +40,7 @@ namespace SJH::Scene
 namespace TopdownShooter::Bootstrap
 {
 	/**
-	 * @brief @c BuildWorldScene 에 전달하는 외부 의존 묶음 — 비싱글턴 자원만 포함.
+	 * @brief @c BuildWorldScene 에 전달하는 외부 의존 묶음 - 비싱글턴 자원만 포함.
 	 * @details @c ResourceRegistry / @c Director 등 싱글톤은 내부에서 @c ::Get() 으로 접근하므로
 	 *          여기에 포함하지 않는다. @p aspect 는 GLFW 의존 격리를 위해 main 이 직접 계산해 주입.
 	 */

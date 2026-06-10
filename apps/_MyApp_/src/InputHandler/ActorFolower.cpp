@@ -43,7 +43,7 @@ namespace TopdownShooter::Controller
 		mMouseInput->BindLookHandler([this](double dx, double dy) {
 			mYawDeg -= static_cast<float>(dx) * mLookSensitivity;
 			mPitchDeg -= static_cast<float>(dy) * mLookSensitivity;
-			// pitch clamp — gimbal lock 회피
+			// pitch clamp - gimbal lock 회피
 			if (mPitchDeg > 89.0f)
 				mPitchDeg = 89.0f;
 			if (mPitchDeg < -89.0f)
@@ -62,12 +62,12 @@ namespace TopdownShooter::Controller
 	{
 		if (!mMouseInput || !mCamera)
 		{
-			spdlog::error("ActorFolower::SetUp — 의존 누락 (mouse={}, camera={})",
+			spdlog::error("ActorFolower::SetUp - 의존 누락 (mouse={}, camera={})",
 			              static_cast<void *>(mMouseInput),
 			              static_cast<void *>(mCamera));
 			return false;
 		}
-		// 보간 커브 미주입 시 default — cubicOut (빠르게 출발 후 목표에서 감속, follow 정통).
+		// 보간 커브 미주입 시 default - cubicOut (빠르게 출발 후 목표에서 감속, follow 정통).
 		if (!mEaseFn)
 			mEaseFn = [](float p, float a, float b) { return tweeny::easing::cubicOut.run(p, a, b); };
 		RegisterBindings();
@@ -115,14 +115,14 @@ namespace TopdownShooter::Controller
 
 	ActorFolower &ActorFolower::SetEaseFunction(EaseFn fn)
 	{
-		if (fn) // 빈 함수는 무시 — Update 에서 null 호출 방지
+		if (fn) // 빈 함수는 무시 - Update 에서 null 호출 방지
 			mEaseFn = std::move(fn);
 		return *this;
 	}
 
 	ActorFolower &ActorFolower::SetFollowDuration(float seconds)
 	{
-		if (seconds > 0.0f) // 0/음수 → 0 나눗셈·역진행 방지
+		if (seconds > 0.0f) // 0/음수 -> 0 나눗셈/역진행 방지
 			mFollowDuration = seconds;
 		return *this;
 	}
@@ -149,7 +149,7 @@ namespace TopdownShooter::Controller
 		mCamera        = nullptr;
 		mFollowTarget  = nullptr;
 		mIsInitialized = false;
-		// 보간 상태 리셋 — 재진입 시 첫 프레임 즉시 스냅.
+		// 보간 상태 리셋 - 재진입 시 첫 프레임 즉시 스냅.
 		mHasGoal = false;
 	}
 	
@@ -159,7 +159,7 @@ namespace TopdownShooter::Controller
 		if (!mIsInitialized)
 			return;
 		if (!mFollowTarget)
-			return; // follow target 미설정 — no-op (no free-fly fallback by design)
+			return; // follow target 미설정 - no-op (no free-fly fallback by design)
 
 		// Camera Component 가 Actor 미부착이면 Transform 갱신 대상 없음.
 		auto *owner = mCamera->GetOwner();
@@ -168,7 +168,7 @@ namespace TopdownShooter::Controller
 		auto &tr               = owner->GetTransform();
 		const vmath::vec3 goal = mFollowTarget->GetTransform().Translate + mFollowOffset; // 이번 프레임 목표
 
-		// 첫 프레임: 보간 없이 즉시 정렬 — 먼 초기 위치에서의 스월-인 방지.
+		// 첫 프레임: 보간 없이 즉시 정렬 - 먼 초기 위치에서의 스월-인 방지.
 		if (!mHasGoal)
 		{
 			tr.Translate = goal;
@@ -191,7 +191,7 @@ namespace TopdownShooter::Controller
 		mEaseProgress          = std::min(1.0f, mEaseProgress + dt / mFollowDuration);
 		const vmath::vec3 next = EaseVec3(mEaseFn, mEaseProgress, mEaseStart, mEaseGoal);
 
-		// progress 완료거나 목표와 EPS 이내면 스냅(잔여 크롤·부동소수 노이즈 = 떨림 제거), 아니면 진행.
+		// progress 완료거나 목표와 EPS 이내면 스냅(잔여 크롤/부동소수 노이즈 = 떨림 제거), 아니면 진행.
 		const bool arrived = mEaseProgress >= 1.0f || vmath::length(mEaseGoal - next) <= mArriveEps;
 		tr.Translate       = arrived ? mEaseGoal : next;
 	}

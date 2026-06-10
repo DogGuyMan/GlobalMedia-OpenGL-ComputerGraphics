@@ -28,7 +28,7 @@
 #include "input/keyboard_input.h"
 #include "input/mouse_input.h"
 
-// fwd — 포인터만 노출.
+// fwd - 포인터만 노출.
 class b2World;
 namespace SJH::Scene
 {
@@ -47,7 +47,7 @@ namespace SJH::SpriteSequence
 namespace TopdownShooter::Bootstrap
 {
 	/**
-	 * @brief @c BuildPlayer 에 전달하는 외부 의존 묶음 — 비싱글턴 자원만 포함.
+	 * @brief @c BuildPlayer 에 전달하는 외부 의존 묶음 - 비싱글턴 자원만 포함.
 	 * @details @c ResourceRegistry / @c Director / @c Manager 등 싱글톤은
 	 *          @c BuildPlayer 내부에서 @c ::Get() 으로 직접 조회하므로 여기에 포함하지 않는다.
 	 */
@@ -74,7 +74,7 @@ namespace TopdownShooter::Bootstrap
 	 *  1. @c PlayerActorConfig 구성 (Life/Movement/Controller/Physics/Weapon).
 	 *  2. @c CreatePlayerActor 호출 -> spriteActor 생성.
 	 *  3. renderActor / aimPivot 자식 Actor 추가.
-	 *  4. @c AttachEntityPresentation (공통 연출 클러스터 — "death"/체력바/HitFlash).
+	 *  4. @c AttachEntityPresentation (공통 연출 클러스터 - "death"/체력바/HitFlash).
 	 *  5. @c BuildPlayerDirectionalGroups (4방향 x 2포즈 스프라이트 8그룹 + @c RegisterGroup).
 	 *  6. @c HpGrayscalePostFX 컴포넌트 부착 (체력 감소 -> 화면 무채색).
 	 *  7. @c RegisterPlayerCombatPlayables ("fire"/"dash"/"hit" 연출 Director 등록).
@@ -84,7 +84,7 @@ namespace TopdownShooter::Bootstrap
 	 *  11. @c Root().AddChild -> enter.
 	 *  12. @c PlayerHands 컴포넌트 부착 (손 child Actor 2개, aimPivot 궤도).
 	 *  13. @c ActorFolower follow-target 을 SpriteActor 로 wiring.
-	 *  14. @c RefreshDirectional (초기 가시성 확정 — Front/Idle 외 SetActive false).
+	 *  14. @c RefreshDirectional (초기 가시성 확정 - Front/Idle 외 SetActive false).
 	 * @param deps 비싱글턴 외부 의존 (@c PlayerDeps 참조).
 	 * @return 구성된 @c PlayerResult (SpriteActor = root 부착 플레이어).
 	 */

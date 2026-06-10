@@ -1,11 +1,11 @@
 /**
  * @file PlayableDirector.cpp
- * @brief PlayableDirector 구현 — Register/Play/Stop/Update 및 8그룹 방향 토글.
+ * @brief PlayableDirector 구현 - Register/Play/Stop/Update 및 8그룹 방향 토글.
  *
  * @details
  *  ### 구현 요점
  *  - @c Register : 같은 키 재등록 시 Slot 덮어쓰기, playing=false 초기화(자동재생 방지).
- *  - @c Play     : Stop()(elapsed_ 리셋) -> Play() 순서 — 첫 프레임부터 OnPlay hook 보장.
+ *  - @c Play     : Stop()(elapsed_ 리셋) -> Play() 순서 - 첫 프레임부터 OnPlay hook 보장.
  *  - @c Update   : playing && !IsFinished() 슬롯만 tick. 완료 즉시 playing=false(휴면).
  *  - @c Apply    : mFacing/mPose 변경 시 4x2 테이블 전수 순회 -> GetOwner()->SetActive(bool).
  *                  SetActive 토글 = 렌더 + tick 동시 게이트.
@@ -15,7 +15,7 @@
 #include "Playable/PlayableDirector.h"
 
 #include "scene/actor.h"             // Actor::GetOwner/SetActive
-#include "sprite/sprite_component.h" // SJH::Sprite::SpriteRenderer (Component 완전형 — GetOwner 호출)
+#include "sprite/sprite_component.h" // SJH::Sprite::SpriteRenderer (Component 완전형 - GetOwner 호출)
 
 #include <utility> // std::move
 
@@ -25,7 +25,7 @@ namespace TopdownShooter::Playable
 	{
 		auto &slot   = mPlayables[key];
 		slot.playable = std::move(p);
-		slot.playing  = false; // 등록만 — Play(key) 전까지 tick 제외.
+		slot.playing  = false; // 등록만 - Play(key) 전까지 tick 제외.
 		return *this;
 	}
 
@@ -54,14 +54,14 @@ namespace TopdownShooter::Playable
 	void PlayableDirector::Update(float dt)
 	{
 		if (!IsEnabled()) return;
-		// 활성(Play 됨) + 미완료 슬롯만 직접 tick (Actor 미부착 — MultipleTimer 식 중앙 디스패치).
+		// 활성(Play 됨) + 미완료 슬롯만 직접 tick (Actor 미부착 - MultipleTimer 식 중앙 디스패치).
 		for (auto &entry : mPlayables)
 		{
 			auto &slot = entry.second;
 			if (!slot.playing || !slot.playable) continue;
 			if (slot.playable->IsFinished())
 			{
-				slot.playing = false; // 완료 — 다음 Play(key) 까지 휴면.
+				slot.playing = false; // 완료 - 다음 Play(key) 까지 휴면.
 				continue;
 			}
 			slot.playable->Update(dt);
@@ -70,7 +70,7 @@ namespace TopdownShooter::Playable
 
 	void PlayableDirector::SetFacing(Entity::EFacing f)
 	{
-		if (f == mFacing) return; // velocity 안 읽음 — 계산은 PlayerController(RD5)
+		if (f == mFacing) return; // velocity 안 읽음 - 계산은 PlayerController(RD5)
 		mFacing = f;
 		Apply();
 	}

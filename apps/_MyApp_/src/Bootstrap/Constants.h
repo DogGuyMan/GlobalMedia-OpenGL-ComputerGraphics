@@ -9,7 +9,7 @@
 
 namespace TopdownShooter::Bootstrap
 {
-	// EntityPresentation 사망 연출 길이(초) — Player 기본 / Enemy override.
+	// EntityPresentation 사망 연출 길이(초) - Player 기본 / Enemy override.
 	constexpr float PLAYER_DISSOLVE_SECONDS = 1.5f;  ///< Player "death" SpriteDissolve 디졸브 지속 시간(초).
 	constexpr float PLAYER_DEATH_DELAY      = 1.5f;  ///< Player 사망 후 비활성 지연(초) = 디졸브 가시화 창.
 	constexpr float ENEMY_DISSOLVE_SECONDS  = 0.6f;  ///< Enemy "death" SpriteDissolve 디졸브 지속 시간(초).

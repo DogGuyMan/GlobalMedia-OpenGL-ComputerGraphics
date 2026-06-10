@@ -27,7 +27,7 @@ namespace TopdownShooter::VFX
 		~EffekseerPlayable() override;
 
 	  public:
-		/// @brief 매 프레임 Y축 회전 속도(rad/sec). 0=비회전. OnUpdate 가 yaw = mYaw + mSpin×elapsed 적용 (궁극기 회전 레이저).
+		/// @brief 매 프레임 Y축 회전 속도(rad/sec). 0=비회전. OnUpdate 가 yaw = mYaw + mSpinxelapsed 적용 (궁극기 회전 레이저).
 		void SetSpinRadPerSec(float v) { mSpinRadPerSec = v; }
 		/// @brief 최대 지속(초). >0 이면 경과 시 StopEffect + finished (AutoDespawnOnFinish 트리거). 0=무제한.
 		void SetMaxDurationSec(float v) { mMaxDurationSec = v; }
@@ -38,7 +38,7 @@ namespace TopdownShooter::VFX
 		void OnUpdate(float dt) override;
 
 	  private:
-		// Play + (yaw!=0) SetRotation 공유 — OnPlay 와 루프 재생(OnUpdate)이 함께 호출.
+		// Play + (yaw!=0) SetRotation 공유 - OnPlay 와 루프 재생(OnUpdate)이 함께 호출.
 		void StartHandle();
 
 		::Effekseer::ManagerRef mManager;

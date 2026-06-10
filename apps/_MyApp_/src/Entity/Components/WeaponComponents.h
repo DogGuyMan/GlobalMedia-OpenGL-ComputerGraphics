@@ -30,15 +30,15 @@
 #include <utility>
 #include <vmath.h>
 
-// fwd — UseWeapon 이 bullet body 를 생성할 물리 월드 (포인터 멤버 — 전방 선언으로 충분).
+// fwd - UseWeapon 이 bullet body 를 생성할 물리 월드 (포인터 멤버 - 전방 선언으로 충분).
 class b2World;
 
 namespace TopdownShooter::Entity::Components
 {
-	/// @brief 단발 발사 무기 컴포넌트 — 좌클릭 시 조준 방향으로 bullet 1개 스폰.
+	/// @brief 단발 발사 무기 컴포넌트 - 좌클릭 시 조준 방향으로 bullet 1개 스폰.
 	/// @details
-	///   - Damage 는 Stat 으로 통합 (NumericType::Power, UseType::Natural) — modifier 시스템 적용 가능.
-	///   - `mWorld` 는 비소유 — bullet body 를 생성할 b2World (PlayerBuilder 가 SetWorld 로 주입).
+	///   - Damage 는 Stat 으로 통합 (NumericType::Power, UseType::Natural) - modifier 시스템 적용 가능.
+	///   - `mWorld` 는 비소유 - bullet body 를 생성할 b2World (PlayerBuilder 가 SetWorld 로 주입).
 	///   - UseWeapon 의 정의는 WeaponComponents.cpp (bullet_factory + scene.h 무거운 include 헤더 분리).
 	class Weapon : public SJH::Scene::Component
 	{

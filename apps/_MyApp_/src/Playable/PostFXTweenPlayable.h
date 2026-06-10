@@ -52,7 +52,7 @@ namespace TopdownShooter::Playable
 	  protected:
 		/// @brief @c Play() 호출 시 트윈을 seek(0) 으로 되감기.
 		/// @details Stop() + Play() 재트리거 시 처음부터 다시 재생 보장.
-		void OnPlay() override;           // 트윈 되감기 (seek 0) — 매 Play 마다 처음부터
+		void OnPlay() override;           // 트윈 되감기 (seek 0) - 매 Play 마다 처음부터
 		/// @brief 트윈을 ms 단위로 step 해 uniform 기록. progress >= 1.0 시 one-shot 종료.
 		/// @param dt 프레임 델타 타임 (초). 내부에서 int32_t ms 로 변환해 @c mTween.step(ms) 호출.
 		/// @note @c step(float) 비율 오버로드 금지 -- @c int32_t ms 오버로드 강제

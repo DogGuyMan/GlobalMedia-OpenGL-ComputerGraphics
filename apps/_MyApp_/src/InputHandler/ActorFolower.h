@@ -34,14 +34,14 @@ namespace TopdownShooter::Controller
 	///   ### 동작
 	///   - 매 Update: owner.Transform.Translate = target.Transform.Translate + mFollowOffset.
 	///   - Mouse 누적 yaw/pitch -> owner.Transform.EulerRot 갱신 (target 머리 위 상대 회전).
-	///   - WASD 이동 없음 — Player 가 별도 Component (PlayerController) 로 담당.
+	///   - WASD 이동 없음 - Player 가 별도 Component (PlayerController) 로 담당.
 	///   ### CameraController 와의 차이
 	///   - free-fly 모드를 갖지 않는 *전용* follow 컨트롤러.
 	///   - KeyboardInput 의존 없음 (Mouse only).
 	class ActorFolower : public SJH::Scene::Component
 	{
 	  public:
-		/// @brief 이동 보간 커브 시그니처 — (position[0..1], start, end) -> 보간값.
+		/// @brief 이동 보간 커브 시그니처 - (position[0..1], start, end) -> 보간값.
 		/// @details Tweeny 의 생성함수 커브(`tweeny::easing::*.run`)를 그대로 감싸 주입 가능.
 		///          예: `[](float p, float a, float b){ return tweeny::easing::quadraticOut.run(p, a, b); }`
 		using EaseFn = std::function<float(float, float, float)>;
@@ -56,7 +56,7 @@ namespace TopdownShooter::Controller
 		/// @return 셋업 성공 여부. false 면 Update no-op.
 		bool SetUp();
 
-		//  Builder Pattern — fluent setter (self 반환)
+		//  Builder Pattern - fluent setter (self 반환)
 		/// @brief 마우스 입력 의존 주입. SetUp() 전에 호출 필수.
 		ActorFolower &SetMouseInput(SJH::MouseInput *m);
 
@@ -82,7 +82,7 @@ namespace TopdownShooter::Controller
 		/// @note 빈 함수 전달은 무시 (기존 커브 유지).
 		ActorFolower &SetEaseFunction(EaseFn fn);
 
-		/// @brief ease 한 구간(현재→목표)의 길이(초). 작을수록 빠르게 따라붙음 (default 0.18).
+		/// @brief ease 한 구간(현재->목표)의 길이(초). 작을수록 빠르게 따라붙음 (default 0.18).
 		/// @note 0 이하는 무시.
 		ActorFolower &SetFollowDuration(float seconds);
 

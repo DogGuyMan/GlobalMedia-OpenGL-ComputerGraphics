@@ -29,8 +29,8 @@
 
 namespace TopdownShooter::UI
 {
-	/// @brief 좌상단 토글 버튼 — 클릭 시 onClick 콜백 (Stage FSM Pause↔CombatPlay 토글).
-	/// @details 구 ExitButtonLayer 기능 전환(2026-06-04). UiBootstrap 에서 push(아래 레이어) — Pause 오버레이 뒤.
+	/// @brief 좌상단 토글 버튼 - 클릭 시 onClick 콜백 (Stage FSM Pause<->CombatPlay 토글).
+	/// @details 구 ExitButtonLayer 기능 전환(2026-06-04). UiBootstrap 에서 push(아래 레이어) - Pause 오버레이 뒤.
 	///          일시정지 중 화면 클릭 resume 은 PauseState 가 !WantCaptureMouse 게이트로 처리.
 	class PauseButtonLayer : public IImGuiLayer
 	{
@@ -51,7 +51,7 @@ namespace TopdownShooter::UI
 		void OnBuildUI() override
 		{
 			ImGui::SetNextWindowPos(ImVec2(64.0f, 64.0f), ImGuiCond_Always);
-			// v1.53: SetNextWindowBgAlpha / NoBackground 미지원 — PushStyleColor 투명화.
+			// v1.53: SetNextWindowBgAlpha / NoBackground 미지원 - PushStyleColor 투명화.
 			ImGui::PushStyleColor(ImGuiCol_WindowBg,     ImVec4(0, 0, 0, 0));
 			ImGui::PushStyleColor(ImGuiCol_Border,       ImVec4(0, 0, 0, 0));
 			ImGui::PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));

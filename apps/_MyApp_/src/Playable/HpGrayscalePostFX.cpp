@@ -26,7 +26,7 @@ namespace TopdownShooter::Playable
 
 	void HpGrayscalePostFX::OnEnter()
 	{
-		// 핫패스 sink 1회 해소 (ctor 금지 — GetOwner null + dynamic type=base). 없으면 매 프레임 no-op.
+		// 핫패스 sink 1회 해소 (ctor 금지 - GetOwner null + dynamic type=base). 없으면 매 프레임 no-op.
 		if (GetOwner())
 			mLife = GetOwner()->GetComponent<Entity::ILivable>();
 	}
@@ -37,7 +37,7 @@ namespace TopdownShooter::Playable
 		const int maxHp = mLife->GetMaxHp();
 		if (maxHp <= 0) return;
 
-		// 체력 비율 [0,1] — 1.0=원색, 0.0=완전 무채색 (셰이더 uGrayscaleAmount 규약).
+		// 체력 비율 [0,1] - 1.0=원색, 0.0=완전 무채색 (셰이더 uGrayscaleAmount 규약).
 		float ratio = static_cast<float>(mLife->GetHp()) / static_cast<float>(maxHp);
 		if (ratio < 0.0f) ratio = 0.0f;
 		else if (ratio > 1.0f) ratio = 1.0f;

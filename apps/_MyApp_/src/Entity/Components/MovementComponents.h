@@ -76,7 +76,7 @@ namespace TopdownShooter::Entity::Components
 			auto *owner = GetOwner();
 			if (!owner)
 				return;
-			// zero-vec 가드 — normalize(0) 는 NaN 발생.
+			// zero-vec 가드 - normalize(0) 는 NaN 발생.
 			if (dir[0] == 0.0f && dir[1] == 0.0f)
 				return;
 			auto &tr = owner->GetTransform();

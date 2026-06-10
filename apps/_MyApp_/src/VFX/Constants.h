@@ -21,17 +21,17 @@
 
 namespace TopdownShooter::VFX
 {
-	/// @brief Effekseer 이펙트 자원 1개 — registry 키 + .efk 경로(char16_t).
+	/// @brief Effekseer 이펙트 자원 1개 - registry 키 + .efk 경로(char16_t).
 	struct EffectAsset
 	{
 		const char     *key;   ///< ResourceRegistry 캐시 키 (영문 식별자).
 		const char16_t *path;  ///< .efk 파일 경로. char16_t 필수 (EFK_CHAR 규약).
 	};
 
-	/// @brief 단발 muzzle 이펙트 (좌클릭 발사 연출 — startup 에서 CreateEffect).
+	/// @brief 단발 muzzle 이펙트 (좌클릭 발사 연출 - startup 에서 CreateEffect).
 	const EffectAsset MUZZLE_EFFECT = {"muzzle", u"resources/vfx/distortion.efk"};
 
-	/// @brief VFX 테스트 드롭다운용 이펙트 목록 — 1.7 에디터 export (.efk 포맷 1710, 런타임 SupportBinaryVersion 과 일치).
+	/// @brief VFX 테스트 드롭다운용 이펙트 목록 - 1.7 에디터 export (.efk 포맷 1710, 런타임 SupportBinaryVersion 과 일치).
 	/// @note .efk 가 참조하는 텍스처는 .efk 파일이 있는 디렉토리 기준 상대경로로 해석된다.
 	///       resources/vfx/ 레이아웃을 에디터 export 기준과 맞추지 않으면 텍스처가 깨진다.
 	const EffectAsset TEST_EFFECTS[] = {

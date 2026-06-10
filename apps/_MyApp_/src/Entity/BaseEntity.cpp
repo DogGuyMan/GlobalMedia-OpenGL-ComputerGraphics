@@ -8,7 +8,7 @@
 #include "Entity/Components/LifeComponents.h"
 #include "Physics/PhysicsComponent.h"        // Components::Physics + FindPhysics
 #include "Physics/PhysicsImpulse.h"          // Impulse (IsActive)
-#include "Playable/PlayableDirector.h"       // 완전형 — GetComponent/Play
+#include "Playable/PlayableDirector.h"       // 완전형 - GetComponent/Play
 
 namespace TopdownShooter::Entity
 {
@@ -29,17 +29,17 @@ namespace TopdownShooter::Entity
 		mLife = nullptr; mPhysics = nullptr; mDirector = nullptr; mImpulse = nullptr;
 	}
 
-	// 이하 ILivable/IDieable/IDamageable 위임 — 형제 미캐시(nullptr) 시 안전한 기본값 반환.
+	// 이하 ILivable/IDieable/IDamageable 위임 - 형제 미캐시(nullptr) 시 안전한 기본값 반환.
 	bool BaseEntity::IsAlive()  const { return mLife && mLife->IsAlive(); }
 	int  BaseEntity::GetHp()    const { return mLife ? mLife->GetHp()    : 0; }
 	int  BaseEntity::GetMaxHp() const { return mLife ? mLife->GetMaxHp() : 0; }
 	void BaseEntity::DoDamaged(int damage) { if (mLife) mLife->DoDamaged(damage); }
 	void BaseEntity::DoDie()               { if (mLife) mLife->DoDie(); }
 
-	// IImpulsable 위임 — 넉백/대시 버스트.
+	// IImpulsable 위임 - 넉백/대시 버스트.
 	void BaseEntity::DoImpulse(vmath::vec2 dir) { if (mImpulse) mImpulse->DoImpulse(dir); }
 	bool BaseEntity::IsImpulseActive() const   { return mImpulse && mImpulse->IsActive(); }
 
-	// named playable 재생 위임 — Director 미캐시 시 무시.
+	// named playable 재생 위임 - Director 미캐시 시 무시.
 	void BaseEntity::Play(const std::string& key) { if (mDirector) mDirector->Play(key); }
 } // namespace TopdownShooter::Entity

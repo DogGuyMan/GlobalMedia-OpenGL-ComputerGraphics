@@ -1,6 +1,6 @@
 /**
  * @file WaveController.cpp
- * @brief @c WaveController 구현 — 웨이브 스폰 / 사망 observer / deferred sweep.
+ * @brief @c WaveController 구현 - 웨이브 스폰 / 사망 observer / deferred sweep.
  *
  * @details
  *  ### 구현 전략
@@ -14,7 +14,7 @@
  *
  *  ### 웨이브 클리어 로직
  *  - 조건: @c mWave > 0 && @c mWaveSpawnedAny && @c LiveCount() == 0
- *  - @c mDying(디졸브 중 corpse) 는 wave-clear 판정에 무관 — 즉시 다음 웨이브 개시.
+ *  - @c mDying(디졸브 중 corpse) 는 wave-clear 판정에 무관 - 즉시 다음 웨이브 개시.
  *  - @c mWaveSpawnedAny 가드: 웨이브 시작 직후 아직 스폰 전 프레임에서의 오발화 방지.
  *
  * @note @c SweepDespawned 는 반드시 @c Director::Update 밖에서 호출.
@@ -45,15 +45,15 @@ namespace TopdownShooter::Stage
 
     void WaveController::OnEnter()
     {
-        // Player 사망 observer 등록 — 사망(HP0) 시 플래그 set, Update 가 GameOver 전이 (IsActive 폴링 대체).
-        // (Player 는 제거하지 않음 — 시체/물리 유지. enemy 만 SweepDespawned 로 완전 제거.)
+        // Player 사망 observer 등록 - 사망(HP0) 시 플래그 set, Update 가 GameOver 전이 (IsActive 폴링 대체).
+        // (Player 는 제거하지 않음 - 시체/물리 유지. enemy 만 SweepDespawned 로 완전 제거.)
         if (mPlayerActor)
             if (auto* life = mPlayerActor->GetComponent<Entity::Components::Life>())
                 life->SetOnDeath([this](SJH::Scene::Actor*) { mPlayerDead = true; });
     }
 
-    // 사망 통지(observer) — live(mEnemies)->dying 이동만 (enqueue). ⚠ Box2D body 변경(SetEnabled/DestroyBody)은
-    // b2World::Step 잠금 중(여기 = contact 콜백 경유 DoDie) 금지 — 실제 body 비활성/파괴는 SweepDespawned(Step 밖) 담당.
+    // 사망 통지(observer) - live(mEnemies)->dying 이동만 (enqueue). [!] Box2D body 변경(SetEnabled/DestroyBody)은
+    // b2World::Step 잠금 중(여기 = contact 콜백 경유 DoDie) 금지 - 실제 body 비활성/파괴는 SweepDespawned(Step 밖) 담당.
     void WaveController::OnEnemyDeath(SJH::Scene::Actor* e)
     {
         if (e == nullptr) return;
@@ -63,8 +63,8 @@ namespace TopdownShooter::Stage
 
     void WaveController::SweepDespawned()
     {
-        // main 이 b2World::Step 끝난 뒤(잠금 해제) 호출 — 여기서만 body 변경 안전.
-        // 각 dying 적: ① 디졸브 중이면 body 비활성(충돌 정지, idempotent) ② 디졸브 끝(IsDespawnReady)이면 완전 제거.
+        // main 이 b2World::Step 끝난 뒤(잠금 해제) 호출 - 여기서만 body 변경 안전.
+        // 각 dying 적: (1) 디졸브 중이면 body 비활성(충돌 정지, idempotent) (2) 디졸브 끝(IsDespawnReady)이면 완전 제거.
         for (auto it = mDying.begin(); it != mDying.end();)
         {
             SJH::Scene::Actor* e    = *it;
@@ -85,7 +85,7 @@ namespace TopdownShooter::Stage
 
     int WaveController::LiveCount() const
     {
-        return static_cast<int>(mEnemies.size()); // mEnemies = 생존만 (사망 즉시 dying 이동) — 폴링 없음
+        return static_cast<int>(mEnemies.size()); // mEnemies = 생존만 (사망 즉시 dying 이동) - 폴링 없음
     }
 
     vmath::vec2 WaveController::RandomEdgePos() const
@@ -117,7 +117,7 @@ namespace TopdownShooter::Stage
         d.variant      = mSpawnCount % 3; // 3종 순환
 
         auto* enemy = Bootstrap::BuildEnemy(d);
-        // 사망 observer 주입 — WaveController 가 적 컴포넌트 init-time 배선 소유 (Stage->Entity inward).
+        // 사망 observer 주입 - WaveController 가 적 컴포넌트 init-time 배선 소유 (Stage->Entity inward).
         if (enemy)
             if (auto* life = enemy->GetComponent<Entity::Components::Life>())
                 life->SetOnDeath([this](SJH::Scene::Actor* e) { OnEnemyDeath(e); });
@@ -143,7 +143,7 @@ namespace TopdownShooter::Stage
             mSpawnTimer.Reset();
         }
 
-        // 전멸 감지 -> 다음 웨이브 (live 0 + 이번 웨이브 스폰됨). 디졸브 중 corpse(mDying)는 무관 — 즉시 다음 웨이브.
+        // 전멸 감지 -> 다음 웨이브 (live 0 + 이번 웨이브 스폰됨). 디졸브 중 corpse(mDying)는 무관 - 즉시 다음 웨이브.
         if (mWave > 0 && mWaveSpawnedAny && LiveCount() == 0)
         {
             ++mWave;

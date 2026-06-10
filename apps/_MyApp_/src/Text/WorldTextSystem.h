@@ -31,7 +31,7 @@ namespace TopdownShooter::Text
     {
       public:
         /// @brief minogram BMFont 를 로드. @c Manager::Init 에서 1회 호출.
-        /// @note 인자 없이 내부에서 ResourceRegistry::Get() 사용 — 호출자(Manager.cpp)가
+        /// @note 인자 없이 내부에서 ResourceRegistry::Get() 사용 - 호출자(Manager.cpp)가
         ///       resource_registry.h(gl3w.h)를 끌어오지 않게 해 Effekseer gl3.h 와의 GL 헤더 충돌 회피.
         void Init();
 

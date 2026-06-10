@@ -87,7 +87,7 @@ namespace TopdownShooter::Physics::Components
 	  public:
 		Physics() = default;
 
-		/// @brief b2Body* 주입 — b2World::CreateBody 결과. user data 에 owner Actor* 자동 등록.
+		/// @brief b2Body* 주입 - b2World::CreateBody 결과. user data 에 owner Actor* 자동 등록.
 		Physics &SetBody(b2Body *body)
 		{
 			mBody = body;
@@ -162,7 +162,7 @@ namespace TopdownShooter::Physics::Components
 			if (mBody != nullptr)
 				mBody->GetUserData().pointer = reinterpret_cast<uintptr_t>(GetOwner());
 		}
-		/// @brief 액터 제거(despawn) 시 b2Body 완전 파괴 — b2World 가 소유하므로 명시 DestroyBody.
+		/// @brief 액터 제거(despawn) 시 b2Body 완전 파괴 - b2World 가 소유하므로 명시 DestroyBody.
 		///        (Update 가 pure 라 Physics 는 여전히 abstract. subtype 의 빈 OnExit override 는 제거됨.)
 		void OnExit() override
 		{

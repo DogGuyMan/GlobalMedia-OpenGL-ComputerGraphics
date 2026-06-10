@@ -23,7 +23,7 @@
 #include <map>
 #include <string>
 
-// fwd — Material* 만 보유/반환하므로 전방 선언으로 충분 (헤더 경량 유지).
+// fwd - Material* 만 보유/반환하므로 전방 선언으로 충분 (헤더 경량 유지).
 namespace SJH
 {
 	class Material;

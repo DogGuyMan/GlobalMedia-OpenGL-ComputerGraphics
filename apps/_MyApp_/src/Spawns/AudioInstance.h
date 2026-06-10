@@ -1,6 +1,6 @@
 /**
  * @file AudioInstance.h
- * @brief 단발(one-shot) SFX Actor 를 조립·스폰하는 팩토리 자유 함수.
+ * @brief 단발(one-shot) SFX Actor 를 조립/스폰하는 팩토리 자유 함수.
  *
  * @details
  *  ### 책임

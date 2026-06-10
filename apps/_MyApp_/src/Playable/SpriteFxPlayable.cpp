@@ -8,7 +8,7 @@
  *    @c SpriteRenderer 가 있는 노드마다 @p fn 호출.
  *    groundActor 데칼 등 SpriteRenderer 없는 노드는 자동 skip.
  *  - @c SpriteDissolvePlayable::OnPlay : noiseTexKey 로 @c ResourceRegistry::FindTexture/CreateTexture
- *    캐시 패턴 — 동일 텍스처를 인스턴스 간 공유 (중복 로드 방지).
+ *    캐시 패턴 - 동일 텍스처를 인스턴스 간 공유 (중복 로드 방지).
  *  - @c SpriteDissolvePlayable::OnUpdate : t = clamp(elapsed/duration). t >= 1.0 이면
  *    @c mIsFinished = true (dissolved 상태 유지, 액터 비활성/despawn 은 Life 책임).
  *
@@ -18,7 +18,7 @@
 #include "Playable/SpriteFxPlayable.h"
 
 #include "resource_registry/image.h"             // SJH::Image::Load (dissolve.png)
-#include "resource_registry/resource_registry.h" // ResourceRegistry — dissolve 노이즈 텍스처 1회 캐시
+#include "resource_registry/resource_registry.h" // ResourceRegistry - dissolve 노이즈 텍스처 1회 캐시
 #include "scene/actor.h"             // SJH::Scene::Actor (GetChildren/GetComponent)
 #include "sprite/sprite_component.h" // SJH::Sprite::SpriteRenderer (enableHit/dissolve)
 
@@ -26,11 +26,11 @@ namespace TopdownShooter::Playable
 {
 	namespace
 	{
-		// 디졸브 노이즈 텍스처 — 모든 dissolve 가 공유 (ResourceRegistry 키, 1회 로드 후 캐시).
+		// 디졸브 노이즈 텍스처 - 모든 dissolve 가 공유 (ResourceRegistry 키, 1회 로드 후 캐시).
 		constexpr const char *kDissolveTexKey = "_dissolve_noise";
 
 		// 대상 액터 + 서브트리 전체(손자 이하 포함)의 SpriteRenderer 에 fn 적용.
-		// (renderActor 하위로 내려간 32 스프라이트 + aimPivot 하위 손까지 도달 — Round 2.
+		// (renderActor 하위로 내려간 32 스프라이트 + aimPivot 하위 손까지 도달 - Round 2.
 		//  영향 집합은 현행과 동일: groundActor 데칼은 SpriteRenderer 없어 자동 skip.)
 		template <typename Fn>
 		void ForEachSpriteRenderer(SJH::Scene::Actor *root, Fn &&fn)
@@ -42,7 +42,7 @@ namespace TopdownShooter::Playable
 		}
 	}
 
-	// ─────────────── SpriteHitFlashPlayable ───────────────
+	// --------------- SpriteHitFlashPlayable ---------------
 	SpriteHitFlashPlayable::SpriteHitFlashPlayable(SJH::Scene::Actor *target, float durationSec)
 	    : mTarget(target), mDuration(durationSec)
 	{
@@ -67,7 +67,7 @@ namespace TopdownShooter::Playable
 		}
 	}
 
-	// ─────────────── SpriteDissolvePlayable ───────────────
+	// --------------- SpriteDissolvePlayable ---------------
 	SpriteDissolvePlayable::SpriteDissolvePlayable(SJH::Scene::Actor *target, float durationSec)
 	    : mTarget(target), mDuration(durationSec)
 	{
@@ -78,7 +78,7 @@ namespace TopdownShooter::Playable
 	{
 		// 노이즈 디졸브 텍스처(dissolve.png) 1회 로드(이후 FindTexture 캐시). 미지정 시 sprite_component 이
 		// uDissolveTex 를 unit0(=atlas)로 fallback -> 스프라이트 내용 의존 crude erode(가시성 불안정, 적이 즉시 사라짐).
-		// 전용 노이즈로 내용 무관 균일·가시 디졸브 보장 (sprite_component 주석의 "dissolve.png sink 주입" 의도).
+		// 전용 노이즈로 내용 무관 균일/가시 디졸브 보장 (sprite_component 주석의 "dissolve.png sink 주입" 의도).
 		auto               &reg   = SJH::ResourceRegistry::Get();
 		const SJH::Texture *noise = reg.FindTexture(kDissolveTexKey);
 		if (!noise)

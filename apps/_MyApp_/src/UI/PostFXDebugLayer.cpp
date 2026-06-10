@@ -1,6 +1,6 @@
 /**
  * @file PostFXDebugLayer.cpp
- * @brief PostFXDebugLayer 구현 — 패스별 ImGui 위젯 빌드.
+ * @brief PostFXDebugLayer 구현 - 패스별 ImGui 위젯 빌드.
  *
  * @details
  *  ### 구현 요점
@@ -27,7 +27,7 @@ namespace TopdownShooter::UI
 
 	void PostFXDebugLayer::OnBuildUI()
 	{
-		// 위치/크기 명시 — ExitButton ((64,64)+48px) 과 겹침 회피.
+		// 위치/크기 명시 - ExitButton ((64,64)+48px) 과 겹침 회피.
 		// FirstUseEver 라 사용자가 이동하면 그 위치 유지.
 		ImGui::SetNextWindowPos(ImVec2(20.0f, 140.0f), ImGuiCond_FirstUseEver);
 		ImGui::SetNextWindowSize(ImVec2(280.0f, 220.0f), ImGuiCond_FirstUseEver);
@@ -68,7 +68,7 @@ namespace TopdownShooter::UI
 			{
 				// Health[0,1] -> grayscale 강도 (1=원본색, 0=무채색). 셰이더는 Health 를 모름(uGrayscaleAmount 만).
 				ImGui::SliderFloat("Health##gv",    &props.Floats["uGrayscaleAmount"], 0.0f, 1.0f);
-				// Vignette — grayscale 과 독립. 색(필수) + 강도.
+				// Vignette - grayscale 과 독립. 색(필수) + 강도.
 				ImGui::SliderFloat("vignette##gv",  &props.Floats["uVignetteAmount"],  0.0f, 1.0f);
 				ImGui::ColorEdit3 ("vig color##gv", &props.Vec3s["uVignetteColor"][0]);
 			}

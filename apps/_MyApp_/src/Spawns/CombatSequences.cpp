@@ -1,6 +1,6 @@
 /**
  * @file CombatSequences.cpp
- * @brief CombatSequences.h 구현 — 전투 단발 FX/오디오 스폰 본체.
+ * @brief CombatSequences.h 구현 - 전투 단발 FX/오디오 스폰 본체.
  *
  * @details
  *  각 함수는 @c SpawnVfxInstance / @c SpawnAudioInstance 헬퍼에 위임해
@@ -24,7 +24,7 @@ namespace TopdownShooter::Spawns
     void SpawnHitSpark(const SequenceContext& ctx, const vmath::vec3& worldPos)
     {
         if (!ctx.fxRoot) return;
-        // VFX one-shot (spark) + 오디오 one-shot (event:/Hit) — 각자 독립 자동 despawn.
+        // VFX one-shot (spark) + 오디오 one-shot (event:/Hit) - 각자 독립 자동 despawn.
         if (ctx.vfx && ctx.reg)
             SpawnVfxInstance(*ctx.fxRoot, ctx.vfx, ctx.reg->FindEffect("spark"), worldPos);
     }

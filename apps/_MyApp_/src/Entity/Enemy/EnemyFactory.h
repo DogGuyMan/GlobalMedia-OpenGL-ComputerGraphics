@@ -73,7 +73,7 @@ namespace TopdownShooter::Entity::Enemy
 
         actor->AddComponent<Components::Life>(cfg.hp);
         actor->AddComponent<SimplePursueAI>(cfg.playerTarget, pb->GetBody(), cfg.speed);
-        // 접촉 데미지 배달 = Carrier::ContactCarrier (적 body 재사용, 동작 보존 — IDamageable 배달).
+        // 접촉 데미지 배달 = Carrier::ContactCarrier (적 body 재사용, 동작 보존 - IDamageable 배달).
         actor->AddComponent<Spawn::Carrier::ContactCarrier>(cfg.damage)
 		->SetOwnerEntity(actor.get());
 

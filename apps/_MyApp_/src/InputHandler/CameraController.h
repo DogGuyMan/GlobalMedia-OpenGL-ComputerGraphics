@@ -60,7 +60,7 @@ namespace TopdownShooter::Controller
 		/// @return 셋업 성공 여부. false 면 Update no-op.
 		bool SetUp();
 
-		//  Builder Pattern — fluent setter (self 반환)
+		//  Builder Pattern - fluent setter (self 반환)
 		/// @brief 키보드 입력 의존 주입. SetUp() 전에 호출 필수.
 		CameraController &SetKeyboardInput(SJH::KeyboardInput<Action> *k);
 

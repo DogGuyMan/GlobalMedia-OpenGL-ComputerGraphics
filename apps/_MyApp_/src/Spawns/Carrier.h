@@ -13,7 +13,7 @@
  *  - [X] Actor lifetime 직접 제어 - despawn 은 @c SetActive(false) 마킹 후 상위 sweep 이 정리.
  *
  *  ### 정통 매핑
- *  - 한 Carrier 가 "데미지 데이터 + 전달 규칙" 만 들고 다니는 작은 운반자 - god-component 분해(확정 §6.4) 결과.
+ *  - 한 Carrier 가 "데미지 데이터 + 전달 규칙" 만 들고 다니는 작은 운반자 - god-component 분해(확정 sec.6.4) 결과.
  *
  * @note Box2D Step(ContactListener 콜백) 중 b2Body 수정 금지 - despawn 은 @c Update 에서 지연 처리한다.
  */
@@ -31,7 +31,7 @@
 namespace TopdownShooter::Spawn::Carrier
 {
 	/**
-	 * @brief 데미지 배달 공통 베이스 (얇음 - 확정 §6.4). 수명/센서/이동은 subtype 책임.
+	 * @brief 데미지 배달 공통 베이스 (얇음 - 확정 sec.6.4). 수명/센서/이동은 subtype 책임.
 	 * @details Owner(발사자) / Damage(피해량) / OnHitFx(타격 콜백) 만 보유하고, 접촉 시 대상에게
 	 *          피해+넉백+HitFx 를 전달하는 @c Deliver 만 protected 로 제공한다. 접촉 감지(@c IContactable)
 	 *          콜백 구현은 subtype(@c Projectile / @c ContactCarrier) 의 책임.
@@ -66,7 +66,7 @@ namespace TopdownShooter::Spawn::Carrier
 		{
 			mOnHitFx = std::move(fx);
 			return *this;
-		} // C4 — SetOnHitFx 흡수
+		} // C4 - SetOnHitFx 흡수
 
 	  protected:
 		/// @brief C1 배달: target 의 IDamageable->DoDamaged + (있으면) IImpulsable->DoImpulse 넉백 + onHitFx.
@@ -105,7 +105,7 @@ namespace TopdownShooter::Spawn::Carrier
 			mDamage = damage;
 		}
 
-		/// @brief 비행 방향 주입 (box2d XY, 정규화 가정) — 넉백 방향 소스.
+		/// @brief 비행 방향 주입 (box2d XY, 정규화 가정) - 넉백 방향 소스.
 		///        위치차분(enemy-bullet)은 접촉 시 관통 깊이에 따라 불안정/역전되므로 비행방향을 쓴다.
 		/// @param box2dDir box2d 평면 비행 방향.
 		void SetLaunchDir(vmath::vec2 box2dDir)
@@ -169,7 +169,7 @@ namespace TopdownShooter::Spawn::Carrier
 		bool mPendingDisable = false;
 	};
 
-	/// @brief sensor + persistent (적 접촉 데미지). EnemyContactHandler 흡수 — 적 body 재사용(동작 보존).
+	/// @brief sensor + persistent (적 접촉 데미지). EnemyContactHandler 흡수 - 적 body 재사용(동작 보존).
 	class ContactCarrier : public CarrierBase
 	{
 	  public:

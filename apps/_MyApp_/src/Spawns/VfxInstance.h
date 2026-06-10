@@ -1,6 +1,6 @@
 /**
  * @file VfxInstance.h
- * @brief 단발(one-shot) Effekseer VFX Actor 를 조립·스폰하는 팩토리 + 전역 파사드.
+ * @brief 단발(one-shot) Effekseer VFX Actor 를 조립/스폰하는 팩토리 + 전역 파사드.
  *
  * @details
  *  ### 책임

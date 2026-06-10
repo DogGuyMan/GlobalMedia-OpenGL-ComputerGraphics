@@ -83,7 +83,7 @@ namespace TopdownShooter::Physics
                 mPhysicsBody->GetBody()->SetLinearVelocity(b2Vec2(0.0f, 0.0f));
                 return;
             }
-            // dir XZ  Box2D XY (Z  -Y, spec §4.4)
+            // dir XZ  Box2D XY (Z  -Y, spec sec.4.4)
             vmath::vec2 n = vmath::normalize(dir);
             const float speed = mMoveSpeed.GetValue();
             mPhysicsBody->GetBody()->SetLinearVelocity(b2Vec2(n[0] * speed, -n[1] * speed));

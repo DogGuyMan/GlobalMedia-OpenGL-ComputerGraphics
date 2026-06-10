@@ -24,7 +24,7 @@
 #include "Bootstrap/Constants.h"
 #include "HUD/Constants.h"
 
-// fwd-decl — 헤더 표면 최소화 (완전형은 .cpp 에서 해소).
+// fwd-decl - 헤더 표면 최소화 (완전형은 .cpp 에서 해소).
 namespace SJH::Scene
 {
 	class Actor;
@@ -42,16 +42,16 @@ namespace TopdownShooter::Bootstrap
 	{
 		float       dissolveSeconds   = PLAYER_DISSOLVE_SECONDS;  // "death" SpriteDissolve 길이
 		float       deathDelaySeconds = PLAYER_DEATH_DELAY;       // 사망 후 비활성 지연(=dissolve 가시화 창)
-		vmath::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 — HUD 단일 소스, C3)
+		vmath::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 - HUD 단일 소스, C3)
 	};
 
-	/// @brief Player/Enemy 공통 연출 클러스터 부착 — *pre-entry*(AddChild 전) 호출.
-	/// @details 두 빌더의 🟢 공통 5동작 dedup:
-	///   ① PlayableDirector 부착 (= Life 의 IActorPresentation sink — entry 전이라야 Life::OnEnter 가 캐시).
-	///   ② "hit"=SpriteHitFlash / "death"=SpriteDissolve(dissolveSeconds) 기본 등록.
-	///      (Player 는 이후 "hit" 을 Parallel 로 overwrite — Register 동일키 덮어쓰기. Enemy 는 그대로.)
-	///   ③ Life::SetDeathDelaySeconds(deathDelaySeconds) — Life 있을 때만.
-	///   ④ AttachHealthBar(healthBarColor).
+	/// @brief Player/Enemy 공통 연출 클러스터 부착 - *pre-entry*(AddChild 전) 호출.
+	/// @details 두 빌더의 [O] 공통 5동작 dedup:
+	///   (1) PlayableDirector 부착 (= Life 의 IActorPresentation sink - entry 전이라야 Life::OnEnter 가 캐시).
+	///   (2) "hit"=SpriteHitFlash / "death"=SpriteDissolve(dissolveSeconds) 기본 등록.
+	///      (Player 는 이후 "hit" 을 Parallel 로 overwrite - Register 동일키 덮어쓰기. Enemy 는 그대로.)
+	///   (3) Life::SetDeathDelaySeconds(deathDelaySeconds) - Life 있을 때만.
+	///   (4) AttachHealthBar(healthBarColor).
 	/// @return 부착된 director (caller 가 "fire"/"hit"-overwrite 등 추가 Register 가능).
 	Playable::PlayableDirector *AttachEntityPresentation(
 	    SJH::Scene::Actor &actor, const EntityPresentationConfig &cfg = {});

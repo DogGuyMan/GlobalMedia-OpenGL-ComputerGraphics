@@ -6,7 +6,7 @@
  *  ### 책임
  *  - @c SJH::Sound (Core @c FMOD::Sound RAII wrap) 를 Core @c System::playSound 로 재생.
  *  - @c Channel 핸들로 stop/pause/종료 폴링 - @c IPlayable 계약(Play/Pause/Stop/IsFinished) 노출.
- *  - 비루프 시 @c Channel::isPlaying 폴링으로 종료를 감지해 @c IsFinished 마킹 (FMODAPI.md §13).
+ *  - 비루프 시 @c Channel::isPlaying 폴링으로 종료를 감지해 @c IsFinished 마킹 (FMODAPI.md sec.13).
  *
  *  ### 비-책임
  *  - [X] @c Sound 로드/소유 - @c SJH::ResourceRegistry 가 캐시 (여기는 빌림 포인터).
@@ -16,7 +16,7 @@
  *  - Unity `AudioSource` - 한 사운드의 재생 제어 단위 (씬 Component).
  *
  * @note Core @c Channel 은 RAII 가 아닌 정수 핸들에 가까운 빌림 포인터 - 정지/종료 후 재활용되므로
- *       직접 release/delete 금지 (@c isPlaying 으로 가드, FMODAPI.md §13).
+ *       직접 release/delete 금지 (@c isPlaying 으로 가드, FMODAPI.md sec.13).
  * @note 단발 SFX 는 Studio 이벤트(@c FmodStudioPlayable)로 통일 - Core leaf 는 BGM/지속음 핸들 제어용.
  * @note FMOD 미빌드 시 모든 동작이 no-op - 시퀀스 행을 막기 위해 비루프면 즉시 @c IsFinished (.cpp 참조).
  */
@@ -60,7 +60,7 @@ namespace TopdownShooter::Audio
 	  private:
 		::FMOD::System  *mSys     = nullptr;  ///< Core System 빌림 포인터 (AudioSystem 소유).
 		SJH::Sound      *mSound   = nullptr;  ///< 재생 대상 Sound 빌림 포인터 (ResourceRegistry 소유).
-		// [[maybe_unused]] — FMOD 미빌드(SJH_HAS_FMOD 미정의) 시 모든 사용처가 #ifdef 로 빠져
+		// [[maybe_unused]] - FMOD 미빌드(SJH_HAS_FMOD 미정의) 시 모든 사용처가 #ifdef 로 빠져
 		// clang -Werror=unused-private-field 에 걸리는 것을 방지.
 		[[maybe_unused]] ::FMOD::Channel *mChannel = nullptr;  ///< 현재 재생 Channel - 빌림 핸들 (release 금지).
 	};

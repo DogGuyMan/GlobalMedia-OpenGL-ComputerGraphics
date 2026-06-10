@@ -58,7 +58,7 @@ namespace TopdownShooter::Audio
 		mChannel->isPlaying(&playing);                  // 종료 폴링 - 끝나면 FMOD 가 Channel 재활용
 		if (!playing && !mIsLoop) mIsFinished = true;   // 비루프 + 재생 종료 -> Playable 완료 마킹
 #else
-		if (!mIsLoop) mIsFinished = true;   // FMOD 미빌드 — 즉시 종료(시퀀스 행 방지)
+		if (!mIsLoop) mIsFinished = true;   // FMOD 미빌드 - 즉시 종료(시퀀스 행 방지)
 #endif
 	}
 }

@@ -23,10 +23,10 @@
 
 #include "Components/Components.Interfaces.h"   // ILivable/IDieable/IDamageable/IImpulsable
 #include "scene/actor.h"
-#include "timer/multiple_timer.h"   // MultipleTimer (값 멤버 — 완전형 필요)
+#include "timer/multiple_timer.h"   // MultipleTimer (값 멤버 - 완전형 필요)
 #include <string>
 
-// fwd — 포인터 멤버만 보유(완전형은 .cpp 에서). Entity 헤더가 Playable/Physics 헤더를 안 끌어오게.
+// fwd - 포인터 멤버만 보유(완전형은 .cpp 에서). Entity 헤더가 Playable/Physics 헤더를 안 끌어오게.
 namespace TopdownShooter::Entity::Components { class Life; }
 namespace TopdownShooter::Physics::Components { class Physics; }
 namespace TopdownShooter::Physics { class Impulse; }
@@ -53,14 +53,14 @@ namespace TopdownShooter::Entity
 
 	  public:
 		/// @brief 형제 Component 4종(Life/Physics/Director/Impulse)을 GetComponent/FindPhysics 로 캐시.
-		void OnEnter() override;   // 4캐시 (.cpp — GetComponent/FindPhysics 완전형 필요)
+		void OnEnter() override;   // 4캐시 (.cpp - GetComponent/FindPhysics 완전형 필요)
 		/// @brief 캐시한 형제 포인터 4종을 nullptr 로 초기화 (dangling 방지).
 		void OnExit()  override;
 		/// @brief 중앙 timer 컨테이너 일괄 tick - 엔티티 timer 의 유일한 구동 지점.
 		/// @param dt 직전 프레임 경과 시간(초).
 		void Update(float dt) override { mTimers.Update(dt); }   // 중앙 tick 구동 (형제 timer 일괄)
 
-		// ── 중앙 Timer 컨테이너 (엔티티 timer 단일 보유처) ──
+		// -- 중앙 Timer 컨테이너 (엔티티 timer 단일 보유처) --
 		/// @brief 엔티티 timer 컨테이너 접근 - 형제 Component 가 핸들 Register/Unregister 위탁.
 		/// @return MultipleTimer 레퍼런스.
 		SJH::Timer::MultipleTimer&       Timers()       { return mTimers; }
@@ -68,7 +68,7 @@ namespace TopdownShooter::Entity
 		/// @return MultipleTimer const 레퍼런스.
 		const SJH::Timer::MultipleTimer& Timers() const { return mTimers; }
 
-		// ── Life 위임 (ILivable/IDieable/IDamageable) ──
+		// -- Life 위임 (ILivable/IDieable/IDamageable) --
 		/// @brief 생존 여부 - Life 위임. Life 미캐시 시 false.
 		/// @return 살아 있으면 true.
 		bool IsAlive()  const override;
@@ -83,14 +83,14 @@ namespace TopdownShooter::Entity
 		void DoDamaged(int damage) override;   // i-frame 은 Life 내부
 		/// @brief 사망 처리 - Life 위임.
 		void DoDie()               override;
-		// ── Impulse 위임 (IImpulsable) — 넉백/대시 ──
+		// -- Impulse 위임 (IImpulsable) - 넉백/대시 --
 		/// @brief 일회성 속도 버스트(넉백/대시) - Impulse 위임.
 		/// @param dir 임펄스 방향 (world XZ).
 		void DoImpulse(vmath::vec2 dir) override;
 		/// @brief 임펄스 버스트 활성 창 여부 - 이동 suppress 게이트로 사용.
 		/// @return 버스트가 활성 중이면 true (Impulse 미캐시 시 false).
 		bool IsImpulseActive() const;          // 버스트 활성 창 = 이동 suppress 게이트
-		// ── accessor ──
+		// -- accessor --
 		/// @brief 캐시한 물리 바디 Component 노출.
 		/// @return Physics 포인터 (미캐시 시 nullptr).
 		Physics::Components::Physics* GetPhysics()  const { return mPhysics; }

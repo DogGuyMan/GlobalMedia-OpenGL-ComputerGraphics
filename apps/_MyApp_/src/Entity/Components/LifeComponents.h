@@ -122,7 +122,7 @@ namespace TopdownShooter::Entity::Components
 		{
 			auto* owner = GetOwner();
 			if (owner == nullptr) return;
-			// 핫패스 sink 1회 해소 (ctor 금지 — GetOwner null + dynamic type=base). 없으면 silent no-op.
+			// 핫패스 sink 1회 해소 (ctor 금지 - GetOwner null + dynamic type=base). 없으면 silent no-op.
 			mSink = owner->GetComponent<IActorPresentation>();
 			// i-frame/die timer 를 BaseEntity 중앙 컨테이너에 등록 (>0 일 때만) + arm-inactive.
 			auto* be = owner->GetComponent<BaseEntity>();
@@ -156,13 +156,13 @@ namespace TopdownShooter::Entity::Components
 		/// @param dt 직전 프레임 경과 시간(초, 내부 미사용 - 타이머 tick 은 BaseEntity 담당).
 		void Update(float /*dt*/) override
 		{
-			// i-frame/die tick 은 BaseEntity::Update 가 일괄 구동 — 여기선 만료 read 만.
+			// i-frame/die tick 은 BaseEntity::Update 가 일괄 구동 - 여기선 만료 read 만.
 			if (mDeathFxFired && mDieTimer)   // 사망 연출 진행 중 (지연 등록 + 죽음 발화됨)
 			{
 				if (mDieTimer->IsTimesUp() && GetOwner()) GetOwner()->SetActive(false);
 				return;
 			}
-			// 안전망 — DoDamaged 외 경로(직접 mCurHp 조작 등)로 죽었어도 death 1회 발화.
+			// 안전망 - DoDamaged 외 경로(직접 mCurHp 조작 등)로 죽었어도 death 1회 발화.
 			if (!mDeathFxFired && !IsAlive()) DoDie();
 		}
 
@@ -183,7 +183,7 @@ namespace TopdownShooter::Entity::Components
 			if (IsInvincible()) return;              // i-frame early-return (총알+접촉 모두 보호)
 			mCurHp -= damage;
 			if (mSink) mSink->ReactDamaged(damage);  // Template-Method forward
-			if (mOnHitFx)                            // 피격 위치에 hit FX (mOnDeathFx 대칭 seam — 빌더가 VFX::Spawn 주입)
+			if (mOnHitFx)                            // 피격 위치에 hit FX (mOnDeathFx 대칭 seam - 빌더가 VFX::Spawn 주입)
 				mOnHitFx(GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f));
 			if (mOnDamageNumber)                     // 피격 위치에 데미지 숫자 (빌더가 WorldText::SpawnDamage 주입)
 				mOnDamageNumber(damage, GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f));
@@ -203,11 +203,11 @@ namespace TopdownShooter::Entity::Components
 			if (mDeathFxFired) return;               // one-shot
 			mDeathFxFired = true;
 			const vmath::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f);
-			if (mSink) mSink->ReactDied(pos);        // 디졸브 시작 (sink 가 구동 — 분해 Task 6)
+			if (mSink) mSink->ReactDied(pos);        // 디졸브 시작 (sink 가 구동 - 분해 Task 6)
 			if (mOnDeathFx) mOnDeathFx(pos);         // spawn-at-point seam
-			if (mOnDeath) mOnDeath(GetOwner());      // 사망 통지(observer) — count↓ + 제거 큐 등록은 owner(WaveController)
+			if (mOnDeath) mOnDeath(GetOwner());      // 사망 통지(observer) - countv + 제거 큐 등록은 owner(WaveController)
 			if (mDieTimer)
-				mDieTimer->Reset();                  // 지연 발동 — Update 가 만료 시 비활성 (mDeathFxFired 가 게이트)
+				mDieTimer->Reset();                  // 지연 발동 - Update 가 만료 시 비활성 (mDeathFxFired 가 게이트)
 			else if (GetOwner())
 				GetOwner()->SetActive(false);        // 즉시 (기본/현행)
 		}

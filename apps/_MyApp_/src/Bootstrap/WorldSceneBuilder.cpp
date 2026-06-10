@@ -1,13 +1,13 @@
 /**
  * @file WorldSceneBuilder.cpp
- * @brief @c BuildWorldScene 및 내부 분할 자유함수 구현 — 월드 씬 조립 세 단계 처리.
+ * @brief @c BuildWorldScene 및 내부 분할 자유함수 구현 - 월드 씬 조립 세 단계 처리.
  *
  * @details
  *  ### 책임
  *  - @c BuildWorldCamera : 45도 FOV Perspective Camera + @c ActorFolower(pan/zoom) 조립.
  *    카메라 culling mask = Default | Player | Enemy | DebugDraw.
  *  - @c BuildLighting : 주 방향광(@c DirLight) 생성 + Ambient(0.3)/Diffuse(0.9,0.85)/Specular(0.5) 설정.
- *  - @c BuildSkybox : Matrix 스타일 스크롤 skybox — chars 텍스처(GL_REPEAT) + noise 텍스처(GL_REPEAT)
+ *  - @c BuildSkybox : Matrix 스타일 스크롤 skybox - chars 텍스처(GL_REPEAT) + noise 텍스처(GL_REPEAT)
  *    + @c Pass::Kind::Skybox 머티리얼 + Box 메시 + SkyboxActor 등록. 반환된 머티리얼 포인터로
  *    render() 가 매 프레임 @c u_time 을 갱신해 스크롤 애니메이션을 구동.
  *
@@ -41,7 +41,7 @@ namespace TopdownShooter::Bootstrap
 {
 	namespace
 	{
-		// ── World Camera (Perspective) — 3D 월드 ────────────────────────────
+		// -- World Camera (Perspective) - 3D 월드 ----------------------------
 		/// @brief Perspective WorldCamera Actor 를 생성하고 @c Director::Root() 에 추가한다.
 		/// @details FOV 45도, near 0.1, far 1000, 초기 위치 (0, 3, 6), pitch -30도.
 		///          culling mask = Default | Player | Enemy | DebugDraw.
@@ -79,7 +79,7 @@ namespace TopdownShooter::Bootstrap
 			return camera;
 		}
 
-		// ── DirLight ─────────────────────────────────────────────────────────
+		// -- DirLight ---------------------------------------------------------
 		/// @brief 주 방향광(@c DirLight) Actor 를 생성하고 @c Director::Root() 에 추가한다.
 		/// @details 방향 (-0.4, -1.0, -0.5), Ambient 0.3, Diffuse 0.9/0.85, Specular 0.5.
 		///          @c SceneRenderer 가 OnEnter 훅으로 @c SceneContext 에 자동 등록한다
@@ -97,7 +97,7 @@ namespace TopdownShooter::Bootstrap
 			dir.Root().AddChild(std::move(lightActor));
 		}
 
-		// ── Matrix Skybox (프로그램 + 텍스처 + 머티리얼 + Actor) ────────────
+		// -- Matrix Skybox (프로그램 + 텍스처 + 머티리얼 + Actor) ------------
 		/// @brief Matrix 스타일 스크롤 Skybox 를 조립하고 @c Director::Root() 에 추가한다.
 		/// @details 조립 내용:
 		///  - 프로그램 : matrix_skybox.vs / .fs.
@@ -118,7 +118,7 @@ namespace TopdownShooter::Bootstrap
 			    "resources/shaders/matrix_skybox.fs");
 
 			auto *charsTex = reg.CreateTexture("chars", SJH::Image::Load("chars", "resources/texture/characters.png").get());
-			// 매트릭스 글자 스크롤 필수 — 셰이더의 char_uv.x 가 +noise+time 으로 1 을 넘어 순환한다.
+			// 매트릭스 글자 스크롤 필수 - 셰이더의 char_uv.x 가 +noise+time 으로 1 을 넘어 순환한다.
 			// CreateTexture 기본 wrap 은 GL_CLAMP_TO_EDGE(texture.cpp) 라 끝 열에 고착돼 세로 줄로
 			// 보이므로, 글자 열이 순환하도록 REPEAT 로 덮어쓴다 (uniform_atlas Bind->SetWrap 선례).
 			charsTex->Bind();
@@ -134,10 +134,10 @@ namespace TopdownShooter::Bootstrap
 
 			auto *skyboxMat = reg.CreateSharedMaterial("mat_matrix_skybox");
 			skyboxMat->SetProgram(skyboxProg);
-			// Skybox Pass — DepthFunc LEQUAL(.xyww 트릭) + CullMode FRONT(박스 안쪽 면) +
+			// Skybox Pass - DepthFunc LEQUAL(.xyww 트릭) + CullMode FRONT(박스 안쪽 면) +
 			// DepthWrite off + queue 2500(Opaque 다음). pass.h 의 Kind::Skybox 가 전부 자동 도출.
 			skyboxMat->SetPass(SJH::Pass::Kind::Skybox);
-			// 텍스처 유닛 분리 필수 — TextureBinding.Unit 이 둘 다 기본값 0 이면
+			// 텍스처 유닛 분리 필수 - TextureBinding.Unit 이 둘 다 기본값 0 이면
 			// 두 sampler 가 같은 유닛을 가리켜 한 텍스처만 읽힌다 (PropertyBlockSetter 가
 			// binding.Unit 그대로 BindTexture + sampler int 송신).
 			skyboxMat->Properties.Textures["chars"] = {charsTex, 0};

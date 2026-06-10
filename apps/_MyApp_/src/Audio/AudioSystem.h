@@ -4,7 +4,7 @@
  *
  * @details
  *  ### 책임
- *  - FMOD Studio System 생성/초기화 + @c getCoreSystem 으로 Core System 핸들 동시 보유 (FMODAPI.md §12).
+ *  - FMOD Studio System 생성/초기화 + @c getCoreSystem 으로 Core System 핸들 동시 보유 (FMODAPI.md sec.12).
  *  - @c .bank 파일 로드 (@c LoadBank) + EventDescription 경로 lookup 캐시 (@c LoadEvent).
  *  - 매 프레임 @c Update 에서 Studio @c update() 구동 (Core update 는 Studio 가 내부 구동 - 별도 호출 안 함).
  *  - 카메라 Transform 으로 3D listener 갱신 (@c SetListener) + global parameter / bus 볼륨 제어.
@@ -30,7 +30,7 @@
 #include <vector>
 #include <vmath.h>
 
-// fwd — FMOD 헤더는 .cpp 안에서만
+// fwd - FMOD 헤더는 .cpp 안에서만
 namespace FMOD
 {
 	class System;
@@ -49,7 +49,7 @@ namespace TopdownShooter::Audio
 	 * @details
 	 *  Director 멤버로 거주. main 의 startup 에서 @c Init, render 마다 @c Update(dt),
 	 *  shutdown 에서 @c Shutdown 호출. @c Studio::System::getCoreSystem 으로 Core System ptr 도
-	 *  함께 얻어 @c FmodPlayable 의 Core 직접 재생(@c playSound)에 사용 (FMODAPI.md §12).
+	 *  함께 얻어 @c FmodPlayable 의 Core 직접 재생(@c playSound)에 사용 (FMODAPI.md sec.12).
 	 *
 	 *  복사 금지 (단일 owner) - 이동도 미정의. FMOD 자원 lifetime 을 @c Init / @c Shutdown 쌍이 관리.
 	 */
@@ -66,7 +66,7 @@ namespace TopdownShooter::Audio
 		///          한 단계라도 실패하면 즉시 return (오디오 비활성, 게임은 계속 진행).
 		///          FMOD 미빌드 시 warn 로그만 남기는 no-op.
 		void Init();
-		/// @brief 매 프레임 Studio @c update() 1회 - 누락 시 사운드가 끊기거나 안 들림 (FMODAPI.md §3).
+		/// @brief 매 프레임 Studio @c update() 1회 - 누락 시 사운드가 끊기거나 안 들림 (FMODAPI.md sec.3).
 		/// @param dt 미사용 - FMOD 가 자체 dt 를 추적하므로 인자는 전달만 받고 무시.
 		void Update(float dt);
 		/// @brief 모든 bank 언로드 + 캐시 clear + Studio @c release() (Core 까지 함께 정리).
@@ -79,7 +79,7 @@ namespace TopdownShooter::Audio
 		/// @brief Studio System 핸들 반환. 미초기화 시 nullptr.
 		::FMOD::Studio::System *GetStudioSystem() { return mStudioSystem; }
 
-		/// @brief listener 위치/방향 갱신 — render 마다 카메라 Transform 으로 호출 (velocity=0 -> doppler 없음).
+		/// @brief listener 위치/방향 갱신 - render 마다 카메라 Transform 으로 호출 (velocity=0 -> doppler 없음).
 		/// @details Studio (@c setListenerAttributes) + Core (@c set3DListenerAttributes) listener 를 둘 다 갱신.
 		/// @param pos     listener(카메라) 월드 좌표.
 		/// @param forward listener 바라보는 방향 (단위 벡터 권장).
@@ -95,13 +95,13 @@ namespace TopdownShooter::Audio
 
 		/// @brief @p eventPath (예: "event:/BGM") 의 EventDescription 을 *조회/캐시* 후 반환.
 		///        Studio bank 가 사전에 LoadBank 로 로드된 상태여야 한다. 못 찾으면 nullptr.
-		/// @details 캐시 hit 시 즉시 반환. EventDescription 은 bank 소유라 release 하지 않는다 (FMODAPI.md §5).
+		/// @details 캐시 hit 시 즉시 반환. EventDescription 은 bank 소유라 release 하지 않는다 (FMODAPI.md sec.5).
 		///          @c .strings.bank 누락/경로 오타 시 조용히 nullptr - 호출부가 별도 가드 없이 안전.
 		/// @param eventPath "event:/<name>" 형식 경로 (대소문자/공백 정확히 일치해야 함).
 		/// @return 캐시된 EventDescription 포인터, 미존재 시 nullptr.
 		::FMOD::Studio::EventDescription *LoadEvent(const std::string &eventPath);
 
-		/// @brief Studio global parameter 설정 (System 스코프 — 예: "Health"). 미초기화 시 no-op.
+		/// @brief Studio global parameter 설정 (System 스코프 - 예: "Health"). 미초기화 시 no-op.
 		/// @param name  global parameter 이름.
 		/// @param value 설정할 값.
 		void SetGlobalParameter(const std::string &name, float value);

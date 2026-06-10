@@ -21,7 +21,7 @@
 
 namespace TopdownShooter::HUD
 {
-	// 머리 위 분절형 체력바 외형/배치. (Bootstrap EntityPresentation 의 healthBarColor 기본도 FILL 참조 — C3.)
+	// 머리 위 분절형 체력바 외형/배치. (Bootstrap EntityPresentation 의 healthBarColor 기본도 FILL 참조 - C3.)
 	const     vmath::vec4 HEALTHBAR_FILL_COLOR      = vmath::vec4(0.13f, 1.0f, 0.0f, 1.0f); ///< 채워진 조각 색 (레퍼런스 녹색, RGBA).
 	const     vmath::vec4 HEALTHBAR_BG_COLOR        = vmath::vec4(0.0f, 0.0f, 0.0f, 0.55f); ///< 빈 트랙 색 (반투명 검정, RGBA).
 	constexpr float       HEALTHBAR_SEGMENT_COUNT   = 5.0f;                                 ///< 바를 나누는 분절 조각 수.

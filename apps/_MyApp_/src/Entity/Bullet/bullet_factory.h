@@ -28,7 +28,7 @@
 #include "Physics/PhysicsLayer.h"
 #include "Entity/Constants.h"
 #include "scene/actor.h"
-// 임시 비행 가시화 — 구 Mesh + Magenta Material + MeshRenderer (HealthBarFactory 패턴).
+// 임시 비행 가시화 - 구 Mesh + Magenta Material + MeshRenderer (HealthBarFactory 패턴).
 #include "object/geometry.h"
 #include "object/mesh.h"
 #include "material/material.h"
@@ -75,11 +75,11 @@ namespace TopdownShooter::Entity::Bullet
 
         Physics::Components::BodyConfig bc;
         bc.world          = cfg.world;
-        bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 -> 안 떨어짐) — static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
+        bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 -> 안 떨어짐) - static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
         bc.startPosition  = cfg.pos;
         bc.linearVelocity = vmath::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
         bc.density        = 1.0f;
-        bc.isSensor       = true;        // 트리거 — 벽/적 OnTriggerEnter 로 despawn (물리 밀어내기/바운스 없음)
+        bc.isSensor       = true;        // 트리거 - 벽/적 OnTriggerEnter 로 despawn (물리 밀어내기/바운스 없음)
         bc.categoryBits   = Physics::ToBits(Physics::PhysicsLayer::BulletPlayer);
         bc.maskBits       = Physics::ToBits(Physics::PhysicsLayer::Enemy |
                                             Physics::PhysicsLayer::Wall);
@@ -87,16 +87,16 @@ namespace TopdownShooter::Entity::Bullet
 
         // 데미지 배달 = Carrier::Projectile (IDamageable/IImpulsable 인터페이스 배달 + self-despawn).
         auto* proj = actor->AddComponent<Spawn::Carrier::Projectile>(cfg.damage);
-        proj->SetOwnerEntity(nullptr);   // 발사자 자가피해 방지 site (현재 물리 필터로 충분 — 후속 owner 주입 가능)
-        proj->SetLaunchDir(cfg.dir);     // 넉백 방향 = 비행방향(box2d XY) — 위치차분 불안정 대체
+        proj->SetOwnerEntity(nullptr);   // 발사자 자가피해 방지 site (현재 물리 필터로 충분 - 후속 owner 주입 가능)
+        proj->SetLaunchDir(cfg.dir);     // 넉백 방향 = 비행방향(box2d XY) - 위치차분 불안정 대체
         actor->AddComponent<BulletLifetime>(cfg.lifetime);
 
-        // ── 임시: 비행 가시화용 Magenta 단색 구 (정식 비주얼은 추후 sprite/FX 로 대체) ──
-        // 모든 총알이 동일한 형상 — 공유 키로 1회만 생성/등록 (per-actor 키 = registry 무한 증식 방지).
+        // -- 임시: 비행 가시화용 Magenta 단색 구 (정식 비주얼은 추후 sprite/FX 로 대체) --
+        // 모든 총알이 동일한 형상 - 공유 키로 1회만 생성/등록 (per-actor 키 = registry 무한 증식 방지).
         {
             auto& reg = SJH::ResourceRegistry::Get();
 
-            // 공유 Program (simple.vs/.fs — uModel/uView/uProj + baseColor 단색, 광원 무관)
+            // 공유 Program (simple.vs/.fs - uModel/uView/uProj + baseColor 단색, 광원 무관)
             constexpr char kBulletProgKey[] = "bullet_debug";
             SJH::Program* prog = reg.FindProgram(kBulletProgKey);
             if (prog == nullptr)
@@ -104,12 +104,12 @@ namespace TopdownShooter::Entity::Bullet
                                          "./resources/shaders/simple.vs",
                                          "./resources/shaders/simple.fs");
 
-            // 공유 Mesh (반지름 0.15 구 — 물리 CircleBody 와 동일 크기)
+            // 공유 Mesh (반지름 0.15 구 - 물리 CircleBody 와 동일 크기)
             constexpr char kBulletMeshKey[] = "bullet_debug_sphere";
             SJH::Mesh* mesh = reg.FindMesh(kBulletMeshKey);
             if (mesh == nullptr)
             {
-                constexpr double kTwoPi = 6.283185307179586; // 2π — 경도 한 바퀴 (M_PI 의존 회피)
+                constexpr double kTwoPi = 6.283185307179586; // 2pi - 경도 한 바퀴 (M_PI 의존 회피)
                 SJH::MeshData data = SJH::Geometry::Sphere(0.0, kTwoPi, 16, 0.0, 1.0, 8, BULLET_RADIUS);
                 mesh = reg.RegisterMesh(kBulletMeshKey,
                                         SJH::Mesh::Create(data.vertices, data.indices, GL_TRIANGLES));

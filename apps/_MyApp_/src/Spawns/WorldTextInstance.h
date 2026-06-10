@@ -1,6 +1,6 @@
 /**
  * @file WorldTextInstance.h
- * @brief 월드 공간에 떠오르며 사라지는 텍스트 Actor 를 조립·스폰하는 팩토리 + 전역 파사드.
+ * @brief 월드 공간에 떠오르며 사라지는 텍스트 Actor 를 조립/스폰하는 팩토리 + 전역 파사드.
  *
  * @details
  *  ### 책임

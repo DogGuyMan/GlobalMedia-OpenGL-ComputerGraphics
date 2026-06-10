@@ -21,7 +21,7 @@ namespace TopdownShooter::Playable
 
 	void PostFXRegistry::Register(const std::string &passName, SJH::Material *mat)
 	{
-		mMats[passName] = mat; // 비소유 — 덮어쓰기 허용 (resize 시 재등록 등).
+		mMats[passName] = mat; // 비소유 - 덮어쓰기 허용 (resize 시 재등록 등).
 	}
 
 	SJH::Material *PostFXRegistry::Material(const std::string &passName) const

@@ -51,7 +51,7 @@ namespace TopdownShooter::Audio
 		if (!ck(mStudioSystem->getCoreSystem(&mSystem), "Studio::System::getCoreSystem")) return;
 		spdlog::info("[AudioSystem] init OK (Studio + Core)");
 #else
-		spdlog::warn("[AudioSystem] FMOD 미빌드 — 오디오 비활성 (no-op)");
+		spdlog::warn("[AudioSystem] FMOD 미빌드 - 오디오 비활성 (no-op)");
 #endif
 	}
 
@@ -67,12 +67,12 @@ namespace TopdownShooter::Audio
 #ifdef SJH_HAS_FMOD
 		if (mStudioSystem)
 		{
-			for (auto *bank : mBanks) if (bank) bank->unload();   // bank 일괄 언로드 (FMODAPI.md §4)
+			for (auto *bank : mBanks) if (bank) bank->unload();   // bank 일괄 언로드 (FMODAPI.md sec.4)
 			mBanks.clear();
 			mEventCache.clear();                                  // EventDescription 은 bank 소유 - 포인터만 비움
 			mStudioSystem->release();                             // Studio release 가 Core + 잔여 인스턴스까지 정리
 			mStudioSystem = nullptr;
-			mSystem       = nullptr;   // Studio 가 Core 소유 — getCoreSystem 으로 받은 ptr 은 별도 release 불요
+			mSystem       = nullptr;   // Studio 가 Core 소유 - getCoreSystem 으로 받은 ptr 은 별도 release 불요
 		}
 		spdlog::info("[AudioSystem] shutdown OK");
 #endif
@@ -100,7 +100,7 @@ namespace TopdownShooter::Audio
 		if (!mStudioSystem) { spdlog::error("[AudioSystem::LoadEvent] Studio 미초기화"); return nullptr; }
 
 		::FMOD::Studio::EventDescription *desc = nullptr;
-		// getEvent 는 오타/.strings.bank 미로드 시 ERR_EVENT_NOTFOUND 를 *조용히* 반환 (FMODAPI.md §11).
+		// getEvent 는 오타/.strings.bank 미로드 시 ERR_EVENT_NOTFOUND 를 *조용히* 반환 (FMODAPI.md sec.11).
 		FMOD_RESULT r = mStudioSystem->getEvent(eventPath.c_str(), &desc);
 		if (r != FMOD_OK || !desc)
 		{
@@ -142,7 +142,7 @@ namespace TopdownShooter::Audio
 #ifdef SJH_HAS_FMOD
 		if (!mStudioSystem) return 1.0f;
 		::FMOD::Studio::Bus *bus = nullptr;
-		float vol = 1.0f, finalVol = 1.0f; // finalVol = 페이드/automation 반영 — 슬라이더엔 raw vol 사용
+		float vol = 1.0f, finalVol = 1.0f; // finalVol = 페이드/automation 반영 - 슬라이더엔 raw vol 사용
 		if (mStudioSystem->getBus(busPath.c_str(), &bus) == FMOD_OK && bus)
 			bus->getVolume(&vol, &finalVol);
 		return vol;
@@ -163,7 +163,7 @@ namespace TopdownShooter::Audio
 		attr.up       = {up[0], up[1], up[2]};
 		if (mStudioSystem) mStudioSystem->setListenerAttributes(0, &attr);   // listener index 0
 
-		// Core listener - 같은 값을 FMOD_VECTOR 4개로 분리 전달 (Core playSound 사운드용, FMODAPI.md §14).
+		// Core listener - 같은 값을 FMOD_VECTOR 4개로 분리 전달 (Core playSound 사운드용, FMODAPI.md sec.14).
 		if (mSystem)
 		{
 			FMOD_VECTOR p = {pos[0], pos[1], pos[2]};

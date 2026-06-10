@@ -42,7 +42,7 @@
 // 마우스->Ground raycast + 발사/회전/디버그 마커에 필요한 의존 (Client 코드라 직접 사용 OK).
 #include "Entity/BaseEntity.h"
 #include "Entity/Components/WeaponComponents.h"
-#include "Entity/Player/PlayerHand.h" // 발사 핀치 — 좌클릭 바인딩에서 PlayerHands::TriggerFire 통지
+#include "Entity/Player/PlayerHand.h" // 발사 핀치 - 좌클릭 바인딩에서 PlayerHands::TriggerFire 통지
 #include "Playable/Constants.h"       // FacingThresholdConfig / PLAYER_FACING_THRESHOLD (헤더-only 데이터)
 #include "material/material.h"
 #include "material/material_uniforms.h"
@@ -84,7 +84,7 @@ namespace TopdownShooter::Controller
 	/// @param fallback 어떤 구간에도 해당하지 않을 때 반환할 기본 방향.
 	/// @return 판정된 @c EFacing 열거값.
 	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
-	// !dir=(x,z) -> θ=normalize360(deg(atan2(-z,x))) -> 4범위 중 포함 필드. no-match=fallback.
+	// !dir=(x,z) -> theta=normalize360(deg(atan2(-z,x))) -> 4범위 중 포함 필드. no-match=fallback.
 	TopdownShooter::Entity::EFacing QuantizeByThreshold(
 	    vmath::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
 	    TopdownShooter::Entity::EFacing fallback)
@@ -121,9 +121,9 @@ namespace TopdownShooter::Controller
 		mKeyboardInput->BindKey(Action::Ultimate, GLFW_KEY_R);
 
 		// W = 앞 = -Z (OpenGL forward 컨벤션).
-		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
-		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
-		// (held 핸들러는 매 프레임 호출 -> 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec §2.)
+		// `+=` 누적 - 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
+		// 대각 sqrt2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
+		// (held 핸들러는 매 프레임 호출 -> 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec sec.2.)
 		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { 
 			mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); 
 		});
@@ -147,24 +147,24 @@ namespace TopdownShooter::Controller
 			}
 			spdlog::error("NO FIND IMPULSE");
 		});
-		// R(Ultimate) — 플레이어 중심 회전 히트스캔 레이저 궁극기 (3초 유지 + 1초당 1회전 + 자동 파괴).
+		// R(Ultimate) - 플레이어 중심 회전 히트스캔 레이저 궁극기 (3초 유지 + 1초당 1회전 + 자동 파괴).
 		// 시작각 = 마우스 조준. 매 프레임 RaycastAll 로 경로상 적에 적별 0.2s 틱 데미지. press(이산 1회).
 		mKeyboardInput->BindPressHandler(Action::Ultimate, [this] {
 			UpdateAim(); // 최신 조준 (입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값 재산출)
 			if (auto *owner = GetOwner())
 			{
-				// box2d forward = (aimDir.x, -aimDir.z) → 시작 회전각 = atan2(fwd.y, fwd.x).
+				// box2d forward = (aimDir.x, -aimDir.z) -> 시작 회전각 = atan2(fwd.y, fwd.x).
 				const float startAngle = std::atan2(-mAimDirection[2], mAimDirection[0]);
-				spdlog::info("[input] R (Ultimate) — 회전 레이저 발동 angle={:.1f}deg", startAngle * 57.29578f);
+				spdlog::info("[input] R (Ultimate) - 회전 레이저 발동 angle={:.1f}deg", startAngle * 57.29578f);
 				Spawns::SpawnUltimateLaser(mWorld, owner->GetTransform().Translate, startAngle, owner);
 			}
 		});
 
-		// 좌클릭 (이산 press) — 발사. MouseInput 미주입이면 바인딩 생략.
+		// 좌클릭 (이산 press) - 발사. MouseInput 미주입이면 바인딩 생략.
 		if (mMouseInput)
 			mMouseInput->BindButtonPressHandler(GLFW_MOUSE_BUTTON_LEFT, [this] {
 				OnFirePressed();
-				// 발사 핀치 통지 — 좁힘/복귀 로직은 PlayerHands 가 소유. 입력 바인딩은 호출만(멤버 캐시 없음).
+				// 발사 핀치 통지 - 좁힘/복귀 로직은 PlayerHands 가 소유. 입력 바인딩은 호출만(멤버 캐시 없음).
 				if (auto *owner = GetOwner())
 					if (auto *hands = owner->GetComponent<Entity::PlayerHands>())
 						hands->TriggerFire();
@@ -176,7 +176,7 @@ namespace TopdownShooter::Controller
 	///   WASD 키 + 좌클릭 버튼의 바인딩을 @c KeyboardInput / @c MouseInput 에서 제거.
 	void PlayerController::UnregisterBindings()
 	{
-		// SetUp 이 성공한 경우만 호출됨 (OnExit 의 mIsInitialized 가드) — 입력 의존은 non-null 보장.
+		// SetUp 이 성공한 경우만 호출됨 (OnExit 의 mIsInitialized 가드) - 입력 의존은 non-null 보장.
 		assert(this->mKeyboardInput != nullptr);
 
 		mKeyboardInput->UnbindKey(GLFW_KEY_W);
@@ -197,7 +197,7 @@ namespace TopdownShooter::Controller
 	{
 		if (!mKeyboardInput)
 		{
-			spdlog::error("PlayerController::SetUp — KeyboardInput 미주입");
+			spdlog::error("PlayerController::SetUp - KeyboardInput 미주입");
 			return false;
 		}
 		RegisterBindings();
@@ -210,7 +210,7 @@ namespace TopdownShooter::Controller
 	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetKeyboardInput(SJH::KeyboardInput<Action> *k)
 	{
-		// 멱등 — 두 번째 호출은 무시. nullptr 검증은 SetUp() 한 곳에서.
+		// 멱등 - 두 번째 호출은 무시. nullptr 검증은 SetUp() 한 곳에서.
 		if (mKeyboardInput == nullptr)
 			mKeyboardInput = k;
 		return *this;
@@ -221,7 +221,7 @@ namespace TopdownShooter::Controller
 	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetMovableTarget(Entity::IMovable *target)
 	{
-		// 멱등 — 첫 비-null 주입 후 무시.
+		// 멱등 - 첫 비-null 주입 후 무시.
 		if (mMovementPtr == nullptr)
 			mMovementPtr = target;
 		return *this;
@@ -232,7 +232,7 @@ namespace TopdownShooter::Controller
 	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetMouseInput(SJH::MouseInput *m)
 	{
-		// 멱등 — 첫 비-null 주입 후 무시. RegisterBindings 가 좌클릭 바인딩 시점에 참조.
+		// 멱등 - 첫 비-null 주입 후 무시. RegisterBindings 가 좌클릭 바인딩 시점에 참조.
 		if (mMouseInput == nullptr)
 			mMouseInput = m;
 		return *this;
@@ -243,7 +243,7 @@ namespace TopdownShooter::Controller
 	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetWorldCamera(SJH::Scene::Camera *cam)
 	{
-		// 멱등 — 첫 비-null 주입 후 무시. 미주입이면 좌클릭 raycast 생략.
+		// 멱등 - 첫 비-null 주입 후 무시. 미주입이면 좌클릭 raycast 생략.
 		if (mCamera == nullptr)
 			mCamera = cam;
 		return *this;
@@ -256,7 +256,7 @@ namespace TopdownShooter::Controller
 	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetFacingPivot(SJH::Scene::Actor *pivot)
 	{
-		// 멱등 — 첫 비-null 주입 후 무시.
+		// 멱등 - 첫 비-null 주입 후 무시.
 		if (mFacingPivot == nullptr)
 			mFacingPivot = pivot;
 		return *this;
@@ -267,7 +267,7 @@ namespace TopdownShooter::Controller
 	/// @return @c *this (fluent 체이닝).
 	PlayerController &PlayerController::SetWorld(b2World *world)
 	{
-		// 멱등 — 첫 비-null 주입 후 무시. 미주입이면 R 궁극기 no-op (SpawnUltimateLaser 내부 guard).
+		// 멱등 - 첫 비-null 주입 후 무시. 미주입이면 R 궁극기 no-op (SpawnUltimateLaser 내부 guard).
 		if (mWorld == nullptr)
 			mWorld = world;
 		return *this;
@@ -345,22 +345,22 @@ namespace TopdownShooter::Controller
 		if (mEntity == nullptr && GetOwner() != nullptr)
 			mEntity = GetOwner()->GetComponent<TopdownShooter::Entity::BaseEntity>();
 
-		// 대시(Impulse) 중에는 입력 자유이동을 Block — DoForward 호출 자체를 skip.
+		// 대시(Impulse) 중에는 입력 자유이동을 Block - DoForward 호출 자체를 skip.
 		// (입력 0 이어도 DoForward(0) 이 속도를 0 으로 만들어 버스트를 죽이므로 호출 자체를 막아야 함.)
 		// 현재 dash 입력 미배선이라 IsImpulseActive()=false -> 게이트 dormant(행동 변화 0).
 		const bool impulseActive = (mEntity != nullptr && mEntity->IsImpulseActive());
 		if (!impulseActive)
 			mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
 
-		// === 연속 조준 (spec D1) — 매 프레임 마우스->Ground raycast 로 조준 멤버 갱신. ===
+		// === 연속 조준 (spec D1) - 매 프레임 마우스->Ground raycast 로 조준 멤버 갱신. ===
 		UpdateAim();
 
-		// === 플레이어 회전 (spec D2/§3) — 논리 facing(EulerRot.Y). ===
+		// === 플레이어 회전 (spec D2/sec.3) - 논리 facing(EulerRot.Y). ===
 		// mAimAngleY/mAimDirection 은 직전 유효값을 유지하므로 mAimValid 와 무관하게 매 프레임 반영.
 		SJH::Scene::Actor *owner = GetOwner();
 		if (owner != nullptr)
 		{
-			// facing 회전은 pivot(주입 시)에만 적용 — root는 비회전(데칼 spin 분리).
+			// facing 회전은 pivot(주입 시)에만 적용 - root는 비회전(데칼 spin 분리).
 			// 미주입이면 owner(하위호환). aimPivot 하위 손이 WorldMatrix 로 회전 상속.
 			SJH::Scene::Actor *pivot = (mFacingPivot != nullptr) ? mFacingPivot : owner;
 			pivot->GetTransform().EulerRot[1] = mAimAngleY;
@@ -373,7 +373,7 @@ namespace TopdownShooter::Controller
 		{
 			namespace E = TopdownShooter::Entity;
 			const bool attacking = (mAttackTimer != nullptr && !mAttackTimer->IsTimesUp()); // tick은 BaseEntity가
-			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]);                        // ★ 리셋 전
+			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]);                        // * 리셋 전
 			const bool moving = (velXZ[0] * velXZ[0] + velXZ[1] * velXZ[1]) > 0.001f;
 			const vmath::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
 
@@ -409,7 +409,7 @@ namespace TopdownShooter::Controller
 	/// @return true -- 유효 교차 성공 / false -- 카메라 미주입 / 윈도우 없음 / ray 평행 / t<0.
 	bool PlayerController::UpdateAim()
 	{
-		// 카메라 미주입 / 윈도우 없음 — 직전 조준 유지 (silent).
+		// 카메라 미주입 / 윈도우 없음 - 직전 조준 유지 (silent).
 		if (mCamera == nullptr || mCamera->GetOwner() == nullptr)
 		{
 			mAimValid = false;
@@ -436,8 +436,8 @@ namespace TopdownShooter::Controller
 		const float ndcX = 2.0f * static_cast<float>(mx) / static_cast<float>(ww) - 1.0f;
 		const float ndcY = 1.0f - 2.0f * static_cast<float>(my) / static_cast<float>(wh);
 
-		// 카메라 world basis — owner WorldMatrix 의 컬럼. (vmath 는 일반 inverse 미제공 ->
-		// proj·view 역행렬 대신 fov/aspect 로 view-space ray 를 직접 구성해 world 로 회전.)
+		// 카메라 world basis - owner WorldMatrix 의 컬럼. (vmath 는 일반 inverse 미제공 ->
+		// proj/view 역행렬 대신 fov/aspect 로 view-space ray 를 직접 구성해 world 로 회전.)
 		const vmath::mat4 camW = mCamera->GetOwner()->GetWorldMatrix();
 		const vmath::vec3 right(camW[0][0], camW[0][1], camW[0][2]);
 		const vmath::vec3 up(camW[1][0], camW[1][1], camW[1][2]);
@@ -449,9 +449,9 @@ namespace TopdownShooter::Controller
 		const vmath::vec3 dir =
 		    normalize(right * (ndcX * aspect * tanHalf) + up * (ndcY * tanHalf) + forward);
 
-		// === 화면(NDC) 정규화 조준 강도 mAimScreenT — 플레이어를 NDC 에 투영해 커서 NDC 와의 거리. ===
+		// === 화면(NDC) 정규화 조준 강도 mAimScreenT - 플레이어를 NDC 에 투영해 커서 NDC 와의 거리. ===
 		// 손 spread 보간용. 화면 가장자리(NDC 1.0)에서 포화(1). ground 교차 성공 여부와 무관(여기서 미리 산출).
-		// mat*vec 미지원(vmath) → 커서 ray 와 동일 basis/규약으로 직접 투영:
+		// mat*vec 미지원(vmath) -> 커서 ray 와 동일 basis/규약으로 직접 투영:
 		//   depth = dot(rel, forward), ndc = dot(rel, right|up) / (depth * (aspect)tanHalf).
 		if (SJH::Scene::Actor *pl = GetOwner())
 		{
@@ -468,7 +468,7 @@ namespace TopdownShooter::Controller
 			}
 		}
 
-		// y=0 평면과 교차. dir.y ≈ 0 이면 평행, t<0 이면 카메라 뒤 -> 직전값 유지.
+		// y=0 평면과 교차. dir.y ~= 0 이면 평행, t<0 이면 카메라 뒤 -> 직전값 유지.
 		if (std::fabs(dir[1]) < 1e-5f)
 		{
 			mAimValid = false;
@@ -487,7 +487,7 @@ namespace TopdownShooter::Controller
 		const vmath::vec3 playerPos = (player != nullptr) ? player->GetTransform().Translate : vmath::vec3(0.0f);
 
 		vmath::vec3 aim = hit - playerPos;
-		aim[1] = 0.0f; // 탑다운 조준 — 높이 성분 제거 (XZ 평면)
+		aim[1] = 0.0f; // 탑다운 조준 - 높이 성분 제거 (XZ 평면)
 		const float dist = vmath::length(aim);
 
 		mAimPoint = hit;
@@ -496,10 +496,10 @@ namespace TopdownShooter::Controller
 		if (dist > 1e-4f)
 		{
 			mAimDirection = aim * (1.0f / dist);
-			// facing Y각 (degree) — spec §1: θ = degrees(atan2(-dir.x, -dir.z)). forward(-Z)=0, +X=-90.
+			// facing Y각 (degree) - spec sec.1: theta = degrees(atan2(-dir.x, -dir.z)). forward(-Z)=0, +X=-90.
 			mAimAngleY = vmath::degrees(std::atan2(-mAimDirection[0], -mAimDirection[2]));
 		}
-		// dist≈0 (커서가 player 위) — 방향/각도는 직전값 유지 (snap 방지). mAimPoint 만 갱신.
+		// dist~=0 (커서가 player 위) - 방향/각도는 직전값 유지 (snap 방지). mAimPoint 만 갱신.
 		return true;
 	}
 
@@ -513,7 +513,7 @@ namespace TopdownShooter::Controller
 	///   (5) @c mFireCallback 실행 (오디오/VFX Composite 등).
 	void PlayerController::OnFirePressed()
 	{
-		// 클릭 직전 조준 갱신 — 입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값으로 재산출.
+		// 클릭 직전 조준 갱신 - 입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값으로 재산출.
 		UpdateAim();
 
 		if (mAttackTimer)
@@ -523,7 +523,7 @@ namespace TopdownShooter::Controller
 		             mAimPoint[0], mAimPoint[1], mAimPoint[2],
 		             mAimDirection[0], mAimDirection[1], mAimDirection[2], mAimAngleY);
 
-		// 발사 — owner 의 Weapon 경유 (spec D3). box2d forward = (aimDir.x, -aimDir.z).
+		// 발사 - owner 의 Weapon 경유 (spec D3). box2d forward = (aimDir.x, -aimDir.z).
 		SJH::Scene::Actor *owner = GetOwner();
 		if (owner != nullptr)
 		{
@@ -532,7 +532,7 @@ namespace TopdownShooter::Controller
 				pe->UseWeapon(vmath::vec2(mAimDirection[0], -mAimDirection[2]));
 		}
 
-		// 오디오/VFX Composite (onFire) — 주입됐으면.
+		// 오디오/VFX Composite (onFire) - 주입됐으면.
 		if (mFireCallback)
 			mFireCallback();
 	}

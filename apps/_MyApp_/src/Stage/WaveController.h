@@ -12,9 +12,9 @@
  *  - Player 사망(@c mPlayerDead 플래그) 감지 시 @c StageStateMachine::TryTransit(GameOver) 위임.
  *
  *  ### 비-책임
- *  - [X] Enemy Actor 조립 세부 — @c Bootstrap::BuildEnemy 팩토리 위임.
- *  - [X] Box2D body 생성/파괴 — @c Physics::Components 위임 (@c OnExit 자동 처리).
- *  - [X] FSM 전이 소유 — @c StageStateMachine 비소유 포인터(@c mStageFsm) 경유 호출.
+ *  - [X] Enemy Actor 조립 세부 - @c Bootstrap::BuildEnemy 팩토리 위임.
+ *  - [X] Box2D body 생성/파괴 - @c Physics::Components 위임 (@c OnExit 자동 처리).
+ *  - [X] FSM 전이 소유 - @c StageStateMachine 비소유 포인터(@c mStageFsm) 경유 호출.
  *
  *  ### Box2D Step 잠금 계약 (중요)
  *  @c OnEnemyDeath 는 @c b2World::Step 잠금 중(contact 콜백 경유)에 호출될 수 있다.
@@ -33,7 +33,7 @@
 #define __TOPDOWNSHOOTER_STAGE_WAVE_CONTROLLER_H__
 
 #include "scene/actor.h"
-#include "timer/timer.h"   // SJH::Timer::Timer (spawn 간격 — Timer 객체화)
+#include "timer/timer.h"   // SJH::Timer::Timer (spawn 간격 - Timer 객체화)
 #include <vector>
 #include <vmath.h>
 
@@ -41,7 +41,7 @@ class b2World;
 
 namespace TopdownShooter::Stage
 {
-    class StageStateMachine; // 전방 선언 — Player 사망 시 GameOver 전이 구동 (역참조)
+    class StageStateMachine; // 전방 선언 - Player 사망 시 GameOver 전이 구동 (역참조)
 
     /**
      * @brief 웨이브 기반 Enemy spawn/despawn 관리 컴포넌트.
@@ -60,7 +60,7 @@ namespace TopdownShooter::Stage
     class WaveController : public SJH::Scene::Component
     {
       public:
-        /// @brief 생성자 — 필수 의존 주입.
+        /// @brief 생성자 - 필수 의존 주입.
         /// @param world           Box2D 월드 (Enemy 물리 생성 위탁).
         /// @param spawnParent     Enemy Actor 를 AddChild 할 부모 Actor.
         /// @param playerActor     Player Actor 비소유 포인터 (사망 observer 등록 대상).
@@ -69,19 +69,19 @@ namespace TopdownShooter::Stage
                        SJH::Scene::Actor* playerActor, float arenaHalfExtent);
         ~WaveController() override;
 
-        /// @brief Player @c Life 에 사망 observer 등록 — 사망 시 @c mPlayerDead = true 플래그 set.
+        /// @brief Player @c Life 에 사망 observer 등록 - 사망 시 @c mPlayerDead = true 플래그 set.
         void OnEnter() override;
         void OnExit()  override {}
 
-        /// @brief per-frame 갱신 — Player 사망 감지 / 웨이브 진행 / 스폰 타이머 tick.
+        /// @brief per-frame 갱신 - Player 사망 감지 / 웨이브 진행 / 스폰 타이머 tick.
         /// @param dt 프레임 delta time(초).
         void Update(float dt) override;
 
-        /// @brief deferred 파괴 sweep — 디졸브 끝(Life::IsDespawnReady) 적을 RemoveChild->OnExit->DestroyBody.
-        ///        Director.Update *밖*(main 렌더루프)에서 호출 — 트리 순회 중 RemoveChild 의 iterator 무효화 회피.
+        /// @brief deferred 파괴 sweep - 디졸브 끝(Life::IsDespawnReady) 적을 RemoveChild->OnExit->DestroyBody.
+        ///        Director.Update *밖*(main 렌더루프)에서 호출 - 트리 순회 중 RemoveChild 의 iterator 무효화 회피.
         void SweepDespawned();
 
-        /// @brief FSM 역참조 주입 (startup) — Player 사망 시 GameOver 전이 구동.
+        /// @brief FSM 역참조 주입 (startup) - Player 사망 시 GameOver 전이 구동.
         /// @param fsm @c StageStateMachine 비소유 포인터 (@c game_application 이 소유).
         void SetStageStateMachine(StageStateMachine* fsm) { mStageFsm = fsm; }
 
@@ -90,14 +90,14 @@ namespace TopdownShooter::Stage
         int  WaveLevel()       const { return mWave; }
 
         /// @brief 현재 생존 Enemy 수 조회.
-        /// @return @c mEnemies.size() — 사망 즉시 @c mDying 으로 이동하므로 폴링 없이 정확.
+        /// @return @c mEnemies.size() - 사망 즉시 @c mDying 으로 이동하므로 폴링 없이 정확.
         int  AliveEnemyCount() const { return LiveCount(); }
 
       private:
         /// @brief 웨이브 파라미터(HP/속도/데미지)를 적용해 Enemy 1마리 스폰 + observer 배선.
         void        SpawnEnemy();
 
-        /// @brief 사망 observer 콜백 — @c mEnemies 에서 제거 후 @c mDying 에 enqueue.
+        /// @brief 사망 observer 콜백 - @c mEnemies 에서 제거 후 @c mDying 에 enqueue.
         /// @details Box2D Step 잠금 중 호출될 수 있으므로 body 변경 금지 (enqueue 전용).
         /// @param e 사망한 Enemy @c Actor 포인터.
         void        OnEnemyDeath(SJH::Scene::Actor* e);
@@ -111,18 +111,18 @@ namespace TopdownShooter::Stage
 
         b2World*           mWorld;          ///< Box2D 월드 (비소유). Enemy 물리 바디 생성 위탁.
         SJH::Scene::Actor* mSpawnParent;    ///< Enemy @c Actor 를 AddChild 할 부모 (비소유).
-        SJH::Scene::Actor* mPlayerActor;    ///< Player @c Actor 비소유 포인터 — 사망 observer 등록 대상.
-        float              mArenaHalfExtent; ///< 아레나 반-크기(월드 단위) — @c RandomEdgePos 계산 기준.
+        SJH::Scene::Actor* mPlayerActor;    ///< Player @c Actor 비소유 포인터 - 사망 observer 등록 대상.
+        float              mArenaHalfExtent; ///< 아레나 반-크기(월드 단위) - @c RandomEdgePos 계산 기준.
 
         std::vector<SJH::Scene::Actor*> mEnemies;  ///< 생존(live) Enemy 목록. 사망 시 @c mDying 으로 이동.
-        std::vector<SJH::Scene::Actor*> mDying;    ///< 사망·디졸브 중 Enemy 목록. @c SweepDespawned 가 처리.
-        bool  mPlayerDead     = false;  ///< Player 사망 observer 플래그 — @c Update 가 GameOver 전이 트리거.
-        bool  mWaveSpawnedAny = false;  ///< 이번 웨이브 1+ 스폰 여부 — wave-clear 조기 오발화 방지 가드.
+        std::vector<SJH::Scene::Actor*> mDying;    ///< 사망/디졸브 중 Enemy 목록. @c SweepDespawned 가 처리.
+        bool  mPlayerDead     = false;  ///< Player 사망 observer 플래그 - @c Update 가 GameOver 전이 트리거.
+        bool  mWaveSpawnedAny = false;  ///< 이번 웨이브 1+ 스폰 여부 - wave-clear 조기 오발화 방지 가드.
         int   mWave           = 0;      ///< 현재 웨이브 레벨 (1~). @c Update 첫 호출 시 1로 초기화.
         SJH::Timer::Timer mSpawnTimer;  ///< 스폰 간격 타이머 (@c WAVE_SPAWN_INTERVAL 주기, ctor 초기화).
-        int   mSpawnCount     = 0;      ///< 누적 스폰 카운터 — Enemy variant(3종) 순환 인덱스.
+        int   mSpawnCount     = 0;      ///< 누적 스폰 카운터 - Enemy variant(3종) 순환 인덱스.
 
-        StageStateMachine* mStageFsm = nullptr; ///< @c StageStateMachine 비소유 포인터 — Player 사망 시 GameOver 위임.
+        StageStateMachine* mStageFsm = nullptr; ///< @c StageStateMachine 비소유 포인터 - Player 사망 시 GameOver 위임.
     };
 }
 

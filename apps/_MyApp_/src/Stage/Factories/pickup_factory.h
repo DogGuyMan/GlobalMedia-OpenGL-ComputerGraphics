@@ -9,8 +9,8 @@
  *  - PhysicsLayer::Pickup 카테고리 / PhysicsLayer::Player 마스크로 충돌 필터링을 설정한다.
  *
  *  ### 비-책임
- *  - [X] 픽업 동작(HP 회복, ammo 등) — 별도 Component 를 addComponent 로 추가해야 한다.
- *  - [X] 씬 등록 — 반환된 unique_ptr 를 호출자가 addChild 로 직접 등록한다.
+ *  - [X] 픽업 동작(HP 회복, ammo 등) - 별도 Component 를 addComponent 로 추가해야 한다.
+ *  - [X] 씬 등록 - 반환된 unique_ptr 를 호출자가 addChild 로 직접 등록한다.
  *
  * @note half 파라미터는 half-extents (박스 절반 크기). BoxBody 는 full size(half*2) 로 SetAsBox.
  */
@@ -29,7 +29,7 @@
 namespace TopdownShooter::Stage::Factories
 {
     /**
-     * @brief 정적 Sensor 박스 픽업 Actor 를 생성한다 — Unity @c isTrigger=true 영역과 동일.
+     * @brief 정적 Sensor 박스 픽업 Actor 를 생성한다 - Unity @c isTrigger=true 영역과 동일.
      * @details
      *  생성된 Actor 에는 다음 Component 가 자동 부착된다:
      *  - @c BoxBody : b2_staticBody + isSensor=true, PhysicsLayer::Pickup|Player 필터.
