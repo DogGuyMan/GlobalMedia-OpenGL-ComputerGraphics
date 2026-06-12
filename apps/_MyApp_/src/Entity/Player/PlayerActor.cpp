@@ -14,7 +14,7 @@
  *  - facade(PlayerEntity) 를 wiring 전에 부착해 Controller 가 facade verb 를 IMovable 타깃으로 받게 한다
  *    (DoForward 경유 시 dust FX 등 이동 부수효과 발화).
  *
- * @note 익명 namespace 의 Init*/Wire* 헬퍼는 본 번역 단위 전용 (외부 노출 없음).
+ * @note 익명 namespace 의 Init Wire 헬퍼는 본 번역 단위 전용 (외부 노출 없음).
  */
 #include <GL/gl3w.h> // 반드시 최상단 - resource_registry.h->framebuffer.h->render_target.h->gl3w.h 보다 먼저.
 
