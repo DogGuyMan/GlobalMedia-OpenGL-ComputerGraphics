@@ -9,7 +9,7 @@
  *  - @c SJH::Const::GEOMETRY - 정점 레이아웃 크기 + 원형 메시 위치/UV/인덱스 테이블
  *    (삼각형/사각형/정사면체/콘/큐브). @c SJH::Geometry 팩토리들이 참조한다.
  *  - 셰이더 파일 경로 (@c PATH_*), 텍스처 파일 경로 (@c PATH_TEX_*),
- *    리소스 ID 키 (@c STR_*), uniform 이름 (@c UNI_* / @c SFX_*),
+ *    리소스 ID 키 (@c STR_*), uniform 이름 (@c UNI_* / @c SHADER_PROPERTIE_*),
  *    ImGui 위젯 라벨 (@c LBL_*), depth test enum 쌍 (@c DEPTH_FUNC_LABELS / @c DEPTH_FUNC).
  *  - 배열 uniform 조합 컨벤션: @c UNI_POINT_LIGHTS_PREFIX + 인덱스 + @c STR_INDEX_CLOSE.
  *    예: @c "pointLights[" + @c "0" + @c "]".
@@ -268,17 +268,17 @@ namespace SJH::Const
 	inline constexpr int MAX_SPOT_LIGHTS  = 16;
 
 	// --- uniform struct 멤버 suffix (program_uniforms 가 prefix 와 결합) ---
-	/// @brief uniform struct 멤버 suffix - @c prefix(배열 요소) + @c SFX_* 로 전체 uniform 이름 구성.
-	/// @details 예: @c "pointLights[0]" + @c SFX_POSITION = @c "pointLights[0].position".
+	/// @brief uniform struct 멤버 suffix - @c prefix(배열 요소) + @c SHADER_PROPERTIE_* 로 전체 uniform 이름 구성.
+	/// @details 예: @c "pointLights[0]" + @c SHADER_PROPERTIE_POSITION = @c "pointLights[0].position".
 	/// @{
-	inline constexpr auto SFX_DIRECTION = ".direction";
-	inline constexpr auto SFX_POSITION = ".position";
-	inline constexpr auto SFX_AMBIENT = ".ambient";
-	inline constexpr auto SFX_DIFFUSE = ".diffuse";
-	inline constexpr auto SFX_SPECULAR = ".specular";
-	inline constexpr auto SFX_ATTENUATION = ".attenuation";
-	inline constexpr auto SFX_CUTOFF = ".cutoff";
-	inline constexpr auto SFX_OUTER_CUTOFF = ".outerCutoff";
+	inline constexpr auto SHADER_PROPERTIE_DIRECTION = ".direction";
+	inline constexpr auto SHADER_PROPERTIE_POSITION = ".position";
+	inline constexpr auto SHADER_PROPERTIE_AMBIENT = ".ambient";
+	inline constexpr auto SHADER_PROPERTIE_DIFFUSE = ".diffuse";
+	inline constexpr auto SHADER_PROPERTIE_SPECULAR = ".specular";
+	inline constexpr auto SHADER_PROPERTIE_ATTENUATION = ".attenuation";
+	inline constexpr auto SHADER_PROPERTIE_CUTOFF = ".cutoff";
+	inline constexpr auto SHADER_PROPERTIE_OUTER_CUTOFF = ".outerCutoff";
 	/// @}
 
 	// --- ImGui 위젯 라벨 (라벨이 위젯 ID 도 겸함 - 변경 시 상태 분리 주의) ---

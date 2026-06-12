@@ -21,7 +21,7 @@
  *  - 본 TU 만 @c program/program.h 를 include - public 멤버만 호출.
  *  - 헤더 (@c program_uniforms.h) 는 forward declaration 만 사용 - Program 정의 의존 없음.
  *
- * @note 광원 헬퍼의 셰이더 struct 필드 이름 접미사는 @c common/constants.h 의 @c Const::SFX_* 상수 사용.
+ * @note 광원 헬퍼의 셰이더 struct 필드 이름 접미사는 @c common/constants.h 의 @c Const::SHADER_PROPERTIE_* 상수 사용.
  */
 
 #include "program/program.h"
@@ -124,35 +124,35 @@ namespace SJH::Uniforms
                      const DirLight &light, const vmath::vec3 &worldDir)
     {
         const std::string base = prefix;
-        SetVec3(prog, (base + Const::SFX_DIRECTION).c_str(), worldDir);
-        SetVec3(prog, (base + Const::SFX_AMBIENT).c_str(),   light.Ambient);
-        SetVec3(prog, (base + Const::SFX_DIFFUSE).c_str(),   light.Diffuse);
-        SetVec3(prog, (base + Const::SFX_SPECULAR).c_str(),  light.Specular);
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(), worldDir);
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),   light.Ambient);
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),   light.Diffuse);
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),  light.Specular);
     }
 
     void SetPointLight(const Program &prog, const char *prefix,
                        const PointLight &light, const vmath::vec3 &worldPos)
     {
         const std::string base = prefix;
-        SetVec3(prog, (base + Const::SFX_POSITION).c_str(),    worldPos);
-        SetVec3(prog, (base + Const::SFX_ATTENUATION).c_str(), GetAttenuationCoeff(light.Distance));
-        SetVec3(prog, (base + Const::SFX_AMBIENT).c_str(),     light.Ambient);
-        SetVec3(prog, (base + Const::SFX_DIFFUSE).c_str(),     light.Diffuse);
-        SetVec3(prog, (base + Const::SFX_SPECULAR).c_str(),    light.Specular);
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(),    worldPos);
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(), GetAttenuationCoeff(light.Distance));
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),     light.Ambient);
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),     light.Diffuse);
+        SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),    light.Specular);
     }
 
     void SetSpotLight(const Program &prog, const char *prefix,
                       const SpotLight &light, const vmath::vec3 &worldPos, const vmath::vec3 &worldDir)
     {
         const std::string base = prefix;
-        SetVec3 (prog, (base + Const::SFX_POSITION).c_str(),     worldPos);
-        SetVec3 (prog, (base + Const::SFX_DIRECTION).c_str(),    worldDir);
+        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(),     worldPos);
+        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(),    worldDir);
         // CPU 는 degree, 셰이더는 cosine - 송신 시점에 변환 (struct 정의 시 의도된 분업).
-        SetFloat(prog, (base + Const::SFX_CUTOFF).c_str(),       cosf(vmath::radians(light.CutoffAngleDeg)));
-        SetFloat(prog, (base + Const::SFX_OUTER_CUTOFF).c_str(), cosf(vmath::radians(light.OuterCutoffAngleDeg)));
-        SetVec3 (prog, (base + Const::SFX_ATTENUATION).c_str(),  GetAttenuationCoeff(light.Distance));
-        SetVec3 (prog, (base + Const::SFX_AMBIENT).c_str(),      light.Ambient);
-        SetVec3 (prog, (base + Const::SFX_DIFFUSE).c_str(),      light.Diffuse);
-        SetVec3 (prog, (base + Const::SFX_SPECULAR).c_str(),     light.Specular);
+        SetFloat(prog, (base + Const::SHADER_PROPERTIE_CUTOFF).c_str(),       cosf(vmath::radians(light.CutoffAngleDeg)));
+        SetFloat(prog, (base + Const::SHADER_PROPERTIE_OUTER_CUTOFF).c_str(), cosf(vmath::radians(light.OuterCutoffAngleDeg)));
+        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(),  GetAttenuationCoeff(light.Distance));
+        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),      light.Ambient);
+        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),      light.Diffuse);
+        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),     light.Specular);
     }
 }

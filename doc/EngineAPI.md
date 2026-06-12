@@ -134,7 +134,7 @@ flowchart TD
 
 | 모듈 | 종류 | 책임 (요약) |
 |---|---|---|
-| `SJH::common` | STATIC | 공통 상수 + 유틸 (`Const::SFX_*` 등 셰이더 schema suffix) |
+| `SJH::common` | STATIC | 공통 상수 + 유틸 (`Const::SHADER_PROPERTIE_*` 등 셰이더 schema suffix) |
 | `SJH::diagnostics` | STATIC | GL 호출 / 셰이더 / uniform / 상태 / 엔진 단위 진단 |
 | `SJH::buffer` | STATIC | VBO/EBO RAII (`Buffer`) + Framebuffer |
 | `SJH::shader` | STATIC | 셰이더 컴파일 + InfoLog |
@@ -160,7 +160,7 @@ flowchart TD
 [`src/common/constants.h`](../src/common/constants.h) — 셰이더 schema 매크로 + UI 라벨.
 
 **핵심 컨벤션**:
-- `Const::SFX_DIRECTION = ".direction"` 등 *uniform 멤버 suffix* — `program_uniforms.cpp` 가 prefix 와 결합.
+- `Const::SHADER_PROPERTIE_DIRECTION = ".direction"` 등 *uniform 멤버 suffix* — `program_uniforms.cpp` 가 prefix 와 결합.
 - `Const::UNI_POINT_LIGHTS_PREFIX = "pointLights["` 등 *배열 uniform prefix*.
 
 ---
