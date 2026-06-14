@@ -1,0 +1,10 @@
+공통점(핵심): 모두 텍스처를 균일 격자로 나눔,
+[0, 1] 사이를 col, row단위로 나눔, sprite, bitmap font, skybox에 동일하게 사용
+여러 그림/글자를 cols × rows 균일 칸으로 한 직접 텍스처에 배치하고,
+상수 값으로 쉽게 조작하도록 파일을 빼냄.
+UniformAtlas.SetGrid(cols,rows) 함수로, BitmapFont는 xml 형식에 맞춰 cols = scaleW / cellW 로 같은 격자를 인식하도록 구현 -> 추후 인터페이스로 뺄 대상임.
+칸 번호를 좌하단부터, 좌상단까지 nxm 에 맞도록 인덱스 매핑함.
+그 칸의 시작점·크기 = uUvRect(uMin,vMin,uSize,vSize)를 만든다. → atlas->GetUVRect(frameIdx), 글자는 FrameOf(cp) 가 frame = row*cols + col 로 번호를 준다.
+Phase 3 — 0~1 좌표를 그 칸으로 옮긴다 (Affine Remap = 공통 식) 정점 셰이더가 quad의 0~1 지역좌표를 그 칸 영역으로 확대·평행이동한다. → vUv = uUvRect.xy + aTexCoord * uUvRect.zw = 시작점 + 지역좌표 × 칸크기 (skybox는 이걸 floor/fract로 즉석 계산할 뿐 식은 동일).
+Phase 4 — 그 칸만 끌어와 그린다 (Gather Sample) 프래그먼트가 vUv로 텍스처를 읽어(gather) 그 칸 픽셀만 화면에 칠한다. → texture(uAtlas, vUv). 결국 숫자 4개(uUvRect)만 바꾸면 같은 텍스처에서 다른 칸(애니 프레임·글자)이 교체된다.
+한 줄 정리: 텍스처를 격자로 쪼개고 → 칸 번호를 사각형으로 바꿔(uUvRect) → 시작점+지역좌표×칸크기로 remap → 그 칸만 gather. 차이는 칸 선택을 CPU가 미리 하느냐(sprite/글자) 셰이더가 floor/fract로 즉석에 하느냐(skybox) 뿐이다.

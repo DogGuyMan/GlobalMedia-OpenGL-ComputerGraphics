@@ -1,0 +1,34 @@
+/*
+ * stage-fsm.dot - 탑다운 슈터 Stage FSM 상태 다이어그램 (컴팩트)
+ *
+ * 소스: apps/_MyApp_/src/Stage/State/*  +  src/fsm/*
+ * 렌더: dot -Tpng doc/diagrams/stage-fsm.dot -o doc/diagrams/stage-fsm.png
+ */
+digraph StageFSM
+{
+	rankdir = LR;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	label = "Stage FSM - 게임 진행 상태 기계";
+
+	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 12];
+	edge [fontname = "Helvetica", fontsize = 10];
+
+	__start__ [shape = point, width = 0.15];
+
+	// 각 상태: 제목 + 대표 기능 2가지
+	Title      [fillcolor = "#cfe8ff", label = "타이틀\n- 타이틀 화면 표시\n- 배경 음악 재생 시작"];
+	CombatPlay [fillcolor = "#d6f5d6", label = "전투 진행\n- 게임 로직 갱신\n- 플레이어 체력 추적"];
+	Pause      [fillcolor = "#fff2cc", label = "일시정지\n- 게임 진행 멈춤\n- 볼륨 조절 UI"];
+	GameOver   [fillcolor = "#f8cccc", peripheries = 2, label = "게임 오버\n- 게임 오버 화면 표시\n- 종료 연출 (전이 없음)"];
+
+	__start__  -> Title;
+	Title      -> CombatPlay [label = "빈 화면 클릭"];
+	CombatPlay -> Pause      [label = "정지 버튼 클릭"];
+	CombatPlay -> GameOver   [label = "플레이어 사망", color = "#cc0000", fontcolor = "#cc0000"];
+	Pause      -> CombatPlay [label = "빈 화면 클릭"];
+
+	// 전투 진행 = 매 프레임 자기 자신으로 루프 (게임 로직 tick)
+	CombatPlay -> CombatPlay [label = "매 프레임\n(deltatime 단위 게임 tick)"];
+}

@@ -1,0 +1,122 @@
+/*
+ * stat-class-deps.dot - Algebraic Stat 시스템 + 구체 컴포넌트 클래스 다이어그램 (컴팩트)
+ *
+ * 범위:
+ *   - Algebraic: Stat / StatModifier / 3 enum
+ *   - 구체 컴포넌트: Component 상속만 표기 (나머지 인터페이스 생략) + 보유 Stat
+ *   - ENumericStatType 미구현 Top 3 첨부.
+ *
+ * 화살표:
+ *   - 다이아몬드 (diamond) = 보유 (composition / by-value Stat 멤버)
+ *   - 점선 (dashed)        = 사용 (enum 참조)
+ *
+ * 렌더: dot -Tpng doc/diagrams/stat-class-deps.dot -o doc/diagrams/stat-class-deps.png
+ */
+digraph StatClassDeps
+{
+	rankdir = TB;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	fontsize = 18;
+	label = "Algebraic Stat 시스템 + 구체 컴포넌트 - 클래스 다이어그램";
+	nodesep = 0.45;
+	ranksep = 0.9;
+	node [shape = none, fontname = "Helvetica", margin = 0];
+	edge [fontname = "Helvetica", fontsize = 10];
+
+	// ───────────── Algebraic 코어 ─────────────
+	Stat [label = <
+		<table border="0" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="#d6e8ff">
+			<tr><td bgcolor="#aaccf0"><b>Stat</b></td></tr>
+			<tr><td align="left">+ const BaseValue : float<br align="left"/>+ const UseType : ENumericStatUseType<br align="left"/>+ const NumericType : ENumericStatType<br align="left"/>- mModifiers : set&lt;StatModifier&gt;</td></tr>
+			<tr><td align="left">+ GetValue() : float<br align="left"/>+ AddModifier(m) / RemoveModifier(m)</td></tr>
+		</table>>];
+
+	StatModifier [label = <
+		<table border="0" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="#fff6e0">
+			<tr><td bgcolor="#f0dca8"><b>StatModifier  «struct/PoD»</b></td></tr>
+			<tr><td align="left">+ const CalcType : ENumericStateCalcType<br align="left"/>+ const StatType : ENumericStatType<br align="left"/>+ const Value : float / Order : int</td></tr>
+		</table>>];
+
+	EUse [label = <
+		<table border="0" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="#e8f5e8">
+			<tr><td bgcolor="#bfe3bf"><b>ENumericStatUseType  «enum»</b></td></tr>
+			<tr><td align="left">None=-1, Natural, Ratio, Percentage</td></tr>
+		</table>>];
+
+	ECalc [label = <
+		<table border="0" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="#e8f5e8">
+			<tr><td bgcolor="#bfe3bf"><b>ENumericStateCalcType  «enum»</b></td></tr>
+			<tr><td align="left">None=-1, Add, Mul</td></tr>
+		</table>>];
+
+	EType [label = <
+		<table border="0" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="#e8f5e8">
+			<tr><td bgcolor="#bfe3bf"><b>ENumericStatType  «enum»</b></td></tr>
+			<tr><td align="left"><font color="#1a7a1a"><b>[구현됨]</b></font> MaxHp, MoveSpeed,<br align="left"/>Power, DashForce, CoolDownSpeed</td></tr>
+		</table>>];
+
+	// 미구현 Enum Top 3
+	NotImpl [label = <
+		<table border="0" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="#f5e0e0">
+			<tr><td bgcolor="#e3b8b8"><b>미구현 StatType Top 3</b></td></tr>
+			<tr><td align="left">1. Defence<br align="left"/>2. Tenacity<br align="left"/>3. MaxStamina  <i>(...외 13종)</i></td></tr>
+		</table>>];
+
+	// ───────────── Component 베이스 (멤버/함수 미표기 빈 블럭) ─────────────
+	Component [label = <
+		<table border="0" cellborder="1" cellspacing="0" cellpadding="8" bgcolor="#e0e0e0">
+			<tr><td bgcolor="#c8c8c8"><b>SJH::Scene::Component  «abstract»</b></td></tr>
+		</table>>];
+
+	// ───────────── 구체 컴포넌트 (Component 상속, 컴팩트) ─────────────
+	Life            [label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="3" bgcolor="#eef0ff"><tr><td bgcolor="#cfd4f0"><b>Life</b></td></tr><tr><td align="left">mMaxHp [MaxHp]</td></tr></table>>];
+	Movement        [label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="3" bgcolor="#eef0ff"><tr><td bgcolor="#cfd4f0"><b>Movement</b></td></tr><tr><td align="left">mMoveSpeed [MoveSpeed]</td></tr></table>>];
+	PhysicsMovement [label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="3" bgcolor="#eef0ff"><tr><td bgcolor="#cfd4f0"><b>PhysicsMovement</b></td></tr><tr><td align="left">mMoveSpeed [MoveSpeed]</td></tr></table>>];
+	Weapon          [label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="3" bgcolor="#eef0ff"><tr><td bgcolor="#cfd4f0"><b>Weapon</b></td></tr><tr><td align="left">Damage [Power]</td></tr></table>>];
+	Impulse         [label = <<table border="0" cellborder="1" cellspacing="0" cellpadding="3" bgcolor="#eef0ff"><tr><td bgcolor="#cfd4f0"><b>Impulse</b></td></tr><tr><td align="left">mImpulseForce [DashForce]<br align="left"/>mCooldown [CoolDownSpeed]</td></tr></table>>];
+
+	// ── 사용 (enum 참조) ──
+	edge [arrowhead = vee, style = dashed, color = "#666666"];
+	Stat         -> EUse;
+	Stat         -> EType;
+	StatModifier -> ECalc;
+	StatModifier -> EType;
+	EType        -> NotImpl [label = "미구현", style = dotted, color = "#cc0000", arrowhead = none];
+
+	// ── 레이아웃: Component 최상단 -> 구체 컴포넌트 2행 3열 ──
+	{ rank = same; Life; Movement; PhysicsMovement; }   // 1행
+	{ rank = same; Weapon; Impulse; }                    // 2행
+
+	// 그리드 정렬용 invisible 구조 엣지 (열 정렬 + 행 순서)
+	edge [style = invis];
+	Component -> Life;
+	Component -> Movement;
+	Component -> PhysicsMovement;
+	Life     -> Weapon;     // 1열: Life 아래 Weapon
+	Movement -> Impulse;    // 2열: Movement 아래 Impulse
+	Life -> Movement -> PhysicsMovement;  // 1행 좌->우 순서
+	Weapon -> Impulse;                    // 2행 좌->우 순서
+
+	// StatModifier 를 Stat 우측에 배치 + enum 3종 세로 스택 (가로폭 절감)
+	{ rank = same; Stat; StatModifier; }
+	EUse -> ECalc -> EType;               // enum 세로 스택 (invis)
+
+	// ── 상속 (속이 빈 삼각형, Component 가 부모=위) - 화살표 겹침 허용 ──
+	edge [dir = back, arrowtail = onormal, arrowhead = none, style = solid, color = "#333333", constraint = false];
+	Component -> Life;
+	Component -> Movement;
+	Component -> PhysicsMovement;
+	Component -> Weapon;
+	Component -> Impulse;
+
+	// ── 보유 / composition (다이아몬드, by-value Stat 멤버) ──
+	edge [dir = forward, arrowtail = none, arrowhead = diamond, style = solid, color = "#aa3333", constraint = true];
+	Stat            -> StatModifier [label = "set<>"];
+	Weapon          -> Stat;
+	Impulse         -> Stat [label = "x2"];
+	Life            -> Stat [constraint = false];
+	Movement        -> Stat [constraint = false];
+	PhysicsMovement -> Stat [constraint = false];
+}

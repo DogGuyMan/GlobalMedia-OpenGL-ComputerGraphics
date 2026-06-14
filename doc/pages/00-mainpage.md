@@ -164,6 +164,7 @@ digraph SceneSystem {
 
 - @ref build-system "빌드 시스템 가이드"
 - @ref dependencies "의존 라이브러리 (project_deps / game_deps)"
+- @ref client-architecture "Client 의존 그래프 (apps/_MyApp_ — Client↔Client + Client→엔진)"
 
 > **클래스 의존 그래프 갱신:** 새 클래스를 추가했거나 멤버 구성이 바뀌면
 > `.claude/skills/doxygen-class-graph/` 절차에 따라 위 "씬 시스템 관계" 스케치를 보강한다.

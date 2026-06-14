@@ -1,0 +1,70 @@
+/*
+ * actor-component-deps.dot - Actor / Component 에 의존하는 객체들 (간단 관계도)
+ *
+ * 클래스 다이어그램 아님 - 노드 + 관계선만.
+ * 관계: 소유(holds) / is-a(파생) / uses(순회·조립)
+ *
+ * 렌더: dot -Tpng doc/diagrams/actor-component-deps.dot -o doc/diagrams/actor-component-deps.png
+ */
+digraph ActorComponentDeps
+{
+	rankdir = LR;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	fontsize = 16;
+	label = "SJH::Scene::Actor / Component 에 의존하는 객체들";
+	nodesep = 0.35;
+	ranksep = 1.1;
+	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 11];
+	edge [fontname = "Helvetica", fontsize = 9];
+
+	// ── 코어 2개 ──
+	Actor     [label = "Actor\n(트리 노드)", fillcolor = "#d6e8ff", penwidth = 2];
+	Component [label = "Component\n(동작 단위 베이스)", fillcolor = "#ffe6cc", penwidth = 2];
+
+	// Actor <-> Component 핵심 관계
+	Actor -> Component [label = "소유 1:N (mComponents)", color = "#aa3333", penwidth = 2];
+	Actor -> Actor     [label = "자식 트리 (mChildren)", color = "#333333"];
+
+	// ── Component 파생 (is-a) ──
+	subgraph cluster_isa
+	{
+		label = "Component 파생 (is-a)";
+		style = "rounded,dashed"; color = "#cc8844";
+		node [fillcolor = "#fff2e0"];
+		Life; Movement; Weapon; Physics; SpriteRenderer; MeshRenderer;
+		TextRenderer; PlayerController; PlayerEntity; BaseEntity;
+		Camera; Light; PlayableDirector; FSM;
+		FSM [label = "FSM::StateMachine"];
+		Physics [label = "Physics\n(BoxBody/CircleBody)"];
+	}
+	edge [color = "#cc8844", arrowhead = onormal, style = solid];
+	Life -> Component; Movement -> Component; Weapon -> Component;
+	Physics -> Component; SpriteRenderer -> Component; MeshRenderer -> Component;
+	TextRenderer -> Component; PlayerController -> Component; PlayerEntity -> Component;
+	BaseEntity -> Component; Camera -> Component; Light -> Component;
+	PlayableDirector -> Component; FSM -> Component;
+
+	// ── Actor/Component 사용 (uses) ──
+	subgraph cluster_uses
+	{
+		label = "Actor/Component 사용 (uses)";
+		style = "rounded,dashed"; color = "#4488cc";
+		node [fillcolor = "#e0f0ff"];
+		Director; SceneRenderer; ContactListener; PlayerBuilder; CompoundFactory;
+		Director         [label = "Director / Scene\n(root Actor 소유)"];
+		SceneRenderer    [label = "SceneRenderer\n(트리 순회 렌더)"];
+		ContactListener  [label = "PhysicsContactListener\n(ForEachComponent)"];
+		PlayerBuilder    [label = "PlayerBuilder\n(조립/Warmup)"];
+		CompoundFactory  [label = "compound_actor\n팩토리"];
+	}
+	edge [color = "#4488cc", arrowhead = vee, style = dashed];
+	Director        -> Actor     [label = "root 소유"];
+	SceneRenderer   -> Actor     [label = "DFS 순회"];
+	ContactListener -> Component [label = "dynamic_cast 디스패치"];
+	PlayerBuilder   -> Actor     [label = "AddChild/AddComponent"];
+	PlayerBuilder   -> Component;
+	CompoundFactory -> Actor;
+	FSM             -> Actor     [label = "TOwner = Actor", color = "#888888"];
+}

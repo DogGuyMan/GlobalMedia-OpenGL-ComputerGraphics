@@ -1,0 +1,91 @@
+/*
+ * player-build-tree.dot - PlayerEntity 구성 + Warmup 트리 (디렉토리 트리 스타일)
+ *
+ * 레퍼런스: apps/_MyApp_/src/Bootstrap/PlayerBuilder.cpp (BuildPlayer)
+ *           apps/_MyApp_/src/Entity/Player/PlayerActor.h (CreatePlayerActor)
+ *
+ * 폴더(상자) = Actor 노드 / 파일(노트) = 부착 Component.
+ * 렌더: dot -Tpng doc/diagrams/player-build-tree.dot -o doc/diagrams/player-build-tree.png
+ */
+digraph PlayerBuildTree
+{
+	rankdir = LR;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	fontsize = 16;
+	label = "PlayerEntity 구성 + Warmup 트리 (BuildPlayer)";
+	nodesep = 0.25;
+	ranksep = 0.8;
+	splines = ortho;
+	node [fontname = "Helvetica", fontsize = 11];
+	edge [arrowhead = none, color = "#888888"];
+
+	// ── Actor 노드 (폴더) ──
+	node [shape = folder, style = filled, fillcolor = "#d6e8ff"];
+	Root        [label = "Director.Root()"];
+	PlayerSprite[label = "PlayerSprite\n(player Actor)", fillcolor = "#aaccf0"];
+	renderActor [label = "renderActor"];
+	aimPivot    [label = "aimPivot"];
+	groundActor [label = "groundActor"];
+	dirGroup    [label = "dir group x8\n(Front/Back/Left/Right x Idle/Move)", fillcolor = "#cfe8cf"];
+
+	Root -> PlayerSprite;
+	PlayerSprite -> renderActor;
+	PlayerSprite -> aimPivot;
+	PlayerSprite -> groundActor;
+	renderActor -> dirGroup;
+
+	// ── PlayerSprite 부착 Component (파일) ──
+	node [shape = note, style = filled, fillcolor = "#fff2e0"];
+	C_Life   [label = "Life"];
+	C_Move   [label = "PhysicsMovement"];
+	C_Weapon [label = "Weapon"];
+	C_Body   [label = "BoxBody (Physics)"];
+	C_Ctrl   [label = "PlayerController"];
+	C_PE     [label = "PlayerEntity"];
+	C_BE     [label = "BaseEntity"];
+	C_Dir    [label = "PlayableDirector (Life sink)"];
+	C_Gray   [label = "HpGrayscalePostFX"];
+	C_Hands  [label = "PlayerHands"];
+	PlayerSprite -> C_Life; PlayerSprite -> C_Move; PlayerSprite -> C_Weapon;
+	PlayerSprite -> C_Body; PlayerSprite -> C_Ctrl; PlayerSprite -> C_PE;
+	PlayerSprite -> C_BE;   PlayerSprite -> C_Dir;  PlayerSprite -> C_Gray;
+	PlayerSprite -> C_Hands;
+
+	// ── 자식 Actor 의 leaf ──
+	node [shape = note, fillcolor = "#fff2e0"];
+	L_layer [label = "layer x4\n(SpriteRenderer + 애니)"];
+	dirGroup -> L_layer;
+
+	node [shape = folder, fillcolor = "#d6e8ff"];
+	HandL [label = "Hand L"]; HandR [label = "Hand R"];
+	aimPivot -> HandL [style = dashed, label = "PlayerHands::OnEnter"];
+	aimPivot -> HandR [style = dashed];
+
+	node [shape = note, fillcolor = "#fff2e0"];
+	D_shadow [label = "decal_shadow (MeshRenderer)"];
+	D_hit    [label = "decal_hitrange (MeshRenderer)"];
+	groundActor -> D_shadow;
+	groundActor -> D_hit;
+
+	// ── Warmup 순서 (BuildPlayer 흐름) ──
+	Warmup [shape = box, style = "rounded,filled", fillcolor = "#f5f5dc", fontsize = 10,
+		label = <
+		<table border="0" cellborder="0" cellspacing="1">
+		<tr><td align="left"><b>Warmup 순서 (BuildPlayer)</b></td></tr>
+		<tr><td align="left">1. CreatePlayerActor(cfg) - Life/Move/Weapon/Ctrl/BoxBody 부착</td></tr>
+		<tr><td align="left">2. AddChild renderActor + aimPivot</td></tr>
+		<tr><td align="left">3. AttachEntityPresentation - director(sink)+death+체력바</td></tr>
+		<tr><td align="left">4. BuildPlayerDirectionalGroups - 8그룹 RegisterGroup</td></tr>
+		<tr><td align="left">5. HpGrayscalePostFX 부착</td></tr>
+		<tr><td align="left">6. RegisterPlayerCombatPlayables - "fire"/"dash"/"hit"</td></tr>
+		<tr><td align="left">7. 입력 콜백 -&gt; director.Play / VFX seam 주입</td></tr>
+		<tr><td align="left">8. AttachGroundDecals - groundActor</td></tr>
+		<tr><td align="left"><b>9. Root().AddChild -&gt; OnEnter 발화 (Warmup tick)</b></td></tr>
+		<tr><td align="left">10. PlayerHands 부착 -&gt; Hand child 생성</td></tr>
+		<tr><td align="left">11. camera follower SetFollowTarget</td></tr>
+		<tr><td align="left">12. director.RefreshDirectional() - 초기 가시성</td></tr>
+		</table>>];
+	Warmup -> Root [style = invis];
+}

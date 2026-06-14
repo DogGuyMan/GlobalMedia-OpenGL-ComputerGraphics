@@ -1,0 +1,80 @@
+/*
+ * render-multipass-deps.dot - 3-6 Renderer & Multi Pass Rendering 의존 관계
+ *
+ * 노드 + 관계선 (클래스 다이어그램 아님).
+ * 관계: 소유(holds, 빨강 diamond) / is-a(파생, 주황 onormal) / uses(호출, 파랑 dashed)
+ *
+ * 렌더: dot -Tsvg doc/diagrams/render-multipass-deps.dot -o doc/diagrams/render-multipass-deps.svg
+ */
+digraph RenderMultiPassDeps
+{
+	rankdir = TB;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	fontsize = 16;
+	label = "3-6  Renderer & Multi Pass Rendering  의존 관계";
+	nodesep = 0.4;
+	ranksep = 0.85;
+	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 11];
+	edge [fontname = "Helvetica", fontsize = 9];
+
+	App [label = "game_application\n(Application · mStages 소유)", fillcolor = "#ffe6cc", penwidth = 2];
+	IRenderStage [label = "IRenderStage\n«추상 stage»", fillcolor = "#d6e8ff", penwidth = 2, style = "rounded,filled,dashed"];
+
+	subgraph cluster_stage {
+		label = "IRenderStage 구현 (멀티패스 단계)";
+		style = "rounded,dashed"; color = "#cc8844"; fontsize = 11;
+		node [fillcolor = "#fff2e0"];
+		CameraStage [label = "CameraStage\n(Camera 위임)"];
+		ParticleStage [label = "ParticleStage\n(Effekseer 합성)"];
+		ScreenQuadStage [label = "ScreenQuadStage\n(backbuffer 합성)"];
+	}
+
+	SceneRenderer [label = "SceneRenderer\n(조명·수집·정렬 조율)", fillcolor = "#d6e8ff"];
+	MeshPassProcessor [label = "MeshPassProcessor\n(DrawCommand 발행)", fillcolor = "#d6e8ff"];
+	LightUniformDispatcher [label = "LightUniformDispatcher\n(조명 일괄 송신)", fillcolor = "#d6e8ff"];
+
+	PropertyBlockSetter [label = "PropertyBlockSetter\n(uniform · texture)", fillcolor = "#e0f0ff"];
+	PipelineStateSetter [label = "PipelineStateSetter\n(GL state)", fillcolor = "#e0f0ff"];
+	DeviceContext [label = "DeviceContext\n«싱글톤» GL facade", fillcolor = "#ffd6d6", penwidth = 2];
+
+	Camera [label = "Camera", fillcolor = "#f0e0ff"];
+	RenderTarget [label = "RenderTarget\n«추상»", fillcolor = "#f0e0ff", style = "rounded,filled,dashed"];
+	Framebuffer [label = "Framebuffer\n(sceneFB · PostFX)", fillcolor = "#f0e0ff"];
+	DefaultRenderTarget [label = "DefaultRenderTarget\n(backbuffer FBO 0)", fillcolor = "#f0e0ff"];
+
+	PassComponent [label = "PassComponent\n(PostFX 단계)", fillcolor = "#fff9c4"];
+	VFXSystem [label = "VFXSystem → Effekseer", fillcolor = "#ffe6cc"];
+
+	// ── 상속 (is-a) ──
+	edge [color = "#cc8844", arrowhead = onormal, style = solid];
+	CameraStage -> IRenderStage;
+	ParticleStage -> IRenderStage;
+	ScreenQuadStage -> IRenderStage;
+	SceneRenderer -> IRenderStage [label = "Render 경로 deprecated", style = dashed, color = "#cccccc", fontcolor = "#aaaaaa"];
+	DefaultRenderTarget -> RenderTarget;
+	Framebuffer -> RenderTarget;
+
+	// ── 소유 (holds) ──
+	edge [color = "#aa3333", arrowhead = diamond, style = solid, penwidth = 1.7, fontcolor = "#aa3333"];
+	App -> IRenderStage [label = "mStages vector"];
+	SceneRenderer -> MeshPassProcessor [label = "value"];
+	SceneRenderer -> LightUniformDispatcher [label = "value"];
+	ParticleStage -> VFXSystem [label = "raw*"];
+	Camera -> RenderTarget [label = "targetRT*"];
+
+	// ── 호출 (uses) ──
+	edge [color = "#4488cc", arrowhead = vee, style = dashed, penwidth = 1, fontcolor = "#4488cc"];
+	CameraStage -> SceneRenderer [label = "RenderWithCamera"];
+	MeshPassProcessor -> PropertyBlockSetter [label = "Set"];
+	MeshPassProcessor -> PipelineStateSetter [label = "Set"];
+	MeshPassProcessor -> DeviceContext [label = "Draw*"];
+	LightUniformDispatcher -> DeviceContext [label = "UseProgram"];
+	PropertyBlockSetter -> DeviceContext [label = "BindTexture"];
+	ScreenQuadStage -> DeviceContext [label = "BindTarget / Draw"];
+	ParticleStage -> DeviceContext [label = "BindTarget"];
+	DeviceContext -> RenderTarget [label = "Bind()"];
+	SceneRenderer -> Camera [label = "View / Proj / RT"];
+	SceneRenderer -> PassComponent [label = "수집 (screenCam)", color = "#cc88cc", fontcolor = "#cc88cc"];
+}

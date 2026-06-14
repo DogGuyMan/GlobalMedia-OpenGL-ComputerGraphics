@@ -1,0 +1,50 @@
+/*
+ * physics-class-deps.dot - Physics 핵심 추상/구체 클래스 다이어그램 (노이즈 제외)
+ *
+ * 범위: IContactable / IMovable / IImpulsable / Physics 추상 + 구체 클래스만.
+ *       Scene::Component, Box2D, vmath, Stat, Timer, BaseEntity 등은 노이즈로 제외.
+ * 화살표:
+ *   - 속이 빈 삼각형 (onormal) = 상속 (구현 / is-a)
+ *   - 점선 (dashed)            = 사용 (FindPhysics 로 body 참조)
+ *
+ * 렌더: dot -Tpng doc/diagrams/physics-class-deps.dot -o doc/diagrams/physics-class-deps.png
+ */
+digraph PhysicsCore
+{
+	rankdir = TB;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	fontsize = 16;
+	label = "TopdownShooter::Physics - 추상/구체 클래스 (핵심만)";
+	nodesep = 0.6;
+	ranksep = 1.0;
+
+	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 12];
+	edge [fontname = "Helvetica", fontsize = 10];
+
+	// ── 추상 / 인터페이스 ──
+	IContactable [label = "IContactable\n«interface»\n접촉 콜백 4종", fillcolor = "#ffe6cc"];
+	IMovable     [label = "IMovable\n«interface»\n이동 명령",       fillcolor = "#ffe6cc"];
+	IImpulsable  [label = "IImpulsable\n«interface»\n속도 버스트",   fillcolor = "#ffe6cc"];
+	Physics      [label = "Physics\n«abstract»\nb2Body 라이프사이클", fillcolor = "#d6e8ff"];
+
+	// ── 구체 클래스 ──
+	CircleBody      [label = "CircleBody\ncircle fixture",       fillcolor = "#e8f5e8"];
+	BoxBody         [label = "BoxBody\nbox fixture",             fillcolor = "#e8f5e8"];
+	PhysicsMovement [label = "PhysicsMovement\nvelocity 이동",   fillcolor = "#e8f5e8"];
+	Impulse         [label = "Impulse\nDash / Knockback",       fillcolor = "#e8f5e8"];
+
+	// ── 상속 (구현) ──
+	edge [arrowhead = onormal, style = solid, color = "#333333"];
+	Physics         -> IContactable;
+	CircleBody      -> Physics;
+	BoxBody         -> Physics;
+	PhysicsMovement -> IMovable;
+	Impulse         -> IImpulsable;
+
+	// ── 사용 (FindPhysics 로 body 참조) ──
+	edge [arrowhead = vee, style = dashed, color = "#777777"];
+	PhysicsMovement -> Physics [label = "uses (FindPhysics)"];
+	Impulse         -> Physics [label = "uses (FindPhysics)"];
+}

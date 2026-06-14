@@ -1,0 +1,52 @@
+/*
+ * render-multipass-seq.dot - 3-6 한 프레임 render() 호출 시퀀스 (시간순 플로우)
+ *
+ * Graphviz 는 시퀀스 전용이 아니므로, 시간순 세로 플로우 + 참여자 색으로 표현.
+ *   회색=App/ImGui · 주황=stage · 파랑=SceneRenderer 코어 · 빨강=DeviceContext · 노랑=PostFX
+ *
+ * 렌더: dot -Tsvg doc/diagrams/render-multipass-seq.dot -o doc/diagrams/render-multipass-seq.svg
+ */
+digraph RenderMultiPassSeq
+{
+	rankdir = TB;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	fontsize = 16;
+	label = "3-6  한 프레임 render() 호출 시퀀스";
+	nodesep = 0.3;
+	ranksep = 0.45;
+	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 10];
+	edge [fontname = "Helvetica", fontsize = 9, arrowhead = vee, color = "#555555"];
+
+	p1 [label = "① ImGui.NewFrame", fillcolor = "#eeeeee"];
+	p2 [label = "② StageFSM.Update(dt)   (Director · Physics · Effekseer sim)", fillcolor = "#eeeeee"];
+	p3 [label = "③ ScreenQuadStage.SetSources(지난 프레임 out ?: sceneFB)", fillcolor = "#fff2e0"];
+	loop [label = "for stage in mStages:   stage.Render(backbuffer)", shape = hexagon, fillcolor = "#f5f5f5"];
+
+	s0 [label = "[0] CameraStage(worldCam).Render", fillcolor = "#fff2e0"];
+	r1 [label = "SceneRenderer.RenderWithCamera(worldCam)", fillcolor = "#d6e8ff"];
+	r2 [label = "DeviceContext.BeginFrame(sceneFB)  —  bind + clear", fillcolor = "#ffd6d6"];
+	r3 [label = "조명 수집 → LightUniformDispatcher.Dispatch\n(모든 Program · 패스당 1회)", fillcolor = "#d6e8ff"];
+	r4 [label = "CollectFromActor (DFS) → MeshPassProcessor.Submit", fillcolor = "#d6e8ff"];
+	r5 [label = "SortMultiStage   (불투명 front→back / 투명 back→front)", fillcolor = "#d6e8ff"];
+	r6 [label = "MeshPassProcessor.Process — program/material/state 전환마다:\nPropertyBlockSetter · PipelineStateSetter · DeviceContext.DrawIndexed", fillcolor = "#d6e8ff"];
+
+	s1 [label = "[1] ParticleStage.Render", fillcolor = "#fff2e0"];
+	v1 [label = "DeviceContext.BindTarget(sceneFB, NoClear) → VFXSystem.Draw → Effekseer", fillcolor = "#ffd6d6"];
+
+	s2 [label = "[2] CameraStage(screenCam).Render → SceneRenderer\nPassComponent PostFX 선형 체인 (fog → bloom → …)", fillcolor = "#fff9c4"];
+
+	s3 [label = "[3] ScreenQuadStage.Render\nDeviceContext.BindTarget(backbuffer) → blit (EBO 재핀)", fillcolor = "#fff2e0"];
+
+	e1 [label = "④ ImGuiLayerStack.RenderAll → ImGui.Render   (backbuffer 위 UI)", fillcolor = "#eeeeee"];
+
+	p1 -> p2 -> p3 -> loop;
+	loop -> s0 [label = "stage[0]"];
+	s0 -> r1 -> r2 -> r3 -> r4 -> r5 -> r6;
+	r6 -> s1 [label = "stage[1]"];
+	s1 -> v1;
+	v1 -> s2 [label = "stage[2]"];
+	s2 -> s3 [label = "stage[3]"];
+	s3 -> e1;
+}

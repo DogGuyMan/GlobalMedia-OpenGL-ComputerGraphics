@@ -4,7 +4,7 @@
 > LearnOpenGL 매핑: Getting started — 6. Textures (+ Lighting 3·4 Materials/Lighting maps 에서 재사용)
 > **이 노트가 "텍스처 핸들 vs 유닛 번호" 와 "텍스처 상태 스코프" 의 단일 출처(SSoT)다.**
 
-> **상황**: 박스 10개를 같은 쉐이더 + 같은 diffuse/specular 텍스처로 그리는 중. 다음 6줄을 `startup()` / `render()` 루프 바깥 / `render()` 루프 안 중 어디에 둘지 결정한다.
+> **상황**: 박스 10개를 같은 셰이더 + 같은 diffuse/specular 텍스처로 그리는 중. 다음 6줄을 `startup()` / `render()` 루프 바깥 / `render()` 루프 안 중 어디에 둘지 결정한다.
 >
 > ```cpp
 > glActiveTexture(GL_TEXTURE1);
@@ -26,7 +26,7 @@
 - `GL_TEXTURE0`, `GL_TEXTURE1`, ... `GL_TEXTUREn` 슬롯은 **드라이버 컨텍스트 전역 상태**.
 - "유닛 1번에 어떤 텍스처가 바인딩되어 있는가" 는 누군가 `glBindTexture`로 다시 바꾸기 전까지 유지된다.
 - -> **다른 코드가 같은 유닛을 침범하면 깨진다 (state leak).**
-- 멀티스레드, ImGui, 프레임워크 내부, 다른 쉐이더 패스가 모두 잠재적 침범자.
+- 멀티스레드, ImGui, 프레임워크 내부, 다른 셰이더 패스가 모두 잠재적 침범자.
 
 #### (B) 프로그램 객체 로컬 상태 — `glUniform1i(sampler, unit)`
 
@@ -125,7 +125,7 @@ for (int i = 0; i < boxPositions.size(); i++) {
 |----|-----------|------|
 | `glUniform1i(sampler, unit)` × 2 | **startup** (단, `glUseProgram` 후) | 프로그램 로컬, 영구 저장 |
 | `glGetUniformLocation`(model, light, …) | **startup**에서 캐싱 | 문자열 검색 비용 회피 |
-| `glActiveTexture` + `glBindTexture` × 2 | **render의 루프 바깥**, 쉐이더 전환 직후 | 프레임당 1회 = state leak 방어 + 낭비 없음 |
+| `glActiveTexture` + `glBindTexture` × 2 | **render의 루프 바깥**, 셰이더 전환 직후 | 프레임당 1회 = state leak 방어 + 낭비 없음 |
 | `glUniformMatrix4fv("model", …)` | **루프 안** | 박스마다 다름 |
 
 ---
@@ -157,7 +157,7 @@ for (int i = 0; i < boxPositions.size(); i++) {
 - [ ] `glUniform1i` 호출 시점에 해당 프로그램이 `glUseProgram` 되어 있는가?
 - [ ] `glGetUniformLocation`은 startup에서 캐싱했는가?
 - [ ] `glActiveTexture` 후 반드시 `glBindTexture`가 따라오는가?
-- [ ] 한 프레임에 여러 쉐이더 패스가 같은 유닛을 건드리는가? (그러면 패스마다 재바인딩 필요)
+- [ ] 한 프레임에 여러 셰이더 패스가 같은 유닛을 건드리는가? (그러면 패스마다 재바인딩 필요)
 
 ## 관련 노트
 - 텍스처 슬롯이 *컨텍스트 전역*, 샘플러 uniform이 *program-local* 인 더 큰 상태 스코프 그림: `01_GettingStarted/01_OpenGL_상태머신.md`

@@ -1326,7 +1326,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -		GLuint vsAddr = sb7::shader::load(vs_path, GL_VERTEX_SHADER, true);
 -		if (vsAddr == 0)
 -		{
--			std::cerr << "버텍스 쉐이더 로드 실패 : " << vs_path << std::endl;
+-			std::cerr << "버텍스 셰이더 로드 실패 : " << vs_path << std::endl;
 -			exit(1);
 -		}
 -		// sb7::shader::load 는 GL_COMPILE_STATUS 가 false 여도 0 이 아닌 핸들을 돌려줄 수 있음.
@@ -1336,7 +1336,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -		GLuint fsAddr = sb7::shader::load(fs_path, GL_FRAGMENT_SHADER, true);
 -		if (fsAddr == 0)
 -		{
--			std::cerr << "프래그먼트 쉐이더 로드 실패 : " << fs_path << std::endl;
+-			std::cerr << "프래그먼트 셰이더 로드 실패 : " << fs_path << std::endl;
 -			exit(1);
 -		}
 -		diag::GLObjectLog::CheckShaderCompile(fsAddr, fs_path);
@@ -2225,7 +2225,7 @@ _… diff 생략: 코드 파일 40개 더 (커밋 줄 수 캡)_
 그날 커밋:
 - `d3bcc03` [refactor] : ECS 컴포넌트 + RenderSystem + RenderQueue 설계
 - `30f01a7` [dev] : add fmod engine
-- `e2833c8` [refactor] : 쉐이더 로드 sb7 의존 및 FMOD Core Engine 추가
+- `e2833c8` [refactor] : 셰이더 로드 sb7 의존 및 FMOD Core Engine 추가
 - `7a0a8e1` [refactor] : RenderSystem 개선 Framebuffer 모듈 생성
 - `a503ab6` [refactor] : prepare migrate demo 및 머티리얼 개선
 
@@ -3439,7 +3439,7 @@ _비코드 19개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
      }
 ```
 
-### `e2833c8` [refactor] : 쉐이더 로드 sb7 의존 및 FMOD Core Engine 추가
+### `e2833c8` [refactor] : 셰이더 로드 sb7 의존 및 FMOD Core Engine 추가
 
 >   사용자 결정 — common 의 LoadTextFile 폐기. 파일 IO + glCreateShader +
 > glShaderSource + glCompileShader 일괄 수행을 sb7code 의 sb7::shader::load
@@ -24153,7 +24153,7 @@ _비코드 175개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 그날 커밋:
 - `770215a` [feat] : ParticleStage 신규 (Effekseer→sceneFB 합성 stage)
 - `e65a715` [dev] : 스카이박스
-- `eee2fab` [refactor] : Wrapup 보일러 플레이트 이동, PCB 모델 렌더링 쉐이더
+- `eee2fab` [refactor] : Wrapup 보일러 플레이트 이동, PCB 모델 렌더링 셰이더
 - `1ac0f26` [feat] : fog + bloom PostFX 통합 + ImGui 파라미터 슬라이더
 - `e740b29` [fix] : fog 방향 반전 — top 이 멀게 (FogColor 누적)
 - `2f8bbf2` feat(scene): Actor DetachChild/FindChild/FindChildIf — 트리 탐색·소유권 이전 API
@@ -24822,7 +24822,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 … (+76줄 생략)
 ```
 
-### `eee2fab` [refactor] : Wrapup 보일러 플레이트 이동, PCB 모델 렌더링 쉐이더
+### `eee2fab` [refactor] : Wrapup 보일러 플레이트 이동, PCB 모델 렌더링 셰이더
 
 > spec docs/superpowers/specs/2026-05-31-warmup-boilerplate-extraction-design.md T1 (A1).
 >
