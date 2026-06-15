@@ -1,0 +1,113 @@
+/*
+ * playable-module-deps.dot - 모든 Playable 모듈의 의존 그래프 (코어 + 클라이언트 + 외부 Depth 1)
+ *
+ * 코어: src/playable/  (IPlayable / PlayableBase / Interval / Sequence / Parallel)
+ * 클라: apps/_MyApp_/src/Playable/  (Director / PostFXTween / HpGrayscale / SpriteFx / PostFXRegistry / SpriteLayerFactory / Constants)
+ * 외부: Depth 1 (scene / material / render / sprite / resource_registry / Entity / tweeny / vmath)
+ *
+ * 화살표: 속이 빈 삼각형 = 상속(is-a) / 점선 = 사용(include·참조)
+ * 렌더: dot -Tpng doc/diagrams/playable-module-deps.dot -o doc/diagrams/playable-module-deps.png
+ */
+digraph PlayableModuleDeps
+{
+	rankdir = TB;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	fontsize = 18;
+	label = "Playable 모듈 전체 의존 그래프 (코어 + 클라이언트, 외부 Depth 1)";
+	nodesep = 0.4;
+	ranksep = 1.0;
+	compound = true;
+	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 11];
+	edge [fontname = "Helvetica", fontsize = 9];
+
+	// ───────────── 클라이언트 연출 레이어 (apps/_MyApp_/src/Playable/) ─────────────
+	subgraph cluster_client
+	{
+		label = "클라이언트 연출 (apps/_MyApp_/src/Playable/)";
+		style = "rounded,dashed"; color = "#cc8844"; fontcolor = "#aa6622";
+		node [fillcolor = "#fff2e0"];
+		Director       [label = "PlayableDirector\nverb→Play(key) + 8그룹 토글"];
+		PostFXTween    [label = "PostFXTweenPlayable\ntweeny→PostFX uniform (one-shot)"];
+		HpGray         [label = "HpGrayscalePostFX\nHP비율 연속 바인딩 (※Playable 아님)", fillcolor = "#ffe0cc"];
+		SpriteFx       [label = "SpriteFxPlayable\n(HitFlash / Dissolve)"];
+		PostFXReg      [label = "PostFXRegistry\npassName→Material* (싱글톤)"];
+		SpriteFactory  [label = "SpriteLayerFactory\natlas+SpriteRenderer 부착"];
+		Constants      [label = "Constants.h\n스프라이트 테이블 + 튜닝", shape = note];
+		PostFXConst    [label = "PostFXConstants.h\nPOSTFX_PROGRAM_CONFIGS", shape = note];
+	}
+
+	// ───────────── 코어 SJH::Playable (src/playable/) ─────────────
+	subgraph cluster_core
+	{
+		label = "코어 SJH::Playable (src/playable/)";
+		style = "rounded,dashed"; color = "#4488cc"; fontcolor = "#2266aa";
+		node [fillcolor = "#d6e8ff"];
+		IPlayable    [label = "IPlayable «interface»\nPlay/Pause/Stop/GetIsLoop+IsFinished", fillcolor = "#cfe0f5"];
+		PlayableBase [label = "PlayableBase «abstract»\nIPlayable+Component 다중상속", fillcolor = "#aaccf0"];
+		Interval     [label = "IntervalPlayable\n(대기 leaf)"];
+		Sequence     [label = "SequencePlayable\n(순차 Composite)"];
+		Parallel     [label = "ParallelPlayable\n(동시 Composite)"];
+	}
+
+	// ───────────── 외부 모듈 (Depth 1) ─────────────
+	subgraph cluster_ext
+	{
+		label = "외부 모듈 (Depth 1)";
+		style = "rounded,dashed"; color = "#999999"; fontcolor = "#666666";
+		node [fillcolor = "#e8e8e8"];
+		Scene    [label = "SJH::Scene\nComponent / Actor"];
+		Material [label = "SJH::Material"];
+		Render   [label = "SJH::Render\nPostFXStageConfig"];
+		Sprite   [label = "SJH::Sprite\nSpriteRenderer / Sequence / Clip"];
+		ResReg   [label = "SJH::ResourceRegistry\n+ Image"];
+		EntityIf [label = "Entity 인터페이스\nILivable / IActorPresentation / EFacing·EPose"];
+		Tweeny   [label = "tweeny (헤더온리)"];
+		Vmath    [label = "vmath"];
+	}
+
+	// ── 상속 (속이 빈 삼각형) ──
+	edge [arrowhead = onormal, style = solid, color = "#333333"];
+	PlayableBase -> IPlayable;
+	PlayableBase -> Scene        [label = "Component"];
+	Interval     -> PlayableBase;
+	Sequence     -> PlayableBase;
+	Parallel     -> PlayableBase;
+	PostFXTween  -> PlayableBase;
+	SpriteFx     -> PlayableBase;
+	Director     -> PlayableBase;
+	Director     -> EntityIf     [label = "IActorPresentation"];
+	HpGray       -> Scene        [label = "Component"];
+	HpGray       -> EntityIf     [label = "ILivable"];
+
+	// ── 코어 내부 사용 (점선) ──
+	edge [arrowhead = vee, style = dashed, color = "#4477aa"];
+	Sequence -> IPlayable   [label = "children"];
+	Parallel -> IPlayable   [label = "children"];
+	Sequence -> Interval    [label = "AppendInterval"];
+	Sequence -> Scene       [label = "dynamic_cast"];
+	Parallel -> Scene       [label = "dynamic_cast"];
+
+	// ── 클라이언트 사용 (점선) ──
+	edge [arrowhead = vee, style = dashed, color = "#aa7744"];
+	Director      -> Scene;
+	Director      -> Sprite      [label = "SpriteRenderer"];
+	PostFXTween   -> Tweeny;
+	PostFXTween   -> PostFXReg;
+	PostFXTween   -> Material;
+	HpGray        -> PostFXReg;
+	HpGray        -> Material;
+	SpriteFx      -> Constants;
+	SpriteFx      -> Scene       [label = "Actor"];
+	SpriteFx      -> Sprite;
+	SpriteFx      -> ResReg      [label = "dissolve.png"];
+	PostFXReg     -> Material;
+	SpriteFactory -> Constants;
+	SpriteFactory -> ResReg;
+	SpriteFactory -> Scene;
+	SpriteFactory -> Sprite      [label = "+Sequence/Clip"];
+	Constants     -> Vmath;
+	PostFXConst   -> Render;
+	PostFXConst   -> Vmath;
+}

@@ -1,0 +1,14 @@
+digraph CompositeTree {
+	rankdir=TB; bgcolor=white; fontname="Helvetica";
+	label="실전 Composite 중첩 — director \"hit\" = Parallel(3 leaf)"; labelloc=t; fontsize=15;
+	node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11];
+
+	Par [label="ParallelPlayable\n(전원 종료 시 finish)", fillcolor="#d6e8ff"];
+	Vig [label="PostFXTweenPlayable\n비네팅 0.45→0 (300ms)", fillcolor="#fff2e0"];
+	Flash [label="SpriteHitFlashPlayable\nenableHit 0.18s", fillcolor="#fff2e0"];
+	Snd [label="FmodStudioPlayable\nDamaged 사운드", fillcolor="#fff2e0"];
+	Par -> Vig [label="Join"]; Par -> Flash [label="Join"]; Par -> Snd [label="Join"];
+
+	Seq [label="SequencePlayable\n(중첩 가능 예시)", fillcolor="#e8f5e8", style="rounded,filled,dashed"];
+	Par -> Seq [label="Join (무제한 중첩)", style=dashed];
+}

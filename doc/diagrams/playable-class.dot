@@ -1,0 +1,24 @@
+digraph PlayableClass {
+	rankdir=TB; bgcolor=white; fontname="Helvetica";
+	label="SJH::Playable 코어 — 3계층 (인터페이스 / 상태+틱 / 합성)"; labelloc=t; fontsize=16;
+	node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11];
+	edge [arrowhead=onormal];
+
+	IPlayable [label="IPlayable «interface»\nPlay/Pause/Stop/GetIsLoop + IsFinished", fillcolor="#ffe6cc"];
+	Component [label="SJH::Scene::Component\n(OnEnter/OnExit/Update)", fillcolor="#e0e0e0"];
+	PlayableBase [label="PlayableBase «abstract»\n상태(mElapsed/mIsLoop/...) + Update→OnUpdate hook", fillcolor="#d6e8ff"];
+
+	PlayableBase -> IPlayable;
+	PlayableBase -> Component;
+
+	node [fillcolor="#e8f5e8"];
+	Interval [label="IntervalPlayable\n(대기 leaf)"];
+	Sequence [label="SequencePlayable\n(순차 Composite)"];
+	Parallel [label="ParallelPlayable\n(동시 Composite)"];
+	Interval -> PlayableBase; Sequence -> PlayableBase; Parallel -> PlayableBase;
+
+	node [fillcolor="#fff2e0"];
+	PostFXTween [label="PostFXTweenPlayable (client)"];
+	SpriteFx [label="SpriteHitFlash/Dissolve (client)"];
+	PostFXTween -> PlayableBase; SpriteFx -> PlayableBase;
+}
