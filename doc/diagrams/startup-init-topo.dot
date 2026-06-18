@@ -1,0 +1,54 @@
+// game_application::startup() 의존 위상 정렬 (Kahn 레벨 = longest-path 깊이)
+// 동일 레벨 = 같은 rank. 왼쪽 레벨이 in-degree 0 에 가깝다.
+digraph startup_topo {
+  rankdir=LR;
+  node  [shape=box, fontname="Helvetica", fontsize=10, style="rounded,filled", fillcolor="#eef"];
+  edge  [color="#666", arrowsize=0.7];
+
+  // -- 레벨(degree-sorted) --
+  { rank=same; window; manager; }                                  // L0 in-deg 0
+  { rank=same; fb; reg; dir; phys; vfxs; sceneRenderer; audio; worldText; } // L1
+  { rank=same; mDefaultTarget; mSceneFB; warmupAudio; vfxEffects; stageActor; mFxRoot; } // L2
+  { rank=same; screenQuadStage; mCamera; mScreenCamera; spawnCtx; }  // L3
+  { rank=same; mPassComponents; particleStage; mSpriteActor; }       // L4
+  { rank=same; fogMatCfg; postFXRegistry; cameraStages; mImGuiCtx; waveController; } // L5
+  { rank=same; gameContext; dirEnter; }                             // L6
+  { rank=same; mStageFsm; }                                         // L7
+  { rank=same; fsmWiring; }                                         // L8
+  { rank=same; onEnter; }                                           // L9
+
+  // -- 의존 간선 (A -> B : B 는 A 를 필요로 함) --
+  window -> fb;
+  manager -> {reg dir phys vfxs sceneRenderer audio worldText};
+
+  fb -> {mDefaultTarget mSceneFB};
+  audio -> warmupAudio;
+  {reg vfxs} -> vfxEffects;
+  {phys reg dir} -> stageActor;
+  dir -> mFxRoot;
+
+  {reg sceneRenderer mSceneFB} -> screenQuadStage;
+  {fb mSceneFB} -> mCamera;
+  {fb mSceneFB dir} -> mScreenCamera;
+  {mFxRoot vfxs worldText} -> spawnCtx;
+
+  {reg mScreenCamera mSceneFB} -> mPassComponents;
+  {vfxs mCamera} -> particleStage;
+  {phys mCamera} -> mSpriteActor;
+
+  {mPassComponents mSceneFB} -> fogMatCfg;
+  mPassComponents -> postFXRegistry;
+  {mCamera mScreenCamera sceneRenderer} -> cameraStages;
+  {reg mPassComponents} -> mImGuiCtx;
+  {dir phys mSpriteActor} -> waveController;
+
+  {dir reg mPassComponents warmupAudio} -> gameContext;
+  mImGuiCtx -> dirEnter;
+  dir -> mStageFsm;
+
+  {gameContext mStageFsm waveController mSpriteActor audio} -> fsmWiring;
+  fsmWiring -> onEnter;
+  dirEnter -> onEnter;
+
+  onEnter [fillcolor="#ead1dc", peripheries=2];
+}

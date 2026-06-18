@@ -9,10 +9,8 @@ doc/html/
 doc/latex/
 docs/
 
-########### docs/superpowers — 로컬 전용 (untracked 강제, 2026-05-22 history 제거됨) ###########
-docs/superpowers
-docs/superpowers/
-**/docs/superpowers/
+###########
+*workspace
 
 ###########  FILES  ############
 *.pptx

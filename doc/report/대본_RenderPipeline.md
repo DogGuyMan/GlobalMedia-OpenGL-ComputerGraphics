@@ -428,3 +428,60 @@ ImGui 는 항상 **최상단 UI** 라서 패스 리스트에 넣지 않았다. �
 `src/render/`: `scene_renderer.{h,cpp}`(패스 코어·수집·송신) · `mesh_pass_processor.{h,cpp}`(그리기·전환결정) · `property_block_setter.cpp`/`pipeline_state_setter.cpp`/`light_uniform_dispatcher.cpp`(데이터 송신) · `screen_quad_stage.{h,cpp}`(최종 출력·EBO 복구) · `pass_component.h`(후처리 체인) · `render_target.{h,cpp}`/`camera_stage.{h,cpp}`/`device_context.{h,cpp}`
 `src/buffer/framebuffer.h`(그림판) · `src/material/pass.h`(GL 상태 기준)
 `apps/_MyApp_/src/`: `VFX/{VFXSystem,ParticleStage}.{h,cpp}` · `UI/{UiBootstrap.cpp,ImGuiLayerStack.h}` · `main.cpp`(패스 리스트·프레임 루프)
+
+
+---
+
+### 대본
+
+> 발표 시간: **2분 내외**. 각 단락의 `[화면]` = 그 멘트를 말할 때 띄울 코드(파일:줄). 발표자가 해당 줄로 스크롤하며 설명.
+
+**① 전제 — 어디에 그리나 (약 20초)**
+
+"렌더링 파트를 맡은 ○○○입니다. 이 엔진의 단 하나의 대전제는, **카메라마다 자기 앞에 '그림판'(렌더 타겟, FBO)이 한 장 붙어 있다**는 것입니다. 카메라가 그리는 모든 것은 화면이 아니라 그 텍스처에 *먼저* 그려집니다 — Unity의 `Camera.targetTexture`와 같은 발상이죠. 3D 장면은 `sceneFB`라는 오프스크린 텍스처에 그려집니다."
+
+> `[화면] src/scene/camera.h:145` (Camera가 자기 RenderTarget을 보유) · `apps/_MyApp_/main.cpp:110` (`sceneFB`를 깊이 텍스처까지 가진 FBO로 생성)
+
+**② 멀티패스 — stage 벡터 순회 (약 25초)**
+
+"그럼 한 프레임은 어떻게 그려질까요? 복잡한 게 아니라, **Application이 든 stage 벡터를 순서대로 순회**할 뿐입니다."
+
+> `[화면] apps/_MyApp_/main.cpp:357` — `for (auto& s : mStages) s->Render(*mDefaultTarget);`
+
+"스테이지는 네 개로 고정돼 있습니다 — `worldCam` → `ParticleStage` → `screenCam` → `ScreenQuadStage`. 앞 두 개는 3D 씬을 `sceneFB`에 그리는 일반 패스, 뒤 두 개는 후처리와 최종 화면 출력입니다."
+
+> `[화면] apps/_MyApp_/main.cpp:173-188` (mStages 셋업 — CameraStage 2개 + ParticleStage + ScreenQuadStage)
+
+**③ 1패스의 코어 — 무엇을 언제 보내나 (약 30초)**
+
+"한 패스를 실제로 그리는 코어는 `SceneRenderer::RenderWithCamera`입니다. 순서가 분명합니다 — ① 켜진 조명만 수집해서 ② `LightUniformDispatcher`로 모든 셰이더에 *한 번에* 보내고, ③ 액터 트리를 DFS로 훑어 그릴 대상을 `DrawCommand` 큐에 담고, ④ 불투명·투명 순으로 정렬한 뒤, ⑤ `MeshPassProcessor`가 실제 GL 드로우를 발행합니다."
+
+> `[화면] src/render/scene_renderer.cpp:71` (RenderWithCamera — 조명 수집 124행 / 수집 127행 / 정렬 128행 / 발행 129행)
+> `[화면] src/render/mesh_pass_processor.cpp:95` (Process — program/material/state 전환 결정)
+
+"핵심 설계는, **자주 안 바뀌는 조명은 패스당 1회, 자주 바뀌는 모델 행렬은 메시 하나하나마다** 보내서 GL 상태 전환을 최소화한다는 겁니다."
+
+**④ 후처리 — PassComponent 선형 체인 (약 20초)**
+
+"후처리는 `PassComponent`라는 **렌더 로직이 전혀 없는 순수 데이터**로 엮습니다. 한 패스의 `OutputFB`가 다음 패스의 `InputFB`와 *같은 포인터*라서, fog → bloom → vignette가 FBO에서 FBO로 줄줄이 흐르는 **선형 체인**이 됩니다."
+
+> `[화면] src/render/pass_component.h:48` (InputFB/OutputFB 포인터만 보유) · `src/render/render_pipeline.cpp:119-134` (BuildPostFXChain — prevFB→fbPtr 연결)
+
+**⑤ 외부 모듈 — Effekseer · ImGui (약 20초)**
+
+"마지막으로 외부 모듈입니다. Effekseer는 `IRenderStage`를 상속한 **`ParticleStage`로 '위장'**시켜 리스트 중간에 끼우고, 월드 카메라의 `sceneFB`를 대신 bind해 그 위에 파티클을 얹습니다."
+
+> `[화면] apps/_MyApp_/src/VFX/ParticleStage.cpp:57-80` (sceneFB BindTarget + VFXSystem.Draw)
+
+"반면 ImGui는 패스로 만들지 않고, **모든 stage가 끝난 뒤** 백버퍼 위에 직접 얹습니다 — 직전 ScreenQuadStage가 백버퍼를 bind해둔 상태를 그대로 이용하는 거죠."
+
+> `[화면] apps/_MyApp_/main.cpp:361-362` (mImGuiStack.RenderAll → ImGui::Render)
+
+**⑥ 마무리 (약 10초)**
+
+"정리하면, 모든 렌더링은 '카메라 앞 텍스처 위에 무언가를 그리는' **동일한 동작의 반복**이고, 외부 모듈조차 같은 그림판 체계 안으로 흡수했습니다. 이상입니다."
+
+---
+
+> **시간 배분 합계**: 20 + 25 + 30 + 20 + 20 + 10 = 약 2분 5초. 길면 ③의 ①~⑤ 나열을 "수집 → 정렬 → 발행" 3단계로 줄이거나 ④를 한 문장으로 압축.
+

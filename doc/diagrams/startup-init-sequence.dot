@@ -1,0 +1,49 @@
+// game_application::startup() 초기화 시퀀스 (apps/_MyApp_/main.cpp:96-292)
+// 실선 = 시간순 호출 백본 / 점선 = Lazy 의존(선행 산출물 소비)
+digraph startup_sequence {
+  rankdir=TB;
+  node  [shape=box, fontname="Helvetica", fontsize=10, style="rounded,filled"];
+  edge  [fontname="Helvetica", fontsize=9];
+
+  // -- 시간순 호출 백본 (실선) --
+  node [fillcolor="#e8eef7"];
+  S0  [label="R0  Manager::Init()\nreg/dir/phys/vfxs 핸들"];
+  S1  [label="R1  mDefaultTarget / mSceneFB  (<- fb)"];
+  S2  [label="R2  ScreenQuadStage  (<- reg, SceneRenderer, mSceneFB)"];
+  S3  [label="R3  BuildWorldScene -> mCamera / mSkyboxMat"];
+  S4  [label="R4  ScreenCamera -> mScreenCamera"];
+  S5  [label="R5  BuildPostFXChain -> mPassComponents", fillcolor="#fde9d9"];
+  S5b [label="R5  (Lazy) fog/vignette/PostFXRegistry\n= FindPassMaterial(...)", fillcolor="#fde9d9"];
+  S6  [label="R6  mStages.insert(worldCam, screenCam, ParticleStage)"];
+  S7  [label="R7  WarmupAudio(->BgmActor) / CreateEffect(VFX)"];
+  S8  [label="R8  StageActor / mFxRoot", fillcolor="#e2efda"];
+  S8b [label="R8  (Lazy) VFX/WorldText::SetSpawnContext(mFxRoot)", fillcolor="#e2efda"];
+  S9  [label="R9  BuildPlayer -> mSpriteActor"];
+  S10 [label="R10 WaveController(mSpriteActor)  player 이후"];
+  S11 [label="R11 BuildGameUI / VfxSpawnLayer / dir.Enter()"];
+  S12 [label="R12 GameContext / mStageFsm + RegisterState", fillcolor="#ead1dc"];
+  S12b[label="R12 (Lazy) ctx 배선: waveCtrl/audio/bgm/playerLife", fillcolor="#ead1dc"];
+  S13 [label="R12 mStageFsm->OnEnter()  ***최종", fillcolor="#ead1dc", peripheries=2];
+
+  S0->S1->S2->S3->S4->S5->S5b->S6->S7->S8->S8b->S9->S10->S11->S12->S12b->S13
+     [color="#444", penwidth=1.4];
+
+  // -- Lazy 의존(점선): 선행 산출물 소비 --
+  edge [style=dashed, color="#c0504d", constraint=false, fontsize=8];
+  S1  -> S2   [label="mSceneFB"];
+  S0  -> S2   [label="reg"];
+  S1  -> S3   [label="mSceneFB"];
+  S1  -> S4   [label="mSceneFB"];
+  S4  -> S5   [label="screenCamActor"];
+  S5  -> S5b  [label="mPassComponents"];
+  S1  -> S5b  [label="depth(uDepth)"];
+  S3  -> S6   [label="mCamera"];
+  S4  -> S6   [label="mScreenCamera"];
+  S8  -> S8b  [label="mFxRoot"];
+  S3  -> S9   [label="mCamera"];
+  S9  -> S10  [label="mSpriteActor(AI target)"];
+  S5  -> S11  [label="mPassComponents(debugEntries)"];
+  S10 -> S12b [label="waveSpawner"];
+  S7  -> S12b [label="BgmActor"];
+  S9  -> S12b [label="playerLife"];
+}
