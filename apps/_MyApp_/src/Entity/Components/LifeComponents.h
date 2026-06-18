@@ -24,7 +24,7 @@
 #define _TOPDOWNSHOOTER_ENTITY_COMPONENTS_LIFE__
 
 #include "Algebraic/Stat.h"
-#include "Components.Interfaces.h"
+#include "Contracts/EntityContracts.h"
 #include "Entity/BaseEntity.h"   // BaseEntity::Timers() (MultipleTimer 등록 위탁)
 #include "scene/actor.h"
 #include "timer/timer.h"

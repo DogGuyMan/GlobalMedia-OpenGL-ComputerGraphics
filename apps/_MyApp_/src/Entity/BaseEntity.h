@@ -21,7 +21,7 @@
 #ifndef _TOPDOWNSHOOTER_ENTITY_BASE__
 #define _TOPDOWNSHOOTER_ENTITY_BASE__
 
-#include "Components/Components.Interfaces.h"   // ILivable/IDieable/IDamageable/IImpulsable
+#include "Contracts/EntityContracts.h"   // ILivable/IDieable/IDamageable/IImpulsable
 #include "scene/actor.h"
 #include "timer/multiple_timer.h"   // MultipleTimer (값 멤버 - 완전형 필요)
 #include <string>
@@ -42,7 +42,8 @@ namespace TopdownShooter::Entity
 	 *  엔티티의 timer 는 본 클래스의 @c mTimers 한 곳에만 존재하며, 형제가 핸들을 Register 위탁한다.
 	 */
 	class BaseEntity : public SJH::Scene::Component,
-	                   public ILivable, public IDieable, public IDamageable, public IImpulsable
+	                   public ILivable, public IDieable, public IDamageable, public IImpulsable,
+	                   public ITimerOwner, public IImpulseState
 	{
 	  protected:
 		Components::Life*                    mLife     = nullptr;   ///< Life Component 비소유 캐시 (HP/i-frame/사망).
@@ -63,7 +64,7 @@ namespace TopdownShooter::Entity
 		// -- 중앙 Timer 컨테이너 (엔티티 timer 단일 보유처) --
 		/// @brief 엔티티 timer 컨테이너 접근 - 형제 Component 가 핸들 Register/Unregister 위탁.
 		/// @return MultipleTimer 레퍼런스.
-		SJH::Timer::MultipleTimer&       Timers()       { return mTimers; }
+		SJH::Timer::MultipleTimer&       Timers() override { return mTimers; }
 		/// @brief 엔티티 timer 컨테이너 const 접근.
 		/// @return MultipleTimer const 레퍼런스.
 		const SJH::Timer::MultipleTimer& Timers() const { return mTimers; }
@@ -89,7 +90,7 @@ namespace TopdownShooter::Entity
 		void DoImpulse(vmath::vec2 dir) override;
 		/// @brief 임펄스 버스트 활성 창 여부 - 이동 suppress 게이트로 사용.
 		/// @return 버스트가 활성 중이면 true (Impulse 미캐시 시 false).
-		bool IsImpulseActive() const;          // 버스트 활성 창 = 이동 suppress 게이트
+		bool IsImpulseActive() const override; // 버스트 활성 창 = 이동 suppress 게이트
 		// -- accessor --
 		/// @brief 캐시한 물리 바디 Component 노출.
 		/// @return Physics 포인터 (미캐시 시 nullptr).

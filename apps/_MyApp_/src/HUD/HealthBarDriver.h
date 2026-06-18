@@ -21,7 +21,7 @@
 #ifndef __TOPDOWNSHOOTER_HUD_HEALTHBAR_DRIVER_H__
 #define __TOPDOWNSHOOTER_HUD_HEALTHBAR_DRIVER_H__
 
-#include "Entity/Components/Components.Interfaces.h" // TopdownShooter::Entity::ILivable
+#include "Contracts/EntityContracts.h" // TopdownShooter::Entity::ILivable
 #include "scene/actor.h"                             // SJH::Scene::Component
 
 namespace SJH

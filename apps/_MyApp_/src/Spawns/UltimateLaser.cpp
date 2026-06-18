@@ -26,7 +26,7 @@
 #include "VFX/EffekseerPlayable.h"                    // EffekseerPlayable + Spin/MaxDuration setter
 #include "Physics/PhysicsRaycast.h"                   // RaycastAll
 #include "Physics/PhysicsLayer.h"                     // PhysicsLayer::Enemy
-#include "Entity/Components/Components.Interfaces.h"  // IDamageable
+#include "Contracts/EntityContracts.h"  // IDamageable
 #include "Entity/Constants.h"                         // ULTIMATE_*
 #include "resource_registry/resource_registry.h"      // FindEffect("laser")
 #include "scene/actor.h"

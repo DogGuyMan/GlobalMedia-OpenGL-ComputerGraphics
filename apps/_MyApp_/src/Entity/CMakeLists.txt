@@ -9,7 +9,7 @@ add_library(myapp_entity STATIC
 add_library(MyApp::Entity ALIAS myapp_entity)
 
 # PUBLIC: src/ 디렉토리 consumer 가 "Entity/BaseEntity.h" / "Entity/Components/LifeComponents.h"
-# PRIVATE: 자기 디렉토리 — BaseEntity.h 내부의 "Components/Components.Interfaces.h" 등.
+# PRIVATE: 자기 디렉토리 — 같은 폴더 헤더를 prefix 없이 include (예: BaseEntity.cpp 의 "BaseEntity.h").
 target_include_directories(myapp_entity
     PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}

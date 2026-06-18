@@ -28,7 +28,7 @@
 #define _TOPDOWNSHOOTER_ENTITY_PLAYER__
 
 #include "Entity/BaseEntity.h"
-#include "Entity/Components/Components.Interfaces.h" // IMovable
+#include "Contracts/EntityContracts.h" // IMovable
 #include "Entity/Components/PlayerLifeComponents.h"
 #include "Entity/Components/WeaponComponents.h" // Components::Weapon (UseWeapon 호출 - 완전형)
 #include "timer/timer.h"                        // SJH::Timer::Timer (dust interval poll - 완전형)

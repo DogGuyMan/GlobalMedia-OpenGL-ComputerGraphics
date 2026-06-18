@@ -21,7 +21,7 @@
 #ifndef __TOPDOWNSHOOTER_PLAYABLE_HP_GRAYSCALE_POSTFX_H__
 #define __TOPDOWNSHOOTER_PLAYABLE_HP_GRAYSCALE_POSTFX_H__
 
-#include "Entity/Components/Components.Interfaces.h" // ILivable (HP 조회)
+#include "Contracts/EntityContracts.h" // ILivable (HP 조회)
 #include "scene/actor.h"                             // SJH::Scene::Component
 
 #include <string>

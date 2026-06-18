@@ -25,7 +25,7 @@
 #ifndef __TOPDOWNSHOOTER_PLAYABLE_PLAYABLE_DIRECTOR_H__
 #define __TOPDOWNSHOOTER_PLAYABLE_PLAYABLE_DIRECTOR_H__
 
-#include "Entity/Components/Components.Interfaces.h" // IActorPresentation / EFacing / EPose (sink)
+#include "Contracts/EntityContracts.h" // IActorPresentation / EFacing / EPose (sink)
 #include "playable/playable_base.h"                  // SJH::Playable::PlayableBase (map 보유 + Component)
 #include "scene/actor.h"                             // SJH::Scene::Component
 

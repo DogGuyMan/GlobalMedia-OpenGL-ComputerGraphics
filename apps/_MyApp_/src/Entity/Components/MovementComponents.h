@@ -21,7 +21,7 @@
 #define _TOPDOWNSHOOTER_ENTITY_COMPONENTS_MOVEMENT__
 
 #include "Algebraic/Stat.h"
-#include "Components.Interfaces.h"
+#include "Contracts/EntityContracts.h"
 #include "scene/actor.h"
 
 namespace TopdownShooter::Entity::Components

@@ -25,7 +25,7 @@
 #define __MYAPP_PHYSICS_IMPULSE_H__
 
 #include "Algebraic/Stat.h"
-#include "Entity/Components/Components.Interfaces.h"
+#include "Contracts/EntityContracts.h"
 #include "Physics/PhysicsComponent.h"
 #include "Physics/Constants.h"
 #include "Entity/Player/PlayerEntity.h"

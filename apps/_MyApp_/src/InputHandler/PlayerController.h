@@ -23,13 +23,13 @@
 #ifndef _TOPDOWNSHOOTER_INPUT_PLAYER_CONTROLLER__
 #define _TOPDOWNSHOOTER_INPUT_PLAYER_CONTROLLER__
 
-#include "Entity/Components/Components.Interfaces.h"
+#include "Contracts/EntityContracts.h"
 #include "input/keyboard_input.h"
 #include "input/mouse_input.h"
 #include "scene/actor.h"
 #include <functional>
 #include <vmath.h>
-#include "Entity/Components/Components.Interfaces.h"
+#include "Contracts/EntityContracts.h"
 
 namespace SJH::Scene
 {

@@ -23,7 +23,7 @@
 #define _TOPDOWNSHOOTER_ENTITY_COMPONENTS_WEAPON__
 
 #include "Algebraic/Stat.h"
-#include "Components.Interfaces.h"
+#include "Contracts/EntityContracts.h"
 #include "scene/actor.h"
 #include <functional>
 #include <string>

@@ -24,7 +24,7 @@
 #define __MYAPP_PHYSICS_MOVEMENT_H__
 
 #include "Algebraic/Stat.h"
-#include "Entity/Components/Components.Interfaces.h"
+#include "Contracts/EntityContracts.h"
 #include "Physics/PhysicsComponent.h"
 #include "scene/actor.h"
 

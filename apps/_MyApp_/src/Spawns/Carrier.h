@@ -20,7 +20,7 @@
 #ifndef __TOPDOWNSHOOTER_SPAWNS_CARRIER_H__
 #define __TOPDOWNSHOOTER_SPAWNS_CARRIER_H__
 
-#include "Entity/Components/Components.Interfaces.h" // IDamageable / IImpulsable
+#include "Contracts/EntityContracts.h" // IDamageable / IImpulsable
 #include "Entity/Components/LifeComponents.h"        // IDamageable / IImpulsable
 #include "Physics/Components.Interfaces.h"           // IContactable
 #include "scene/actor.h"

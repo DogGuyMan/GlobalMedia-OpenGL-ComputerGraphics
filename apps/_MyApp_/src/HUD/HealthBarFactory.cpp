@@ -6,7 +6,7 @@
 
 #include "HUD/HealthBarDriver.h"
 
-#include "Entity/Components/Components.Interfaces.h" // TopdownShooter::Entity::ILivable
+#include "Contracts/EntityContracts.h" // TopdownShooter::Entity::ILivable
 #include "material/material.h"
 #include "material/pass.h"
 #include "object/geometry.h"
