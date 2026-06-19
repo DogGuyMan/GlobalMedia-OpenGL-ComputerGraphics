@@ -9,7 +9,7 @@ add_library(SJH::texture ALIAS sjhopengl_texture)
 
 target_include_directories(sjhopengl_texture
     PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
-            ${CMAKE_SOURCE_DIR}/include   # image.h: vmath.h + image.cpp: stb_image.h (체크인본)
+            ${CMAKE_SOURCE_DIR}/include   # image.h: vmath.h (sb7 잔류 헤더)
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -17,6 +17,7 @@ target_link_libraries(sjhopengl_texture
     PUBLIC  SJH::common      # texture.h/image.h: CLASS_PTR 매크로
             project_deps     # GLuint / gl3w
     PRIVATE spdlog           # texture.cpp / image.cpp 의 spdlog::error
+            stb_extra        # image.cpp: stb_image.h (vcpkg 전이본)
 )
 
 target_compile_features(sjhopengl_texture PUBLIC cxx_std_17)

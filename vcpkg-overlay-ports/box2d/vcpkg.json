@@ -1,0 +1,9 @@
+{
+    "name": "box2d",
+    "version-semver": "2.4.1",
+    "port-version": 100,
+    "description": "An open source C++ engine for simulating rigid bodies in 2D",
+    "homepage": "https://box2d.org",
+    "supports": "!uwp",
+    "$comment": "overlay port — 공식 box2d 2.4.1 port 가 잘못된 CMake 옵션명(BUILD_TESTS/BUILD_SAMPLES)을 넘겨 box2d 의 unit-test(번들 doctest.h 의 x86 int $3 inline asm)가 arm64 에서 컴파일 실패. 실제 옵션명(BOX2D_BUILD_UNIT_TESTS/BOX2D_BUILD_TESTBED)으로 교정."
+}

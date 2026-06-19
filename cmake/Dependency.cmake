@@ -56,20 +56,12 @@ elseif(WIN32)
     target_link_libraries(project_deps INTERFACE opengl32 gdi32 winmm)
 endif()
 
-# ====== 게임/엔진 라이브러리 (extern 서브모듈 -> lib/include 사전 빌드) ======
-# Box2D v2.4.1 — C++ 정적 라이브러리
-add_library(box2d STATIC IMPORTED)
-if(WIN32)
-    set_target_properties(box2d PROPERTIES
-        IMPORTED_LOCATION         ${LIB_DIR}/box2d.lib
-        IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/box2d_d.lib)
-else()
-    set_target_properties(box2d PROPERTIES
-        IMPORTED_LOCATION         ${LIB_DIR}/libbox2d.a
-        IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libbox2d_d.a)
-endif()
-set_target_properties(box2d PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/extern/box2d/include")
+# ====== 게임/엔진 라이브러리 ======
+# 전이분(box2d/assimp/spdlog/tweeny)은 vcpkg manifest(루트 vcpkg.json) 가 정확 버전 핀으로 설치.
+# 잔류분(Effekseer/stb/FMOD)은 lib/include 사전 빌드 유지.
+#
+# Box2D — vcpkg (manifest 2.4.1 핀, 코드 무변경). 타겟: box2d::box2d
+find_package(box2d CONFIG REQUIRED)
 
 # Effekseer — 파티클 엔진 + OpenGL 렌더러
 add_library(Effekseer STATIC IMPORTED)
@@ -98,58 +90,48 @@ set_target_properties(Effekseer PROPERTIES
 set_target_properties(EffekseerRendererGL PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/include/Effekseer)
 
-# assimp v5.4.3 — 3D 모델 임포트 라이브러리. 번들 zlib(zlibstatic) 정적 링크.
-add_library(assimp STATIC IMPORTED)
-add_library(zlibstatic STATIC IMPORTED)
-if(WIN32)
-    set_target_properties(assimp PROPERTIES
-        IMPORTED_LOCATION         ${LIB_DIR}/assimp.lib
-        IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/assimp_d.lib)
-    set_target_properties(zlibstatic PROPERTIES
-        IMPORTED_LOCATION         ${LIB_DIR}/zlibstatic.lib
-        IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/zlibstatic_d.lib)
-else()
-    set_target_properties(assimp PROPERTIES
-        IMPORTED_LOCATION         ${LIB_DIR}/libassimp.a
-        IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libassimp_d.a)
-    set_target_properties(zlibstatic PROPERTIES
-        IMPORTED_LOCATION         ${LIB_DIR}/libzlibstatic.a
-        IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libzlibstatic_d.a)
-endif()
-# assimp 는 번들 zlib 의 inflate/deflate 심볼에 의존 — 링크 순서 보장
-target_link_libraries(assimp INTERFACE zlibstatic)
+# assimp — vcpkg (manifest 5.4.3 핀). 번들 zlib 도 vcpkg 가 의존성으로 자동 동반
+# (별도 zlibstatic 타겟/링크 순서 처리 불필요). 타겟: assimp::assimp
+find_package(assimp CONFIG REQUIRED)
 
-# spdlog v1.17.0 — 컴파일 정적 라이브러리 (헤더 온리 모드 아님)
-add_library(spdlog STATIC IMPORTED)
-if(WIN32)
-    set_target_properties(spdlog PROPERTIES
-        IMPORTED_LOCATION         ${LIB_DIR}/spdlog.lib
-        IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/spdlog_d.lib)
-else()
-    set_target_properties(spdlog PROPERTIES
-        IMPORTED_LOCATION         ${LIB_DIR}/libspdlog.a
-        IMPORTED_LOCATION_DEBUG   ${LIB_DIR}/libspdlog_d.a)
-endif()
-# 컴파일된 정적 라이브러리를 쓰므로 소비자는 SPDLOG_COMPILED_LIB 매크로가 필요하다.
-# INTERFACE_INCLUDE_DIRECTORIES — spdlog 헤더는 include/ 에 있어 소비자에게 전파 필요.
-set_target_properties(spdlog PROPERTIES
-    INTERFACE_COMPILE_DEFINITIONS SPDLOG_COMPILED_LIB
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/include")
-# spdlog::spdlog ALIAS — 외부 코드(테스트 등)가 표준 네임스페이스 형식으로 링크 가능.
-add_library(spdlog::spdlog ALIAS spdlog)
+# spdlog — vcpkg (manifest 1.17.0 핀, 컴파일 정적 라이브러리). vcpkg 타겟이
+# SPDLOG_COMPILED_LIB 매크로를 INTERFACE 로 전파하므로 수동 정의 불필요. 타겟: spdlog::spdlog
+find_package(spdlog CONFIG REQUIRED)
 
-# 헤더 온리 — 헤더는 이미 include/ 에 체크인. INTERFACE 타겟은 game_deps 멤버 표식.
-add_library(tweeny INTERFACE)
+# tweeny — vcpkg (manifest 3.2.0; 사전 3.0.0 에서 업글, 헤더온리). vcpkg 가 INTERFACE
+# IMPORTED 타겟 'tweeny' 를 직접 노출. 타겟: tweeny
+find_package(tweeny CONFIG REQUIRED)
+
+# stb — vcpkg (헤더온리, manifest dependency). vcpkg 는 IMPORTED 타겟 대신 Stb_INCLUDE_DIR
+# 변수를 노출하므로, 동명 INTERFACE 타겟 stb_extra 에 그 include 경로를 실어 소비자에 전파한다.
+# (stb_image.h / stb_rect_pack.h 등) 소비자: src/texture(image.cpp 의 STB_IMAGE_IMPLEMENTATION) + game_deps.
+find_package(Stb REQUIRED)
 add_library(stb_extra INTERFACE)
+target_include_directories(stb_extra INTERFACE ${Stb_INCLUDE_DIR})
+
+# ====== 하위 호환 래퍼 (bare 타겟명 -> vcpkg 네임스페이스 타겟) ======
+# 일부 모듈 CMakeLists (src/object, src/common, src/diagnostics, src/resource_registry,
+# apps/_MyApp_/src/*) 가 bare 'assimp' / 'spdlog' 로 직접 링크한다. find_package 전이 후
+# 그 이름은 타겟이 아니라 -l 링크 플래그로 오인되므로, vcpkg 네임스페이스 타겟을 forward 하는
+# 동명 INTERFACE 래퍼를 제공해 모듈 CMakeLists 를 무수정으로 둔다.
+# (ALIAS-to-IMPORTED 는 CMake 버전별 GLOBAL 제약이 있어 INTERFACE 래퍼가 더 견고.)
+if(NOT TARGET assimp)
+    add_library(assimp INTERFACE)
+    target_link_libraries(assimp INTERFACE assimp::assimp)
+endif()
+if(NOT TARGET spdlog)
+    add_library(spdlog INTERFACE)
+    target_link_libraries(spdlog INTERFACE spdlog::spdlog)
+endif()
 
 # game_deps — 게임/엔진 챕터가 project_deps 와 함께 링크하는 집계 타겟.
 # Box2D / Effekseer 는 각각 Task 4 / Task 5 에서 이 줄에 추가된다.
 add_library(game_deps INTERFACE)
 target_link_libraries(game_deps INTERFACE
-    box2d
+    box2d::box2d
     EffekseerRendererGL
-    assimp
-    spdlog
+    assimp::assimp
+    spdlog::spdlog
     tweeny stb_extra)
 # SYSTEM 인클루드 — 서드파티 헤더(Effekseer/Tweeny/Box2D 등)는 Debug 의
 # -Wall -Werror 대상에서 제외한다. (예: <Effekseer/Effekseer.h> 의 -Wmacro-redefined,

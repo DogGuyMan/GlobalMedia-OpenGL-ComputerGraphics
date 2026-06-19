@@ -1,30 +1,8 @@
-[submodule "extern/sb7code"]
-	path = extern/sb7code
-	url = https://github.com/openglsuperbible/sb7code.git
-[submodule "extern/box2d"]
-	path = extern/box2d
-	url = https://github.com/erincatto/box2d.git
 [submodule "extern/Effekseer"]
 	path = extern/Effekseer
 	url = https://github.com/effekseer/Effekseer.git
 	ignore = dirty
-[submodule "extern/tweeny"]
-	path = extern/tweeny
-	url = https://github.com/mobius3/tweeny.git
-[submodule "extern/stb"]
-	path = extern/stb
-	url = https://github.com/nothings/stb.git
-[submodule "extern/assimp"]
-	path = extern/assimp
-	url = https://github.com/assimp/assimp.git
-[submodule "extern/spdlog"]
-	path = extern/spdlog
-	url = https://github.com/gabime/spdlog.git
 [submodule "extern/imgui"]
 	path = extern/imgui
 	url = https://github.com/ocornut/imgui.git
 	branch = master
-[submodule "extern/Catch2"]
-	path = extern/Catch2
-	url = https://github.com/catchorg/Catch2.git
-	branch = devel

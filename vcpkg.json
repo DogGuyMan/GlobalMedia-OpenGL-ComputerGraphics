@@ -1,0 +1,21 @@
+{
+    "$comment": "vcpkg manifest — 게임/엔진 의존성 전이분만 관리. 잔류 의존(glfw3/FMOD/Effekseer/sb7/stb/imgui)은 lib/include 사전 빌드 유지. builtin-baseline + overrides 로 현행 버전 정확 핀 -> 코드 무변경. (tweeny 만 3.0.0->3.2.0 업글, vcpkg 최소 버전.)",
+    "name": "opengl-computergraphics",
+    "version-string": "0.1.0",
+    "builtin-baseline": "a900048467b8199f82c31411e0f1597c267fdada",
+    "dependencies": [
+        "box2d",
+        "spdlog",
+        "assimp",
+        "catch2",
+        "tweeny",
+        "stb"
+    ],
+    "overrides": [
+        { "name": "box2d", "version": "2.4.1" },
+        { "name": "spdlog", "version": "1.17.0" },
+        { "name": "assimp", "version": "5.4.3" },
+        { "name": "catch2", "version": "3.15.0" },
+        { "name": "tweeny", "version": "3.2.0" }
+    ]
+}
