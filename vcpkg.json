@@ -8,7 +8,8 @@
         "spdlog",
         "assimp",
         "tweeny",
-        "stb"
+        "stb",
+        "catch2"
     ],
     "overrides": [
         { "name": "box2d", "version": "2.4.1" },

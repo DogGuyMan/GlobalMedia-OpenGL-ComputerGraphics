@@ -2,7 +2,19 @@
 # lib/{macos,windows}/ 는 shell/BuildExternLibs.{sh,bat} 로 사전 빌드 필요
 # project_deps PUBLIC 타겟으로 집약하여 앱 타겟에 PRIVATE 링크
 
+# vcpkg toolchain 은 CMAKE_FIND_FRAMEWORK 를 LAST 로 설정한다(프레임워크보다 vcpkg 라이브러리 우선).
+# 그 상태로 find_package(OpenGL) 하면 macOS 에서 Apple OpenGL.framework 대신 MacPorts/Homebrew
+# (/opt/local, /usr/local) 의 Mesa libGL.dylib 를 잡아 GLFW(NSGL) 컨텍스트 생성이 깨진다
+# ("Failed to open window"). macOS 는 시스템 OpenGL.framework 가 정답이므로 OpenGL 탐색 동안만
+# 프레임워크 우선을 복원하고, 이후 다시 vcpkg 기본값으로 되돌린다.
+if(APPLE)
+    set(_sjh_saved_find_framework "${CMAKE_FIND_FRAMEWORK}")
+    set(CMAKE_FIND_FRAMEWORK FIRST)
+endif()
 find_package(OpenGL REQUIRED)
+if(APPLE)
+    set(CMAKE_FIND_FRAMEWORK "${_sjh_saved_find_framework}")
+endif()
 
 # ====== 플랫폼별 라이브러리 경로 ======
 
