@@ -18,7 +18,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include "object/light.h"
+#include "object/light.h" // Light POD + GetAttenuationCoeff (순수 데이터/함수)
+#include "scene/light.h"  // DirLight/PointLight/SpotLight 컴포넌트 (2026-06-11 E1 이주처)
 
 using Catch::Matchers::WithinAbs;
 

@@ -23,7 +23,7 @@
 #define __SJH_FRAMEBUFFER_H__
 
 #include "common/common.h"
-#include "render/render_target.h"
+#include "buffer/render_target.h"
 #include "resource_registry/texture.h"
 #include <cstdint>
 

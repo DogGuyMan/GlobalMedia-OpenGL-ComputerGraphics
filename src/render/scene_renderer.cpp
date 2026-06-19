@@ -24,11 +24,11 @@
 #include <cstdint>
 #include <vector>
 #include "material/material.h"
-#include "object/light.h"
+#include "scene/light.h"
 #include "object/mesh.h"
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"
-#include "render/render_target.h"
+#include "buffer/render_target.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"

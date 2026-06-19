@@ -205,7 +205,8 @@ catch_discover_tests(test_material)
 add_executable(test_light test_light.cpp)
 target_link_libraries(test_light PRIVATE
     Catch2::Catch2WithMain
-    SJH::object     # "object/light.h" 접근 + vmath
+    SJH::object     # "object/light.h": Light POD + GetAttenuationCoeff + vmath
+    SJH::scene      # "scene/light.h": DirLight/PointLight/SpotLight 컴포넌트 (2026-06-11 E1 이주)
 )
 target_compile_features(test_light PRIVATE cxx_std_17)
 catch_discover_tests(test_light)

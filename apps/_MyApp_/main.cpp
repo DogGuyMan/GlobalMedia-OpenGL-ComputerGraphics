@@ -48,7 +48,7 @@
 #include "render/camera_stage.h"
 #include "render/pass_component.h"
 #include "render/render_pipeline.h"
-#include "render/render_target.h"
+#include "buffer/render_target.h"
 #include "render/scene_renderer.h"
 #include "render/screen_quad_stage.h"
 #include "resource_registry/resource_registry.h"

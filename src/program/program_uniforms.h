@@ -65,9 +65,6 @@
 namespace SJH
 {
     class Program;   // forward - 본 헤더는 Program 의 정의에 의존하지 않음 (의도된 decoupling).
-    class DirLight;   // forward - 광원 struct 정의는 object/light.h. .cpp 만 include.
-    class PointLight;
-    class SpotLight;
 
     /**
      * @brief GL 프로그램 uniform 값 setter 자유 함수 모음.
@@ -111,31 +108,9 @@ namespace SJH
         /// @return 찾은 location, 없으면 @c -1.
         GLint GetLocation(const Program &prog, const char *name);
 
-        // --- 광원 struct -> uniform block 일괄 전송 helpers ----------------------------
-        // 각 helper 는 `<prefix>.<field>` 형태로 셰이더 struct 멤버에 1:1 대응.
-        // 내부적으로 SetVec3/SetFloat 를 호출 - 누락/타입불일치 진단도 자동 적용.
-
-        /// @brief @c DirLight -> @c `<prefix>.{direction,ambient,diffuse,specular}` 4 uniform 전송.
-        /// @param prefix 셰이더 struct 변수명 (예: @c "dirLight").
-        /// @param worldDir Owner Actor 의 월드 전방 벡터 - @c DirLight::GetWorldDirection() 결과 전달.
-        void SetDirLight(const Program &prog, const char *prefix,
-                         const DirLight &light, const vmath::vec3 &worldDir);
-
-        /// @brief @c PointLight -> @c `<prefix>.{position,attenuation,ambient,diffuse,specular}` 5 uniform 전송.
-        /// @param prefix 셰이더 struct 변수명 (예: @c "pointLights[0]").
-        /// @param worldPos Owner Actor 의 월드 위치 - @c PointLight::GetWorldPosition() 결과 전달.
-        /// @details @c PointLight::Distance -> @c (Kc,Kl,Kq) 는 @c GetAttenuationCoeff 내부 도출 후 @c SetVec3 전송.
-        void SetPointLight(const Program &prog, const char *prefix,
-                           const PointLight &light, const vmath::vec3 &worldPos);
-
-        /// @brief @c SpotLight -> 8 uniform 전송
-        ///        (@c `<prefix>.{position,direction,cutoff,outerCutoff,attenuation,ambient,diffuse,specular}`).
-        /// @param prefix 셰이더 struct 변수명 (예: @c "spotLights[0]").
-        /// @param worldPos Owner Actor 의 월드 위치. @param worldDir Owner Actor 의 월드 전방.
-        /// @details CPU 는 degree 보관 / 셰이더는 cosine 비교 -
-        ///          송신 시점에 @c cosf(vmath::radians(CutoffAngleDeg)) 변환 수행.
-        void SetSpotLight(const Program &prog, const char *prefix,
-                          const SpotLight &light, const vmath::vec3 &worldPos, const vmath::vec3 &worldDir);
+        // 광원 struct -> uniform block 일괄 전송 헬퍼(SetDirLight/SetPointLight/SetSpotLight)는
+        // 2026-06-11 D6 으로 render/light_uniform_dispatcher.cpp 파일-로컬 헬퍼로 이주.
+        // (program -> object 역의존 제거 - 유일 호출처가 dispatcher 단독이었음.)
     }
 }
 

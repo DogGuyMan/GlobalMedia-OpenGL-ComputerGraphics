@@ -25,7 +25,7 @@
 
 #include "material/material.h"
 #include "material/pass.h"
-#include "object/light.h"
+#include "scene/light.h"
 #include "object/mesh.h"
 #include "resource_registry/image.h"
 #include "resource_registry/resource_registry.h"

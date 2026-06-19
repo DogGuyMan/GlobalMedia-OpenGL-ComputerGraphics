@@ -3,6 +3,10 @@
  * @brief 그릴 대상의 다형 추상 - Default backbuffer / FBO / (미래) Shadow/MRT/MSAA 등의 *공통 슬롯*.
  *
  * @details
+ *  ### 거주지 (2026-06-11 E4 사이클 해소로 render -> buffer 이주)
+ *  주 구현인 @c Framebuffer (buffer 모듈) 가 @c RenderTarget 을 상속하므로 인터페이스를 buffer 에
+ *  동거시켜 buffer -> render 역의존을 끊었다. @c device_context.h (render) 는 이제 buffer 를 PUBLIC 의존.
+ *
  *  ### 책임
  *  - @c RenderTarget - @c Bind() + @c GetWidth/Height() 만을 강제하는 LSP 계약 추상.
  *  - @c DefaultRenderTarget - window backbuffer(FBO 0) 구현체.

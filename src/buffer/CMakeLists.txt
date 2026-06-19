@@ -1,6 +1,7 @@
 add_library(sjhopengl_buffer STATIC
     buffer.cpp
     framebuffer.cpp
+    render_target.cpp           # 2026-06-11 E4 — RenderTarget/DefaultRenderTarget (render 에서 이주). vtable home TU.
 )
 add_library(SJH::buffer ALIAS sjhopengl_buffer)
 
@@ -9,11 +10,11 @@ target_include_directories(sjhopengl_buffer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# SP4 T1 — framebuffer.h 가 RenderTarget 인터페이스 + Texture 헤더 노출 -> PUBLIC.
+# 2026-06-11 E4 — RenderTarget 이 buffer 로 이주해 SJH::render 역의존 제거 (buffer -> render 절단).
+# framebuffer.h 는 이제 같은 모듈의 render_target.h 만 참조.
 target_link_libraries(sjhopengl_buffer
     PUBLIC  SJH::common
             SJH::program
-            SJH::render               # framebuffer.h : RenderTarget 인터페이스 (SP4 T1)
             SJH::resource_registry    # framebuffer.h : TexturePtr / Texture
             project_deps
     PRIVATE SJH::diagnostics

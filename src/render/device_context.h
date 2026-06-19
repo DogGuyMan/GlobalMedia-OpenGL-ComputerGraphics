@@ -35,7 +35,7 @@
 
 #include "GL/gl3w.h"
 #include "program/program.h"
-#include "render/render_target.h"
+#include "buffer/render_target.h"
 #include <memory>
 
 namespace SJH

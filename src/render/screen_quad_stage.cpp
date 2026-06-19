@@ -24,7 +24,7 @@
 #include "program/program.h"
 #include "program/program_uniforms.h"
 #include "render/device_context.h"
-#include "render/render_target.h"
+#include "buffer/render_target.h"
 #include <GL/gl3w.h>
 #include <cassert>
 #include <cstddef>

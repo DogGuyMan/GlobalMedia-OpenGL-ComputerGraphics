@@ -5,6 +5,7 @@ add_library(sjhopengl_scene STATIC
     model_spawner.cpp
     camera.cpp
     compound_actor.cpp
+    light.cpp              # 2026-06-11 E1 — DirLight/PointLight/SpotLight 컴포넌트 (object 에서 이주)
 )
 add_library(SJH::scene ALIAS sjhopengl_scene)
 

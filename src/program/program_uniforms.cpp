@@ -21,18 +21,14 @@
  *  - 본 TU 만 @c program/program.h 를 include - public 멤버만 호출.
  *  - 헤더 (@c program_uniforms.h) 는 forward declaration 만 사용 - Program 정의 의존 없음.
  *
- * @note 광원 헬퍼의 셰이더 struct 필드 이름 접미사는 @c common/constants.h 의 @c Const::SHADER_PROPERTIE_* 상수 사용.
+ * @note 광원 struct -> uniform block 일괄 전송 헬퍼 3종은 2026-06-11 D6 으로
+ *       render/light_uniform_dispatcher.cpp 로 이주 (program -> object 역의존 제거).
  */
 
 #include "program/program.h"
 #include "program/program_uniforms.h"
 #include "diagnostics/uniform_diagnostics.h"
-#include "object/light.h"   // DirLight/PointLight/SpotLight + GetAttenuationCoeff (헤더는 forward decl 만)
-#include "common/constants.h"
 #include "GL/gl3w.h"        // glGetUniformLocation, glUniform*, GL_FALSE 등 직접 include (strict includes)
-
-#include <cmath>            // cosf - SpotLight degree->cosine 변환
-#include <string>
 
 namespace SJH::Uniforms
 {
@@ -114,45 +110,5 @@ namespace SJH::Uniforms
         if (loc < 0)
             Diagnostics::UniformDiagnostics::NotifyMissing(prog.GetProgramAddr(), name);
         return loc;
-    }
-
-    // === 광원 struct -> uniform block 일괄 전송 helpers ==========================
-    // 책임 분리: 셰이더 struct 멤버 이름과의 *문자열 결합* 만 본 TU 가 담당, 실제
-    // GL 호출은 SetVec3/SetFloat 가 재사용 - 캐시/진단/타입체크 경로 그대로 통과.
-
-    void SetDirLight(const Program &prog, const char *prefix,
-                     const DirLight &light, const vmath::vec3 &worldDir)
-    {
-        const std::string base = prefix;
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(), worldDir);
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),   light.Ambient);
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),   light.Diffuse);
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),  light.Specular);
-    }
-
-    void SetPointLight(const Program &prog, const char *prefix,
-                       const PointLight &light, const vmath::vec3 &worldPos)
-    {
-        const std::string base = prefix;
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(),    worldPos);
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(), GetAttenuationCoeff(light.Distance));
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),     light.Ambient);
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),     light.Diffuse);
-        SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),    light.Specular);
-    }
-
-    void SetSpotLight(const Program &prog, const char *prefix,
-                      const SpotLight &light, const vmath::vec3 &worldPos, const vmath::vec3 &worldDir)
-    {
-        const std::string base = prefix;
-        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(),     worldPos);
-        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(),    worldDir);
-        // CPU 는 degree, 셰이더는 cosine - 송신 시점에 변환 (struct 정의 시 의도된 분업).
-        SetFloat(prog, (base + Const::SHADER_PROPERTIE_CUTOFF).c_str(),       cosf(vmath::radians(light.CutoffAngleDeg)));
-        SetFloat(prog, (base + Const::SHADER_PROPERTIE_OUTER_CUTOFF).c_str(), cosf(vmath::radians(light.OuterCutoffAngleDeg)));
-        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(),  GetAttenuationCoeff(light.Distance));
-        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),      light.Ambient);
-        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),      light.Diffuse);
-        SetVec3 (prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),     light.Specular);
     }
 }

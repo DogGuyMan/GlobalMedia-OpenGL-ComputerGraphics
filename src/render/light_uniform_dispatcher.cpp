@@ -19,16 +19,60 @@
  */
 #include "render/light_uniform_dispatcher.h"
 #include "common/constants.h"
-#include "object/light.h"
+#include "object/light.h"   // GetAttenuationCoeff (거리 감쇠 계수 자유 함수)
+#include "scene/light.h"    // DirLight/PointLight/SpotLight 컴포넌트 (2026-06-11 E1 이주처)
 #include "program/program.h"
 #include "program/program_uniforms.h"
 #include "render/device_context.h"
+#include <cmath>            // cosf - SpotLight degree->cosine 변환 (D6 이주)
 #include <spdlog/spdlog.h>
 #include <string>
 #include <vector>
 
 namespace SJH
 {
+	namespace
+	{
+		// D6 (2026-06-11): program_uniforms.cpp 에서 이주한 광원 struct -> uniform block 일괄 전송 헬퍼.
+		// program -> object 역의존(program 이 광원 타입을 참조)을 끊기 위해 유일 호출처인 본 dispatcher 의
+		// 파일-로컬(익명 ns)로 옮겼다. 실제 GL 송신은 Uniforms::SetVec3/SetFloat 재사용 - 캐시/진단 경로 동일.
+		void SetDirLight(const Program &prog, const char *prefix,
+		                 const DirLight &light, const vmath::vec3 &worldDir)
+		{
+			const std::string base = prefix;
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(), worldDir);
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),   light.Ambient);
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),   light.Diffuse);
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),  light.Specular);
+		}
+
+		void SetPointLight(const Program &prog, const char *prefix,
+		                   const PointLight &light, const vmath::vec3 &worldPos)
+		{
+			const std::string base = prefix;
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(),    worldPos);
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(), GetAttenuationCoeff(light.Distance));
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),     light.Ambient);
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),     light.Diffuse);
+			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),    light.Specular);
+		}
+
+		void SetSpotLight(const Program &prog, const char *prefix,
+		                  const SpotLight &light, const vmath::vec3 &worldPos, const vmath::vec3 &worldDir)
+		{
+			const std::string base = prefix;
+			Uniforms::SetVec3 (prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(),     worldPos);
+			Uniforms::SetVec3 (prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(),    worldDir);
+			// CPU 는 degree, 셰이더는 cosine - 송신 시점에 변환 (struct 정의 시 의도된 분업).
+			Uniforms::SetFloat(prog, (base + Const::SHADER_PROPERTIE_CUTOFF).c_str(),       cosf(vmath::radians(light.CutoffAngleDeg)));
+			Uniforms::SetFloat(prog, (base + Const::SHADER_PROPERTIE_OUTER_CUTOFF).c_str(), cosf(vmath::radians(light.OuterCutoffAngleDeg)));
+			Uniforms::SetVec3 (prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(),  GetAttenuationCoeff(light.Distance));
+			Uniforms::SetVec3 (prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(),      light.Ambient);
+			Uniforms::SetVec3 (prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(),      light.Diffuse);
+			Uniforms::SetVec3 (prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(),     light.Specular);
+		}
+	} // anonymous namespace
+
 	void LightUniformDispatcher::Dispatch(const std::vector<Program *> &programs,
 	                                      DirLight *dir,
 	                                      const std::vector<PointLight *> &points,
@@ -60,7 +104,7 @@ namespace SJH
 			// DirLight - 1개. 없으면 enabled=0 만 전송 (uniform 0 보장).
 			if (dir)
 			{
-				Uniforms::SetDirLight(*prog, Const::UNI_DIR_LIGHT, *dir, dir->GetWorldDirection());
+				SetDirLight(*prog, Const::UNI_DIR_LIGHT, *dir, dir->GetWorldDirection());
 				Uniforms::SetInt(*prog, Const::UNI_DIR_LIGHT_ENABLED, 1);
 			}
 			else
@@ -75,7 +119,7 @@ namespace SJH
 				const std::string enStr  = Const::UNI_POINT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
 				if (i < points.size())
 				{
-					Uniforms::SetPointLight(*prog, idxStr.c_str(), *points[i], points[i]->GetWorldPosition());
+					SetPointLight(*prog, idxStr.c_str(), *points[i], points[i]->GetWorldPosition());
 					Uniforms::SetInt(*prog, enStr.c_str(), 1);
 				}
 				else
@@ -91,9 +135,9 @@ namespace SJH
 				const std::string enStr  = Const::UNI_SPOT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
 				if (i < spots.size())
 				{
-					Uniforms::SetSpotLight(*prog, idxStr.c_str(), *spots[i],
-					                      spots[i]->GetWorldPosition(),
-					                      spots[i]->GetWorldDirection());
+					SetSpotLight(*prog, idxStr.c_str(), *spots[i],
+					             spots[i]->GetWorldPosition(),
+					             spots[i]->GetWorldDirection());
 					Uniforms::SetInt(*prog, enStr.c_str(), 1);
 				}
 				else

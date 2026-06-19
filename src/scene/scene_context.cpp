@@ -17,7 +17,7 @@
  */
 #include "scene/scene_context.h"
 #include "common/constants.h"
-#include "object/light.h"
+#include "scene/light.h"
 #include "scene/camera.h"
 #include <algorithm>
 #include <cassert>

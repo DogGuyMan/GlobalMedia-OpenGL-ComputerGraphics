@@ -1,6 +1,5 @@
 add_library(sjhopengl_render STATIC
     device_context.cpp
-    render_target.cpp           # vtable home TU — virtual class 의 ODR 보장 (header-only 만으로 부족)
     render_stage.cpp            # vtable home TU — IRenderStage virtual class (SP5)
     mesh_pass_processor.cpp
     pipeline_state_setter.cpp   # SP-PipelineSetter — GL state machine 분리 (Applier 패턴)
@@ -23,8 +22,8 @@ target_include_directories(sjhopengl_render
 # SJH::material + SJH::resource_registry 는 PRIVATE.
 target_link_libraries(sjhopengl_render
     PUBLIC  SJH::common SJH::program project_deps
+            SJH::buffer   # 2026-06-11 E4 — device_context.h(공개) 가 buffer/render_target.h(RenderTarget) 노출 -> PUBLIC 승격
     PRIVATE SJH::diagnostics SJH::material SJH::object SJH::resource_registry SJH::scene
-            SJH::buffer   # scene_renderer.cpp 가 framebuffer.h (RenderTarget 상속 인식) 사용 (SP4 T3)
 )
 
 target_compile_features(sjhopengl_render PUBLIC cxx_std_17)

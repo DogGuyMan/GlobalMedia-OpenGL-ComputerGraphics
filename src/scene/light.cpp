@@ -7,15 +7,14 @@
  *  - `GetWorldDirection` / `GetWorldPosition` - Owner Actor 의 worldMatrix 에서 방향/위치 추출.
  *  - `OnEnter` / `OnExit` - Actor 트리 부착/해제 시 `SceneContext::AddLight` / `RemoveLight` 자동 호출.
  *
- *  ### 헤더/cpp 분리 이유
- *  - `light.h` 는 데이터 + `Scene::Component` 상속만 보유 - `Actor::GetWorldMatrix()` 정의 호출은
- *    link 의존을 유발하므로 cpp 로 격리. `SJH::object -> SJH::scene` 의존은 이 파일 한정.
- *  - 헤더는 `actor.h` 의 `Component` base 만 사용 (모두 inline -> link 의존 0).
+ *  ### 거주지 (2026-06-11 E1 사이클 해소로 이주)
+ *  광원 컴포넌트는 scene 의 Director/SceneContext 를 직접 호출 - 본 모듈(scene) 에 거주.
+ *  과거 object/light.cpp 시절 유발하던 object -> scene 역의존을 제거했다.
  *
  * @note `GetWorldDirection` 은 worldMatrix 의 `-Z 컬럼` 을 forward 로 정의 -
  *       `Transform::GetForward()` / `Camera::GetViewMatrix` 와 일관 (EulerRot=0 기본 시 (0,0,-1)).
  */
-#include "object/light.h"
+#include "scene/light.h"
 #include "scene/actor.h" // Actor::GetWorldMatrix definition
 #include "scene/scene.h" // SP-SceneContext+ProgramRegistry - Director::Get().GetContext() 접근.
 

@@ -18,7 +18,7 @@
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/layer.h"
-#include "object/light.h"
+#include "scene/light.h"
 #include "object/transform.h"
 #include "render/mesh_renderer.h"  // SJH::Scene::MeshRenderer (render 헤더에 있지만 Scene namespace)
 #include "object/mesh.h"           // SJH::Mesh 완전 타입
