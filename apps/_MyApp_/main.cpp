@@ -52,7 +52,7 @@
 #include "render/scene_renderer.h"
 #include "render/screen_quad_stage.h"
 #include "resource_registry/resource_registry.h"
-#include "resource_registry/image.h"        // SJH::Image::Load
+#include "texture/image.h"        // SJH::Image::Load
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "render/actor_factory.h" // CreateScreenCameraActor (2026-06-11 E2 이주)

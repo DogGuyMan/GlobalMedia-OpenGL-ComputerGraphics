@@ -22,7 +22,7 @@
 #define __MYAPP_STATE_OVERLAY_LAYER_H__
 
 #include "UI/IImGuiLayer.h"
-#include "resource_registry/texture.h"
+#include "texture/texture.h"
 #include <cstdint> // intptr_t (ImTextureID 캐스트)
 #include <imgui.h>
 

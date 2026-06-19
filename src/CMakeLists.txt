@@ -1,3 +1,4 @@
+add_subdirectory(texture)   # <- 추가 (2026-06-11 E3/E5/E6 — leaf GPU 자원, rr 에서 하위추출)
 add_subdirectory(buffer)
 add_subdirectory(object)
 add_subdirectory(common)
@@ -37,4 +38,5 @@ target_link_libraries(sjhopengl_engine INTERFACE
     SJH::playable           # M3.5 — 15 모듈 (playable 합류)
     SJH::timer              # 16 모듈 — 게임플레이 타이머 (spec 2026-06-01)
     SJH::text               # 17 모듈 — World Text (spec 2026-06-02)
+    SJH::texture            # 18 모듈 — leaf GPU 자원 (2026-06-11 E3/E5/E6 사이클 해소)
 )

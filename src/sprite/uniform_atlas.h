@@ -23,7 +23,7 @@
 
 #include "GL/gl3w.h"
 #include "common/common.h"
-#include "resource_registry/texture.h" // SJH::Texture / SJH::TextureUPtr (CLASS_PTR)
+#include "texture/texture.h" // SJH::Texture / SJH::TextureUPtr (CLASS_PTR)
 #include <vmath.h>
 
 namespace SJH::Sprite

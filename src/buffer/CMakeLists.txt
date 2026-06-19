@@ -15,7 +15,7 @@ target_include_directories(sjhopengl_buffer
 target_link_libraries(sjhopengl_buffer
     PUBLIC  SJH::common
             SJH::program
-            SJH::resource_registry    # framebuffer.h : TexturePtr / Texture
+            SJH::texture              # 2026-06-11 E3 — framebuffer.h : TexturePtr / Texture (rr 에서 texture 하위추출)
             project_deps
     PRIVATE SJH::diagnostics
 )

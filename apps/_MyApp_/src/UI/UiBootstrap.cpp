@@ -16,7 +16,7 @@
 #include "UI/PauseButtonLayer.h"
 #include "UI/ImGuiLayerStack.h"
 #include "UI/PostFXDebugLayer.h"
-#include "resource_registry/image.h"
+#include "texture/image.h"
 #include "resource_registry/resource_registry.h"
 
 #include <GLFW/glfw3.h>

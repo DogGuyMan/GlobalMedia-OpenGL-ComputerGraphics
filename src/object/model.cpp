@@ -18,7 +18,7 @@
  */
 #include "model.h"
 #include "object/geometry.h"
-#include "resource_registry/texture.h"
+#include "texture/texture.h"
 #include "material/material.h"
 #include <assimp/material.h>
 #include <spdlog/spdlog.h>

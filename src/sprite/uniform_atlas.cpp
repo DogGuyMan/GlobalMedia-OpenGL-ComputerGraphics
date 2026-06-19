@@ -18,7 +18,7 @@
  */
 #include "uniform_atlas.h"
 
-#include "resource_registry/image.h"   // SJH::Image::Load
+#include "texture/image.h"   // SJH::Image::Load
 #include "GL/gl3w.h"
 #include <spdlog/spdlog.h>
 

@@ -32,14 +32,14 @@
 #include "buffer/framebuffer.h"
 #include "common/common.h"
 #include "effect.h"
-#include "image.h"
+#include "texture/image.h"
 #include "material/material.h"
 #include "object/mesh.h"
 #include "object/model.h"
 #include "program/program.h"
 #include "sound.h"
 #include "sprite/uniform_atlas.h"
-#include "texture.h"
+#include "texture/texture.h"
 #include <string>
 #include <unordered_map>
 #include <vector>

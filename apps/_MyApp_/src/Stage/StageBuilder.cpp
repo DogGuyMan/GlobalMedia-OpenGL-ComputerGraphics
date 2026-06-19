@@ -31,9 +31,9 @@
 #include "object/mesh.h"
 #include "program/program.h"
 #include "render/mesh_renderer.h"
-#include "resource_registry/image.h"
+#include "texture/image.h"
 #include "resource_registry/resource_registry.h"
-#include "resource_registry/texture.h"
+#include "texture/texture.h"
 #include "scene/actor.h"
 #include "render/model_spawner.h"
 

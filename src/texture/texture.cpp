@@ -13,7 +13,8 @@
  *  5-arg @c Create 오버로드는 @c GL_NEAREST 필터 + @c GL_CLAMP_TO_EDGE wrap 강제 -
  *  @c GL_DEPTH24_STENCIL8 등 packed 포맷은 mipmap 생성 및 선형 보간 부적합.
  */
-#include "resource_registry.h"
+#include "texture.h"
+#include "image.h"
 #include <memory>
 #include <spdlog/spdlog.h>
 

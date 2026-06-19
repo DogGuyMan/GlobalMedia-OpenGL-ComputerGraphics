@@ -27,6 +27,7 @@ target_link_libraries(sjhopengl_render
             SJH::buffer   # 2026-06-11 E4 — device_context.h(공개) 가 buffer/render_target.h(RenderTarget) 노출 -> PUBLIC 승격
             SJH::scene    # 2026-06-11 E2 — actor_factory.h/model_spawner.h(공개) 가 SJH::Scene::Actor 반환 -> PUBLIC 승격
     PRIVATE SJH::diagnostics SJH::material SJH::object SJH::resource_registry
+            SJH::texture  # 2026-06-11 E3 — property_block_setter.cpp 의 Texture (rr 에서 texture 하위추출)
 )
 
 target_compile_features(sjhopengl_render PUBLIC cxx_std_17)

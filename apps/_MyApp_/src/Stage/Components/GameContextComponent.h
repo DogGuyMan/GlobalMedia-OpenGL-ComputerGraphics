@@ -21,7 +21,7 @@
 #define __TOPDOWNSHOOTER_STAGE_COMPONENTS_GAME_CONTEXT_H__
 
 #include "scene/actor.h"
-#include "resource_registry/texture.h"
+#include "texture/texture.h"
 
 // 포인터만 보유 - 전방 선언으로 충분 (UI/imgui / WaveController 헤더 전이 의존 차단).
 // 실제 멤버 역참조(overlay->Show / waveCtrl->WaveLevel)는 사용처(StageState.Impl.h)가 헤더 include.

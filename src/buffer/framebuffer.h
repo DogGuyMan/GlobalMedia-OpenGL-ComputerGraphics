@@ -24,7 +24,7 @@
 
 #include "common/common.h"
 #include "buffer/render_target.h"
-#include "resource_registry/texture.h"
+#include "texture/texture.h"
 #include <cstdint>
 
 namespace SJH

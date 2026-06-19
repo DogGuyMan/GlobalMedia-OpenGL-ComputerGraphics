@@ -18,6 +18,7 @@ target_link_libraries(sjhopengl_object
             SJH::buffer      # mesh.h: Buffer / BufferPtr 필드
             SJH::layout      # mesh.h: VertexLayout / VertexLayoutUPtr 필드
             SJH::material    # model.h: RenderUnit.material / mMaterials / Material
+            SJH::texture     # 2026-06-11 E5 — model.h/model.cpp: TextureUPtr (rr 에서 texture 하위추출, transitive 명시화)
             project_deps     # mesh.h: <glad/glad.h>, GLuint
             assimp
 )

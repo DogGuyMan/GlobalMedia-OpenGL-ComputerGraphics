@@ -32,7 +32,7 @@
 #include "program/program_uniforms.h"
 #include "program/uniform_cache.h"
 #include "render/device_context.h"
-#include "resource_registry/texture.h"
+#include "texture/texture.h"
 
 namespace SJH::PropertyBlockSetter
 {

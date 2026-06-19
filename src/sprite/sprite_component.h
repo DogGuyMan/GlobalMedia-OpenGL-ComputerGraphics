@@ -4,17 +4,17 @@
  *
  * @details
  *  ### 책임
- *  - @c UniformAtlas* 를 주입받아 billboard plane + program + per-instance Material 을 최초 1회 자동 해결.
+ *  - @c UniformAtlas* + 주입된 billboard plane Mesh / per-instance Material 을 보관 (base MeshRenderer).
  *  - 매 @c Update 에서 atlas UV rect / tint / flipX / roll / 피격 / 디졸브 uniform 을 Material 에 동기화.
  *  - @c SpriteSequencePlayable (sibling Component) 이 @c frameIdx 를 갱신하면 다음 Update 에서 UV 재계산.
  *
  *  ### 비-책임
  *  - [X] frameIdx 시간 진행 - @c SpriteSequencePlayable 책임.
- *  - [X] 공유 자원(@c Mesh / @c Program / template @c Material) 수동 생성 - @c ResourceRegistry 경유 자동 해결.
+ *  - [X] 공유 자원(@c Mesh / @c Program / @c Material) 생성/해결 - 호출자가 @c SJH::SpriteResources 로
+ *    해결 후 생성자에 주입 (2026-06-11 E6 D8 DI 전환 - 과거 ctor 자가 ResourceRegistry 해결 폐기).
  *  - [X] 디졸브 텍스처 로드 - 외부 sink(@c PlayerSpriteDirector 등)가 @c dissolveTex 주입.
  *
- * @note 내부 ResourceRegistry 키 컨벤션('_' 접두 - 사용자 namespace 격리):
- *       @c _sprite_plane / @c _sprite_billboard_program / @c _sprite_billboard / @c _sprite_inst_N.
+ * @note 공유 자원 ResourceRegistry 키 컨벤션('_' 접두)은 @c resource_registry/sprite_resources.h 참조.
  */
 
 #ifndef __SJH_SPRITE_SPRITE_COMPONENT_H__
@@ -25,7 +25,9 @@
 
 namespace SJH
 {
-    class Texture;   // forward - dissolveTex 핸들 참조 (resource_registry 거주, SJH 네임스페이스)
+    class Texture;   // forward - dissolveTex 핸들 참조 (texture 모듈 거주, SJH 네임스페이스)
+    class Mesh;      // forward - 생성자 주입 plane (포인터, base MeshRenderer 로 전달)
+    class Material;  // forward - 생성자 주입 per-instance material (포인터, base MeshRenderer 로 전달)
 }
 
 namespace SJH::Sprite
@@ -35,11 +37,10 @@ namespace SJH::Sprite
     /**
      * @brief Sprite 전용 MeshRenderer - billboard plane + per-instance Material 자동 셋업.
      * @details
-     *  ### 자동 해결되는 공유 자원 (ResourceRegistry 고정 키, '_' 접두로 사용자 namespace 격리)
-     *  - @c "_sprite_plane"             - @c Mesh::CreatePlane() (sprite 전용 plane, 최초 1회)
-     *  - @c "_sprite_billboard_program" - @c billboard_atlas.vs/fs program (최초 1회)
-     *  - @c "_sprite_billboard"         - template SharedMaterial (program + AlphaTest)
-     *  - @c "_sprite_inst_N"            - per-instance MaterialInstance (SpriteRenderer 마다 고유)
+     *  ### 주입되는 공유 자원 (호출자가 @c SJH::SpriteResources 로 해결, D8 DI)
+     *  - plane Mesh             - @c SpriteResources::EnsureSharedPlane() (@c "_sprite_plane")
+     *  - per-instance Material  - @c SpriteResources::CreateInstanceMaterial(atlas) (@c "_sprite_inst_N")
+     *    (template @c "_sprite_billboard" + @c "_sprite_billboard_program" 은 SpriteResources 내부 해결)
      *
      *  ### 책임 분할
      *  - 본 클래스 (MeshRenderer 상속): atlas / frameIdx / tint / flipX / 시각 효과 데이터
@@ -49,7 +50,9 @@ namespace SJH::Sprite
      *
      *  ### 사용 예
      *  @code
-     *  auto* spr = actor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
+     *  auto* mesh = SJH::SpriteResources::EnsureSharedPlane();
+     *  auto* mat  = SJH::SpriteResources::CreateInstanceMaterial(atlas);
+     *  auto* spr = actor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas, mesh, mat);
      *  spr->tint = vmath::vec4(1.0f, 0.5f, 0.5f, 1.0f);
      *  // SpriteSequencePlayable 부착 시 frameIdx 자동 진행
      *  SJH::SpriteSequence::SpriteFrameClip clip{0, atlas->FrameCount(), 4.0f};
@@ -66,10 +69,17 @@ namespace SJH::Sprite
     class SpriteRenderer : public SJH::Scene::MeshRenderer
     {
     public:
-        /// @brief atlas 주입 생성자 - plane + program + per-instance Material 자동 해결 (ctor 내 1회).
-        /// @details @p atlas == @c nullptr 이면 Material 도 @c nullptr - 빈 SpriteRenderer (테스트/지연 셋업).
-        /// @param atlas 사용할 @c UniformAtlas 포인터. @c nullptr 허용.
-        explicit SpriteRenderer(UniformAtlas* atlas = nullptr);
+        /// @brief atlas + 주입된 공유 자원(plane Mesh / per-instance Material) 생성자.
+        /// @details 2026-06-11 E6(D8) - 자가 ResourceRegistry 해결을 폐기하고 DI 로 전환.
+        ///          호출자가 @c SJH::SpriteResources::EnsureSharedPlane() + @c CreateInstanceMaterial(atlas)
+        ///          로 자원을 해결해 주입한다. @p mesh / @p materialInstance 는 base @c MeshRenderer 로 전달.
+        ///          모두 @c nullptr 이면 빈 SpriteRenderer (테스트/지연 셋업).
+        /// @param atlas           사용할 @c UniformAtlas 포인터. @c nullptr 허용.
+        /// @param mesh            billboard plane Mesh (비소유 - rr 세션수명 소유). @c nullptr 허용.
+        /// @param materialInstance per-instance Material (비소유 - rr 세션수명 소유). @c nullptr 허용.
+        explicit SpriteRenderer(UniformAtlas* atlas = nullptr,
+                                SJH::Mesh* mesh = nullptr,
+                                SJH::Material* materialInstance = nullptr);
 
         void OnEnter() override {}
         void OnExit()  override {}

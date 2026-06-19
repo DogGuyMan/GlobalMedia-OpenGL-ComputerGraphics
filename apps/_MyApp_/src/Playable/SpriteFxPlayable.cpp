@@ -17,7 +17,7 @@
  */
 #include "Playable/SpriteFxPlayable.h"
 
-#include "resource_registry/image.h"             // SJH::Image::Load (dissolve.png)
+#include "texture/image.h"             // SJH::Image::Load (dissolve.png)
 #include "resource_registry/resource_registry.h" // ResourceRegistry - dissolve 노이즈 텍스처 1회 캐시
 #include "scene/actor.h"             // SJH::Scene::Actor (GetChildren/GetComponent)
 #include "sprite/sprite_component.h" // SJH::Sprite::SpriteRenderer (enableHit/dissolve)

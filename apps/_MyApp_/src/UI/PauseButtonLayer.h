@@ -21,7 +21,7 @@
 #define __MYAPP_PAUSE_BUTTON_LAYER_H__
 
 #include "UI/IImGuiLayer.h"
-#include "resource_registry/texture.h"
+#include "texture/texture.h"
 #include <cstdint> // intptr_t (ImTextureID 캐스트)
 #include <functional>
 #include <imgui.h>

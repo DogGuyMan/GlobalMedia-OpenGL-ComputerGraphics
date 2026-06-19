@@ -1,104 +1,26 @@
 /**
  * @file sprite_component.cpp
- * @brief SpriteRenderer 구현 - ResourceRegistry 경유 공유 자원 lazy 해결 + per-instance Material 생성 + uniform 동기화.
+ * @brief SpriteRenderer 구현 - 주입된 공유 자원 base 전달 + 매 프레임 uniform 동기화.
  *
  * @details
  *  ### 책임
- *  - 익명 namespace 헬퍼 3종:
- *    - @c EnsureSharedPlane()      - @c _sprite_plane (Mesh) 최초 1회 생성/등록.
- *    - @c EnsureTemplateMaterial() - @c _sprite_billboard_program (Program) + @c _sprite_billboard (SharedMaterial) 최초 1회.
- *    - @c CreateInstanceMaterial() - @c _sprite_inst_N (MaterialInstance) per-SpriteRenderer 생성.
+ *  - 생성자: 주입된 plane Mesh / per-instance Material 을 base @c MeshRenderer 로 전달 (D8 DI).
  *  - @c SpriteRenderer::Update : atlas UV / tint / flipX / roll / 피격 / 디졸브 uniform 매 프레임 동기화.
  *
- *  ### ResourceRegistry 키 컨벤션 ('_' 접두 - 사용자 namespace 격리)
- *  - @c "_sprite_plane"             (Mesh)
- *  - @c "_sprite_billboard_program" (Program)
- *  - @c "_sprite_billboard"         (template SharedMaterial)
- *  - @c "_sprite_inst_N"            (per-instance MaterialInstance, N = 단조 증가 counter)
+ *  ### 거주지 이동 (2026-06-11 E6 D8)
+ *  과거 익명 ns 헬퍼 3종(plane/template/instance ResourceRegistry 해결)은
+ *  @c resource_registry/sprite_resources.{h,cpp} 로 이주 - 본 TU 는 rr 의존 0.
  */
 #include "sprite/sprite_component.h"
 
 #include "material/material.h"
 #include "material/material_uniforms.h"
-#include "material/pass.h"
-#include "object/mesh.h"
-#include "resource_registry/resource_registry.h"
 #include "sprite/uniform_atlas.h"
-
-#include <spdlog/spdlog.h>
-#include <string>
 
 namespace SJH::Sprite
 {
-	namespace
-	{
-		constexpr const char *kPlaneKey = "_sprite_plane";
-		constexpr const char *kProgramKey = "_sprite_billboard_program";
-		constexpr const char *kTemplateKey = "_sprite_billboard";
-
-		SJH::Mesh *EnsureSharedPlane()
-		{
-			auto &reg = ResourceRegistry::Get();
-			if (auto *m = reg.FindMesh(kPlaneKey))
-				return m;
-			return reg.RegisterMesh(kPlaneKey, SJH::Mesh::CreatePlane());
-		}
-
-		SJH::Material *EnsureTemplateMaterial()
-		{
-			auto &reg = ResourceRegistry::Get();
-			if (auto *tpl = reg.FindSharedMaterial(kTemplateKey))
-				return tpl;
-
-			SJH::Program *prog = reg.FindProgram(kProgramKey);
-			if (!prog)
-			{
-				prog = reg.CreateProgram(
-				    kProgramKey,
-				    "resources/shaders/billboard_atlas.vs",
-				    "resources/shaders/billboard_atlas.fs");
-				if (!prog)
-				{
-					spdlog::error("SpriteRenderer: billboard_atlas shader 로드 실패");
-					return nullptr;
-				}
-			}
-
-			auto *tpl = reg.CreateSharedMaterial(kTemplateKey);
-			if (tpl)
-			{
-				tpl->SetProgram(prog);
-				tpl->SetPass(SJH::Pass::Kind::AlphaTest);
-			}
-			return tpl;
-		}
-
-		SJH::Material *CreateInstanceMaterial(UniformAtlas *atlas)
-		{
-			if (!atlas)
-				return nullptr;
-			auto &reg = ResourceRegistry::Get();
-			auto *tpl = EnsureTemplateMaterial();
-			if (!tpl)
-				return nullptr;
-
-			// 단조 증가 - 동일 프로세스 안 unique. ResourceRegistry::Clear 이후에도 충돌 없음.
-			static int counter = 0;
-			const std::string key = std::string("_sprite_inst_") + std::to_string(++counter);
-			auto *inst = reg.CreateMaterialInstanceFrom(key, tpl);
-			if (!inst)
-				return nullptr;
-
-			inst->Properties.Textures["uAtlas"] = {atlas->GetTexture(), /*unit=*/0};
-			Uniforms::SetVec4(*inst, "uUvRect", atlas->GetUVRect(/*frameIdx=*/0));
-			Uniforms::SetFloat(*inst, "uFlipX", 1.0f);
-			Uniforms::SetVec4(*inst, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-			return inst;
-		}
-	} // namespace
-
-	SpriteRenderer::SpriteRenderer(UniformAtlas *atlasPtr)
-	    : MeshRenderer(EnsureSharedPlane(), CreateInstanceMaterial(atlasPtr)),
+	SpriteRenderer::SpriteRenderer(UniformAtlas *atlasPtr, SJH::Mesh *mesh, SJH::Material *materialInstance)
+	    : MeshRenderer(mesh, materialInstance),
 	      atlas(atlasPtr)
 	{
 	}

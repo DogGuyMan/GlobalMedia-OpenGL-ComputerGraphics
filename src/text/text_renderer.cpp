@@ -18,6 +18,7 @@
 
 #include "text/bitmap_font.h"
 #include "sprite/sprite_component.h"   // SJH::Sprite::SpriteRenderer
+#include "resource_registry/sprite_resources.h" // SJH::SpriteResources (D8 DI - plane/material 해결)
 
 #include <memory>
 #include <string>
@@ -76,7 +77,11 @@ namespace SJH::Text
                 auto& t = glyph->GetTransform();
                 t.Translate = vmath::vec3(penX + glyphW * 0.5f, mCharHeight * 0.5f, 0.0f); // 하단중앙
                 t.Scale     = vmath::vec3(glyphW, mCharHeight, 1.0f);                       // 빌보드 sx/sy
-                auto* sr = glyph->AddComponent<SJH::Sprite::SpriteRenderer>(mFont->GetAtlas());
+                // D8 DI - 공유 자원(plane/material)을 SpriteResources 로 해결 후 주입 (미주입 시 글리프 무성 소멸).
+                auto* atlas = mFont->GetAtlas();
+                auto* mesh  = SJH::SpriteResources::EnsureSharedPlane();
+                auto* mat   = SJH::SpriteResources::CreateInstanceMaterial(atlas);
+                auto* sr = glyph->AddComponent<SJH::Sprite::SpriteRenderer>(atlas, mesh, mat);
                 sr->frameIdx = frame;
                 sr->tint     = mColor;
                 mGlyphs.push_back(glyph);

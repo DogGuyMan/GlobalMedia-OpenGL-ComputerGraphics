@@ -21,7 +21,7 @@
 
 #include "common/common.h"
 #include "object/mesh.h"
-#include "resource_registry/texture.h"   // TextureUPtr - 모델이 보유하는 텍스처 lifetime
+#include "texture/texture.h"   // TextureUPtr - 모델이 보유하는 텍스처 lifetime
 #include "material/material.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>

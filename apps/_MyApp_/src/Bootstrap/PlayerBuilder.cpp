@@ -50,7 +50,7 @@
 #include "render/mesh_renderer.h"     // SJH::Scene::MeshRenderer
 #include "material/material.h"        // SJH::Material
 #include "material/pass.h"            // SJH::Pass::Kind::Transparent
-#include "resource_registry/image.h"  // SJH::Image::Load
+#include "texture/image.h"  // SJH::Image::Load
 #include "Physics/PhysicsComponent.h" // FindPhysics / Physics::GetBody
 #include "scene/actor.h"
 #include "scene/scene.h"

@@ -35,6 +35,7 @@
 #include "object/transform.h"
 #include "resource_registry/resource_registry.h" // ResourceRegistry / UniformAtlas
 #include "sprite/sprite_component.h"              // SJH::Sprite::SpriteRenderer (빌보드)
+#include "resource_registry/sprite_resources.h"  // SJH::SpriteResources (D8 DI - plane/material 해결)
 
 #include <cmath>
 #include <memory>
@@ -105,7 +106,9 @@ namespace TopdownShooter::Entity
 			auto *hc = hand->AddComponent<PlayerSingleHand>(spreadDeg, HAND_RADIUS, HAND_Y_OFFSET, HAND_SCALE);
 			if (atlas != nullptr)
 			{
-				auto *spr = hand->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
+				auto *mesh = SJH::SpriteResources::EnsureSharedPlane();          // D8 DI - 공유 plane
+				auto *mat  = SJH::SpriteResources::CreateInstanceMaterial(atlas); // D8 DI - per-instance material
+				auto *spr = hand->AddComponent<SJH::Sprite::SpriteRenderer>(atlas, mesh, mat);
 				spr->flipX = hp.Flip;
 				spr->QueueOffset = HAND_QUEUE_OFFSET; // 플레이어 몸통 위 레이어
 			}

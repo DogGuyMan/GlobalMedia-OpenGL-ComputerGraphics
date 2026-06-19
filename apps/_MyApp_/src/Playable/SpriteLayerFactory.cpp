@@ -20,6 +20,7 @@
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "sprite/sprite_component.h"
+#include "resource_registry/sprite_resources.h" // SJH::SpriteResources (D8 DI - plane/material 해결)
 #include "sprite/sprite_frame_clip.h"
 #include "sprite/sprite_sequence_playable.h"
 
@@ -41,7 +42,9 @@ namespace TopdownShooter::Playable
 			return nullptr;
 		}
 
-		auto *spr        = target.AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
+		auto *mesh       = SJH::SpriteResources::EnsureSharedPlane();          // D8 DI - 공유 plane
+		auto *mat        = SJH::SpriteResources::CreateInstanceMaterial(atlas); // D8 DI - per-instance material
+		auto *spr        = target.AddComponent<SJH::Sprite::SpriteRenderer>(atlas, mesh, mat);
 		spr->flipX       = t.Flip;
 		spr->QueueOffset = t.DrawOrder; // painter 합성 층 (enemy=0 -> 기본값과 동일, 무해)
 

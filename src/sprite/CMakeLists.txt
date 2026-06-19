@@ -16,8 +16,8 @@ target_link_libraries(sjh_sprite PUBLIC
     SJH::scene # SJH::Scene::Component 베이스 (SpriteRenderer / SpriteSequencePlayable)
     SJH::render # SJH::Scene::MeshRenderer 베이스 (SpriteRenderer 상속)
     SJH::material # SJH::Material / Pass / Uniforms (sprite_component.cpp)
-    SJH::object # SJH::Mesh::CreatePlane (sprite_component.cpp)
-    SJH::resource_registry # SJH::Image / SJH::Texture / 공유 자원 lookup
+    SJH::object # SJH::Mesh (uniform_atlas / sprite_sequence)
+    SJH::texture # 2026-06-11 E6 — uniform_atlas.h/.cpp: SJH::Texture / SJH::Image (rr->texture 하위추출 + D8 로 sprite->rr 절단)
     SJH::playable # PlayableBase 베이스 — sprite_sequence_playable.h 가 PUBLIC include
     project_deps # gl3w, vmath, OpenGL, 플랫폼 프레임워크
 )
