@@ -50,7 +50,7 @@ namespace TopdownShooter::Entity
 	 *
 	 *  dust FX seam(@c mOnMoveFx)은 빌더가 @c SetOnMoveFx 로 주입 - PlayerEntity 는 VFX 코드와 무관.
 	 */
-	class PlayerEntity : public BaseEntity, public IMovable
+	class PlayerEntity : public BaseEntity, public IMovable, public IPlayerCommand
 	{
 	  protected:
 		IMovable *mMovement = nullptr; ///< PhysicsMovement 비소유 캐시 (인터페이스 포인터 - 물리/비물리 양분 대비).
@@ -125,7 +125,7 @@ namespace TopdownShooter::Entity
 		///          "dash" Play 를 1회만 발화한다 (폭주 방지).
 		///          @c PlayerLifeComponent::DoInvincible -> @c DoImpulse 순서 고정.
 		/// @param dir 대시 방향 벡터 (XZ).
-		void Dash(vmath::vec2 dir)
+		void Dash(vmath::vec2 dir) override
 		{
 			const bool wasActive = IsImpulseActive(); // rising-edge 판정용 (직전 버스트 활성?)
 			auto *plife = dynamic_cast<Components::PlayerLifeComponent *>(mLife);
@@ -140,7 +140,7 @@ namespace TopdownShooter::Entity
 
 		/// @brief 원거리 발사 verb - @c Components::Weapon::UseWeapon 위임.
 		/// @param aim 조준 방향 벡터 (XZ world 평면). 투사체 진행 방향 계산에 사용.
-		void UseWeapon(vmath::vec2 aim)
+		void UseWeapon(vmath::vec2 aim) override
 		{
 			if (mWeapon)
 			{

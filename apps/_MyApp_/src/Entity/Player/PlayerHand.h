@@ -27,6 +27,7 @@
 #define _TOPDOWNSHOOTER_ENTITY_PLAYER_HAND__
 
 #include "scene/actor.h"
+#include "Contracts/EntityContracts.h" // IFireTrigger (좌클릭 발사 통지 계약)
 #include "Entity/Constants.h"
 #include "Tween/TweenPlayable.h" // 발사 핀치 복귀 (Tweeny Playable)
 #include <memory>
@@ -98,7 +99,7 @@ namespace TopdownShooter::Entity
 	 *
 	 *  @note spread/radius/yOffset/QueueOffset 수치는 @c Entity/Constants.h (HAND_*) 단일 소스.
 	 */
-	class PlayerHands : public SJH::Scene::Component
+	class PlayerHands : public SJH::Scene::Component, public IFireTrigger
 	{
 	  public:
 		/// @brief 손 child 액터를 부착할 orbit parent 주입 (선택적). 미주입이면 owner(root).
@@ -118,7 +119,7 @@ namespace TopdownShooter::Entity
 
 		/// @brief 좌클릭 발사 - 양팔을 즉시 최소각(15deg)으로 핀치한 뒤 @c HAND_FIRE_PINCH_MS 동안
 		///        거리 기반 각도로 Tweeny 복귀. 클릭마다 트윈 재생성(재시작).
-		void TriggerFire();
+		void TriggerFire() override;
 
 	  private:
 		SJH::Scene::Actor *mOrbitParent = nullptr; ///< 손 child 부착 대상 (nullptr -> owner). 데칼 spin 분리 후 손 궤도 유지.

@@ -31,7 +31,6 @@
 
 // PlayerController.h -> input/mouse_input.h 가 <GLFW/glfw3.h> 를 끌어오므로, GLFW 가 자체 GL 헤더를
 // 포함해 엔진 gl3w 와 PFNGL* 가 충돌하지 않도록 *모든 include 이전* 에 NONE 을 선언한다.
-#include "Entity/Player/PlayerEntity.h"
 #define GLFW_INCLUDE_NONE
 
 #include "PlayerController.h"
@@ -40,9 +39,9 @@
 #include "scene/actor.h"
 
 // 마우스->Ground raycast + 발사/회전/디버그 마커에 필요한 의존 (Client 코드라 직접 사용 OK).
-#include "Entity/BaseEntity.h"
-#include "Entity/Components/WeaponComponents.h"
-#include "Entity/Player/PlayerHand.h" // 발사 핀치 - 좌클릭 바인딩에서 PlayerHands::TriggerFire 통지
+#include "Contracts/EntityContracts.h" // IPlayerCommand/IFireTrigger/ITimerOwner/IImpulseState (C2 DIP - 구체 Entity 미참조)
+#include "timer/timer.h"               // SJH::Timer::Timer (mAttackTimer->Tick/GetBaseTime 완전형)
+#include "timer/multiple_timer.h"      // SJH::Timer::MultipleTimer (ITimerOwner::Timers() Register/Unregister 완전형)
 #include "Playable/Constants.h"       // FacingThresholdConfig / PLAYER_FACING_THRESHOLD (헤더-only 데이터)
 #include "material/material.h"
 #include "material/material_uniforms.h"
@@ -140,8 +139,8 @@ namespace TopdownShooter::Controller
 			if (auto *owner = GetOwner())
 			{
 				const vmath::vec2 aimXZ(mPrevInputValue[0], mPrevInputValue[2]);
-				if(auto* pe = owner->GetComponent<Entity::PlayerEntity>()) {
-					pe->Dash(aimXZ); 
+				if(auto* pe = owner->GetComponent<Entity::IPlayerCommand>()) {
+					pe->Dash(aimXZ);
 					return;
 				}
 			}
@@ -166,7 +165,7 @@ namespace TopdownShooter::Controller
 				OnFirePressed();
 				// 발사 핀치 통지 - 좁힘/복귀 로직은 PlayerHands 가 소유. 입력 바인딩은 호출만(멤버 캐시 없음).
 				if (auto *owner = GetOwner())
-					if (auto *hands = owner->GetComponent<Entity::PlayerHands>())
+					if (auto *hands = owner->GetComponent<Entity::IFireTrigger>())
 						hands->TriggerFire();
 			});
 	}
@@ -299,13 +298,13 @@ namespace TopdownShooter::Controller
 	{
 		if (!mIsInitialized)
 			return;
-		// attack 윈도 timer 를 BaseEntity 중앙 컨테이너에 등록 + arm-inactive (발사 시 Reset 으로 발동).
+		// attack 윈도 timer 를 ITimerOwner 중앙 컨테이너에 등록 + arm-inactive (발사 시 Reset 으로 발동).
 		if (auto *owner = GetOwner())
 		{
-			mEntity = owner->GetComponent<TopdownShooter::Entity::BaseEntity>();
-			if (mEntity != nullptr)
+			mTimerOwner = owner->GetComponent<TopdownShooter::Entity::ITimerOwner>();
+			if (mTimerOwner != nullptr)
 			{
-				mAttackTimer = mEntity->Timers().Register("player.attack", mAttackWindowSec);
+				mAttackTimer = mTimerOwner->Timers().Register("player.attack", mAttackWindowSec);
 				mAttackTimer->Tick(mAttackTimer->GetBaseTime());
 			}
 		}
@@ -319,8 +318,8 @@ namespace TopdownShooter::Controller
 	{
 		if (!mIsInitialized)
 			return;
-		if (mEntity != nullptr)
-			mEntity->Timers().Unregister("player.attack");
+		if (mTimerOwner != nullptr)
+			mTimerOwner->Timers().Unregister("player.attack");
 		mAttackTimer = nullptr;
 		UnregisterBindings();
 		mKeyboardInput = nullptr;
@@ -329,7 +328,7 @@ namespace TopdownShooter::Controller
 
 	/// @brief 매 프레임 입력 처리 -- 이동/조준/facing 갱신.
 	/// @details 처리 순서:
-	///   (1) @c mEntity lazy 캐시 -- controller 가 facade 보다 먼저 @c OnEnter 될 수 있어 첫 Update 에서 조회.
+	///   (1) @c mImpulseState lazy 캐시 -- controller 가 facade 보다 먼저 @c OnEnter 될 수 있어 첫 Update 에서 조회.
 	///   (2) dash(Impulse) 활성 중이면 @c IMovable::DoForward 호출 skip (대시 버스트 보존).
 	///   (3) @c UpdateAim 으로 마우스->Ground raycast 조준 정보 갱신.
 	///   (4) facing pivot 의 EulerRot[1] 에 @c mAimAngleY 적용 (논리 회전).
@@ -341,14 +340,14 @@ namespace TopdownShooter::Controller
 		if (!mIsInitialized)
 			return;
 
-		// facade lazy 캐시 (controller 가 facade 보다 먼저 OnEnter 될 수 있어 첫 Update 에서 조회).
-		if (mEntity == nullptr && GetOwner() != nullptr)
-			mEntity = GetOwner()->GetComponent<TopdownShooter::Entity::BaseEntity>();
+		// 임펄스 게이트 lazy 캐시 (controller 가 facade 보다 먼저 OnEnter 될 수 있어 첫 Update 에서 조회).
+		if (mImpulseState == nullptr && GetOwner() != nullptr)
+			mImpulseState = GetOwner()->GetComponent<TopdownShooter::Entity::IImpulseState>();
 
 		// 대시(Impulse) 중에는 입력 자유이동을 Block - DoForward 호출 자체를 skip.
 		// (입력 0 이어도 DoForward(0) 이 속도를 0 으로 만들어 버스트를 죽이므로 호출 자체를 막아야 함.)
 		// 현재 dash 입력 미배선이라 IsImpulseActive()=false -> 게이트 dormant(행동 변화 0).
-		const bool impulseActive = (mEntity != nullptr && mEntity->IsImpulseActive());
+		const bool impulseActive = (mImpulseState != nullptr && mImpulseState->IsImpulseActive());
 		if (!impulseActive)
 			mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
 
@@ -527,7 +526,7 @@ namespace TopdownShooter::Controller
 		SJH::Scene::Actor *owner = GetOwner();
 		if (owner != nullptr)
 		{
-			auto *pe = owner->GetComponent<Entity::PlayerEntity>();
+			auto *pe = owner->GetComponent<Entity::IPlayerCommand>();
 			if (pe != nullptr)
 				pe->UseWeapon(vmath::vec2(mAimDirection[0], -mAimDirection[2]));
 		}

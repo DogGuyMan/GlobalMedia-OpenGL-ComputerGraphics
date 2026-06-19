@@ -20,8 +20,7 @@
 #ifndef __TOPDOWNSHOOTER_SPAWNS_CARRIER_H__
 #define __TOPDOWNSHOOTER_SPAWNS_CARRIER_H__
 
-#include "Contracts/EntityContracts.h" // IDamageable / IImpulsable
-#include "Entity/Components/LifeComponents.h"        // IDamageable / IImpulsable
+#include "Contracts/EntityContracts.h" // IDamageable / IImpulsable / ILivable
 #include "Physics/Components.Interfaces.h"           // IContactable
 #include "scene/actor.h"
 #include <functional>
@@ -190,13 +189,13 @@ namespace TopdownShooter::Spawn::Carrier
 
 		void OnCollisionEnter(SJH::Scene::Actor *other) override
 		{
-			if (mOwnerEntity != nullptr && !mOwnerEntity->GetComponent<Entity::Components::Life>()->IsAlive())
+			if (mOwnerEntity != nullptr && !mOwnerEntity->GetComponent<Entity::ILivable>()->IsAlive())
 				return;
 			Deliver(other, vmath::vec2(0.0f));
 		}
 		void OnTriggerEnter(SJH::Scene::Actor *other) override
 		{
-			if (mOwnerEntity != nullptr && !mOwnerEntity->GetComponent<Entity::Components::Life>()->IsAlive())
+			if (mOwnerEntity != nullptr && !mOwnerEntity->GetComponent<Entity::ILivable>()->IsAlive())
 				return;
 			Deliver(other, vmath::vec2(0.0f));
 		}

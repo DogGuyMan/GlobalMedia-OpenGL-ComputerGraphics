@@ -28,10 +28,9 @@
 #include "Contracts/EntityContracts.h"
 #include "Physics/PhysicsComponent.h"
 #include "Physics/Constants.h"
-#include "Entity/Player/PlayerEntity.h"
-#include "Entity/BaseEntity.h"   // Entity::BaseEntity::Timers() (MultipleTimer 등록 위탁)
 #include "scene/actor.h"
-#include "timer/timer.h"   // SJH::Timer::Timer (header-only)
+#include "timer/timer.h"            // SJH::Timer::Timer (header-only)
+#include "timer/multiple_timer.h"   // SJH::Timer::MultipleTimer (ITimerOwner::Timers() 완전형 - Register/Unregister)
 #include <cmath>
 
 namespace TopdownShooter::Physics
@@ -60,7 +59,7 @@ namespace TopdownShooter::Physics
 		void OnEnter() override
 		{
 			mBody = Components::FindPhysics(GetOwner());
-			auto* be = GetOwner() ? GetOwner()->GetComponent<Entity::BaseEntity>() : nullptr;
+			auto* be = GetOwner() ? GetOwner()->GetComponent<Entity::ITimerOwner>() : nullptr;
 			if (be == nullptr) return;
 			mActiveTimer = be->Timers().Register("impulse.active", IMPULSE_DURATION);
 			mActiveTimer->Tick(mActiveTimer->GetBaseTime());          // arm-inactive
@@ -70,7 +69,7 @@ namespace TopdownShooter::Physics
 		/// @brief BaseEntity::Timers() 에서 타이머 Unregister + 캐시 포인터 초기화.
 		void OnExit() override
 		{
-			if (auto* be = GetOwner() ? GetOwner()->GetComponent<Entity::BaseEntity>() : nullptr)
+			if (auto* be = GetOwner() ? GetOwner()->GetComponent<Entity::ITimerOwner>() : nullptr)
 			{
 				be->Timers().Unregister("impulse.active");
 				be->Timers().Unregister("impulse.cooldown");

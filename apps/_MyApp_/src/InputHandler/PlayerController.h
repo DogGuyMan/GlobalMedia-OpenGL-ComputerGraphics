@@ -29,7 +29,6 @@
 #include "scene/actor.h"
 #include <functional>
 #include <vmath.h>
-#include "Contracts/EntityContracts.h"
 
 namespace SJH::Scene
 {
@@ -37,8 +36,6 @@ namespace SJH::Scene
 }
 
 namespace SJH::Timer { class Timer; }
-namespace TopdownShooter::Entity { class BaseEntity; }
-namespace TopdownShooter::Entity { class PlayerHands; } // 발사 핀치 통지용 (포인터 멤버)
 
 class b2World; // 궁극기(R) 회전 히트스캔 레이저 발동용 물리 월드 (포인터 멤버 - 전방 선언)
 
@@ -125,7 +122,8 @@ namespace TopdownShooter::Controller
 		b2World *mWorld                              = nullptr; // 궁극기(R) 레이캐스트용 물리 월드 (비소유)
 		SJH::Scene::Actor *mFacingPivot = nullptr; // facing 회전 대상 (미주입 시 owner) - 데칼 spin 분리
 		Entity::IMovable* mMovementPtr = nullptr;
-		TopdownShooter::Entity::BaseEntity* mEntity = nullptr; // 대시 중 이동 suppress 게이트(IsImpulseActive)
+		TopdownShooter::Entity::ITimerOwner*   mTimerOwner   = nullptr; // player.attack 타이머 위탁처(중앙 컨테이너) - C2 DIP
+		TopdownShooter::Entity::IImpulseState* mImpulseState = nullptr; // 대시 중 이동 suppress 게이트(IsImpulseActive) - C2 DIP
 
 		std::function<void()> mFireCallback;   // 좌클릭
 
