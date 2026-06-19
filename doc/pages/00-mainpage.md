@@ -4,7 +4,7 @@
 C++17 / CMake 단독 빌드. macOS·Linux (Ninja) + Windows (MSVC) 크로스 플랫폼.
 
 > **교수 제출용 — vcpkg 미사용.** 모든 서드파티는 `lib/`·`include/` 사전 빌드 산출물을 체크인해 CMake 단독으로 완결된다.
-> 재빌드는 `shell/BuildExternLibs.{sh,bat}`. 본 문서는 `src/` 코어 모듈 16종 + `doc/pages/` 가이드를 대상으로 한다 (`apps/` 데모는 범위 외).
+> 재빌드는 `shell/BuildExternLibs.{sh,bat}`. 본 문서는 `src/` 코어 모듈 18종 + `doc/pages/` 가이드를 대상으로 한다 (`apps/` 데모는 범위 외).
 
 ## 모듈 의존 그래프 (`src/` 내부)
 
@@ -33,42 +33,45 @@ digraph ModuleDeps {
     input       [label="input\nKeyboardInput<T> · MouseInput (leaf)"];
   }
 
-  // 인스턴스 의존 노드
+  // 인스턴스 의존 노드 (texture = 2026-06-19 신설, E3 Texture/Image 하위추출)
   node [style=rounded];
-  shader; program; layout; material; object; buffer;
+  shader; program; layout; material; object; buffer; texture;
   scene; render; resource_registry; sprite; playable; fsm; timer; text;
+  resource_registry [style="rounded,filled", fillcolor="#fdf0d5", label="resource_registry\n(최상위 캐시 파사드)"];
 
-  // ── 상호 의존 (응집 핫스팟) — 빨강 양방향 ──
-  edge [color="#c0392b", dir=both, penwidth=1.3];
-  scene  -> object            [label="Transform ↔ Light:Component"];
-  scene  -> render            [label="comp 생성 ↔ comp 수집"];
-  buffer -> resource_registry [label="Framebuffer ↔ Texture 캐시"];
+  // == 잔존 사이클: render -> rr -> sprite -> render (3-사이클, 2026-06-19 미절단) ==
+  // 부자연 역의존 (절단대상) - 빨강 굵게. 중간층 render 가 최상위 파사드 rr 에 역의존 = 레이어 역행.
+  edge [color="#c0392b", dir=forward, penwidth=2.4, fontcolor="#c0392b"];
+  render -> resource_registry [label="역의존 절단대상"];
+  // 자연 사이클 경로 - 주황 점선 (절단 안 함).
+  edge [color="#e67e22", dir=forward, penwidth=1.4, style=dashed, fontcolor="#e67e22"];
+  resource_registry -> sprite [label="UniformAtlas 캐시"];
+  sprite -> render            [label="SpriteRenderer is-a MeshRenderer"];
 
-  // ── 단방향 인스턴스 의존 ──
-  edge [color="#5b6b80", dir=forward, penwidth=1.0];
+  // == 단방향 인스턴스 의존 (DAG) - 2026-06-19 10 mutual 절단 후 ==
+  edge [color="#5b6b80", dir=forward, penwidth=1.0, style=solid, fontcolor="#5b6b80"];
   program -> shader;
   material -> program;
+  buffer -> texture;
   object -> buffer;
   object -> layout;
   object -> material;
-  object -> resource_registry;
-  buffer -> render;
-  resource_registry -> material;
-  resource_registry -> object;
-  resource_registry -> program;
-  resource_registry -> sprite;
-  scene -> buffer;
-  scene -> material;
+  object -> texture;
+  scene -> object;
   render -> buffer;
   render -> material;
   render -> object;
   render -> program;
-  render -> resource_registry;
+  render -> scene;
+  render -> texture;
+  resource_registry -> buffer;
+  resource_registry -> material;
+  resource_registry -> object;
+  resource_registry -> program;
+  resource_registry -> texture;
   sprite -> material;
-  sprite -> object;
   sprite -> playable;
-  sprite -> render;
-  sprite -> resource_registry;
+  sprite -> texture;
   playable -> scene;
   fsm -> scene;
   timer -> scene;
@@ -83,16 +86,18 @@ digraph ModuleDeps {
 | 표기 | 의미 |
 |---|---|
 | A → B (회색) | A 가 B 의 인스턴스를 소유·보유·생성하거나 비-static 멤버 호출/상속 (실제 결합) |
-| A ↔ B (빨강) | 상호 의존 — 응집 핫스팟 (리팩토링 후보) |
+| A → B (빨강 굵게) | 절단대상 역의존 — 레이어 역행. 잔존 3-사이클 `render → rr → sprite → render` 의 부자연 엣지 |
+| A → B (주황 점선) | 위 3-사이클의 자연 경로 (`rr → sprite` UniformAtlas 캐시, `sprite → render` 상속) — 절단 안 함 |
 | 기반 유틸 박스 | `common`·`diagnostics`·`input` — 의존 엣지를 **의도적으로 생략** |
 
 **의도적으로 제외한 노이즈 엣지:**
 - `→ diagnostics` — 전부 `static` 진단 호출 (`GLObjectLog::Check*`, `GLDebug::*`, `GLValidate::*`, `EffekseerDiagnostics`)
 - `→ common` — `CLASS_PTR` 매크로 + `LoadTextFile()` free function 뿐 (인스턴스 클래스 없음)
-- `program → object` — 오직 `program_uniforms.cpp` 의 `Uniforms::Set*Light()` **free function** 인자로 `object::Light` 사용
-- `sprite·object → program` — 오직 `Uniforms::Set*()` **free function** 호출 (직접 `#include "program/"` 없음)
+- `sprite·object → program` — 오직 `Uniforms::Set*()` **free function** 호출 (직접 `#include "program/"` 없음). ※ 구 `program → object` (Set*Light 인자) 는 D6 으로 setter 를 `render` dispatcher 로 이주해 소멸.
 
-> ⚠️ **레이어링 이상:** `common/layer.h` 가 `scene/layer.h` 를 re-export (`common → scene`, 역방향). 의존 그래프에선 제외했으나 정리 후보.
+> ✅ **2026-06-19 갱신:** 엔진 6 + 클라 4 = **10 mutual 사이클 절단 완료**(커밋 `f98fc81`~`cadf80b`). `scene↔object`·`scene↔render`·`buffer↔rr` 등 양방향 응집이 단방향 DAG 로 정리되고 `texture` 모듈(E3)이 신설되었다. **유일하게 남은 사이클 = `render → rr → sprite → render`** (사전 존재 3-사이클 — 빨강 엣지 `render → rr` 가 절단대상). 절단 설계 진행 중: `docs/handoffs/2026-06-19-render-rr-cycle-cut-design-handoff.md`.
+>
+> ⚠️ **레이어링 이상 (정리 후보):** `common/layer.h` 가 `scene/layer.h` 를 re-export (`common → scene`, 역방향). 아무도 include 하지 않는 deprecated 호환 shim(`LAYER_SCENE`) 이라 의존 그래프에선 제외 — 삭제 가능.
 
 ## 빌드 / 실행 흐름 (high-level)
 

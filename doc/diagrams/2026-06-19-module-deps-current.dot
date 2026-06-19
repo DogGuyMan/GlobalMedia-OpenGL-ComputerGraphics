@@ -1,0 +1,80 @@
+// SJH 엔진 모듈 의존 그래프 - 현재 상태 (2026-06-19, HEAD=cadf80b)
+// 10 mutual 사이클 -> 0 절단 완료 후. 유일하게 남은 사이클 = render -> rr -> sprite -> render (사전 존재 3-사이클).
+//
+// 디노이즈 규칙 (doc/pages/00-mainpage.md 기존 그래프와 동일):
+//   - common / diagnostics / input : static / macro / free-func 접근뿐 -> 분리 박스, 의존 엣지 생략.
+//   - "-> program" free-function 전용(Uniforms::Set*) 호출 : #include 없으므로 자동 제외.
+//   - dead shim common/layer.h -> scene/layer.h : 아무도 include 안 함 -> 그래프에서 제외 (정리 후보).
+//   - 나머지는 실제 cross-module #include 엣지 (실인스턴스 의존).
+//
+// 렌더: dot -Tpng 2026-06-19-module-deps-current.dot -o 2026-06-19-module-deps-current.png
+digraph ModuleDepsCurrent
+{
+	rankdir=TB;
+	labelloc="t";
+	fontname="Helvetica";
+	fontsize=14;
+	label="SJH 엔진 모듈 의존 그래프 (현재 / 2026-06-19)\n10 mutual 절단 완료 - 유일 잔존 사이클: render -> resource_registry -> sprite -> render";
+	node [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
+	edge [color="#5b6b80", arrowsize=0.7];
+
+	// 기반 유틸 - static / macro / free-func 라 의존 엣지를 의도적으로 생략 (분리 박스)
+	subgraph cluster_util
+	{
+		label="기반 유틸 - 의존 엣지 생략 (static / macro / free-func)";
+		style=filled; fillcolor="#f4f4f4"; fontsize=10;
+		node [style="rounded,filled", fillcolor="#eaeaea"];
+		common      [label="common\nCLASS_PTR 매크로 / LoadTextFile()"];
+		diagnostics [label="diagnostics\nGL* / Effekseer static 진단"];
+		input       [label="input\nKeyboardInput<T> / MouseInput (leaf)"];
+	}
+
+	// 실인스턴스 의존 노드 (15)
+	node [style=rounded];
+	shader; program; layout; material; object; buffer; texture;
+	scene; render; resource_registry; sprite; playable; fsm; timer; text;
+
+	// resource_registry 강조 (최상위 캐시 파사드 - 모든 자원 캐시)
+	resource_registry [style="rounded,filled", fillcolor="#fdf0d5", label="resource_registry\n(최상위 캐시 파사드)"];
+
+	// ===== 사이클 엣지 =====
+	// 부자연 역의존 (절단 대상) - 빨강 굵게. 중간층 render 가 최상위 파사드 rr 에 역의존 = 레이어 역행.
+	edge [color="#c0392b", penwidth=2.6, fontcolor="#c0392b", fontsize=10];
+	render -> resource_registry [label="  역의존 (절단대상)\n  GetAllPrograms() pull +\n  SetupDefaultPipeline(reg)"];
+
+	// 자연스러운 사이클 경로 - 주황 점선 (절단 안 함)
+	edge [color="#e67e22", penwidth=1.6, style=dashed, fontcolor="#e67e22", fontsize=9];
+	resource_registry -> sprite [label=" UniformAtlas 캐시"];
+	sprite -> render            [label=" SpriteRenderer is-a\n MeshRenderer"];
+
+	// ===== 단방향 인스턴스 의존 (DAG) - 회색 =====
+	edge [color="#5b6b80", penwidth=1.0, style=solid, fontcolor="#5b6b80"];
+	program -> shader;
+	material -> program;
+	buffer -> texture;
+	object -> buffer;
+	object -> layout;
+	object -> material;
+	object -> texture;
+	scene -> object;
+	render -> buffer;
+	render -> material;
+	render -> object;
+	render -> program;
+	render -> scene;
+	render -> texture;
+	resource_registry -> buffer;
+	resource_registry -> material;
+	resource_registry -> object;
+	resource_registry -> program;
+	resource_registry -> texture;
+	sprite -> material;
+	sprite -> playable;
+	sprite -> texture;
+	playable -> scene;
+	fsm -> scene;
+	timer -> scene;
+	text -> resource_registry;
+	text -> scene;
+	text -> sprite;
+}

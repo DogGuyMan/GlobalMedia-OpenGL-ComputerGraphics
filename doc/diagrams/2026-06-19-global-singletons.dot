@@ -1,0 +1,67 @@
+// 전역 싱글톤 5종 + 소유/접근 + 흡수 후보 (2026-06-19)
+// 엔진 3(저변동) + 클라 2(고변동). Godot 'Servers' 관심사 분리 정통과 정합.
+// 빨강 = 중복(PostFXRegistry -> ResourceRegistry 흡수 후보).
+// 렌더: dot -Tpng 2026-06-19-global-singletons.dot -o 2026-06-19-global-singletons.png
+digraph GlobalSingletons
+{
+	rankdir=TB;
+	labelloc="t"; fontname="Helvetica"; fontsize=13;
+	label="전역 싱글톤 5종 (2026-06-19)  -  엔진 3(저변동) / 클라 2(고변동)  -  빨강=중복 흡수후보";
+	node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10, fillcolor="#ffffff"];
+	edge [arrowsize=0.7];
+
+	// ===== 엔진 전역 (저변동) - Godot 'Servers' 정통 =====
+	subgraph cluster_engine
+	{
+		label="엔진 전역 (저변동) - Godot Servers 관심사 분리";
+		style=filled; fillcolor="#eaf6f6"; fontsize=10;
+		DeviceContext    [label="DeviceContext\n[GL 상태 facade]\nglUseProgram / Bind*", fillcolor="#d5e8d4"];
+		ResourceRegistry [label="ResourceRegistry\n[자원 캐시 9종]\nTexture/Material/Program/Mesh/\nFramebuffer/Atlas/Sound/Effect", fillcolor="#d5e8d4"];
+		Director         [label="Scene::Director\n[씬 그래프]\nroot Actor + SceneContext", fillcolor="#d5e8d4"];
+	}
+
+	// ===== 클라 전역 (고변동) =====
+	subgraph cluster_client
+	{
+		label="클라 전역 (고변동)";
+		style=filled; fillcolor="#fdeef4"; fontsize=10;
+		Manager        [label="Manager\n[게임 시스템 허브 + 라이프사이클]\n= 클라측 'Director' (명칭 혼동)", fillcolor="#ffe6cc"];
+		PostFXRegistry [label="PostFXRegistry\n[passName -> Material* 비소유]\n= 서비스 로케이터", fillcolor="#f8cecc"];
+	}
+
+	// ===== Manager 소유 (값 멤버) =====
+	node [fillcolor="#fff2cc", fontsize=9];
+	AudioSystem     [label="AudioSystem\n[FMOD = server]\n엔진global 0"];
+	VFXSystem       [label="VFXSystem\n[Effekseer = server]\n엔진global 0"];
+	PhysicsSystem   [label="PhysicsSystem\n[Box2D = server]\n엔진global 0 (절차적 body)"];
+	WorldTextSystem [label="WorldTextSystem\n-> rr(font) 유일 asset-loading"];
+	SceneRenderer   [label="SceneRenderer\n(코어 렌더 orchestrator)"];
+	edge [color="#888", fontsize=8, fontcolor="#888"];
+	Manager -> AudioSystem      [label="owns"];
+	Manager -> VFXSystem        [label="owns"];
+	Manager -> PhysicsSystem    [label="owns"];
+	Manager -> WorldTextSystem  [label="owns"];
+	Manager -> SceneRenderer    [label="owns"];
+
+	// ===== Director 소유 =====
+	node [fillcolor="#dae8fc"];
+	RootActor [label="root Actor 트리"]; SceneContext [label="SceneContext\n(Camera/Light)"];
+	Director -> RootActor    [label="owns"];
+	Director -> SceneContext [label="owns"];
+
+	// ===== 접근(Get) = 의존 계층 (Godot: scene/system 이 server 위) =====
+	edge [style=dashed, color="#5b6b80", penwidth=1.0, fontsize=8, fontcolor="#5b6b80"];
+	SceneRenderer   -> Director         [label="GetContext"];
+	SceneRenderer   -> DeviceContext    [label="GL 상태"];
+	WorldTextSystem -> ResourceRegistry [label="폰트/atlas (유일 시스템 의존)"];
+	RootActor       -> ResourceRegistry [label="에셋"];
+	// 주의: Audio/VFX 의 Sound/Effect 자원은 rr 에 있으나 leaf Playable(Fmod/Effekseer)이 로드 - 시스템 자체는 rr 미접근
+
+	// render -> rr 절단예정 (현재 사이클)
+	edge [color="#e67e22", fontcolor="#e67e22"];
+	SceneRenderer -> ResourceRegistry [label="GetAllPrograms (절단예정=push)"];
+
+	// ===== 중복 = 흡수 후보 (빨강 굵게) =====
+	edge [color="#c0392b", penwidth=2.2, style=solid, fontcolor="#c0392b", fontsize=9];
+	PostFXRegistry -> ResourceRegistry [label="중복! pass Material 은\n이미 rr에 mat_pass_<name> 등록\n=> PostFXRegistry 흡수 후보"];
+}

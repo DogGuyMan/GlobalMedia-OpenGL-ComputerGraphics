@@ -1,0 +1,98 @@
+// WebEditor 마스터 데이터 기반 - 예상 데이터 흐름 시퀀스 다이어그램
+// spec: docs/superpowers/specs/2026-06-19-webeditor-master-data-foundation-design.md
+// 렌더: dot -Tpng -O 2026-06-19-webeditor-dataflow-sequence.dot
+//       dot -Tsvg -O 2026-06-19-webeditor-dataflow-sequence.dot
+//
+// Graphviz 시퀀스 다이어그램 관용: 라이프라인=세로 점선, 메시지=같은 rank 가로 엣지.
+
+digraph WebEditorSequence
+{
+	rankdir=TB;
+	fontname="Helvetica";
+	labelloc="t";
+	label="WebEditor 데이터 흐름 (편집 Phase + 소비 Phase)\nspec 2026-06-19-webeditor-master-data-foundation-design";
+	node  [fontname="Helvetica", fontsize=10];
+	edge  [fontname="Helvetica", fontsize=9];
+
+	// ---- 라이프라인 헤더 (액터) ----
+	{
+		rank=same;
+		ED [shape=box, style="filled", fillcolor="#cfe8ff", label="Editor\n(ImGui / WASM·WGPU)"];
+		DS [shape=box, style="filled", fillcolor="#cfe8ff", label="IDataStore\n(포트 + 어댑터)"];
+		SV [shape=box, style="filled", fillcolor="#e8e8e8", label="DevServer\n(Python 정적+PUT)"];
+		JF [shape=box, style="filled", fillcolor="#fff2cc", label="resources/data/\n*.json + schema"];
+		GM [shape=box, style="filled", fillcolor="#d9ead3", label="Game boot\nDataTable -> ResourceRegistry"];
+		SC [shape=box, style="filled", fillcolor="#d9ead3", label="Stage 소비처\nWaveController / StageConfig"];
+	}
+
+	// ---- 시간 노드 (보이지 않는 라이프라인 점) ----
+	// r1..r13 각 라이프라인마다 하나씩.
+	node [shape=point, width=0.02, color="#999999"];
+
+	ED1; ED2; ED3; ED4; ED5; ED6; ED7; ED8; ED9; ED10; ED11; ED12; ED13;
+	DS1; DS2; DS3; DS4; DS5; DS6; DS7; DS8; DS9; DS10; DS11; DS12; DS13;
+	SV1; SV2; SV3; SV4; SV5; SV6; SV7; SV8; SV9; SV10; SV11; SV12; SV13;
+	JF1; JF2; JF3; JF4; JF5; JF6; JF7; JF8; JF9; JF10; JF11; JF12; JF13;
+	GM1; GM2; GM3; GM4; GM5; GM6; GM7; GM8; GM9; GM10; GM11; GM12; GM13;
+	SC1; SC2; SC3; SC4; SC5; SC6; SC7; SC8; SC9; SC10; SC11; SC12; SC13;
+
+	// ---- 라이프라인(세로 점선) ----
+	edge [style=dashed, arrowhead=none, color="#999999", weight=20];
+	ED -> ED1 -> ED2 -> ED3 -> ED4 -> ED5 -> ED6 -> ED7 -> ED8 -> ED9 -> ED10 -> ED11 -> ED12 -> ED13;
+	DS -> DS1 -> DS2 -> DS3 -> DS4 -> DS5 -> DS6 -> DS7 -> DS8 -> DS9 -> DS10 -> DS11 -> DS12 -> DS13;
+	SV -> SV1 -> SV2 -> SV3 -> SV4 -> SV5 -> SV6 -> SV7 -> SV8 -> SV9 -> SV10 -> SV11 -> SV12 -> SV13;
+	JF -> JF1 -> JF2 -> JF3 -> JF4 -> JF5 -> JF6 -> JF7 -> JF8 -> JF9 -> JF10 -> JF11 -> JF12 -> JF13;
+	GM -> GM1 -> GM2 -> GM3 -> GM4 -> GM5 -> GM6 -> GM7 -> GM8 -> GM9 -> GM10 -> GM11 -> GM12 -> GM13;
+	SC -> SC1 -> SC2 -> SC3 -> SC4 -> SC5 -> SC6 -> SC7 -> SC8 -> SC9 -> SC10 -> SC11 -> SC12 -> SC13;
+
+	// ---- 각 시간대 rank 정렬 ----
+	{ rank=same; ED1; DS1; SV1; JF1; GM1; SC1; }
+	{ rank=same; ED2; DS2; SV2; JF2; GM2; SC2; }
+	{ rank=same; ED3; DS3; SV3; JF3; GM3; SC3; }
+	{ rank=same; ED4; DS4; SV4; JF4; GM4; SC4; }
+	{ rank=same; ED5; DS5; SV5; JF5; GM5; SC5; }
+	{ rank=same; ED6; DS6; SV6; JF6; GM6; SC6; }
+	{ rank=same; ED7; DS7; SV7; JF7; GM7; SC7; }
+	{ rank=same; ED8; DS8; SV8; JF8; GM8; SC8; }
+	{ rank=same; ED9; DS9; SV9; JF9; GM9; SC9; }
+	{ rank=same; ED10; DS10; SV10; JF10; GM10; SC10; }
+	{ rank=same; ED11; DS11; SV11; JF11; GM11; SC11; }
+	{ rank=same; ED12; DS12; SV12; JF12; GM12; SC12; }
+	{ rank=same; ED13; DS13; SV13; JF13; GM13; SC13; }
+
+	// ---- 메시지 (가로 엣지) ----
+	edge [style=solid, arrowhead=normal, color="#1f4e79", constraint=false, weight=1];
+	ED1 -> DS1 [label="1: load(schema, data)"];
+	DS2 -> SV2 [label="2: GET schema/*.json + *.json"];
+	SV3 -> JF3 [label="3: read"];
+
+	edge [style=dashed, color="#7f7f7f", arrowhead=vee];
+	JF4 -> SV4 [label="4: bytes"];
+	SV5 -> DS5 [label="5: json"];
+	DS6 -> ED6 [label="6: schema+data -> 폼 렌더 (IndexedDB 드래프트)"];
+
+	edge [style=solid, color="#1f4e79", arrowhead=normal];
+	ED7 -> DS7 [label="7: save(stage.json)"];
+	DS8 -> SV8 [label="8: PUT stage.json"];
+	SV9 -> JF9 [label="9: write (resources/data/ 갱신)"];
+
+	// ---- Phase 구분 노트 ----
+	PH [shape=note, style="filled", fillcolor="#fde9d9", color="#c55a11",
+	    label="── 이후 (별도 시점): 게임 재실행 — 재컴파일 없음 ──"];
+	{ rank=same; PH; GM9; }
+	edge [style=invis];
+	JF9 -> PH;
+
+	// ---- 소비 Phase ----
+	edge [style=solid, color="#38761d", arrowhead=normal, constraint=false];
+	GM10 -> JF10 [label="10: Load + parse (관대한 폴백 + spdlog warn)"];
+
+	edge [style=dashed, color="#7f7f7f", arrowhead=vee];
+	JF11 -> GM11 [label="11: StageData (Registry 적재)"];
+
+	edge [style=solid, color="#38761d", arrowhead=normal];
+	SC12 -> GM12 [label="12: GetDataTable<StageData>(\"stage\")"];
+
+	edge [style=dashed, color="#7f7f7f", arrowhead=vee];
+	GM13 -> SC13 [label="13: StageData& -> 웨이브 곡선/아레나 반영"];
+}
