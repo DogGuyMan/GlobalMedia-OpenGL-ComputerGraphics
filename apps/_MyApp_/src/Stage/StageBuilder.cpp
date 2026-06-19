@@ -35,7 +35,7 @@
 #include "resource_registry/resource_registry.h"
 #include "resource_registry/texture.h"
 #include "scene/actor.h"
-#include "scene/model_spawner.h"
+#include "render/model_spawner.h"
 
 #include <assimp/defs.h>
 #include <box2d/box2d.h>

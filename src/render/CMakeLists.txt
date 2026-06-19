@@ -9,6 +9,8 @@ add_library(sjhopengl_render STATIC
     screen_quad_stage.cpp         # SP-UniversalRenderTarget Phase A — N FBO ->backbuffer 합성
     camera_stage.cpp              # SP-RenderStage 완성 — 단일 Camera 를 IRenderStage 로 wrap
     render_pipeline.cpp           # SP-Warmup — Setup + BuildPostFXChain 자유 함수 family
+    actor_factory.cpp             # 2026-06-11 E2 — Skybox/ScreenCamera 팩토리 (scene 에서 이주)
+    model_spawner.cpp             # 2026-06-11 E2 — Model RenderUnit -> Actor (scene 에서 이주)
 )
 add_library(SJH::render ALIAS sjhopengl_render)
 
@@ -23,7 +25,8 @@ target_include_directories(sjhopengl_render
 target_link_libraries(sjhopengl_render
     PUBLIC  SJH::common SJH::program project_deps
             SJH::buffer   # 2026-06-11 E4 — device_context.h(공개) 가 buffer/render_target.h(RenderTarget) 노출 -> PUBLIC 승격
-    PRIVATE SJH::diagnostics SJH::material SJH::object SJH::resource_registry SJH::scene
+            SJH::scene    # 2026-06-11 E2 — actor_factory.h/model_spawner.h(공개) 가 SJH::Scene::Actor 반환 -> PUBLIC 승격
+    PRIVATE SJH::diagnostics SJH::material SJH::object SJH::resource_registry
 )
 
 target_compile_features(sjhopengl_render PUBLIC cxx_std_17)

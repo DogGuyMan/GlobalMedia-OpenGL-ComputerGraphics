@@ -5,7 +5,7 @@
  * @details
  *  ### 책임
  *  - 자주 쓰이는 Actor + Component 조합을 한 줄 호출로 생성하는 free factory.
- *    Camera Actor / ScreenCamera / Skybox Actor / Dir/Point/SpotLight Actor.
+ *    Camera Actor / Dir/Point/SpotLight Actor. (render 결합 ScreenCamera/Skybox 는 render/actor_factory.h.)
  *  - Compound Actor 컨벤션 일관성 보장 - @c class XxxActor : public Actor 형태 금지.
  *
  *  ### 비-책임
@@ -23,13 +23,6 @@
 #include <memory>
 #include <string>
 #include <vmath.h>
-
-namespace SJH
-{
-    class Framebuffer;
-    class Mesh;
-    class Material;
-}
 
 namespace SJH::Scene
 {
@@ -64,32 +57,8 @@ namespace SJH::Scene
         float nearZ = 0.1f,
         float farZ = 100.0f);
 
-    /// @brief PostFX 2-Camera 패턴의 Orthographic ScreenCamera Actor 생성.
-    /// @details @c IsOrthographic=true, @c OrthoSize=1.0, @c NoClear=true,
-    ///          @c CullingMask(UI|Screen), @c SetTargetRenderTarget(sceneFB).
-    ///          기존 @c main.cpp 의 @c CreateAndRegisterScreenCamera() 22줄 보일러 추출.
-    /// @param name     Actor 이름.
-    /// @param aspect   화면 비율.
-    /// @param sceneFB  WorldCamera 출력 FBO (비소유 - @c NoClear 합성 대상).
-    /// @return 비편입 Actor @c unique_ptr - 호출자가 @c Director::Root().AddChild 책임.
-    std::unique_ptr<Actor> CreateScreenCameraActor(
-        std::string name,
-        float aspect,
-        Framebuffer* sceneFB);
-
-    /// @brief Skybox Actor 생성 - @c Mesh + 큰 @c scale + @c MeshRenderer.
-    /// @details 카메라 추적은 *셰이더* 측(vert shader view matrix translation 제거)으로 자동 처리.
-    ///          @c SyncSkyboxToCamera 자유 함수 불필요.
-    /// @param name       Actor 이름.
-    /// @param skyboxMesh 큐브맵 메시 (비소유).
-    /// @param skyboxMat  스카이박스 머티리얼 (비소유).
-    /// @param scale      스케일 (world unit). 카메라 far plane 보다 크게 설정 권장.
-    /// @return 비편입 Actor @c unique_ptr.
-    std::unique_ptr<Actor> CreateSkyboxActor(
-        std::string name,
-        Mesh* skyboxMesh,
-        Material* skyboxMat,
-        float scale = 50.0f);
+    // -- Skybox / ScreenCamera 는 render 결합(MeshRenderer/Framebuffer)이라 2026-06-11 E2 로
+    //    render/actor_factory.h 로 이주. (CreateSkyboxActor / CreateScreenCameraActor)
 
     // -- Lights -------------------------------------------------------------
     /// @brief DirLightActor 생성 - Actor + Transform(방향 매핑) + DirLight 컴포넌트.

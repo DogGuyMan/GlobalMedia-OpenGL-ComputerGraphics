@@ -33,6 +33,7 @@
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/compound_actor.h"
+#include "render/actor_factory.h" // CreateSkyboxActor (2026-06-11 E2 이주)
 #include "scene/scene.h"
 
 #include <vmath.h>
