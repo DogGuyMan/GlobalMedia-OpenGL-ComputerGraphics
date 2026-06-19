@@ -19,7 +19,7 @@
  * @note @c gl3w.h 는 Effekseer OpenGL 헤더보다 반드시 먼저 포함해야 한다.
  *       include 순서를 변경하면 중복 정의 링크 오류가 발생할 수 있다.
  */
-#include <GL/gl3w.h> // 반드시 최상단 - Manager.h->VFXSystem.h->EffekseerRendererGL.h(시스템 gl3.h)보다 먼저.
+#include <GL/gl3w.h> // 반드시 최상단 - GameSystems.h->VFXSystem.h->EffekseerRendererGL.h(시스템 gl3.h)보다 먼저.
 
 #include "Bootstrap/PlayerBuilder.h"
 
@@ -40,7 +40,7 @@
 #include "Playable/SpriteFxPlayable.h"    // "hit" Parallel 의 SpriteHitFlashPlayable
 #include "Playable/SpriteLayerFactory.h"  // AttachSpriteLayer - 3-빌더 공유 sprite-layer 부착 헬퍼
 #include "InputHandler/ActorFolower.h"
-#include "Manager.h"
+#include "GameSystems.h"
 #include "Physics/PhysicsLayer.h"
 #include "Spawns/VfxInstance.h"   // VFX::Spawn 파사드 (seam 주입 람다 본문)
 #include "Spawns/WorldTextInstance.h"   // WorldText::SpawnDamage 파사드 (데미지 숫자 seam 주입)
@@ -112,7 +112,7 @@ namespace TopdownShooter::Bootstrap
 		{
 			// "fire" - 좌클릭: 발사음(event:/Shoot)만 재생. muzzle VFX 는 weapon onFireFx 의 "gunshoot" 가 별도 담당.
 			{
-				auto &audio    = TopdownShooter::Manager::Get().Audio();
+				auto &audio    = TopdownShooter::GameSystems::Get().Audio();
 				auto *shootEvt = audio.LoadEvent(Audio::EVENT_SHOOT); // 발사 SFX (Studio 이벤트)
 				if (shootEvt)
 					director.Register("fire", std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(shootEvt));
@@ -122,7 +122,7 @@ namespace TopdownShooter::Bootstrap
 
 			// "dash" - Shift 대시: 대시음(event:/Dash)만 재생. PlayerEntity::Dash 가 실제 발동(rising edge)에서 Play("dash").
 			{
-				auto &audio   = TopdownShooter::Manager::Get().Audio();
+				auto &audio   = TopdownShooter::GameSystems::Get().Audio();
 				auto *dashEvt = audio.LoadEvent(Audio::EVENT_DASH); // 대시 SFX (Studio 이벤트)
 				if (dashEvt)
 					director.Register("dash", std::make_unique<TopdownShooter::Audio::FmodStudioPlayable>(dashEvt));
@@ -134,7 +134,7 @@ namespace TopdownShooter::Bootstrap
 			//          Parallel( 화면 비네팅 플래시[PostFX] || 스프라이트 hit-flash[Task6] || Damaged 사운드 ).
 			//          비네팅 = grayscale_vignetting.uVignetteAmount 0.45->0; hit-flash = SpriteRenderer.enableHit 0.18s.
 			{
-				auto &audio      = TopdownShooter::Manager::Get().Audio();
+				auto &audio      = TopdownShooter::GameSystems::Get().Audio();
 				auto *damagedEvt = audio.LoadEvent(Audio::EVENT_DAMAGED);
 
 				auto par = std::make_unique<SJH::Playable::ParallelPlayable>();

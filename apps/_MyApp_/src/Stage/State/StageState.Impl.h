@@ -11,7 +11,7 @@
  *  ### 비-책임
  *  - [X] State 등록 / 전이 트리거 판정 - @c StageStateMachine / @c SJH::FSM::StateMachine 담당.
  *  - [X] 게임 로직 tick (Physics SyncToTransform, WaveController) - CombatPlayState::OnUpdate 가
- *    위임 호출하나, 로직 자체는 @c Manager / @c Director 가 담당.
+ *    위임 호출하나, 로직 자체는 @c GameSystems / @c Director 가 담당.
  *
  *  ### 상태 전이 요약
  *  | State       | 진입 조건                  | 전이 조건                                    |
@@ -36,7 +36,7 @@
 #include "Audio/Constants.h"                    // BUS_BGM / BUS_SFX (Pause 볼륨 슬라이더)
 #include "Entity/Components/LifeComponents.h"   // Player HP -> FMOD "Health" 파라미터
 #include "Tween/TweenPlayable.h"                // GameOver Health 0->1.0 ramp (tweeny 포함)
-#include "Manager.h"          // TopdownShooter::Manager::Get()
+#include "GameSystems.h"      // TopdownShooter::GameSystems::Get()
 #include <memory>             // std::unique_ptr / make_unique (GameOver Health tween)
 #include "render/pass_component.h" // SJH::Scene::PassComponent::Enabled (Title blur 토글)
 #include "scene/actor.h"
@@ -112,7 +112,7 @@ namespace TopdownShooter::Stage
 	 * @brief 전투 진행 State - WaveController/Director::Update tick 을 담당하는 게임 루프 허브.
 	 * @details
 	 *  - OnEnter: overlay Hide, BGM_STATE=1 (Combat 분위기), Pause->Resume 시 BGM SetPaused(false).
-	 *  - OnUpdate: Manager::Update + Director::Update + Physics SyncToTransform 순 tick.
+	 *  - OnUpdate: GameSystems::Update + Director::Update + Physics SyncToTransform 순 tick.
 	 *              Player HP 비율 -> FMOD global "Health" 파라미터 실시간 송신.
 	 *              Pause 전이는 PauseButtonLayer 가 구동(여기서 처리 안 함).
 	 *              WaveController 가 Player 사망 감지 시 ApplyPending 경로로 GameOver 전이.
@@ -152,13 +152,13 @@ namespace TopdownShooter::Stage
 			// 일시정지는 좌상단 Pause 버튼(PauseButtonLayer->TogglePause)이 구동 - 여기선 입력 처리 없음.
 			// 게임 로직 tick (render() 에서 이전 - Hybrid). 이 안 Director::Update ->
 			// WaveController 가 Player 사망 시 GameOver 로 전이(이제 deferred - StateMachine::ApplyPending).
-			auto &mgr = TopdownShooter::Manager::Get();
+			auto &mgr = TopdownShooter::GameSystems::Get();
 			mgr.Update(dt);
 			SJH::Scene::Director::Get().Update(dt);
 			mgr.Physics().SyncToTransform(SJH::Scene::Director::Get().Root());
 
 			// [FMOD] Player HP 비율 -> global "Health" 파라미터 (BGM/믹서 자동화 입력).
-			//   오디오 접근은 Manager 싱글톤이 아니라 ctx->audio 로 통일 (bgmPlayable 과 동일 경로).
+			//   오디오 접근은 GameSystems 싱글톤이 아니라 ctx->audio 로 통일 (bgmPlayable 과 동일 경로).
 			//   * 사망 프레임에 여기서 Health=0 을 써도 GameOver 전이는 *다음 Update* 의 ApplyPending 에서
 			//     일어나 GameOverState::OnEnter 가 Health=1.0 을 세팅하고, 이후 CombatPlay.OnUpdate 는
 			//     다시 호출되지 않으므로 1.0 이 덮이지 않는다(LPF 해제 유지). IsAlive 가드 불요.

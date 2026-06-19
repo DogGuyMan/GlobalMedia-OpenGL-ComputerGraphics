@@ -1,4 +1,4 @@
-# MyApp::Text — WorldTextSystem (minogram BMFont 보유). Manager 가 소유.
+# MyApp::Text — WorldTextSystem (minogram BMFont 보유). GameSystems 가 소유.
 add_library(myapp_worldtext STATIC
     WorldTextSystem.cpp
 )

@@ -69,7 +69,7 @@ namespace TopdownShooter::WorldText
     ///        @c VFX::SetSpawnContext 대칭 -- @c Life seam 이 fxRoot/font 를 직접 들지 않고
     ///        @c SpawnDamage 만 호출 가능하게 한다.
     /// @param fxRoot 스폰 Actor 를 붙일 루트 Actor (Director.Root() 자식 "FxRoot").
-    /// @param font   @c BitmapFont 포인터 (Manager.WorldText().GetFont() 등).
+    /// @param font   @c BitmapFont 포인터 (GameSystems.WorldText().GetFont() 등).
     void SetSpawnContext(SJH::Scene::Actor* fxRoot, SJH::Text::BitmapFont* font);
 
     /// @brief 데미지 숫자 단발 스폰 ("-N" 빨강 0.5 배).

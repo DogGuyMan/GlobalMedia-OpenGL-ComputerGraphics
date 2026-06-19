@@ -5,7 +5,7 @@
  * @details
  *  ### 책임
  *  - @c PlayableBase (IPlayable + Component 다중 상속) 를 구현해 tweeny 트윈을 구동한다.
- *  - @c PostFXRegistry 로 패스 Material 을 매 프레임 조회하고
+ *  - @c ResourceRegistry 의 @c mat_pass_<name> 공유본을 매 프레임 조회하고
  *    @c Properties.Floats[uniformName] 에 트윈 현재값을 기록한다.
  *  - one-shot: progress >= 1.0 에서 @c mIsFinished = true -> Composite 안에서 1회 재생 후 종료.
  *  - @c Play() 시 트윈 처음으로 되감기 (@c seek(0)) -- Stop()+Play() 재트리거 정상 동작.
@@ -43,7 +43,7 @@ namespace TopdownShooter::Playable
 	{
 	  public:
 		/// @brief PostFX 패스 이름 / uniform 명 / tweeny 트윈을 지정해 생성.
-		/// @param passName    @c PostFXRegistry 키 (예: "grayscale_vignetting").
+		/// @param passName    PostFX 패스 이름 (예: "grayscale_vignetting") -- rr 키는 mat_pass_<passName>.
 		/// @param uniformName 기록 대상 float uniform 명 (예: "uVignetteAmount" / "uGrayscaleAmount").
 		/// @param tween       @c tweeny::from(a).to(b).during(ms).via(easing) -- 값이 곧 uniform 값.
 		PostFXTweenPlayable(std::string passName, std::string uniformName, tweeny::tween<float> tween);
@@ -60,7 +60,7 @@ namespace TopdownShooter::Playable
 		void OnUpdate(float dt) override; // step(ms) -> uniform 기록 -> progress>=1 시 one-shot finish
 
 	  private:
-		std::string          mPassName;    ///< PostFXRegistry 검색 키 (예: "grayscale_vignetting").
+		std::string          mPassName;    ///< PostFX 패스 이름 (rr 키 = mat_pass_<name>).
 		std::string          mUniformName; ///< 기록 대상 float uniform 명 (예: "uVignetteAmount").
 		tweeny::tween<float> mTween;       ///< tweeny 트윈 인스턴스 -- from/to/during/via 체인 결과.
 	};

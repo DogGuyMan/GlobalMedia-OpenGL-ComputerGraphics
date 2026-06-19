@@ -28,7 +28,7 @@ namespace SJH::Scene { class Actor; }
 namespace TopdownShooter::Bootstrap
 {
     /// @brief BuildEnemy 입력 의존 (PlayerDeps 미러 - 비싱글턴만).
-    /// @details 싱글톤(ResourceRegistry/Director/Manager)은 BuildEnemy 내부에서 ::Get() 조회.
+    /// @details 싱글톤(ResourceRegistry/Director/GameSystems)은 BuildEnemy 내부에서 ::Get() 조회.
     ///          여기 묶이는 것은 호출자(WaveController)만 아는 비싱글턴 값/포인터.
     struct EnemyDeps
     {

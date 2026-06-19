@@ -16,7 +16,7 @@
  * @note 두 함수 모두 *실패 시* 해당 자원 skip + @c spdlog::error 출력 후 계속.
  *       @c SetupDefaultPipeline 은 어느 단계든 실패하면 @c nullptr 반환.
  */
-#include "render/render_pipeline.h"
+#include "render_bootstrap/render_pipeline.h"
 
 #include "object/mesh.h"
 #include "material/material.h"

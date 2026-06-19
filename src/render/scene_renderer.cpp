@@ -29,7 +29,6 @@
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"
 #include "buffer/render_target.h"
-#include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
@@ -120,8 +119,8 @@ namespace SJH
 			if (l->IsEnabled())
 				spots.push_back(l);
 
-		auto programs = ResourceRegistry::Get().GetAllPrograms();
-		mDispatcher.Dispatch(programs, dir, points, spots, viewPos);
+		// D-1 push -- 외부가 SetActivePrograms 로 주입한 스냅샷 사용 (rr 직접 pull 제거).
+		mDispatcher.Dispatch(mActivePrograms, dir, points, spots, viewPos);
 
 		mProcessor.Clear();
 		CollectFromActor(Scene::Director::Get().Root(), viewMat, cullingMask);

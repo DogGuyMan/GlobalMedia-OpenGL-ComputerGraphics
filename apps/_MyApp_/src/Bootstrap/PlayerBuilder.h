@@ -48,7 +48,7 @@ namespace TopdownShooter::Bootstrap
 {
 	/**
 	 * @brief @c BuildPlayer 에 전달하는 외부 의존 묶음 - 비싱글턴 자원만 포함.
-	 * @details @c ResourceRegistry / @c Director / @c Manager 등 싱글톤은
+	 * @details @c ResourceRegistry / @c Director / @c GameSystems 등 싱글톤은
 	 *          @c BuildPlayer 내부에서 @c ::Get() 으로 직접 조회하므로 여기에 포함하지 않는다.
 	 */
 	struct PlayerDeps

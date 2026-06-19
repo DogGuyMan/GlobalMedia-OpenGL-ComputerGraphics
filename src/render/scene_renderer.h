@@ -29,10 +29,12 @@
 #include "render/mesh_pass_processor.h"
 #include "render/render_stage.h"
 #include <cstdint>
+#include <utility>
+#include <vector>
 #include <vmath.h>
 
 namespace SJH::Scene { class Actor; class Camera; class PassComponent; }
-namespace SJH { class RenderTarget; class Framebuffer; class Mesh; class Material; }
+namespace SJH { class RenderTarget; class Framebuffer; class Mesh; class Material; class Program; }
 
 namespace SJH
 {
@@ -80,6 +82,12 @@ namespace SJH
         /// @param cam 렌더 대상 Camera (RenderTarget 이 연결되어 있어야 함).
         void RenderWithCamera(Scene::Camera& cam);
 
+        /// @brief 라이트 uniform 송신 대상 Program 집합을 외부에서 주입 (D-1 push).
+        /// @details rr 을 직접 pull 하던 의존을 끊기 위해 외부(Composition Root)가 매 프레임
+        ///          @c ResourceRegistry::GetAllPrograms() 스냅샷을 push. render -> rr 의존 제거.
+        /// @param programs 활성 Program 포인터 스냅샷 (owner = caller, 본 클래스는 복사 보유).
+        void SetActivePrograms(std::vector<Program*> programs) { mActivePrograms = std::move(programs); }
+
     private:
         /// @brief Actor 트리 DFS - 활성 노드에서 MeshRenderer/PassComponent 를 DrawCommand 로 변환해 mProcessor 에 Submit.
         /// @param actor      현재 순회 노드.
@@ -90,6 +98,7 @@ namespace SJH
         MeshPassProcessor      mProcessor;          ///< DrawCommand 큐 보유/정렬/GL draw 발행.
         LightUniformDispatcher mDispatcher;          ///< 수집된 Light 를 모든 Program 에 일괄 uniform 송신.
 
+        std::vector<Program*>  mActivePrograms;     ///< D-1 push -- 외부 주입 Program 집합 (rr pull 대체).
         const Framebuffer*     mLastSceneOutput = nullptr;  ///< 이번 프레임 마지막 PassComponent 출력 FB.
     };
 }

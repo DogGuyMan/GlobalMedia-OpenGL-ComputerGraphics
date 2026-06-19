@@ -7,6 +7,7 @@ add_library(myapp_bootstrap STATIC
     AudioWarmup.cpp
     EnemyBuilder.cpp
     EntityPresentation.cpp   # Player/Enemy 공통 연출 클러스터 부착 헬퍼 (director+hit/death+deathDelay+healthbar)
+    InitScheduler.cpp        # 데이터주도 topo-sort 초기화 (spec 2026-06-19)
 )
 add_library(MyApp::Bootstrap ALIAS myapp_bootstrap)
 
@@ -22,7 +23,7 @@ target_link_libraries(myapp_bootstrap
         MyApp::Entity        # CreatePlayerActor (PlayerActor.h)
         MyApp::Audio         # AudioSystem& (헤더 노출)
         MyApp::Physics       # b2World (PlayerBuilder)
-        MyApp::Manager       # Manager::Get()
+        MyApp::GameSystems   # GameSystems::Get()
     PRIVATE
         MyApp::VFX           # EffekseerPlayable (PlayerBuilder .cpp)
         MyApp::Tween         # TweenPlayable (PlayerBuilder .cpp)

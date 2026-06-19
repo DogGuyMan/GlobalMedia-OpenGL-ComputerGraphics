@@ -4,7 +4,7 @@
  *
  * @details
  *  - @c OnEnter : 소유 Actor 에서 @c ILivable 인터페이스를 1회 캐시. GetOwner() null 가드 포함.
- *  - @c Update  : HP 비율 [0,1] 을 계산하고 @c PostFXRegistry 로 Material 을 조회해
+ *  - @c Update  : HP 비율 [0,1] 을 계산하고 @c ResourceRegistry 의 mat_pass_<name> 공유본을 조회해
  *                 @c Properties.Floats[mUniformName] 에 직접 기록한다.
  *                 maxHp<=0 이면 ZeroDivision 방지를 위해 조기 return.
  * @note Material uniform 기록은 GL draw 호출 전에 이루어진다 -- Properties.Floats 는
@@ -12,7 +12,7 @@
  */
 #include "Playable/HpGrayscalePostFX.h"
 
-#include "Playable/PostFXRegistry.h"
+#include "resource_registry/resource_registry.h"
 #include "material/material.h" // SJH::Material::Properties.Floats
 
 #include <utility>
@@ -42,7 +42,8 @@ namespace TopdownShooter::Playable
 		if (ratio < 0.0f) ratio = 0.0f;
 		else if (ratio > 1.0f) ratio = 1.0f;
 
-		if (auto *mat = PostFXRegistry::Get().Material(mPassName))
+		// rr 의 mat_pass_<name> 공유본 직접 조회 (D-7 PostFXRegistry 흡수).
+		if (auto *mat = SJH::ResourceRegistry::Get().FindSharedMaterial("mat_pass_" + mPassName))
 			mat->Properties.Floats[mUniformName] = ratio;
 	}
 }

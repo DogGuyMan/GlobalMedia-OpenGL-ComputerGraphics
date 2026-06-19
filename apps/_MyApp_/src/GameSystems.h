@@ -1,7 +1,7 @@
 /**
- * @file Manager.h
+ * @file GameSystems.h
  * @brief 게임 클라이언트의 중앙 허브 - 하위 시스템(Physics/Audio/VFX/WorldText) + SceneRenderer 를
- *        한 곳에 집계하는 Client-side Director 싱글톤.
+ *        한 곳에 집계하는 게임 시스템 허브(GameSystems) 싱글톤.
  *
  * @details
  *  ### 책임
@@ -19,8 +19,8 @@
  *
  * @note 엔진의 @c SJH::Scene::Director 와 이름이 겹치지 않게 namespace(@c TopdownShooter) 로 분리되어 있다.
  */
-#ifndef _TOPDOWNSHOOTER_DIRECTOR_H__
-#define _TOPDOWNSHOOTER_DIRECTOR_H__
+#ifndef _TOPDOWNSHOOTER_GAMESYSTEMS_H__
+#define _TOPDOWNSHOOTER_GAMESYSTEMS_H__
 
 #include "Audio/AudioSystem.h"
 #include "Physics/PhysicsSystem.h"
@@ -31,19 +31,19 @@
 namespace TopdownShooter
 {
 	/**
-	 * @brief Client-side Director - PhysicsSystem + AudioSystem + VFXSystem + WorldTextSystem + SceneRenderer 집계 싱글톤.
+	 * @brief 게임 시스템 허브(GameSystems) - PhysicsSystem + AudioSystem + VFXSystem + WorldTextSystem + SceneRenderer 집계 싱글톤.
 	 * @details
 	 *  - @b SJH::Scene::Director @b (engine) @b 와 @b 무관 - namespace 분리, Cocos cc::Director 정통 *별도 인스턴스*.
 	 *  - main 의 startup 에서 @c Init, render 마다 @c Update(dt), shutdown 에서 @c Shutdown 호출.
 	 *  - 멤버는 값 보유 (싱글톤 자체 라이프타임 = 프로그램 종료까지).
 	 *  - 복사/이동 금지 - Meyer's 싱글톤.
 	 */
-	class Manager
+	class GameSystems
 	{
 	  public:
 		/// @brief Meyer's 싱글톤 접근. 최초 호출 시 인스턴스 생성.
-		/// @return 프로세스 전역 단일 @c Manager 레퍼런스.
-		static Manager &Get();
+		/// @return 프로세스 전역 단일 @c GameSystems 레퍼런스.
+		static GameSystems &Get();
 
 		/// @brief 보유한 하위 시스템 전체를 초기화. main 의 startup 에서 1회 호출.
 		/// @details Audio -> VFX(maxSprites) -> Physics -> WorldText(BMFont 로드) 순.
@@ -76,14 +76,14 @@ namespace TopdownShooter
 		/// @return 보유 중인 @c Text::WorldTextSystem 레퍼런스.
 		Text::WorldTextSystem   &WorldText() { return mWorldText; }   // <- 추가
 
-		Manager(const Manager &)            = delete;
-		Manager &operator=(const Manager &) = delete;
-		Manager(Manager &&)                 = delete;
-		Manager &operator=(Manager &&)      = delete;
+		GameSystems(const GameSystems &)            = delete;
+		GameSystems &operator=(const GameSystems &) = delete;
+		GameSystems(GameSystems &&)                 = delete;
+		GameSystems &operator=(GameSystems &&)      = delete;
 
 	  private:
-		Manager()  = default;
-		~Manager() = default;
+		GameSystems()  = default;
+		~GameSystems() = default;
 
 		SJH::SceneRenderer	mScenesRender;        ///< 씬 렌더러 - Camera 컬렉션 순회 + 1패스 렌더.
 		Audio::AudioSystem      mAudio;            ///< 오디오 시스템 - FMOD Studio 래퍼.
@@ -93,4 +93,4 @@ namespace TopdownShooter
 	};
 }
 
-#endif // _TOPDOWNSHOOTER_DIRECTOR_H__
+#endif // _TOPDOWNSHOOTER_GAMESYSTEMS_H__

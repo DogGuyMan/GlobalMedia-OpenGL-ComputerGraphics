@@ -29,10 +29,10 @@
 #include "Playable/PlayableDirector.h"    // director->Register("hit", ...) 덮어쓰기
 #include "Tween/TweenPlayable.h"          // 상시 루프 트윈
 #include "Entity/Components/LifeComponents.h" // GetComponent<Life> (SetOnHitFx seam 주입)
-#include "Audio/AudioSystem.h"            // 적 피격음 - Manager().Audio().LoadEvent
+#include "Audio/AudioSystem.h"            // 적 피격음 - GameSystems().Audio().LoadEvent
 #include "Audio/Constants.h"              // EVENT_DAMAGED (적 hit 재사용)
 #include "Audio/FmodStudioPlayable.h"     // 적 "hit" Parallel 의 Damaged 사운드
-#include "Manager.h"                      // TopdownShooter::Manager::Get().Audio()
+#include "GameSystems.h"                  // TopdownShooter::GameSystems::Get().Audio()
 #include "playable/composite_playable.h"  // SJH::Playable::ParallelPlayable (동시재생 컨테이너)
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
@@ -260,7 +260,7 @@ namespace TopdownShooter::Bootstrap
             //   (별도 event:/EnemyHurt 추가 시 Audio::EVENT_DAMAGED 한 곳만 교체).
             if (director)
             {
-                auto *damagedEvt = TopdownShooter::Manager::Get().Audio().LoadEvent(Audio::EVENT_DAMAGED);
+                auto *damagedEvt = TopdownShooter::GameSystems::Get().Audio().LoadEvent(Audio::EVENT_DAMAGED);
                 auto  par        = std::make_unique<SJH::Playable::ParallelPlayable>();
                 par->Join(std::make_unique<TopdownShooter::Playable::SpriteHitFlashPlayable>(enemy.get()));
                 if (damagedEvt)

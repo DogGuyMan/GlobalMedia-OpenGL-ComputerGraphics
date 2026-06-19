@@ -11,7 +11,7 @@
  *
  *  ### 비-책임
  *  - [X] 소유권 관리 - 모든 멤버는 비소유 raw 포인터.
- *    소유권은 각자 (overlay = ImGuiLayerStack, audio/bgmPlayable = Manager / BgmActor 등).
+ *    소유권은 각자 (overlay = ImGuiLayerStack, audio/bgmPlayable = GameSystems / BgmActor 등).
  *  - [X] 게임 로직 tick - Update/OnEnter/OnExit 는 stub.
  *
  * @note 포인터만 보유하므로 전방 선언으로 충분 - 사용처(StageState.Impl.h)가 실제 헤더를 include.
@@ -43,7 +43,7 @@ namespace TopdownShooter::Stage::Components
 	 *  - overlay / 텍스처 3종 - Title/Pause/GameOver 오버레이 UI.
 	 *  - waveCtrl             - 웨이브 레벨 조회 + Player 사망 감시/GameOver 전이 주체.
 	 *  - blurPass             - Title/Pause 동안 blur PostFX Enabled 토글.
-	 *  - audio / bgmPlayable  - FMOD AudioSystem + BGM EventInstance (Manager 를 직접 쓰지 않음).
+	 *  - audio / bgmPlayable  - FMOD AudioSystem + BGM EventInstance (GameSystems 를 직접 쓰지 않음).
 	 *  - playerLife           - CombatPlay 가 HP 비율을 FMOD "Health" 파라미터로 송신.
 	 *
 	 *  모든 멤버는 비소유 raw 포인터. 소유권은 각 원소유자가 보유.
@@ -68,10 +68,10 @@ namespace TopdownShooter::Stage::Components
 		// Title 동안 blur PostFX ON (TitleState OnEnter/OnExit 에서 Enabled 토글)
 		SJH::Scene::PassComponent *blurPass = nullptr; ///< Title/Pause 동안 blur PostFX Enabled 토글 (비소유).
 
-		// FMOD 재생 레퍼런스 - State 는 Manager 싱글톤이 아니라 ctx 를 통해 오디오 접근.
+		// FMOD 재생 레퍼런스 - State 는 GameSystems 싱글톤이 아니라 ctx 를 통해 오디오 접근.
 		//   audio        = AudioSystem (global parameter "Health" 등 System 스코프 호출)
 		//   bgmPlayable  = BGM EventInstance wrap (Play/BGM_STATE/pause/stop - handoff sec.2)
-		// 둘 다 비소유 raw - Manager(audio) / BgmActor(bgmPlayable) 가 소유. startup 에서 주입.
+		// 둘 다 비소유 raw - GameSystems(audio) / BgmActor(bgmPlayable) 가 소유. startup 에서 주입.
 		Audio::AudioSystem        *audio       = nullptr; ///< FMOD AudioSystem - global parameter 송신용 (비소유).
 		Audio::FmodStudioPlayable *bgmPlayable = nullptr; ///< BGM EventInstance wrap (Play/BGM_STATE/pause/stop, 비소유).
 		// Player Life - CombatPlay 가 HP 비율을 FMOD global "Health" 파라미터로 송신 (sec.2).

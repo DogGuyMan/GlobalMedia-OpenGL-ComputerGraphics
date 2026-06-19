@@ -16,15 +16,16 @@
 
 #include "Audio/AudioSystem.h"
 #include "Bootstrap/AudioWarmup.h"
+#include "Bootstrap/EngineBootstrap.h"
+#include "Bootstrap/InitScheduler.h"
 #include "Bootstrap/PlayerBuilder.h"
 #include "Bootstrap/WorldSceneBuilder.h"
 #include "InputHandler/PlayerController.h"
-#include "Manager.h"
+#include "GameSystems.h"
 #include "VFX/ParticleStage.h"
 #include "VFX/Constants.h"   // MUZZLE_EFFECT / TEST_EFFECTS (VFX 자원 테이블)
 
 #include "diagnostics/effekseer_diagnostics.h"   // VFX 텍스처 로드 검증
-#include "Playable/PostFXRegistry.h"             // 연출 foundation — PostFX pass Material 레지스트리
 #include "Playable/PostFXConstants.h"            // PostFX 파이프라인 정의(PASSTHOURH/POSTFX_PROGRAM_CONFIGS) + fog/vignette 색
 #include "Spawns/OneShotSweeper.h"
 #include "Spawns/VfxInstance.h"
@@ -47,7 +48,7 @@
 #include "common/window_helper.h"
 #include "render/camera_stage.h"
 #include "render/pass_component.h"
-#include "render/render_pipeline.h"
+#include "render_bootstrap/render_pipeline.h"
 #include "buffer/render_target.h"
 #include "render/scene_renderer.h"
 #include "render/screen_quad_stage.h"
@@ -74,7 +75,7 @@ namespace TopdownShooter
 		using Playable::POSTFX_PROGRAM_CONFIGS;
 	} // namespace
 
-	class game_application : public sb7::application
+	class game_application : public sb7::application, public Bootstrap::IClientBootstrap
 	{
 	  public:
 		void init() override
@@ -95,111 +96,128 @@ namespace TopdownShooter
 
 		void startup() override
 		{
-			// A1 — GLFW window 정보 1 호출.
-			const auto fb = SJH::GetFramebufferInfo(window);
+			// A1 -- GLFW window 정보 캐시 (hook 들이 공유).
+			mFbInfo = SJH::GetFramebufferInfo(window);
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
 
-			auto &manager = TopdownShooter::Manager::Get();
-			manager.Init();
-			auto &reg = SJH::ResourceRegistry::Get();
-			auto &dir = SJH::Scene::Director::Get();
-			auto &phys = TopdownShooter::Manager::Get().Physics();
-			auto &vfxs = TopdownShooter::Manager::Get().VFX();
+			// 부트 시퀀스 -- 엔진 스켈레톤이 3 hook 을 순차 호출 (제어역전).
+			// 각 hook 은 phase-local InitScheduler 로 자기 phase task 를 topo-sort 직렬 실행.
+			Bootstrap::EngineBootstrap engine;
+			engine.Boot(*this);
+		}
 
-			mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(fb.Width, fb.Height);
-			mSceneFB       = SJH::Framebuffer::CreateWithDepthTexture(fb.Width, fb.Height);
+		// -- phase 1: 자원/시스템 (topo L0~L2) --
+		void OnResourcesReady() override
+		{
+			Bootstrap::InitScheduler sched;
 
-			// A3 — RenderPipeline 셋업 + ScreenQuadStage 받아 mStages push.
-			SJH::Render::DefaultPipelineConfig pipelineCfg{
-			    PASSTHOURH_PROGRAM_CONFIG.Name,
-			    PASSTHOURH_PROGRAM_CONFIG.VertFile,
-			    PASSTHOURH_PROGRAM_CONFIG.FragFile,
-			    // ScreenQuadMeshKey / BypassMatKey 는 default
-			};
-			auto sqStage = SJH::Render::SetupDefaultPipeline(reg, manager.SceneRenderer(), mSceneFB.get(), pipelineCfg);
-			mScreenQuadStagePtr = sqStage.get();
-			mStages.push_back(std::move(sqStage));
+			// T1 core -- 렌더 타깃 + 시스템 초기화 + 오디오 워밍업.
+			sched.Task("core").Gl().Does([&] {
+				mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(mFbInfo.Width, mFbInfo.Height);
+				mSceneFB       = SJH::Framebuffer::CreateWithDepthTexture(mFbInfo.Width, mFbInfo.Height);
 
-			// WorldScene (camera + light + skybox) — Bootstrap 빌더로 추출 (B/C 그룹).
-			// stages 가 mCamera 의존이라 stages 셋업보다 먼저 호출. light·skybox 도 함께
-			// 생성되나 Light=SceneRenderer 매 프레임 수집 / Skybox=Pass queue 정렬이라 순서 무관(시각 동일).
-			auto worldScene = Bootstrap::BuildWorldScene({fb.Aspect, &mMouse, mSceneFB.get()});
-			mCamera    = worldScene.WorldCamera;
-			mSkyboxMat = worldScene.SkyboxMat;
+				TopdownShooter::GameSystems::Get().Init();
+				Bootstrap::WarmupAudio(GameSystems::Get().Audio());
+				return mSceneFB != nullptr;
+			});
 
-			// A2 — ScreenCamera Pure factory.
-			auto screenCamActor = SJH::Scene::CreateScreenCameraActor("ScreenCamera", fb.Aspect, mSceneFB.get());
-			mScreenCamera = screenCamActor->GetComponent<SJH::Scene::Camera>();
-			auto* screenCamActorPtr = dir.Root().AddChild(std::move(screenCamActor));
+			sched.RunAll();
+		}
 
-			// A4 — PostFX 체인 빌드.
-			auto chain = SJH::Render::BuildPostFXChain(reg, *screenCamActorPtr, POSTFX_PROGRAM_CONFIGS, mSceneFB.get(), fb.Width, fb.Height);
-			mPostFXFBs      = std::move(chain.Framebuffers);
-			mPassComponents = std::move(chain.PassComponents);
+		// -- phase 2: 씬/파이프라인 (topo L3~L5) --
+		void OnSceneSetup() override
+		{
+			auto &reg     = SJH::ResourceRegistry::Get();
+			auto &dir     = SJH::Scene::Director::Get();
+			auto &manager = TopdownShooter::GameSystems::Get();
+			auto &phys    = manager.Physics();
+			auto &vfxs    = manager.VFX();
 
-			// invert/blurring/sobel 만 기본 비활성 (자동활성화 취소) — 나머지 PostFX 는 기본 ON.
-			// ImGui(F1) 체크박스로 토글. (Enabled=false ⇒ mesh_pass_processor 가 bypass blit.)
-			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
-			{
-				const auto &name = POSTFX_PROGRAM_CONFIGS[i].Name;
-				if (mPassComponents[i] && (name == "invert" || name == "blurring" || name == "sobel"))
-					mPassComponents[i]->Enabled = false;
-			}
+			Bootstrap::InitScheduler sched;
 
-			// fog 의 non-float 초기값 + uDepth 바인딩 (PostFXStageConfig.InitFloats 는 Floats 만 지원).
-			if (auto *fogMat = FindFogMaterial())
-			{
-				fogMat->Properties.Vec3s["uFogColor"] = Playable::FOG_COLOR; // {20,36,10}
-				fogMat->Properties.Ints["uFogMode"]   = Playable::FOG_MODE; // 0=Linear, 1=Exp, 2=Exp2
-			}
-			RebindFogUniforms(); // uDepth = sceneFB depth 텍스처 (unit 1).
+			// T2 screenPipeline -- DefaultPipeline + ScreenCamera + PostFX 체인 + fog/vignette + 레지스트리.
+			sched.Task("screenPipeline").Gl().Does([&] {
+				SJH::Render::DefaultPipelineConfig pipelineCfg{
+				    PASSTHOURH_PROGRAM_CONFIG.Name,
+				    PASSTHOURH_PROGRAM_CONFIG.VertFile,
+				    PASSTHOURH_PROGRAM_CONFIG.FragFile,
+				};
+				auto sqStage = SJH::Render::SetupDefaultPipeline(reg, manager.SceneRenderer(), mSceneFB.get(), pipelineCfg);
+				if (!sqStage)
+					return false;
+				mScreenQuadStagePtr = sqStage.get();
+				mStages.push_back(std::move(sqStage));
 
-			// grayscale_vignetting 의 vec3 초기값 (InitFloats 밖) — 비네팅 색 명시 set.
-			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
-				gvMat->Properties.Vec3s["uVignetteColor"] = Playable::VIGNETTE_COLOR; // {255,0,0} 빨강 비네팅.
+				auto screenCamActor    = SJH::Scene::CreateScreenCameraActor("ScreenCamera", mFbInfo.Aspect, mSceneFB.get());
+				mScreenCamera          = screenCamActor->GetComponent<SJH::Scene::Camera>();
+				auto *screenCamActorPtr = dir.Root().AddChild(std::move(screenCamActor));
 
-			// 연출 foundation — PostFX pass Material 을 레지스트리에 등록 (hit-FX 트랙의 PostFXTweenPlayable 이
-			// PostFXRegistry::Get().Material("grayscale_vignetting")->Properties 로 도달). pass material 유효 지점.
-			TopdownShooter::Playable::PostFXRegistry::Get().Register("grayscale_vignetting", FindPassMaterial("grayscale_vignetting"));
+				auto chain = SJH::Render::BuildPostFXChain(reg, *screenCamActorPtr, POSTFX_PROGRAM_CONFIGS, mSceneFB.get(), mFbInfo.Width, mFbInfo.Height);
+				mPostFXFBs      = std::move(chain.Framebuffers);
+				mPassComponents = std::move(chain.PassComponents);
 
-			// ── stages 컬렉션 — World -> Particle -> Screen -> ScreenQuad 순 ─────────
-			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
-			// 카메라 stages 를 *ScreenQuadStage 앞* 에 insert + ParticleStage 는
-			// 아래 별도 블록에서 begin()+1 위치에 삽입 — 최종 순서:
-			//   [0] worldCam      -> sceneFB clear + 3D WorldMesh
-			//   [1] ParticleStage -> sceneFB (NoClear) + Effekseer 합성   (※ 아래 블록)
-			//   [2] screenCam     -> PassComponent 체인 (NoClear)
-			//   [3] ScreenQuadStage -> backbuffer 합성
-			mStages.insert(
-			    mStages.begin(),
-			    std::make_unique<SJH::CameraStage>(&Manager::Get().SceneRenderer(), mScreenCamera));
-			mStages.insert(
-			    mStages.begin(),
-			    std::make_unique<SJH::CameraStage>(&Manager::Get().SceneRenderer(), mCamera));
+				for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
+				{
+					const auto &name = POSTFX_PROGRAM_CONFIGS[i].Name;
+					if (mPassComponents[i] && (name == "invert" || name == "blurring" || name == "sobel"))
+						mPassComponents[i]->Enabled = false;
+				}
 
-			// ── ParticleStage insert — Manager.Init() 직후 (VFXSystem 사용 가능 시점) ──
-			//    위치: stages.begin() + 1 (worldCam 뒤, screenCam 앞)
-			//    최종 stages: [worldCam, ParticleStage, screenCam, ScreenQuadStage]
-			//    spec D-5 — Manager.Init() 흐름 보존을 위해 카메라 stages insert 와 분리.
-			//               (spec 원문 식별자: "Director.Init() 흐름 보존" — Manager rename 이전 용어)
-			mStages.insert(
-			    mStages.begin() + 1,
-			    std::make_unique<TopdownShooter::VFX::ParticleStage>(
-			        &TopdownShooter::Manager::Get().VFX(), mCamera));
+				if (auto *fogMat = FindFogMaterial())
+				{
+					fogMat->Properties.Vec3s["uFogColor"] = Playable::FOG_COLOR;
+					fogMat->Properties.Ints["uFogMode"]   = Playable::FOG_MODE;
+				}
+				RebindFogUniforms();
 
-			Bootstrap::WarmupAudio(Manager::Get().Audio());
-			reg.CreateEffect(vfxs.GetManager(), VFX::MUZZLE_EFFECT.key, VFX::MUZZLE_EFFECT.path);
+				if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
+					gvMat->Properties.Vec3s["uVignetteColor"] = Playable::VIGNETTE_COLOR;
 
-			// VFX 테스트 — 6종 Effekseer 이펙트 로드 (ImGui 드롭다운 선택 + 좌클릭 위치 소환).
-			// ※ .efk 가 참조하는 텍스처가 resources/vfx/ 아래에 있어야 실제로 보인다 (현재 누락 가능 — 별도 배치 필요).
-			std::vector<UI::VfxSpawnLayer::Entry> vfxEntries;
-			{
+				return true;
+			});
+
+			// T3 world -- WorldScene(camera/light/skybox) + 스테이지 액터 + FxRoot + spawn 컨텍스트
+			//             + muzzle 이펙트 + 플레이어 + 웨이브 컨트롤러.
+			sched.Task("world").Needs({"vfxUi"}).Gl().Does([&] {  // vfxUi 가 TEST_EFFECTS(orbital_background) 를 선행 로드 -> 스테이지 FindEffect 의존
+				auto worldScene = Bootstrap::BuildWorldScene({mFbInfo.Aspect, &mMouse, mSceneFB.get()});
+				mCamera    = worldScene.WorldCamera;
+				mSkyboxMat = worldScene.SkyboxMat;
+
+				dir.Root().AddChild(std::move(TopdownShooter::Stage::CreateStageActor({&phys.World(), &reg})));
+
+				mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("FxRoot"));
+				VFX::SetSpawnContext(mFxRoot, &vfxs);
+				WorldText::SetSpawnContext(mFxRoot, manager.WorldText().GetFont());
+
+				reg.CreateEffect(vfxs.GetManager(), VFX::MUZZLE_EFFECT.key, VFX::MUZZLE_EFFECT.path);
+
+				auto player  = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
+				mSpriteActor = player.SpriteActor;
+
+				auto *waveSpawner = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("WaveSpawner"));
+				waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, Stage::ARENA_HALF_EXTENT);
+				return mCamera != nullptr && mSpriteActor != nullptr;
+			});
+
+			// T4 stages -- stages 컬렉션 명령형 조립 (worldCam/particle/screenCam 순서 보존).
+			sched.Task("stages").Needs({"screenPipeline", "world"}).Cpu().Does([&] {
+				mStages.insert(mStages.begin(),
+				    std::make_unique<SJH::CameraStage>(&GameSystems::Get().SceneRenderer(), mScreenCamera));
+				mStages.insert(mStages.begin(),
+				    std::make_unique<SJH::CameraStage>(&GameSystems::Get().SceneRenderer(), mCamera));
+				mStages.insert(mStages.begin() + 1,
+				    std::make_unique<TopdownShooter::VFX::ParticleStage>(&GameSystems::Get().VFX(), mCamera));
+				return true;
+			});
+
+			// T5 vfxUi -- VFX 테스트 이펙트 로드 + 게임 UI(PostFX 디버그) + VFX 소환 레이어.
+			sched.Task("vfxUi").Needs({"screenPipeline"}).Gl().Does([&] {
+				std::vector<UI::VfxSpawnLayer::Entry> vfxEntries;
 				for (const auto &v : VFX::TEST_EFFECTS)
 				{
 					if (auto *eff = reg.CreateEffect(vfxs.GetManager(), v.key, v.path))
 					{
 						vfxEntries.push_back({v.key, eff});
-						// 진단 — .efk 가 참조하는 텍스처가 실제 해석되는지 검증 (u16 경로 -> ASCII narrow).
 						std::string narrow;
 						for (const char16_t *p = v.path; *p; ++p)
 							narrow.push_back(static_cast<char>(*p));
@@ -208,87 +226,80 @@ namespace TopdownShooter
 					else
 						spdlog::warn("[vfx-test] load failed: {}", v.key);
 				}
-			}
 
-			dir.Root().AddChild(std::move(TopdownShooter::Stage::CreateStageActor({
-			    &phys.World(),
-			    &reg,
-			})));
+				std::vector<UI::PassDebugEntry> debugEntries;
+				for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size(); ++i)
+					if (i < mPassComponents.size())
+						debugEntries.push_back({POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
+				mImGuiCtx = UI::BuildGameUI({window, &reg, &mImGuiStack, std::move(debugEntries), &mGamma, [this] { TogglePause(); }});
 
-			mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("FxRoot"));
-
-			// VFX::Spawn 파사드 컨텍스트 등록 — seam(dust/hit/gunshoot)이 이 fxRoot+VFXSystem 으로 단발 스폰.
-			VFX::SetSpawnContext(mFxRoot, &vfxs);
-			// World Text 파사드 컨텍스트 — Life::SetOnDamageNumber seam 이 이 fxRoot+폰트로 데미지 숫자 스폰.
-			WorldText::SetSpawnContext(mFxRoot, TopdownShooter::Manager::Get().WorldText().GetFont());
-
-			auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
-			mSpriteActor = player.SpriteActor;
-
-			// 적 웨이브 스폰 트리거 — player(mSpriteActor) 생성 이후라야 SimplePursueAI 타깃 유효.
-			// root 하위 Component 라 Director::Update(dt) 가 자동 tick. arenaHalfExtent 는 StageConfig 기본(10.0f)과 일치.
-			auto *waveSpawner = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("WaveSpawner"));
-			waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, Stage::ARENA_HALF_EXTENT);
-
-			// UI — render(PostFX) ↔ UI 매핑은 Composition Root(main) 책임. 빌더는 결과만 받음.
-			std::vector<UI::PassDebugEntry> debugEntries;
-			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size(); ++i)
-				if (i < mPassComponents.size())
-					debugEntries.push_back({POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
-			mImGuiCtx = UI::BuildGameUI({window, &reg, &mImGuiStack, std::move(debugEntries), &mGamma, [this] { TogglePause(); }});
-
-			// VFX 테스트 드롭다운 (항상 표시) + 좌클릭 Ground 좌표 -> 선택 이펙트 소환.
-			{
 				auto layer = std::make_unique<UI::VfxSpawnLayer>(std::move(vfxEntries));
 				mVfxLayer  = layer.get();
 				mImGuiStack.Push(std::move(layer));
-			}
-			dir.Enter();
+				return mImGuiCtx != nullptr;
+			});
 
-			// ── Stage FSM (Hybrid) ──────────────────────────────────────────────
-			// 게임 로직(Manager/Director/Physics Update)을 State 가 게이트. startup 본문 유지.
-			// GameContext — State 가 owner.FindChild("GameContext") 로 접근하는 공유 컨텍스트.
-			auto *ctxActor = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("GameContext"));
-			mCtx           = ctxActor->AddComponent<Stage::Components::GameContextComponent>();
+			sched.RunAll();
+		}
 
-			// 오버레이 텍스처 (Title/Pause/GameOver) 로드.
-			mCtx->titleTex    = reg.CreateTexture("ui_title", SJH::Image::Load("ui_title", "resources/texture/Title.png").get());
-			mCtx->pauseTex    = reg.CreateTexture("ui_pause", SJH::Image::Load("ui_pause", "resources/texture/Pause.png").get());
-			mCtx->gameOverTex = reg.CreateTexture("ui_gameover", SJH::Image::Load("ui_gameover", "resources/texture/GameOver.png").get());
+		// -- phase 3: 진입/FSM (topo L6~L9) --
+		void OnBeforeFirstFrame() override
+		{
+			auto &reg = SJH::ResourceRegistry::Get();
+			auto &dir = SJH::Scene::Director::Get();
 
-			// blur PostFX 핸들 — TitleState 가 OnEnter/OnExit 에서 Enabled 토글 (기본 OFF).
-			for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
-				if (mPassComponents[i] && POSTFX_PROGRAM_CONFIGS[i].Name == "blurring")
-					mCtx->blurPass = mPassComponents[i];
+			Bootstrap::InitScheduler sched;
 
-			// 오버레이 레이어 — ImGuiLayerStack 이 소유(마지막 push = 최상위). ctx 엔 비소유 raw.
-			{
-				auto overlay  = std::make_unique<UI::StateOverlayLayer>();
-				mCtx->overlay = overlay.get();
-				mImGuiStack.Push(std::move(overlay));
-			}
+			// T6 enter -- Director.Enter (모든 Component OnEnter -- Camera/Light 자동 등록).
+			sched.Task("enter").Gl().Does([&] {
+				dir.Enter();
+				return true;
+			});
 
-			// StateMachine — game_application 멤버 보유(D1, Actor 부착 안 함). startup=Title.
-			mStageFsm = std::make_unique<Stage::StageStateMachine>(dir.Root());
-			mStageFsm->RegisterState(std::make_unique<Stage::TitleState>(mStageFsm.get()));
-			mStageFsm->RegisterState(std::make_unique<Stage::CombatPlayState>(mStageFsm.get()));
-			mStageFsm->RegisterState(std::make_unique<Stage::PauseState>(mStageFsm.get()));
-			mStageFsm->RegisterState(std::make_unique<Stage::GameOverState>(mStageFsm.get()));
+			// T7 fsm -- GameContext + 오버레이 텍스처 + Stage FSM 등록/와이어링/진입.
+			sched.Task("fsm").Needs({"enter"}).Gl().Does([&] {
+				auto *ctxActor = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>("GameContext"));
+				mCtx           = ctxActor->AddComponent<Stage::Components::GameContextComponent>();
 
-			// WaveController 연결 — Player 사망 감시 → GameOver 전이 구동(S5b).
-			mCtx->waveCtrl = waveSpawner->GetComponent<Stage::WaveController>();
-			if (mCtx->waveCtrl)
-				mCtx->waveCtrl->SetStageStateMachine(mStageFsm.get());
+				mCtx->titleTex    = reg.CreateTexture("ui_title", SJH::Image::Load("ui_title", "resources/texture/Title.png").get());
+				mCtx->pauseTex    = reg.CreateTexture("ui_pause", SJH::Image::Load("ui_pause", "resources/texture/Pause.png").get());
+				mCtx->gameOverTex = reg.CreateTexture("ui_gameover", SJH::Image::Load("ui_gameover", "resources/texture/GameOver.png").get());
 
-			// FMOD — Stage State 가 구동할 핸들 주입 (OnEnter 전에 세팅 필수).
-			//   BgmActor 는 WarmupAudio→BuildBGM 이 Root 직속으로 생성 (이미 존재).
-			mCtx->audio = &TopdownShooter::Manager::Get().Audio();
-			if (auto *bgmActor = dir.Root().FindChild("BgmActor"))
-				mCtx->bgmPlayable = bgmActor->GetComponent<Audio::FmodStudioPlayable>();
-			if (mSpriteActor)
-				mCtx->playerLife = mSpriteActor->GetComponent<Entity::Components::Life>();
+				for (std::size_t i = 0; i < POSTFX_PROGRAM_CONFIGS.size() && i < mPassComponents.size(); ++i)
+					if (mPassComponents[i] && POSTFX_PROGRAM_CONFIGS[i].Name == "blurring")
+						mCtx->blurPass = mPassComponents[i];
 
-			mStageFsm->OnEnter(); // curState=Title → TitleState::OnEnter (overlay->Show(titleTex) + BGM_STATE=0)
+				{
+					auto overlay  = std::make_unique<UI::StateOverlayLayer>();
+					mCtx->overlay = overlay.get();
+					mImGuiStack.Push(std::move(overlay));
+				}
+
+				mStageFsm = std::make_unique<Stage::StageStateMachine>(dir.Root());
+				mStageFsm->RegisterState(std::make_unique<Stage::TitleState>(mStageFsm.get()));
+				mStageFsm->RegisterState(std::make_unique<Stage::CombatPlayState>(mStageFsm.get()));
+				mStageFsm->RegisterState(std::make_unique<Stage::PauseState>(mStageFsm.get()));
+				mStageFsm->RegisterState(std::make_unique<Stage::GameOverState>(mStageFsm.get()));
+
+				// WaveController 연결 -- phase 2 에서 만든 WaveSpawner 를 이름으로 조회 (local 승격 회피).
+				if (auto *waveSpawner = dir.Root().FindChild("WaveSpawner"))
+				{
+					mCtx->waveCtrl = waveSpawner->GetComponent<Stage::WaveController>();
+					if (mCtx->waveCtrl)
+						mCtx->waveCtrl->SetStageStateMachine(mStageFsm.get());
+				}
+
+				mCtx->audio = &TopdownShooter::GameSystems::Get().Audio();
+				if (auto *bgmActor = dir.Root().FindChild("BgmActor"))
+					mCtx->bgmPlayable = bgmActor->GetComponent<Audio::FmodStudioPlayable>();
+				if (mSpriteActor)
+					mCtx->playerLife = mSpriteActor->GetComponent<Entity::Components::Life>();
+
+				mStageFsm->OnEnter();
+				return true;
+			});
+
+			sched.RunAll();
 		}
 
 		void render(double currentTime) override
@@ -320,9 +331,9 @@ namespace TopdownShooter
 
 			mKeyboard.PollHeld(window);
 			if (mCamera && mCamera->GetOwner())
-				TopdownShooter::Manager::Get().Audio().SetListener(mCamera->GetOwner()->GetTransform().Translate);
+				TopdownShooter::GameSystems::Get().Audio().SetListener(mCamera->GetOwner()->GetTransform().Translate);
 
-			// Stage FSM — 게임 로직 위탁. CombatPlayState 만 Manager/Director/Physics Update(D5 freeze).
+			// Stage FSM — 게임 로직 위탁. CombatPlayState 만 GameSystems/Director/Physics Update(D5 freeze).
 			//   NewFrame(260) 직후라 State 의 ImGui::IsKeyPressed/IsMouseClicked(frame-edge) 유효.
 			if (mStageFsm)
 				mStageFsm->Update(dt);
@@ -330,7 +341,7 @@ namespace TopdownShooter
 			// 오디오 펌프 — 게임 sim freeze 와 무관하게 매 프레임(ungated). 이게 없으면 Title/Pause 에서
 			// FMOD Studio update 가 안 돌아 Play()/setParameter(BGM_STATE/Health) 명령이 처리되지 않음
 			// (Title BGM 무음 버그의 원인). FSM Update 뒤에 둬 listener/파라미터 갱신을 함께 flush.
-			TopdownShooter::Manager::Get().Audio().Update(dt);
+			TopdownShooter::GameSystems::Get().Audio().Update(dt);
 
 			if (mFxRoot) TopdownShooter::Spawns::SweepFinishedChildren(*mFxRoot);
 			// 디졸브 끝난 사망 적을 RemoveChild -> OnExit -> Physics::OnExit::DestroyBody (deferred — Director.Update 밖이라 iterator 안전).
@@ -338,9 +349,7 @@ namespace TopdownShooter
 
 			// 스카이박스 시간(u_time) 동기화 — 위치는 셰이더가 view 이동 제거로 자동 처리.
 			if (mSkyboxMat)
-			{
 				mSkyboxMat->Properties.Floats["u_time"] = static_cast<float>(currentTime);
-			}
 
 			// fog — WorldCamera projection 역행렬 송신 (Properties.Mat4s 자동 송신, D4).
 			// Camera 의 닫힌 해 inverse (cofactor 일반 inverse 폐기 — perspective/ortho 분기 자체 처리).
@@ -349,9 +358,13 @@ namespace TopdownShooter
 				    mCamera->GetInverseProjectionMatrix();
 
 			// ── stages 컬렉션 순회 — World -> Screen -> ScreenQuad ─────────────────
+			// D-1 push -- 라이트 uniform 송신 대상 Program 집합을 SceneRenderer 에 주입
+			// (SceneRenderer 가 rr 을 직접 pull 하던 의존 제거 -> render->rr 사이클 절단).
+			GameSystems::Get().SceneRenderer().SetActivePrograms(SJH::ResourceRegistry::Get().GetAllPrograms());
+
 			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).
 			{
-				auto *out = Manager::Get().SceneRenderer().GetLastSceneOutput();
+				auto *out = GameSystems::Get().SceneRenderer().GetLastSceneOutput();
 				mScreenQuadStagePtr->SetSources({out ? out : mSceneFB.get()}); // ! ??? 필요한 것 맞나?
 			}
 			for (auto &s : mStages)
@@ -377,7 +390,7 @@ namespace TopdownShooter
 			mCtx = nullptr;
 			mStages.clear();
 			mDefaultTarget.reset();
-			TopdownShooter::Manager::Get().Shutdown();
+			TopdownShooter::GameSystems::Get().Shutdown();
 		}
 
 		void onKey(int key, int action) override
@@ -433,10 +446,11 @@ namespace TopdownShooter
 
 	  private:
 		// ── 멤버 ────────────────────────────────────────────────────────────────────
+		SJH::FramebufferInfo  mFbInfo{};       ///< startup 캐시 -- 3 hook 이 공유하는 window/fb 크기/비율.
 		SJH::RenderTargetUPtr mDefaultTarget;
 		// SP-RenderStage 완성 — Application 이 stages 컬렉션을 명시 순서로 순회.
 		std::vector<std::unique_ptr<SJH::IRenderStage>> mStages;
-		SJH::ScreenQuadStage *mScreenQuadStagePtr;
+		SJH::ScreenQuadStage *mScreenQuadStagePtr = nullptr;
 
 		SJH::FramebufferUPtr mSceneFB;
 		std::vector<SJH::FramebufferUPtr> mPostFXFBs;  // configs 가변 size 대응 (D-6)

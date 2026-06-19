@@ -6,7 +6,7 @@
  *  ### 책임
  *  - 각 시퀀스 빌더(@c BuildBGM / @c SpawnHitSpark 등)가 필요한 서브시스템 포인터를 한 곳에 모아
  *    명시적 주입(Q2 - DI without container) 패턴으로 전달한다.
- *  - 호출 측이 @c Manager::Get() + @c ResourceRegistry::Get() 으로 1회 조립 후 재사용.
+ *  - 호출 측이 @c GameSystems::Get() + @c ResourceRegistry::Get() 으로 1회 조립 후 재사용.
  *  ### 비-책임
  *  - [X] 서브시스템 수명 관리 - 각 포인터 원소의 수명은 호출자(App/Scene) 가 보장.
  *  - [X] 필드 유효성 보장 - 각 빌더 함수가 nullptr 가드를 스스로 수행.
@@ -29,7 +29,7 @@ namespace TopdownShooter::Spawns
 {
     /**
      * @brief 시퀀스 빌더가 필요로 하는 의존 묶음 (명시적 주입 - Q2).
-     * @details 호출 측이 @c Manager::Get() + @c ResourceRegistry::Get() 으로 1회 조립 후
+     * @details 호출 측이 @c GameSystems::Get() + @c ResourceRegistry::Get() 으로 1회 조립 후
      *          각 빌더 함수에 const ref 로 전달한다.
      *          각 필드는 nullptr 허용 - 빌더 함수가 내부에서 nullptr 가드 후 no-op 처리.
      */

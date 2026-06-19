@@ -69,7 +69,7 @@ namespace TopdownShooter::WorldText
     namespace
     {
         SJH::Scene::Actor*     gFxRoot = nullptr;   // main 등록 - Director.Root() 자식 "FxRoot"
-        SJH::Text::BitmapFont* gFont   = nullptr;   // main 등록 - Manager.WorldText().GetFont()
+        SJH::Text::BitmapFont* gFont   = nullptr;   // main 등록 - GameSystems.WorldText().GetFont()
     }
 
     void SetSpawnContext(SJH::Scene::Actor* fxRoot, SJH::Text::BitmapFont* font)

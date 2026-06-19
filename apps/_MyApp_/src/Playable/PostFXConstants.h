@@ -20,7 +20,7 @@
 #ifndef _TOPDOWNSHOOTER_PLAYABLE_POSTFX_CONSTANTS__
 #define _TOPDOWNSHOOTER_PLAYABLE_POSTFX_CONSTANTS__
 
-#include "render/render_pipeline.h" // SJH::Render::PostFXStageConfig
+#include "render_bootstrap/render_pipeline.h" // SJH::Render::PostFXStageConfig
 #include <vector>
 #include <vmath.h>
 

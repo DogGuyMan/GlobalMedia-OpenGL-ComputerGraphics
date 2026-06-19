@@ -10,8 +10,8 @@
  *    HP=0 이면 uniform=0.0 -> 완전 무채색.
  *  ### 비-책임
  *  - [X] 트위닝/애니메이션 시작 결정 -- 연속 상태 바인딩이므로 Director Playable 이 아니라 일반 Component.
- *  - [X] Material 소유 -- @c PostFXRegistry 를 통한 비소유 관찰자.
- *  - [X] PostFX 셰이더 컴파일 / 패스 생성 -- @c PostFXRegistry / PassComponent 담당.
+ *  - [X] Material 소유 -- @c ResourceRegistry 의 @c mat_pass_<name> 공유본 비소유 관찰.
+ *  - [X] PostFX 셰이더 컴파일 / 패스 생성 -- @c RenderPipeline / PassComponent 담당.
  *  ### 정통 매핑
  *  - Cocos2D @c CustomCommand per-frame uniform blit.
  *  - Unity @c PostProcessing.Volume + Weight 실시간 갱신.
@@ -32,7 +32,7 @@ namespace TopdownShooter::Playable
 	 * @brief HP 비율을 PostFX float uniform 에 연속 기록하는 Component.
 	 * @details
 	 *  매 프레임 @c ILivable::GetHp() / @c ILivable::GetMaxHp() 로 비율을 계산하고
-	 *  @c PostFXRegistry::Get().Material(passName) 으로 Material 을 조회해
+	 *  @c ResourceRegistry::FindSharedMaterial("mat_pass_"+passName) 으로 Material 을 조회해
 	 *  @c Properties.Floats[uniformName] 에 기록한다.
 	 *
 	 *  - 트리거 방식이 아닌 연속 바인딩 -> Director Playable 이 아닌 일반 Component (AddComponent + scene tick).
@@ -42,7 +42,7 @@ namespace TopdownShooter::Playable
 	{
 	  public:
 		/// @brief 감시할 PostFX 패스 이름과 uniform 명을 지정해 생성.
-		/// @param passName    @c PostFXRegistry 키 (예: "grayscale_vignetting").
+		/// @param passName    PostFX 패스 이름 (예: "grayscale_vignetting") -- rr 키는 mat_pass_<passName>.
 		/// @param uniformName float uniform 명 (예: "uGrayscaleAmount").
 		HpGrayscalePostFX(std::string passName, std::string uniformName);
 
@@ -56,7 +56,7 @@ namespace TopdownShooter::Playable
 
 	  private:
 		Entity::ILivable *mLife = nullptr;  ///< 소유 Actor 의 ILivable 캐시 (OnEnter 에서 1회 취득).
-		std::string       mPassName;         ///< PostFXRegistry 검색 키 (예: "grayscale_vignetting").
+		std::string       mPassName;         ///< PostFX 패스 이름 (rr 키 = mat_pass_<name>).
 		std::string       mUniformName;      ///< 기록 대상 float uniform 명 (예: "uGrayscaleAmount").
 	};
 }

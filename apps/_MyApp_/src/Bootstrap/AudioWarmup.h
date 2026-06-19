@@ -29,7 +29,7 @@ namespace TopdownShooter::Bootstrap
 	/// @brief FMOD bank 로드 + BGM(@c Spawns::BuildBGM) 부착.
 	/// @details 산출 포인터 없음 (main 이 보유할 핸들 0) -> void. 기존 main.cpp WarmupFMOD 와 동일.
 	///          Master.strings.bank + Master.bank 를 로드한 뒤 BGM 시퀀스를 씬 루트에 부착한다.
-	/// @param audio Manager::Get().Audio() - bank/event/sound 의 owner. reg/dir 은 ::Get() 으로 내부 조회.
+	/// @param audio GameSystems::Get().Audio() - bank/event/sound 의 owner. reg/dir 은 ::Get() 으로 내부 조회.
 	void WarmupAudio(TopdownShooter::Audio::AudioSystem &audio);
 }
 

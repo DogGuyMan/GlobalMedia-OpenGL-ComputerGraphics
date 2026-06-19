@@ -17,14 +17,14 @@
  *    공유 Material 직접 수정 시 모든 벽에 영향.
  *  - Orbit VFX 는 @c ResourceRegistry 에 @c "orbital_background" Effect 등록 여부에만 의존 - 없으면 no-op.
  */
-#include <GL/gl3w.h> // 반드시 최상단 - Manager.h->VFXSystem.h->EffekseerRendererGL(시스템 gl3.h) <-> resource_registry.h->gl3w.h 충돌 회피.
+#include <GL/gl3w.h> // 반드시 최상단 - GameSystems.h->VFXSystem.h->EffekseerRendererGL(시스템 gl3.h) <-> resource_registry.h->gl3w.h 충돌 회피.
 
 #include "Stage/StageBuilder.h"
 #include "Stage/Components/MaterialTimeComponent.h"
 #include "Stage/Components/StageStateComponent.h"
 #include "Stage/Factories/wall_factory.h"
 
-#include "Manager.h"                    // Manager::Get().VFX() (Orbit 배경 VFX)
+#include "GameSystems.h"                // GameSystems::Get().VFX() (Orbit 배경 VFX)
 #include "VFX/EffekseerPlayable.h"      // Orbit EffekseerPlayable (Static + loop)
 #include "material/material.h"
 #include "material/material_uniforms.h"
@@ -229,7 +229,7 @@ namespace TopdownShooter::Stage
 		{
 			auto  orbitActor = std::make_unique<SJH::Scene::Actor>("OrbitVfx");
 			auto *pl         = orbitActor->AddComponent<VFX::EffekseerPlayable>(
-                Manager::Get().VFX().GetManager(), orbitEffect, vmath::vec3(0.0f), VFX::TrackPolicy::Static);
+                GameSystems::Get().VFX().GetManager(), orbitEffect, vmath::vec3(0.0f), VFX::TrackPolicy::Static);
 			pl->SetIsLoop(true);
 			pl->Play();
 			stage->AddChild(std::move(orbitActor));

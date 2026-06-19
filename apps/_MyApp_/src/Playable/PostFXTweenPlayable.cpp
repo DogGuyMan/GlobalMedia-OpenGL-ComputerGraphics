@@ -13,7 +13,7 @@
  */
 #include "Playable/PostFXTweenPlayable.h"
 
-#include "Playable/PostFXRegistry.h"
+#include "resource_registry/resource_registry.h"
 #include "material/material.h" // SJH::Material::Properties.Floats
 
 #include <cstdint>
@@ -38,8 +38,8 @@ namespace TopdownShooter::Playable
 		const int32_t dtMs  = static_cast<int32_t>(dt * 1000.0f); // !! ms 오버로드 (float 금지)
 		const float   value = mTween.step(dtMs);
 
-		// pass Material 은 매 프레임 조회 - 없으면(미등록/파괴) 조용히 무시.
-		if (auto *mat = PostFXRegistry::Get().Material(mPassName))
+		// pass Material 은 매 프레임 조회 - rr 의 mat_pass_<name> 공유본 직접 조회 (D-7 흡수).
+		if (auto *mat = SJH::ResourceRegistry::Get().FindSharedMaterial("mat_pass_" + mPassName))
 			mat->Properties.Floats[mUniformName] = value;
 
 		if (mTween.progress() >= 1.0f)
