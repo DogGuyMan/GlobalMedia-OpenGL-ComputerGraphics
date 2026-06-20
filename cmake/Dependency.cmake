@@ -121,6 +121,10 @@ find_package(Stb REQUIRED)
 add_library(stb_extra INTERFACE)
 target_include_directories(stb_extra INTERFACE ${Stb_INCLUDE_DIR})
 
+# nlohmann-json — vcpkg (헤더온리, manifest dependency). JSON 파서/직렬화.
+# 타겟: nlohmann_json::nlohmann_json (find_package 명은 nlohmann_json, port 명은 nlohmann-json).
+find_package(nlohmann_json CONFIG REQUIRED)
+
 # ====== 하위 호환 래퍼 (bare 타겟명 -> vcpkg 네임스페이스 타겟) ======
 # 일부 모듈 CMakeLists (src/object, src/common, src/diagnostics, src/resource_registry,
 # apps/_MyApp_/src/*) 가 bare 'assimp' / 'spdlog' 로 직접 링크한다. find_package 전이 후
@@ -144,7 +148,8 @@ target_link_libraries(game_deps INTERFACE
     EffekseerRendererGL
     assimp::assimp
     spdlog::spdlog
-    tweeny stb_extra)
+    tweeny stb_extra
+    nlohmann_json::nlohmann_json)
 # SYSTEM 인클루드 — 서드파티 헤더(Effekseer/Tweeny/Box2D 등)는 Debug 의
 # -Wall -Werror 대상에서 제외한다. (예: <Effekseer/Effekseer.h> 의 -Wmacro-redefined,
 #  -Woverloaded-virtual 가 -Werror 로 빌드를 깨지 않도록.)

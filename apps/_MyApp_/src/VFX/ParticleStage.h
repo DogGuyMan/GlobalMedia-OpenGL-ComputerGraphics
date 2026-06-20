@@ -1,7 +1,7 @@
 #ifndef _TOPDOWNSHOOTER_VFX_PARTICLESTAGE_H__
 #define _TOPDOWNSHOOTER_VFX_PARTICLESTAGE_H__
 
-#include "render/render_stage.h"
+#include "render/render_stage/render_stage.h"
 
 namespace SJH::Scene { class Camera; }
 

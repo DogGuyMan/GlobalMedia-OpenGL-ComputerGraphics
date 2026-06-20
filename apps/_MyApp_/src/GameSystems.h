@@ -26,7 +26,7 @@
 #include "Physics/PhysicsSystem.h"
 #include "VFX/VFXSystem.h"
 #include "Text/WorldTextSystem.h"   // <- 추가
-#include "render/scene_renderer.h"
+#include "render/render_stage/render_stage.impls.h"   // SceneRenderer
 
 namespace TopdownShooter
 {

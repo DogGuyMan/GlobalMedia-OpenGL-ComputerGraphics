@@ -1,9 +1,9 @@
 /**
- * @file scene_renderer.cpp
- * @brief SceneRenderer 구현 - Camera 순회, Light 수집, Actor DFS, DrawCommand 큐 Flush.
+ * @file render_stage.impls.cpp
+ * @brief @c IRenderStage 구현체 통합 정의 - @c SceneRenderer + @c ScreenQuadStage.
  *
  * @details
- *  ### 구현 흐름 (RenderWithCamera 기준)
+ *  ### SceneRenderer 구현 흐름 (RenderWithCamera 기준)
  *  1. Camera::GetTargetRenderTarget() 검증 - nullptr 이면 warn+skip.
  *  2. Camera::NoClear 분기:
  *     - false(기본): @c DeviceContext::BeginFrame(rt) - bind + clear(color|depth|stencil) + depth/blend 기본값 설정.
@@ -13,29 +13,46 @@
  *  5. @c MeshPassProcessor::SortMultiStage + Process - 정렬 후 GL draw 발행.
  *  6. @c mLastSceneOutput 갱신 - PassComponent 체인의 마지막 출력 FB 추적.
  *
- *  ### 비-책임
+ *  ### ScreenQuadStage 구현 흐름 (Render 기준)
+ *  - backbuffer 바인딩 -> depth/blend 설정 -> passthrough Program 활성화 -> screen quad VAO 바인딩
+ *    -> **EBO 재핀**(Effekseer/Box2D VAO-EBO 오염 방어) -> FBO 목록 순서대로 합성(첫 replace, 2+ alpha blend).
+ *
+ *  ### 비-책임 (공통)
  *  - [X] GL uniform 직접 송신 - LightUniformDispatcher / PropertyBlockSetter 위임.
  *  - [X] GL 상태 머신 전환 - MeshPassProcessor -> PipelineStateSetter 위임.
+ *  - [X] FBO / Program / Mesh 생성 및 소유 - ResourceRegistry 책임.
  */
-#include "render/scene_renderer.h"
+#include "render/render_stage/render_stage.impls.h"
+
 #include "render/mesh_pass_processor.h"
 #include "render/pass_component.h"
-#include <vmath.h>
-#include <cstdint>
-#include <vector>
-#include "material/material.h"
-#include "scene/light.h"
-#include "object/mesh.h"
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"
 #include "buffer/render_target.h"
+#include "buffer/framebuffer.h"
+#include "material/material.h"
+#include "scene/light.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
+#include "object/mesh.h"
+#include "program/program.h"
+#include "program/program_uniforms.h"
+
+#include <GL/gl3w.h>
+#include <vmath.h>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <utility>
+#include <vector>
 #include <spdlog/spdlog.h>
 
 namespace SJH
 {
+	// ===================================================================================
+	//  SceneRenderer - High-level Orchestrator
+	// ===================================================================================
 	void SceneRenderer::Render(RenderTarget & /*defaultTarget*/)
 	{
 		mLastSceneOutput = nullptr;
@@ -78,7 +95,7 @@ namespace SJH
 		}
 
 		auto &rc = DeviceContext::Get();
-		
+
 		/*
 		* AI를 통한 디버깅
 		*/
@@ -174,5 +191,86 @@ namespace SJH
 
 		for (const auto &child : actor.GetChildren())
 			CollectFromActor(*child, viewMat, cullingMask);
+	}
+
+	// ===================================================================================
+	//  ScreenQuadStage - N FBO -> backbuffer 합성 (final blit)
+	// ===================================================================================
+	ScreenQuadStage::ScreenQuadStage(Program &passthrough, Mesh &screenQuad)
+	    : mProgram(passthrough), mMesh(screenQuad)
+	{
+	}
+
+	void ScreenQuadStage::SetSources(std::vector<const Framebuffer *> sources)
+	{
+		mSources = std::move(sources);
+	}
+
+	void ScreenQuadStage::Render(RenderTarget &target)
+	{
+		if (mSources.empty())
+		{
+			spdlog::warn("[ScreenQuadStage] sources empty - skip");
+			return;
+		}
+
+		auto &rc = DeviceContext::Get();
+
+		// backbuffer 바인딩 + 클리어 (depth test / blend 는 ScreenQuad 특성에 맞게 직접 설정).
+		rc.BindTarget(target);
+		rc.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		rc.SetDepthTest(false);   // NDC quad - z-buffer 불필요.
+		rc.SetBlend(false);       // 첫 소스: replace (전 프레임 백버퍼 잔상 차단).
+
+		rc.UseProgram(mProgram);
+		rc.BindVAO(mMesh.GetVAO());
+
+		// Effekseer / Box2D 등 서드파티 GL 코드가 이 VAO 가 바인딩된 채로
+		// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, X) 를 호출하면 VAO 의 EBO 참조가
+		// 덮어쓰여 glDrawElements ->GL_INVALID_OPERATION 이 발생한다.
+		// 매 프레임 EBO 를 재핀해 원상복구.
+		if (auto ebo = mMesh.GetIndexBuffer())
+			ebo->Bind();
+
+		for (std::size_t i = 0; i < mSources.size(); ++i)
+		{
+			const Framebuffer *fb = mSources[i];
+			assert(fb != nullptr && "ScreenQuadStage: null Framebuffer source");
+
+			const auto &tex = fb->GetColorAttachment();
+			assert(tex && "ScreenQuadStage: Framebuffer has no color attachment");
+
+			// sampler 컨벤션: `uScene` (SP4 migrate_demo / Unity _MainTex 정통).
+			rc.BindTexture(0, tex->GetTextureID());
+			Uniforms::SetInt(mProgram, "uScene", 0);
+
+			// 2+ 소스 - 전 pass 위에 alpha blend 합성.
+			if (i == 1)
+				rc.SetBlend(true);
+
+			rc.DrawIndexed(mMesh.GetIndexCount());
+		}
+
+		// 상태 복원 - 후속 Stage (ImGui 등) 가 blend 를 기대할 수 있으므로.
+		rc.SetDepthTest(true);
+		rc.SetBlend(true);
+	}
+
+	// ===================================================================================
+	//  CameraStage - 단일 Camera 를 IRenderStage 로 wrap (SceneRenderer::RenderWithCamera 위임)
+	// ===================================================================================
+	CameraStage::CameraStage(SceneRenderer* renderer, Scene::Camera* camera)
+	    : mRenderer(renderer), mCamera(camera)
+	{
+	}
+
+	void CameraStage::Render(RenderTarget& /*target*/)
+	{
+		if (!mRenderer || !mCamera)
+		{
+			spdlog::warn("CameraStage::Render - renderer/camera nullptr - skip.");
+			return;
+		}
+		mRenderer->RenderWithCamera(*mCamera);
 	}
 } // namespace SJH

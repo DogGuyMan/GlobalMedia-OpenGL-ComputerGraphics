@@ -1,0 +1,155 @@
+// render + render_bootstrap + main.cpp 클래스-레벨 의존 그래프 (2026-06-20)
+// 엣지: is-a(onormal 빈삼각) / has-a 합성(diamond) / aggregation 포인터·참조(odiamond) / uses 의존(dashed)
+// 렌더: dot -Tpng 2026-06-20-render-class-deps.dot -o 2026-06-20-render-class-deps.png
+digraph RenderClassDeps
+{
+	rankdir=TB;
+	compound=true;
+	labelloc="t"; fontname="Helvetica"; fontsize=15;
+	label="render + render_bootstrap + main.cpp  클래스 의존 (2026-06-20)\nis-a=빈삼각  has-a(합성)=diamond  aggregation(ptr/ref)=odiamond  uses=점선";
+	node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10, fillcolor="#ffffff"];
+	edge [arrowsize=0.8, fontname="Helvetica", fontsize=8];
+
+	// ===== 클라 (apps/_MyApp_) =====
+	subgraph cluster_client
+	{
+		label="apps/_MyApp_/main.cpp  (Composition Root)";
+		style=filled; fillcolor="#fdeef4"; fontsize=11;
+		game_application [label="game_application\n[sb7::application + IClientBootstrap]\nmStages / mScreenQuadStagePtr / mPassComponents", fillcolor="#ffe6cc"];
+	}
+
+	// ===== render_bootstrap (엔진 19모듈, 파이프라인 조립) =====
+	subgraph cluster_bootstrap
+	{
+		label="SJH::render_bootstrap  (render_pipeline.h - 파이프라인 조립)";
+		style=filled; fillcolor="#eaf6f6"; fontsize=11;
+		fnSetupDefault [label="SetupDefaultPipeline()\n[free fn]", shape=note, fillcolor="#d5e8d4"];
+		fnBuildPostFX  [label="BuildPostFXChain()\n[free fn]", shape=note, fillcolor="#d5e8d4"];
+		cfgDefault     [label="DefaultPipelineConfig\n[struct]", fillcolor="#e8f4ea"];
+		cfgPostFX      [label="PostFXStageConfig\n[struct]", fillcolor="#e8f4ea"];
+		resPostFX      [label="PostFXChainResult\n[struct: Framebuffers+PassComponents]", fillcolor="#e8f4ea"];
+	}
+
+	// ===== render core (엔진 sjhopengl_render) =====
+	subgraph cluster_render
+	{
+		label="SJH::render  (sjhopengl_render)";
+		style=filled; fillcolor="#eef2ff"; fontsize=11;
+
+		// --- stages (render_stage/) ---
+		subgraph cluster_stages
+		{
+			label="render_stage/ (IRenderStage 구현 3종)";
+			style=filled; fillcolor="#dde7ff"; fontsize=9;
+			IRenderStage   [label="IRenderStage\n[abstract: Render(RenderTarget&)]", fillcolor="#cfe2ff", shape=box, style="rounded,filled,dashed"];
+			SceneRenderer  [label="SceneRenderer\n[High-level Orchestrator]", fillcolor="#bcd4ff"];
+			ScreenQuadStage[label="ScreenQuadStage\n[N FBO -> backbuffer 합성]", fillcolor="#cfe2ff"];
+			CameraStage    [label="CameraStage\n[단일 Camera wrap]", fillcolor="#cfe2ff"];
+		}
+
+		// --- core processor + appliers ---
+		MeshPassProcessor [label="MeshPassProcessor\n[Low-level Orchestrator: 정렬/발행]", fillcolor="#dbe7ff"];
+		DrawCommand       [label="DrawCommand\n[struct: WorldMesh/ScreenQuad]", fillcolor="#eaf0ff"];
+		LightDispatcher   [label="LightUniformDispatcher\n[Light -> 모든 Program 송신]", fillcolor="#dbe7ff"];
+		DeviceContext     [label="DeviceContext\n[GL 상태 facade: glUseProgram/Bind*]", fillcolor="#dbe7ff"];
+		PipelineSetter    [label="PipelineStateSetter\n[GL state machine 전환]", fillcolor="#dbe7ff"];
+		PropertySetter    [label="PropertyBlockSetter\n[Material props -> uniform/tex]", fillcolor="#dbe7ff"];
+
+		// --- scene components (render 소속, scene::Component 상속) ---
+		MeshRenderer [label="MeshRenderer\n[: Scene::Component]", fillcolor="#e3ebff"];
+		PassComponent[label="PassComponent\n[: Scene::Component, PostFX]", fillcolor="#e3ebff"];
+
+		// --- factories (free fn) ---
+		actor_factory [label="actor_factory\n[CreateScreenCameraActor / Skybox]", shape=note, fillcolor="#e3ebff"];
+		model_spawner [label="model_spawner\n[SpawnEntities]", shape=note, fillcolor="#e3ebff"];
+	}
+
+	// ===== 엔진 경계 (다른 모듈 - 회색) =====
+	subgraph cluster_engine
+	{
+		label="엔진 다른 모듈 (경계)";
+		style=filled; fillcolor="#f0f0f0"; fontsize=10;
+		node [fillcolor="#e0e0e0", fontsize=9];
+		rr        [label="ResourceRegistry\n[resource_registry]"];
+		scene     [label="Scene::Actor / Camera /\nDirector(SceneContext) / Component\n[scene]"];
+		material  [label="Material / Pass /\nMaterialPropertyBlock\n[material]"];
+		object    [label="Mesh / Light / Model\n[object]"];
+		program   [label="Program / UniformCache\n[program]"];
+		buffer    [label="Framebuffer / RenderTarget\n[buffer]"];
+		texture   [label="Texture\n[texture]"];
+		sb7       [label="sb7::application\n[extern]"];
+	}
+
+	// ============ 엣지 ============
+
+	// -- is-a (inheritance) --
+	edge [arrowhead=onormal, color="#333", style=solid];
+	SceneRenderer   -> IRenderStage;
+	ScreenQuadStage -> IRenderStage;
+	CameraStage     -> IRenderStage;
+	MeshRenderer    -> scene  [label="Component", lhead=cluster_engine];
+	PassComponent   -> scene  [label="Component", lhead=cluster_engine];
+	game_application -> sb7    [lhead=cluster_engine];
+
+	// -- has-a 합성 (by-value 멤버, diamond) --
+	edge [arrowhead=diamond, color="#1b5e20", style=solid, fontcolor="#1b5e20"];
+	SceneRenderer     -> MeshPassProcessor [label="mProcessor"];
+	SceneRenderer     -> LightDispatcher   [label="mDispatcher"];
+	MeshPassProcessor -> DrawCommand       [label="vector mItems"];
+
+	// -- aggregation (포인터/참조 멤버, odiamond) --
+	edge [arrowhead=odiamond, color="#0d47a1", style=solid, fontcolor="#0d47a1"];
+	CameraStage     -> SceneRenderer  [label="mRenderer*"];
+	CameraStage     -> scene          [label="mCamera*", lhead=cluster_engine];
+	ScreenQuadStage -> program        [label="mProgram&", lhead=cluster_engine];
+	ScreenQuadStage -> object         [label="mMesh&", lhead=cluster_engine];
+	SceneRenderer   -> program        [label="mActivePrograms\n(D-1 push)", lhead=cluster_engine];
+
+	// -- 클라 -> 조립/스테이지 (key cross-module, 굵게) --
+	edge [arrowhead=vee, color="#c0392b", penwidth=1.6, style=solid, fontcolor="#c0392b"];
+	game_application -> fnSetupDefault [label="A3 호출", lhead=cluster_bootstrap];
+	game_application -> fnBuildPostFX  [label="A4 호출", lhead=cluster_bootstrap];
+	game_application -> CameraStage    [label="mStages push (생성)"];
+	game_application -> ScreenQuadStage[label="mScreenQuadStagePtr"];
+	game_application -> SceneRenderer  [label="SetActivePrograms\n(rr.GetAllPrograms push)"];
+
+	// -- render_bootstrap -> render/엔진 (조립이 생성·주입) --
+	edge [arrowhead=vee, color="#00838f", penwidth=1.2, style=solid, fontcolor="#00838f"];
+	fnSetupDefault -> SceneRenderer   [label="SetScreenQuadMesh/\nSetBypassMaterial"];
+	fnSetupDefault -> ScreenQuadStage [label="생성"];
+	fnSetupDefault -> cfgDefault      [label="param"];
+	fnBuildPostFX  -> PassComponent   [label="생성+부착"];
+	fnBuildPostFX  -> cfgPostFX       [label="param"];
+	fnBuildPostFX  -> resPostFX       [label="return"];
+	fnSetupDefault -> rr              [lhead=cluster_engine];
+	fnBuildPostFX  -> rr              [lhead=cluster_engine];
+
+	// -- uses (의존, 점선) --
+	edge [arrowhead=vee, color="#888", penwidth=1.0, style=dashed, fontcolor="#888"];
+	SceneRenderer     -> DeviceContext;
+	SceneRenderer     -> scene         [label="Camera/Director/Actor", lhead=cluster_engine];
+	SceneRenderer     -> PassComponent;
+	SceneRenderer     -> MeshRenderer;
+	MeshPassProcessor -> DeviceContext;
+	MeshPassProcessor -> PipelineSetter;
+	MeshPassProcessor -> PropertySetter;
+	MeshPassProcessor -> material      [label="Material/Pass", lhead=cluster_engine];
+	MeshPassProcessor -> object        [lhead=cluster_engine];
+	DrawCommand       -> MeshRenderer  [label="SSoT ref"];
+	DrawCommand       -> buffer        [label="in/outFB", lhead=cluster_engine];
+	LightDispatcher   -> program       [lhead=cluster_engine];
+	LightDispatcher   -> DeviceContext;
+	LightDispatcher   -> object        [label="Light", lhead=cluster_engine];
+	DeviceContext     -> program       [lhead=cluster_engine];
+	DeviceContext     -> buffer        [label="RenderTarget", lhead=cluster_engine];
+	PipelineSetter    -> material      [label="Pass", lhead=cluster_engine];
+	PropertySetter    -> material      [lhead=cluster_engine];
+	PropertySetter    -> texture       [lhead=cluster_engine];
+	PropertySetter    -> DeviceContext;
+	actor_factory     -> scene         [lhead=cluster_engine];
+	actor_factory     -> MeshRenderer;
+	model_spawner     -> object        [label="Model", lhead=cluster_engine];
+	model_spawner     -> MeshRenderer;
+	game_application  -> actor_factory [label="CreateScreenCameraActor"];
+	game_application  -> rr            [label="GetAllPrograms", lhead=cluster_engine];
+}

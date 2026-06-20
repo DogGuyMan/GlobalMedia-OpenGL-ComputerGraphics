@@ -19,7 +19,8 @@
  *  - DX11/DX12 post-effect chain (per-stage 리소스 할당)
  *  - Application 다형성 - 데모별로 Stage 수용 조합이 다름.
  *
- * @note vtable 홈 TU 는 render_stage.cpp (header-only abstract ODR 보장).
+ * @note 최상위 추상이라 render_stage/ 폴더에 *파일 그대로* 유지 (impls 로 병합 안 함).
+ *       vtable 홈 TU 는 같은 폴더의 render_stage.cpp (header-only abstract ODR 보장).
  */
 #ifndef __SJH_IRENDER_STAGE_H__
 #define __SJH_IRENDER_STAGE_H__
@@ -35,9 +36,10 @@ namespace SJH
 	 *  각 stage 는 *직교 책임* - Scene / PostFX / ImGui / Skybox / DebugDraw 등.
 	 *  @c Material::Pass::Kind 와 *다른 레이어* - Pass 는 한 stage *내부* Queue 분류.
 	 *
-	 *  ### 구체 클래스 목록
+	 *  ### 구체 클래스 목록 (render_stage.impls.{h,cpp})
 	 *  | 클래스 | 책임 |
 	 *  |---|---|
+	 *  | @ref SceneRenderer | Actor 트리 순회 + DrawCommand Flush (orchestrator) |
 	 *  | @ref CameraStage | 단일 Camera 의 씬 렌더 위임 |
 	 *  | @ref ScreenQuadStage | FBO -> backbuffer 합성 (PostFX 최종 출력) |
 	 */

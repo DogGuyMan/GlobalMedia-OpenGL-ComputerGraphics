@@ -25,7 +25,7 @@ namespace TopdownShooter::Spawns
         auto* evt = ctx.audio->LoadEvent(Audio::EVENT_BGM);
         if (!evt) return; // 이벤트 미존재 - no-op
 
-        auto* bgmActor = ctx.sceneRoot->AddChild(std::make_unique<SJH::Scene::Actor>("BgmActor"));
+        auto* bgmActor = ctx.sceneRoot->AddChild(std::make_unique<SJH::Scene::Actor>(Audio::ACTOR_BGM));
         auto* bgm = bgmActor->AddComponent<TopdownShooter::Audio::FmodStudioPlayable>(evt);
         bgm->SetIsLoop(true);
         // Play() 는 여기서 안 함 - Stage FSM 의 TitleState::OnEnter 가 재생 시작을 소유.

@@ -21,8 +21,7 @@
 #include "object/mesh.h"
 #include "material/material.h"
 #include "render/pass_component.h"
-#include "render/scene_renderer.h"
-#include "render/screen_quad_stage.h"
+#include "render/render_stage/render_stage.impls.h"   // SceneRenderer + ScreenQuadStage 통합
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/layer.h"

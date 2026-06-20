@@ -13,6 +13,7 @@
  */
 #include "UI/PostFXDebugLayer.h"
 #include "material/material.h"
+#include "Playable/Constants.h"   // PASS_* 패스명
 #include <imgui.h>
 #include <utility>
 #include <vector>
@@ -45,12 +46,12 @@ namespace TopdownShooter::UI
 
 			auto &props = entry.Component->mMaterial->Properties;
 
-			if (entry.Name == "gamma")
+			if (entry.Name == Playable::PASS_GAMMA)
 			{
 				if (ImGui::SliderFloat("gamma##val", &mGamma, 0.1f, 2.5f))
 					props.Floats["gamma"] = mGamma;
 			}
-			else if (entry.Name == "fog")
+			else if (entry.Name == Playable::PASS_FOG)
 			{
 				ImGui::SliderFloat("density##fog", &props.Floats["uFogDensity"], 0.0f, 0.5f);
 				ImGui::SliderFloat("start##fog",   &props.Floats["uFogStart"],   0.0f, 1.0f);
@@ -58,13 +59,13 @@ namespace TopdownShooter::UI
 				ImGui::ColorEdit3("color##fog",    &props.Vec3s["uFogColor"][0]);
 				ImGui::SliderInt("mode##fog",      &props.Ints["uFogMode"], 0, 2); // 0=Linear, 1=Exp, 2=Exp2
 			}
-			else if (entry.Name == "bloom")
+			else if (entry.Name == Playable::PASS_BLOOM)
 			{
 				ImGui::SliderFloat("threshold##bloom", &props.Floats["uBloomThreshold"], 0.0f, 1.5f);
 				ImGui::SliderFloat("spread##bloom",    &props.Floats["uBloomSpread"],    0.1f, 5.0f);
 				ImGui::SliderFloat("intensity##bloom", &props.Floats["uBloomIntensity"], 0.0f, 4.0f);
 			}
-			else if (entry.Name == "grayscale_vignetting")
+			else if (entry.Name == Playable::PASS_GRAYSCALE_VIGNETTING)
 			{
 				// Health[0,1] -> grayscale 강도 (1=원본색, 0=무채색). 셰이더는 Health 를 모름(uGrayscaleAmount 만).
 				ImGui::SliderFloat("Health##gv",    &props.Floats["uGrayscaleAmount"], 0.0f, 1.0f);

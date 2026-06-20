@@ -31,6 +31,7 @@
 #include "Stage/State/StageFSMState.h"
 #include "Stage/State/StageStateMachine.h"
 #include "Stage/Components/GameContextComponent.h"
+#include "Stage/Constants.h"                    // ACTOR_GAME_CONTEXT
 #include "UI/StateOverlayLayer.h"
 #include "Audio/FmodStudioPlayable.h"           // BGM_STATE 파라미터 / pause / stop
 #include "Audio/Constants.h"                    // BUS_BGM / BUS_SFX (Pause 볼륨 슬라이더)
@@ -54,7 +55,7 @@ namespace TopdownShooter::Stage
 	/// @return GameContextComponent 포인터, 없으면 nullptr.
 	inline Components::GameContextComponent *GetCtx(SJH::Scene::Actor &root)
 	{
-		auto *ctxActor = root.FindChild("GameContext"); // 비재귀 - Root 직속
+		auto *ctxActor = root.FindChild(ACTOR_GAME_CONTEXT); // 비재귀 - Root 직속
 		return ctxActor ? ctxActor->GetComponent<Components::GameContextComponent>() : nullptr;
 	}
 

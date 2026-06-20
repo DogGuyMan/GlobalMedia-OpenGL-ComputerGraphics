@@ -13,4 +13,4 @@
  *       다른 .cpp 들이 vtable 의 외부 정의를 이 TU 하나에서 받는다.
  *       본 파일에 구현 코드를 추가하지 말 것.
  */
-#include "render/render_stage.h"
+#include "render/render_stage/render_stage.h"

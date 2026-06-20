@@ -9,7 +9,8 @@
         "assimp",
         "tweeny",
         "stb",
-        "catch2"
+        "catch2",
+        "nlohmann-json"
     ],
     "overrides": [
         { "name": "box2d", "version": "2.4.1" },

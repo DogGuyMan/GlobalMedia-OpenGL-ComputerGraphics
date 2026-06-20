@@ -139,7 +139,7 @@ namespace TopdownShooter::Bootstrap
 
 				auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
 				par->Join(std::make_unique<TopdownShooter::Playable::PostFXTweenPlayable>(
-				    "grayscale_vignetting", "uVignetteAmount",
+				    Playable::PASS_GRAYSCALE_VIGNETTING, "uVignetteAmount",
 				    tweeny::from(TopdownShooter::Playable::VIGNETTE_PEAK).to(0.0f).during(TopdownShooter::Playable::VIGNETTE_DURATION_MS).via(tweeny::easing::sinusoidalInOut)));
 				par->Join(std::make_unique<TopdownShooter::Playable::SpriteHitFlashPlayable>(&spriteActor));
 				if (damagedEvt)
@@ -315,7 +315,7 @@ namespace TopdownShooter::Bootstrap
 		BuildPlayerDirectionalGroups(*renderActor, *director);
 
 		// 체력 비율 -> 화면 grayscale ([A] 상시 바인더, director 무관). HP 닳을수록 무채색, HP0 시 완전 무채색.
-		spriteActor->AddComponent<TopdownShooter::Playable::HpGrayscalePostFX>("grayscale_vignetting", "uGrayscaleAmount");
+		spriteActor->AddComponent<TopdownShooter::Playable::HpGrayscalePostFX>(Playable::PASS_GRAYSCALE_VIGNETTING, "uGrayscaleAmount");
 
 		// (사망 후 1.5s 비활성 지연 SetDeathDelaySeconds 는 위 AttachEntityPresentation 헬퍼가 처리.)
 

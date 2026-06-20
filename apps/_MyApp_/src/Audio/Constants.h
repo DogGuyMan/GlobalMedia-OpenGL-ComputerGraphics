@@ -29,6 +29,9 @@ namespace TopdownShooter::Audio
 	// 공백 포함 이름 그대로(FMODAPI.md sec.9). .strings.bank 의 실제 bus 명과 일치해야 함.
 	constexpr const char *BUS_BGM = "bus:/BGM Bus";   ///< 배경음 믹서 bus (Pause 볼륨 슬라이더 대상).
 	constexpr const char *BUS_SFX = "bus:/SFX Bus";   ///< 효과음 믹서 bus (Pause 볼륨 슬라이더 대상).
+
+	// -- Scene actor 이름 --
+	constexpr const char *ACTOR_BGM = "BgmActor"; ///< AmbientSequences 생성 <-> main FindChild.
 } // namespace TopdownShooter::Audio
 
 #endif //_TOPDOWNSHOOTER_AUDIO_CONSTANTS__

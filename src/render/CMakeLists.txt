@@ -1,13 +1,11 @@
 add_library(sjhopengl_render STATIC
     device_context.cpp
-    render_stage.cpp            # vtable home TU — IRenderStage virtual class (SP5)
     mesh_pass_processor.cpp
     pipeline_state_setter.cpp   # SP-PipelineSetter — GL state machine 분리 (Applier 패턴)
     property_block_setter.cpp   # SP-PropertyBlockSetter — 옛 MaterialApplier rename + 시그니처 정밀화
-    scene_renderer.cpp
     light_uniform_dispatcher.cpp  # Phase 2 — SendLightUniforms SceneRenderer 에서 분리
-    screen_quad_stage.cpp         # SP-UniversalRenderTarget Phase A — N FBO ->backbuffer 합성
-    camera_stage.cpp              # SP-RenderStage 완성 — 단일 Camera 를 IRenderStage 로 wrap
+    # render_stage(IRenderStage 추상 + vtable 홈) / camera_stage / scene_renderer / screen_quad_stage 는
+    # render_stage/ 서브폴더로 이동. add_subdirectory(render_stage) 가 target_sources 로 본 타겟에 기여 (아래).
     actor_factory.cpp             # 2026-06-11 E2 — Skybox/ScreenCamera 팩토리 (scene 에서 이주)
     model_spawner.cpp             # 2026-06-11 E2 — Model RenderUnit -> Actor (scene 에서 이주)
 )
@@ -30,3 +28,8 @@ target_link_libraries(sjhopengl_render
 )
 
 target_compile_features(sjhopengl_render PUBLIC cxx_std_17)
+
+# render_stage 서브폴더 -- IRenderStage 구현체(SceneRenderer + ScreenQuadStage) 통합 TU 를
+# 본 타겟에 기여 (별도 라이브러리 아님 -- 서브 CMakeLists 의 사이클 회피 주석 참조).
+# add_library 정의 이후에 호출해야 target_sources 대상 타겟이 존재한다.
+add_subdirectory(render_stage)
