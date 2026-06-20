@@ -129,8 +129,11 @@ namespace TopdownShooter::Entity::Bullet
                 }
             }
 
-        //     if (prog != nullptr && mesh != nullptr && mat != nullptr)
-        //         actor->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
+            // Slang Phase 2 T5 - UBO 셰이더(simple.vs/fs) R1 육안 게이트 PoC 활성화.
+            //   prog 가 HasUniformBlocks()==true 라 MeshPassProcessor 의 useUbo 분기 진입.
+            //   baseColor (Vec4s) -> MaterialBlock std140 으로 자동 주입 (T4 결정 2).
+            if (prog != nullptr && mesh != nullptr && mat != nullptr)
+                actor->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
         }
 
         return actor;

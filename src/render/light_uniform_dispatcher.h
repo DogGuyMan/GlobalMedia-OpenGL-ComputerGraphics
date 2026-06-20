@@ -6,6 +6,9 @@
  *  ### 존재 의의 - SceneRenderer 에서 Light uniform 송신 책임 분리 (Phase 2)
  *  - @c SceneRenderer 의 책임: Camera 수집/순회 + 위임.
  *  - @c LightUniformDispatcher 의 책임: Program 순회 + uniform 값 쓰기.
+ *  - *구조적* 동기(가독성보다 강함): 광원 struct->uniform 변환 지식(cutoff degree->cosine,
+ *    @c GetAttenuationCoeff)을 .cpp 익명 ns 에 가둬 render -> object/scene 역의존을 차단 (D6, 2026-06-11).
+ *    -> render_stage TU 가 광원 타입 세부를 직접 알지 않게 하는 모듈 경계 방어막.
  *
  *  ### 비-책임
  *  - [X] Light 컴포넌트 수집 (SceneContext) -> @c SceneRenderer::RenderWithCamera 담당.
@@ -17,14 +20,23 @@
  *  (simple/passthrough/postfx 셰이더 등) 으로 판정하여 uniform 송신 전체 skip -
  *  warn-once 노이즈 차단 + @c glUseProgram 비용 회피.
  *
- *  ### 4 엔진 정통 (Context7 검증 2026-05-27)
- *  - Unity URP   : @c LightLoop 가 @c _MainLightColor / @c _AdditionalLightsBuffer 에 일괄 업로드.
- *  - Unreal      : @c FDeferredShadingSceneRenderer 가 @c FDeferredLightUniformStruct 로 일괄 바인딩.
- *  - Cocos2d-x   : @c Mesh::setLightUniforms 가 씬 순회 후 배열 일괄 송신.
- *  - Godot       : @c RenderingServer 내부가 RID 기반으로 Light 파라미터 일괄 전달.
- *  -> Light 컴포넌트는 *데이터 보유만* - GPU 전송은 외부 시스템(본 클래스) 이 전담.
+ *  ### 현재 구현 vs 목표 (정통성 주의 - 2026-06-21 재검증)
+ *  *현재* 본 클래스는 program 들을 순회하며 각 program 에 loose @c glUniform* 로 light 값을 *반복 송신*한다.
+ *  이는 아래 3 엔진 정통과 *반대* 다 - 정통은 "프레임당 공유 버퍼 1회 업로드 + program 순회 0" 이다.
+ *  Slang UBO 마이그레이션(Phase 2.5, per-frame 공유 LightBlock UBO)에서 본 클래스를 UBO owner 로
+ *  승격하면 비로소 아래 정통에 정렬된다 (loose 경로는 비-UBO 셰이더용으로 공존 보존).
+ *
+ *  ### 3 엔진 정통 - light 데이터 GPU 도달 경로 (Context7 재검증 2026-06-21)
+ *  - Unity URP : @c ForwardLights 가 프레임당 전역 CBUFFER 1회 업로드 -> 셰이더가 @c GetMainLight /
+ *    @c GetAdditionalLight 로 pull. (구 주석의 "LightLoop" 은 HDRP 용어 - URP CPU 클래스는 ForwardLights)
+ *  - Unreal    : @c FLightSceneProxy::GetLightShaderParameters 가 @c FLightShaderParameters 로 패킹 ->
+ *    RDG uniform buffer 1회 바인딩. (구 주석의 @c FDeferredLightUniformStruct 는 공개 문서 미확인)
+ *  - Godot 4   : @c RenderingDevice (@c uniform_buffer_create + @c uniform_set_create) 가 공유 버퍼로
+ *    1회 바인딩 (@c RenderingServer 는 파사드 - 실 업로드는 RD 3 계층). 셰이더 @c light() built-in 소비.
+ *  -> 공통 must-have: Light 컴포넌트는 *데이터 보유만*, GPU 전송은 외부 시스템이 *공유 버퍼 1회* 로 전담.
  *
  * @note 상태 없음 - 매 @c Dispatch 호출이 독립적 (동일 인스턴스 재사용 안전).
+ *       (UBO owner 승격 시 UniformBuffer 1개를 멤버로 소유하는 stateful 로 전환 예정 - Phase 2.5.)
  */
 #ifndef __SJH_LIGHT_UNIFORM_DISPATCHER_H__
 #define __SJH_LIGHT_UNIFORM_DISPATCHER_H__
