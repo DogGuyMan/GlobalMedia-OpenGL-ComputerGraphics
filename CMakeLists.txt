@@ -15,6 +15,7 @@ include(cmake/CXXStandard.cmake)
 # ______ 의존성 수집 -> project_deps INTERFACE 타겟 ______
 # lib/, include/ 는 build_extern.sh (또는 .bat) 로 사전 빌드
 include(cmake/Dependency.cmake)
+include(cmake/Slang.cmake)   # Slang tool-only 셰이더 컴파일러 (find_program + sjh_compile_slang)
 
 # ______ Doxygen 툴체인 -> sjhopengl_setup_doxygen() 정의 ______
 include(cmake/Doxygen.cmake)

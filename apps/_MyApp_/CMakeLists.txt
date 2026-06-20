@@ -57,10 +57,35 @@ if(APPLE)
     target_link_options(${CHAPTER_NAME} PRIVATE "-Wl,-no_warn_duplicate_libraries")
 endif()
 
+# ______ Slang 셰이더 컴파일 (Phase 1 — simple.slang PoC) ______
+if(SLANGC_EXECUTABLE)
+    set(SLANG_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/slang_generated/shaders)
+    set(SIMPLE_SLANG  ${CMAKE_CURRENT_SOURCE_DIR}/shaders_slang/simple.slang)
+
+    sjh_compile_slang(_SIMPLE_VS   ${SIMPLE_SLANG} vsMain vertex   glsl glsl_410 ${SLANG_GEN_DIR}/simple.vs)
+    sjh_compile_slang(_SIMPLE_FS   ${SIMPLE_SLANG} fsMain fragment glsl glsl_410 ${SLANG_GEN_DIR}/simple.fs)
+    sjh_compile_slang(_SIMPLE_WVS  ${SIMPLE_SLANG} vsMain vertex   wgsl ""       ${SLANG_GEN_DIR}/simple.vert.wgsl)
+    sjh_compile_slang(_SIMPLE_WFS  ${SIMPLE_SLANG} fsMain fragment wgsl ""       ${SLANG_GEN_DIR}/simple.frag.wgsl)
+    sjh_reflect_slang(_SIMPLE_REFL ${SIMPLE_SLANG} fsMain fragment ${SLANG_GEN_DIR}/simple.refl.json)
+
+    add_custom_target(${CHAPTER_NAME}_shaders ALL
+        DEPENDS ${_SIMPLE_VS} ${_SIMPLE_FS} ${_SIMPLE_WVS} ${_SIMPLE_WFS} ${_SIMPLE_REFL})
+    add_dependencies(${CHAPTER_NAME} ${CHAPTER_NAME}_shaders)
+endif()
+
 # ______ 리소스/셰이더 복사 (챕터별) ______
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/resources)
     add_custom_command(TARGET ${CHAPTER_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/resources $<TARGET_FILE_DIR:${CHAPTER_NAME}>/resources
         COMMENT "${CHAPTER_NAME} 빌드 후 리소스를 build 디렉터리에 복사")
+endif()
+
+# 생성된 Slang 셰이더를 실행파일 옆 resources/shaders 로 overlay (소스 resources 복사 위에 덮어씀)
+if(SLANGC_EXECUTABLE)
+    add_custom_command(TARGET ${CHAPTER_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_BINARY_DIR}/slang_generated/shaders
+            $<TARGET_FILE_DIR:${CHAPTER_NAME}>/resources/shaders
+        COMMENT "${CHAPTER_NAME} 생성 Slang 셰이더 overlay")
 endif()
