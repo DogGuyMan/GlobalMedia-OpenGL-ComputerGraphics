@@ -9,21 +9,26 @@ project(OpenGL-ComputerGraphics VERSION 0.1.0 LANGUAGES C CXX)
 # cmake/Doxygen.cmake 의 find_package(Doxygen QUIET) 가 조용히 스킵.
 option(SJH_OPENGL_BUILD_DOCS "Enable Doxygen doc target" ON)
 
+# ______ Python 보조 스크립트 경로 등록 (Slang.cmake 등이 사용) ______
+# scripts/CMakeLists.txt 가 SJH_<NAME>_SCRIPT 변수들을 부모 scope 로 export.
+# Slang.cmake 보다 *먼저* 호출되어야 SJH_SLANG_COMPILE_SCRIPT 가 정의됨.
+add_subdirectory(scripts)
+
 # ______ CMake 헬퍼 모듈 ______
 include(cmake/CXXStandard.cmake)
 
 # ______ 의존성 수집 -> project_deps INTERFACE 타겟 ______
 # lib/, include/ 는 build_extern.sh (또는 .bat) 로 사전 빌드
 include(cmake/Dependency.cmake)
+
+
 include(cmake/Slang.cmake)   # Slang tool-only 셰이더 컴파일러 (find_program + sjh_compile_slang)
 
 # ______ Doxygen 툴체인 -> sjhopengl_setup_doxygen() 정의 ______
 include(cmake/Doxygen.cmake)
 
 # ______ 공용 라이브러리 (모든 챕터에서 사용) ______
-if(EXISTS ${CMAKE_SOURCE_DIR}/src/CMakeLists.txt)
-    add_subdirectory(src)
-endif()
+add_subdirectory(src)
 
 # ______ 챕터별 실행 파일 ______
 add_subdirectory(apps)
