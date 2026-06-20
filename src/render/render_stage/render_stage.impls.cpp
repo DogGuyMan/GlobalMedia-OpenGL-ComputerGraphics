@@ -19,7 +19,7 @@
  *
  *  ### 비-책임 (공통)
  *  - [X] GL uniform 직접 송신 - LightUboUploader / PropertyBlockSetter 위임.
- *  - [X] GL 상태 머신 전환 - MeshPassProcessor -> PipelineStateSetter 위임.
+ *  - [X] GL 상태 머신 전환 - MeshPassProcessor / 본 stage -> @c DeviceContext::ApplyPipelineState 위임 (D-RS-1).
  *  - [X] FBO / Program / Mesh 생성 및 소유 - ResourceRegistry 책임.
  */
 #include "render/render_stage/render_stage.impls.h"
@@ -101,9 +101,9 @@ namespace SJH
 		*/
 		if (cam.NoClear)
 		{
+			// clear 없이 위에 그림 (UI 레이어 등). GL state 는 직후 Process 가 진입 시 InvalidateStateCache +
+			// 매 draw ApplyPipelineState 로 설정하므로 여기선 target bind 만 (D-RS-5 - 구 SetDepthTest/SetBlend 제거).
 			rc.BindTarget(*rt);
-			rc.SetDepthTest(true);
-			rc.SetBlend(true);
 		}
 		else
 		{
@@ -218,11 +218,13 @@ namespace SJH
 
 		auto &rc = DeviceContext::Get();
 
-		// backbuffer 바인딩 + 클리어 (depth test / blend 는 ScreenQuad 특성에 맞게 직접 설정).
+		// backbuffer 바인딩 + 클리어. GL state 는 state-as-data (D-RS-5).
 		rc.BindTarget(target);
 		rc.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		rc.SetDepthTest(false);   // NDC quad - z-buffer 불필요.
-		rc.SetBlend(false);       // 첫 소스: replace (전 프레임 백버퍼 잔상 차단).
+		// 직전 stage(SceneRenderer/ParticleStage)가 캐시 뒤에서 GL state 를 바꿨을 수 있으니 진입 시 무효화.
+		rc.InvalidateStateCache();
+		// 첫 소스: Screen state (depth off / cull off / blend off=replace - 전 프레임 백버퍼 잔상 차단).
+		rc.ApplyPipelineState(Pass::DefaultPipelineStateOf(Pass::Kind::Screen));
 
 		rc.UseProgram(mProgram);
 		rc.BindVAO(mMesh.GetVAO());
@@ -246,16 +248,20 @@ namespace SJH
 			rc.BindTexture(0, tex->GetTextureID());
 			Uniforms::SetInt(mProgram, "uScene", 0);
 
-			// 2+ 소스 - 전 pass 위에 alpha blend 합성.
+			// 2+ 소스 - 전 pass 위에 alpha blend 합성 (Screen state 의 BlendEnable 1필드만 켜서 적용 - D-RS-5).
 			if (i == 1)
-				rc.SetBlend(true);
+			{
+				Pass::PipelineState blendState = Pass::DefaultPipelineStateOf(Pass::Kind::Screen);
+				blendState.BlendEnable         = true;
+				rc.ApplyPipelineState(blendState);
+			}
 
 			rc.DrawIndexed(mMesh.GetIndexCount());
 		}
 
-		// 상태 복원 - 후속 Stage (ImGui 등) 가 blend 를 기대할 수 있으므로.
-		rc.SetDepthTest(true);
-		rc.SetBlend(true);
+		// 후속 foreign 소비자(ImGui 등)는 자기 GL state 를 직접 설정한다. 캐시 desync 차단을 위해 stage 종료 시 무효화
+		// (D-RS-2 - 다음 DeviceContext 소비자 진입 시 재적용. 다음 프레임 BeginFrame 도 무효화).
+		rc.InvalidateStateCache();
 	}
 
 	// ===================================================================================

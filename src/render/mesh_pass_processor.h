@@ -9,7 +9,7 @@
  *  - @c Process - 정렬된 command 를 Program/Material 전환 + Applier 위임 + GL draw 발행.
  *
  *  ### 비-책임 (분리된 책임)
- *  - [X] GL state machine (stencil/depth/cull/blend) 전환 -> @c PipelineStateSetter 위임.
+ *  - [X] GL state machine (stencil/depth/cull/blend) 캐싱/적용 -> @c DeviceContext::ApplyPipelineState 위임 (D-RS-1).
  *  - [X] Material properties (uniform/texture) 송신 -> @c PropertyBlockSetter 위임.
  *
  *  ### DrawCommand 구조
@@ -82,7 +82,7 @@ namespace SJH
      *  - @c SortMultiStage - queueLayer/program/material/depth 다단계 정렬.
      *  - @c Process - 정렬된 command 발행 (Program/Material 전환 + Applier 위임 + draw).
      *
-     *  GL state machine (stencil/depth/cull/blend) 은 @c PipelineStateSetter 에 위임.
+     *  GL state machine (stencil/depth/cull/blend) 은 @c DeviceContext::ApplyPipelineState 에 위임 (D-RS-1).
      *  Material properties (uniform/texture) 는 @c PropertyBlockSetter 에 위임.
      */
     class MeshPassProcessor
@@ -123,8 +123,8 @@ namespace SJH
         /// @details
         ///  - Program 전환 시 @c DeviceContext::UseProgram + view/proj uniform 송신.
         ///  - Material 전환 시 @c PropertyBlockSetter::Set (PropertyBlock -> uniform/texture 송신).
-        ///  - 매 command 마다 @c PipelineStateSetter::Set (Pass.PipelineState -> GL state machine).
-        ///  - Flush 종료 시 @c PipelineStateSetter::RestoreDefaults - 다음 패스를 위한 표준 상태 복원.
+        ///  - 매 command 마다 @c DeviceContext::ApplyPipelineState (Pass.PipelineState -> GL state machine, D-RS-1).
+        ///  - Process 진입 시 @c DeviceContext::InvalidateStateCache - per-Process 캐시 무효화 (foreign GL 대비).
         /// @param rc      DeviceContext 레퍼런스 (UseProgram/BindVAO/DrawIndexed 등).
         /// @param viewMat 이번 패스 View 행렬.
         /// @param projMat 이번 패스 Projection 행렬.

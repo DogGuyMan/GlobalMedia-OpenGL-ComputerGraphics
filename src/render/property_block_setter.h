@@ -9,7 +9,7 @@
  *  - **알고리즘**: Cache outer + Type dispatch + Block lookup inner - Unity reflection 정통.
  *
  *  ### 비-책임
- *  - [X] GL pipeline state (depth/blend/stencil) 전환 -> @c PipelineStateSetter 담당.
+ *  - [X] GL pipeline state (depth/blend/stencil) 전환 -> @c DeviceContext::ApplyPipelineState 담당 (D-RS-1).
  *  - [X] Program 활성화 (@c glUseProgram) -> @c DeviceContext 담당.
  *  - [X] Pass.Kind / QueueLayer 해석 -> @c MeshPassProcessor 담당.
  *

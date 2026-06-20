@@ -61,6 +61,7 @@ namespace SJH::Pass
 		Transparent = 3000,      ///< 반투명 alpha-blend - depth test on, write off, blend on, back-to-front sort.
 		OutlineVisible = 4000,   ///< Stencil-masked outline - DepthFunc=LEQUAL (Opaque 에 가려질 수 있음, 자연스러운 윤곽선).
 		OutlineXRay = 4001,      ///< Stencil-masked outline - DepthFunc=GREATER (벽 뒤에 가려진 부분만 - Apex/Overwatch 적 표시 정통).
+		Screen = 5000,           ///< ScreenQuad/PostFX blit - NDC 풀스크린 quad. depth test/write off, CullMode=0, blend off(첫 소스 replace). 모든 world/outline 패스 후 최종 합성. (D-RS-5 state-as-data - 구 DeviceContext::SetDepthTest(false) 하드코딩 대체.)
 	};
 
 	/// @brief Transparent 임계값 - queue 이 이 값 이상이면 back-to-front sort (Unity TransparencySortMode 정통).
@@ -167,6 +168,7 @@ namespace SJH::Pass
 	///  - `Kind::Transparent`      : depth write off, CullMode=0 (양면), blend on (SRC_ALPHA / ONE_MINUS_SRC_ALPHA).
 	///  - `Kind::OutlineVisible`   : stencil NOTEQUAL ref=1, DepthFunc=LEQUAL, depth write off.
 	///  - `Kind::OutlineXRay`      : OutlineVisible 동일 + DepthFunc=GREATER (가려진 부분만 외곽선).
+	///  - `Kind::Screen`           : ScreenQuad/PostFX blit - depth test/write off, CullMode=0, blend off(replace). 2+ 소스 합성은 호출처가 BlendEnable=true 로 조정.
 	/// @note inline - 헤더 only. include 하는 모든 TU 가 각자 도출 (ODR 안전).
 	inline PipelineState DefaultPipelineStateOf(const Kind k)
 	{
@@ -264,6 +266,21 @@ namespace SJH::Pass
 			s.StencilWriteMask = 0x00u;
 			return s;
 		}
+
+		case Kind::Screen:
+			// ScreenQuad/PostFX blit - NDC 풀스크린 quad (D-RS-5 state-as-data):
+			//  > DepthTest off - z-buffer 불필요 (화면 전체를 덮음)
+			//  > DepthWrite off - 합성 결과가 z 영토 차지 X
+			//  > DepthFunc ALWAYS - test off 라 의미 없으나 명시
+			//  > CullMode 0 - 풀스크린 quad 컬링 비활성
+			//  > BlendEnable false - 첫 소스 = replace (전 프레임 백버퍼 잔상 차단).
+			//    2+ 소스 alpha 합성은 호출처가 도출된 PipelineState 의 BlendEnable=true 로 1필드 조정.
+			//  > Queue 5000 - 모든 world/outline 패스 후 최종 합성
+			return PipelineState{
+			    /*DepthTest*/ false, /*DepthWrite*/ false,
+			    /*DepthFunc*/ GL_ALWAYS, /*CullMode*/ 0,
+			    /*BlendEnable*/ false, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+			    /*QueueLayer*/ QueueOf(Kind::Screen)};
 		}
 		// unreachable - switch 가 enum 전부 커버.
 		return PipelineState{};

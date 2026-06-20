@@ -261,7 +261,7 @@ namespace SJH::Const
 	inline constexpr auto STR_INDEX_CLOSE                 = "]";
 	/// @}
 
-	/// @brief 최대 동시 점 광원 수 - 셰이더 @c lighting.fs / @c phong_tex.fs 의 @c #define 과 1:1.
+	/// @brief 최대 동시 점 광원 수 - 셰이더 @c phong_lighting.slang 의 @c MAX_POINT_LIGHTS 와 1:1.
 	/// @details 2026-05-26 변경: @c NUM_POINT_LIGHTS (= 2, 고정 개수로 오독) -> @c MAX_POINT_LIGHTS (= 16, 런타임 enabled 0~N 가변).
 	inline constexpr int MAX_POINT_LIGHTS = 16;
 	/// @brief 최대 동시 스포트 라이트 수 - 셰이더 @c #define 과 1:1. @c MAX_POINT_LIGHTS 와 대칭.

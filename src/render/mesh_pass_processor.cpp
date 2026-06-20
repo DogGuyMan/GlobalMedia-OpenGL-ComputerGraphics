@@ -8,10 +8,10 @@
  *  - 각 결정에서 Applier 위임:
  *    - Program 전환 -> @c DeviceContext::UseProgram + view/proj uniform 송신.
  *    - Material 전환 -> @c PropertyBlockSetter::Set (PropertyBlock -> uniform/texture).
- *    - 매 cmd -> @c PipelineStateSetter::Set (Pass.PipelineState -> GL state machine).
+ *    - 매 cmd -> @c DeviceContext::ApplyPipelineState (Pass.PipelineState -> GL state machine, D-RS-1).
  *
  *  ### 분리된 책임 (이전엔 본 파일 안에 있었음)
- *  - GL state machine 전환 (Stencil/Depth/Cull/Blend) -> @c PipelineStateSetter.
+ *  - GL state machine 전환 (Stencil/Depth/Cull/Blend) -> @c DeviceContext::ApplyPipelineState (D-RS-1 흡수).
  *  - Material properties -> uniform/texture -> @c PropertyBlockSetter.
  *
  *  @c Process 본문 = 순서 + 조건 결정만 (Orchestrator 정통 - Unreal @c FMeshPassProcessor).
@@ -22,7 +22,7 @@
  *  - @c std::stable_sort: z-fighting 깜빡임 차단 + Actor DFS 순서 보존 + 골든 이미지 결정성.
  *
  *  ### 비-책임
- *  - [X] GL state machine 직접 호출 -> @c PipelineStateSetter 위임.
+ *  - [X] GL state machine *캐싱/적용 로직* 소유 -> @c DeviceContext::ApplyPipelineState 위임 (호출 시점만 결정).
  *  - [X] uniform/texture 직접 송신 -> @c PropertyBlockSetter 위임.
  */
 #include "render/mesh_pass_processor.h"
@@ -30,7 +30,6 @@
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"     // DrawCommand 의 meshRenderer 경유 접근 (SSoT).
 #include "render/property_block_setter.h"
-#include "render/pipeline_state_setter.h"
 #include "program/program.h"
 #include "program/program_uniforms.h"
 #include "object/mesh.h"
@@ -98,7 +97,11 @@ namespace SJH
     {
         const Program*       lastProg = nullptr;
         const Material*      lastMat  = nullptr;
-        PipelineStateSetter  stateSetter;
+
+        // Process 진입 - GL state 캐시 무효화 (per-Process 캐시 불변식 보존, D-RS-2).
+        //   직전 stage(다른 카메라 Process / Effekseer ParticleStage 등)가 GL state 를 캐시 뒤에서
+        //   바꿨을 수 있으므로, 첫 ApplyPipelineState 가 first-call 처럼 전체 강제 적용하도록 한다.
+        rc.InvalidateStateCache();
 
         for (const auto& cmd : mItems)
         {
@@ -116,8 +119,8 @@ namespace SJH
                     continue;
 
                 rc.BeginFrame(*cmd.outputFB);
-                rc.SetDepthTest(false);
-                rc.SetBlend(false);
+                // ScreenQuad blit state-as-data (D-RS-5) - depth test/write off, cull off, blend off(replace).
+                rc.ApplyPipelineState(Pass::DefaultPipelineStateOf(Pass::Kind::Screen));
 
                 effectiveMat->Properties.Textures["uScene"] = {
                     cmd.inputFB->GetColorAttachment().get(), 0};
@@ -131,7 +134,7 @@ namespace SJH
                     ebo->Bind();
                 rc.DrawIndexed(mScreenQuadMesh->GetIndexCount());
 
-                rc.SetDepthTest(true);
+                // 상태 복원 불요 - 다음 WorldMesh 가 ApplyPipelineState 로, 다음 패스는 BeginFrame 으로 자기 state 적용.
                 mLastOutputFB = cmd.outputFB;
                 // FB 전환 후 program/material 상태 초기화 - 다음 WorldMesh 가 재바인딩
                 lastProg = nullptr;
@@ -201,7 +204,7 @@ namespace SJH
             // 결정 3: PipelineState 적용
             //   override 합성 없음 - 변형은 Material::Clone() + 별도 인스턴스 사용 (Unreal MID 정통).
             const Pass::PipelineState passState = Pass::DefaultPipelineStateOf(material->GetPass());
-            stateSetter.Set(passState);
+            rc.ApplyPipelineState(passState);
 
             // 결정 4: model 송신 + draw.
             if (useUbo) {
@@ -216,7 +219,7 @@ namespace SJH
             rc.DrawIndexed(mesh->GetIndexCount());
         }
 
-        // 다음 패스/단계가 표준 opaque 가정하도록 복원 - Applier 가 라이프사이클 책임 (2-B 채택).
-        stateSetter.RestoreDefaults();
+        // RestoreDefaults 불요 (D-RS-2) - 다음 consumer(BeginFrame / 다음 Process / foreign InvalidateStateCache)가
+        //   진입 시 캐시를 무효화하고 자기 state 를 적용한다. "consumer 진입 시 무효화" 불변식.
     }
 }

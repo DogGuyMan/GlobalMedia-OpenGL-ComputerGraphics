@@ -100,7 +100,7 @@ namespace SJH
             glMaterial->Properties.Floats["material.shininess"] = 32.0f;
 
             // 텍스처 없는 머티리얼(Albedo 전용 FBX 등)을 위해 aiColor_Diffuse 를 항상 추출.
-            // phong_albedo.fs 가 sampler2D 대신 material.albedo (vec3) 로 Phong diffuse 계산.
+            // phong.slang (구 phong_albedo.fs) 가 sampler2D 대신 material.albedo (vec3) 로 Phong diffuse 계산.
             aiColor4D aiDiffColor(0.8f, 0.8f, 0.8f, 1.0f);
             aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, aiDiffColor);
             glMaterial->Properties.Vec3s["material.albedo"] =

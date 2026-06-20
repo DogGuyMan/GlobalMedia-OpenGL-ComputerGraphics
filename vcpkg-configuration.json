@@ -1,6 +1,0 @@
-{
-    "$comment": "box2d 2.4.1 공식 port 의 arm64 테스트 빌드 버그를 교정한 overlay port 등록. 경로는 본 파일 기준 상대.",
-    "overlay-ports": [
-        "./vcpkg-overlay-ports"
-    ]
-}

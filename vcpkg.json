@@ -1,5 +1,5 @@
 {
-    "$comment": "게임/엔진 의존성 전이분만 vcpkg manifest 로 관리. 잔류(glfw3/FMOD/Effekseer/sb7/stb-아님/imgui)는 별도. builtin-baseline 은 *로컬 vcpkg HEAD* 로 둔다 -> 프로젝트가 각자 로컬 vcpkg 가 가진 버전 DB 에 의존(추가 fetch/업데이트 불필요). baseline 기본값으로 spdlog/tweeny/stb 는 자동 고정되고, baseline 기본이 위험한 둘만 override 로 핀: box2d(로컬 기본 3.1.1 = C API v3 라 36파일 깨짐 -> 2.4.1 C++ API 고정), assimp(로컬 기본 6.0.4 major 업 -> 검증된 5.4.3 고정). catch2 는 cutover 시점에 추가.",
+    "$comment": "builtin-baseline=로컬 vcpkg HEAD(각자 로컬 버전 DB 사용). override 는 메이저 변경 위험분만: box2d 2.4.1(v3=36파일 깨짐), assimp 5.4.3(6.x 회피).",
     "name": "opengl-computergraphics",
     "version-string": "0.1.0",
     "builtin-baseline": "39a6cc0e44641977a7ccdfdb01a14eaf832aa330",
@@ -15,5 +15,11 @@
     "overrides": [
         { "name": "box2d", "version": "2.4.1" },
         { "name": "assimp", "version": "5.4.3" }
-    ]
+    ],
+    "$comment-configuration": "box2d 2.4.1 arm64 테스트 빌드 버그 교정 overlay-ports 등록(필드명 구 spelling 필수). port 레시피는 vcpkg-overlay-ports/box2d/ 디렉토리(인라인 불가).",
+    "vcpkg-configuration": {
+        "overlay-ports": [
+            "./vcpkg-overlay-ports"
+        ]
+    }
 }
