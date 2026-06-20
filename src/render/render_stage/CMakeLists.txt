@@ -3,7 +3,7 @@
 #   - render_stage.impls.{h,cpp} : SceneRenderer + ScreenQuadStage + CameraStage 구현 통합.
 #
 # *별도 라이브러리가 아니라* 부모 sjhopengl_render 타겟에 소스를 기여한다 (target_sources):
-#   render_stage.impls 는 render-core(MeshPassProcessor/DeviceContext/LightUniformDispatcher/
+#   render_stage.impls 는 render-core(MeshPassProcessor/DeviceContext/LightUboUploader/
 #   PassComponent/MeshRenderer) 에 의존한다. 분리 STATIC 라이브러리로 쪼개면 render-core 와의
 #   엣지 방향을 일일이 관리해야 하고 SceneRenderer<->render-core 상호 의존 위험이 있어,
 #   단일 라이브러리 유지(소스만 하위 폴더로 조직화)로 사이클을 원천 회피한다.

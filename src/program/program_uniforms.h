@@ -109,7 +109,7 @@ namespace SJH
         GLint GetLocation(const Program &prog, const char *name);
 
         // 광원 struct -> uniform block 일괄 전송 헬퍼(SetDirLight/SetPointLight/SetSpotLight)는
-        // 2026-06-11 D6 으로 render/light_uniform_dispatcher.cpp 파일-로컬 헬퍼로 이주.
+        // 2026-06-11 D6 으로 render/light_ubo_uploader.cpp 파일-로컬 헬퍼로 이주.
         // (program -> object 역의존 제거 - 유일 호출처가 dispatcher 단독이었음.)
     }
 }

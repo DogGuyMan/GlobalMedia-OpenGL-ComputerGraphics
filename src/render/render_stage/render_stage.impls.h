@@ -17,7 +17,7 @@
 #ifndef __SJH_RENDER_STAGE_IMPLS_H__
 #define __SJH_RENDER_STAGE_IMPLS_H__
 
-#include "render/light_uniform_dispatcher.h"
+#include "render/light_ubo_uploader.h"
 #include "render/mesh_pass_processor.h"
 #include "render/render_stage/render_stage.h"
 #include <cstdint>
@@ -42,7 +42,7 @@ namespace SJH
      *
      *  내부 멤버:
      *  - @c mProcessor - DrawCommand 큐 보유/정렬/GL draw 발행.
-     *  - @c mDispatcher - 수집된 Light 를 모든 Program 에 일괄 송신.
+     *  - @c mUploader - 수집된 Light 를 공유 LightBlock UBO 로 패킹 + Program 에 결속/loose 송신.
      *  - @c mLastSceneOutput - 이번 프레임 PassComponent 체인의 마지막 출력 FB 추적.
      */
     class SceneRenderer : public IRenderStage
@@ -88,7 +88,7 @@ namespace SJH
         void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
 
         MeshPassProcessor      mProcessor;          ///< DrawCommand 큐 보유/정렬/GL draw 발행.
-        LightUniformDispatcher mDispatcher;          ///< 수집된 Light 를 모든 Program 에 일괄 uniform 송신.
+        LightUboUploader       mUploader;           ///< 수집된 Light 를 공유 LightBlock UBO 패킹 + Program 에 결속/송신 (D-LUD O4).
 
         std::vector<Program*>  mActivePrograms;     ///< D-1 push -- 외부 주입 Program 집합 (rr pull 대체).
         const Framebuffer*     mLastSceneOutput = nullptr;  ///< 이번 프레임 마지막 PassComponent 출력 FB.

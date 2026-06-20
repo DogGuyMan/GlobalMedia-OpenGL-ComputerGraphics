@@ -198,4 +198,17 @@ namespace SJH
         if (b && b->ubo)
             b->ubo->Update(data, bytes, offset);
     }
+
+    /// @copydoc Program::DisownUniformBlock
+    void Program::DisownUniformBlock(const std::string& normalizedName)
+    {
+        for (auto& b : mUniformBlocks)
+            if (b.normalizedName == normalizedName)
+            {
+                // per-program UBO 해제 - BindUniformBlocks 의 if(b.ubo) 가 자동 skip.
+                // blockIndex/bindingPoint 유지 -> 외부 owner(LightUboUploader)가 그 point 에 공유 UBO 결속.
+                b.ubo.reset();
+                return;
+            }
+    }
 }

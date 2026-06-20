@@ -15,7 +15,7 @@
  *  - Actor 트리 부착/해제 시 @c SceneContext 자동 등록/해제 (Cocos2D cc::Light 정통).
  *
  *  ### 비-책임
- *  - [X] 셰이더 uniform 전송 - @c LightUniformDispatcher (render) 가 담당.
+ *  - [X] 셰이더 uniform 전송 - @c LightUboUploader (render) 가 담당.
  *  - [X] 거리 감쇠 계수 계산 - @c GetAttenuationCoeff (@c object/light.h) 자유 함수가 담당.
  */
 
@@ -108,7 +108,7 @@ namespace SJH
 	{
 	  public:
 		/// @brief 콘 안쪽 컷오프 각도 (degree). 이 각도 이내는 fully lit.
-		/// @details degree 로 보관 - 송신 시점 (LightUniformDispatcher) 에 cosf(radians) 변환.
+		/// @details degree 로 보관 - 송신 시점 (LightUboUploader) 에 cosf(radians) 변환.
 		float CutoffAngleDeg{12.5f};
 
 		/// @brief 콘 바깥쪽 컷오프 각도 (degree). 이 각도 바깥은 fully dark.

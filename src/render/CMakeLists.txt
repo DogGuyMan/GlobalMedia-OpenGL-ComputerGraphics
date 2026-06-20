@@ -3,7 +3,7 @@ add_library(sjhopengl_render STATIC
     mesh_pass_processor.cpp
     pipeline_state_setter.cpp   # SP-PipelineSetter — GL state machine 분리 (Applier 패턴)
     property_block_setter.cpp   # SP-PropertyBlockSetter — 옛 MaterialApplier rename + 시그니처 정밀화
-    light_uniform_dispatcher.cpp  # Phase 2 — SendLightUniforms SceneRenderer 에서 분리
+    light_ubo_uploader.cpp        # Phase 2.5 D-LUD — LightUniformDispatcher O4 승격(UBO owner). loose 경로 공존
     # render_stage(IRenderStage 추상 + vtable 홈) / camera_stage / scene_renderer / screen_quad_stage 는
     # render_stage/ 서브폴더로 이동. add_subdirectory(render_stage) 가 target_sources 로 본 타겟에 기여 (아래).
     actor_factory.cpp             # 2026-06-11 E2 — Skybox/ScreenCamera 팩토리 (scene 에서 이주)

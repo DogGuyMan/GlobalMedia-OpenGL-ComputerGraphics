@@ -147,6 +147,18 @@ namespace SJH
                                 std::size_t bytes,
                                 std::size_t offset) const;
 
+        /**
+         * @brief 지정 블록의 *소유 UBO 를 해제* - 외부 owner 가 공유 UBO 를 같은 binding point 에 결속하도록.
+         * @param normalizedName 블록 이름 (예: "LightBlock").
+         * @details per-frame *공유* 블록(LightBlock, S5b)은 외부(@c LightUboUploader)가 단일 UBO 로 소유한다.
+         *          그러나 @ref BuildUniformBlocks 는 모든 블록에 per-program UBO 를 만들므로 이중 소유가 된다.
+         *          본 메서드가 해당 블록의 per-program UBO 를 @c reset 하면 @ref BindUniformBlocks 의
+         *          @c if(b.ubo) 가드가 자동 skip - 외부 owner 가 @c bindingPoint 에 공유 UBO 를 결속한다.
+         *          @c blockIndex / @c bindingPoint 는 *유지* (외부가 그 point 를 조회/결속). idempotent -
+         *          이미 해제됐거나 미존재 이름이면 no-op. 클라이언트가 *이름* 으로 정책 결정 (엔진은 generic).
+         */
+        void DisownUniformBlock(const std::string& normalizedName);
+
     private:
         Program() = default;
 

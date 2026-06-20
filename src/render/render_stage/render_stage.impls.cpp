@@ -8,7 +8,7 @@
  *  2. Camera::NoClear 분기:
  *     - false(기본): @c DeviceContext::BeginFrame(rt) - bind + clear(color|depth|stencil) + depth/blend 기본값 설정.
  *     - true: @c BindTarget + depth/blend 만 설정 (UI 레이어 등 clear 없이 위에 그리는 경우).
- *  3. SceneContext 에서 활성 Light 목록 수집 -> @c LightUniformDispatcher::Dispatch.
+ *  3. SceneContext 에서 활성 Light 목록 수집 -> @c LightUboUploader::Update + @c BindTo.
  *  4. @c CollectFromActor DFS - Actor 트리를 순회하며 MeshRenderer / PassComponent 를 DrawCommand 로 변환.
  *  5. @c MeshPassProcessor::SortMultiStage + Process - 정렬 후 GL draw 발행.
  *  6. @c mLastSceneOutput 갱신 - PassComponent 체인의 마지막 출력 FB 추적.
@@ -18,7 +18,7 @@
  *    -> **EBO 재핀**(Effekseer/Box2D VAO-EBO 오염 방어) -> FBO 목록 순서대로 합성(첫 replace, 2+ alpha blend).
  *
  *  ### 비-책임 (공통)
- *  - [X] GL uniform 직접 송신 - LightUniformDispatcher / PropertyBlockSetter 위임.
+ *  - [X] GL uniform 직접 송신 - LightUboUploader / PropertyBlockSetter 위임.
  *  - [X] GL 상태 머신 전환 - MeshPassProcessor -> PipelineStateSetter 위임.
  *  - [X] FBO / Program / Mesh 생성 및 소유 - ResourceRegistry 책임.
  */
@@ -137,7 +137,9 @@ namespace SJH
 				spots.push_back(l);
 
 		// D-1 push -- 외부가 SetActivePrograms 로 주입한 스냅샷 사용 (rr 직접 pull 제거).
-		mDispatcher.Dispatch(mActivePrograms, dir, points, spots, viewPos);
+		// D-LUD O4 -- Update(광원 -> 공유 LightBlock UBO 패킹 + 캐시) 후 BindTo(UBO 결속 / loose 송신).
+		mUploader.Update(dir, points, spots, viewPos);
+		mUploader.BindTo(mActivePrograms);
 
 		mProcessor.Clear();
 		CollectFromActor(Scene::Director::Get().Root(), viewMat, cullingMask);

@@ -22,7 +22,7 @@
  *  - 헤더 (@c program_uniforms.h) 는 forward declaration 만 사용 - Program 정의 의존 없음.
  *
  * @note 광원 struct -> uniform block 일괄 전송 헬퍼 3종은 2026-06-11 D6 으로
- *       render/light_uniform_dispatcher.cpp 로 이주 (program -> object 역의존 제거).
+ *       render/light_ubo_uploader.cpp 로 이주 (program -> object 역의존 제거).
  */
 
 #include "program/program.h"

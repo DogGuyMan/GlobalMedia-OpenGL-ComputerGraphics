@@ -68,8 +68,16 @@ if(SLANGC_EXECUTABLE)
     sjh_compile_slang(_SIMPLE_WFS  ${SIMPLE_SLANG} fsMain fragment wgsl ""       ${SLANG_GEN_DIR}/simple.frag.wgsl)
     sjh_reflect_slang(_SIMPLE_REFL ${SIMPLE_SLANG} fsMain fragment ${SLANG_GEN_DIR}/simple.refl.json)
 
+    # Phase 2.5 P25-T1 - phong.slang (라이팅 + LightBlock UBO). 새 이름 phong.* 로 생성해
+    #   실측만 (phong_tex.* overlay 활성화는 엔진 경로 T2~T4 완료 후 T5 에서).
+    set(PHONG_SLANG ${CMAKE_CURRENT_SOURCE_DIR}/shaders_slang/phong.slang)
+    sjh_compile_slang(_PHONG_VS   ${PHONG_SLANG} vsMain vertex   glsl glsl_410 ${SLANG_GEN_DIR}/phong.vs)
+    sjh_compile_slang(_PHONG_FS   ${PHONG_SLANG} fsMain fragment glsl glsl_410 ${SLANG_GEN_DIR}/phong.fs)
+    sjh_reflect_slang(_PHONG_REFL ${PHONG_SLANG} fsMain fragment ${SLANG_GEN_DIR}/phong.refl.json)
+
     add_custom_target(${CHAPTER_NAME}_shaders ALL
-        DEPENDS ${_SIMPLE_VS} ${_SIMPLE_FS} ${_SIMPLE_WVS} ${_SIMPLE_WFS} ${_SIMPLE_REFL})
+        DEPENDS ${_SIMPLE_VS} ${_SIMPLE_FS} ${_SIMPLE_WVS} ${_SIMPLE_WFS} ${_SIMPLE_REFL}
+                ${_PHONG_VS} ${_PHONG_FS} ${_PHONG_REFL})
     add_dependencies(${CHAPTER_NAME} ${CHAPTER_NAME}_shaders)
 endif()
 

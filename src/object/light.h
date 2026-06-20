@@ -13,7 +13,7 @@
  *  - **specular**: 시선 방향과 반사 벡터의 cos^shininess - *하이라이트*.
  *
  *  ### 비-책임
- *  - [X] 셰이더 uniform 전송 - @c LightUniformDispatcher (render) 담당.
+ *  - [X] 셰이더 uniform 전송 - @c LightUboUploader (render) 담당.
  *  - [X] 광원 *컴포넌트* (DirLight/PointLight/SpotLight) - @c scene/light.h 로 이주 (2026-06-11 E1 사이클 해소).
  *    이 헤더는 순수 데이터/함수만 보유해 object -> scene 역의존을 끊는다.
  */
