@@ -148,19 +148,49 @@ namespace SJH
             const Program*  program  = material->GetProgram();
             if (!program) continue;
 
-            // 결정 1: Program 전환 - view/proj uniform 송신
+            // Phase 2 T4 - Slang UBO 셰이더 여부 게이트 (program 가 active uniform block 1개 이상 보유).
+            //   true  -> UpdateUniformBlock + BindUniformBlocks 경로 (FrameBlock/DrawBlock/MaterialBlock 분할 갱신).
+            //   false -> 기존 loose glUniform* 경로 (비-UBO 셰이더 공존 보존 - phong/skybox/postfx 등 Phase 3 까지 유지).
+            //   행렬은 D13 결정에 따라 비전치 raw 바이트 송신 (R1 = T5 PoC 육안 게이트, 실패 시 T6 전치 분기).
+            const bool useUbo = program->HasUniformBlocks();
+
+            // 결정 1: Program 전환 - view/proj 송신 + (UBO 시) BindBufferBase 결속.
             if (program != lastProg) {
                 rc.UseProgram(*program);
-                if (program->GetLocation(Const::UNI_VIEW) >= 0)
-                    Uniforms::SetMat4(*program, Const::UNI_VIEW, viewMat);
-                if (program->GetLocation(Const::UNI_PROJ) >= 0)
-                    Uniforms::SetMat4(*program, Const::UNI_PROJ, projMat);
+                if (useUbo) {
+                    // FrameBlock std140 : { mat4 uView @0; mat4 uProj @64; } - 비전치 raw 바이트 (D13).
+                    program->UpdateUniformBlock("FrameBlock", &viewMat,
+                                                sizeof(vmath::mat4), 0);
+                    program->UpdateUniformBlock("FrameBlock", &projMat,
+                                                sizeof(vmath::mat4), sizeof(vmath::mat4));
+                    program->BindUniformBlocks();
+                } else {
+                    if (program->GetLocation(Const::UNI_VIEW) >= 0)
+                        Uniforms::SetMat4(*program, Const::UNI_VIEW, viewMat);
+                    if (program->GetLocation(Const::UNI_PROJ) >= 0)
+                        Uniforms::SetMat4(*program, Const::UNI_PROJ, projMat);
+                }
                 lastProg = program;
                 lastMat  = nullptr;   // program 바뀌면 material 재바인딩 강제
             }
 
-            // 결정 2: Material 전환 - PropertyBlock -> uniform/texture 송신
+            // 결정 2: Material 전환 - PropertyBlock -> uniform/texture 송신.
+            //   UBO 시 MaterialBlock 의 baseColor 는 PropertyBlockSetter 의 *자연 skip* 대상 (P4).
+            //   PropertyBlock 의 active uniform 캐시는 UBO 멤버를 location=-1 로 보유 -> glUniform* 가 no-op.
+            //   따라서 baseColor 는 *별도 경로* 로 직접 주입 + PropertyBlockSetter 호출은 보존 (비-UBO 셰이더 + 텍스처 송신용).
             if (material != lastMat) {
+                if (useUbo) {
+                    // MaterialBlock std140 : { vec4 baseColor @0; } - Material PropertyBlock 의 Vec4s 에서 추출.
+                    auto it = material->Properties.Vec4s.find("baseColor");
+                    const vmath::vec4 base = (it != material->Properties.Vec4s.end())
+                                                ? it->second
+                                                : vmath::vec4(1, 1, 1, 1);   // 기본 흰색.
+                    program->UpdateUniformBlock("MaterialBlock", &base,
+                                                sizeof(vmath::vec4), 0);
+                }
+                // loose 머티리얼 uniform/texture 송신은 항상 시도.
+                //   UBO 셰이더는 schema 에 매칭 cache entry 가 없어 자연 skip (P4 의 의도된 행동).
+                //   비-UBO 셰이더는 기존 그대로 작동.
                 PropertyBlockSetter::Set(rc, material->Properties, *program);
                 lastMat = material;
             }
@@ -170,9 +200,15 @@ namespace SJH
             const Pass::PipelineState passState = Pass::DefaultPipelineStateOf(material->GetPass());
             stateSetter.Set(passState);
 
-            // 결정 4: model uniform + draw
-            if (program->GetLocation(Const::UNI_MODEL) >= 0)
-                Uniforms::SetMat4(*program, Const::UNI_MODEL, cmd.modelMatrix);
+            // 결정 4: model 송신 + draw.
+            if (useUbo) {
+                // DrawBlock std140 : { mat4 uModel @0; } - 비전치 raw (D13).
+                program->UpdateUniformBlock("DrawBlock", &cmd.modelMatrix,
+                                            sizeof(vmath::mat4), 0);
+            } else {
+                if (program->GetLocation(Const::UNI_MODEL) >= 0)
+                    Uniforms::SetMat4(*program, Const::UNI_MODEL, cmd.modelMatrix);
+            }
             rc.BindVAO(mesh->GetVAO());
             rc.DrawIndexed(mesh->GetIndexCount());
         }

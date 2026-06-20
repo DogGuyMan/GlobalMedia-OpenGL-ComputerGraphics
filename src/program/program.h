@@ -28,6 +28,7 @@
 
 #include "common/common.h"
 #include "program/uniform_cache.h"   // SP6 - UniformCache 분리
+#include "program/uniform_buffer.h"  // Slang Phase 2 T3 - UBO 블록 owner 멤버
 #include "shader/shader.h"
 #include "GL/gl3w.h"
 #include <string>
@@ -102,17 +103,68 @@ namespace SJH
         /// @return Program 수명과 동일한 @c UniformCache const ref.
         const UniformCache& GetUniformCache() const { return mUniformCache; }
 
+        /**
+         * @brief Slang 이 출력한 UBO 블록 1개의 자기기술 + 백킹 UBO 객체 (Phase 2 T3).
+         * @details Slang GLSL 출력은 @c layout(std140) uniform block_<T>_0 형식의 블록명을 강제.
+         *          @c normalizedName 은 그 접두/접미를 벗긴 정규화 이름 ("FrameBlock" 등) -
+         *          호출자가 셰이더 측 @c struct 이름과 동일 문자열로 조회 가능하게 함.
+         *          @c ubo 는 본 Program 이 소유 (UPtr 멤버) - Program 소멸 시 자동 해제.
+         *
+         *  멤버 명명은 struct 한정 PascalCase (프로젝트 컨벤션 - struct public 필드는 m 접두 미적용).
+         */
+        struct UniformBlock
+        {
+            std::string       normalizedName;        ///< "block_<T>_0" 에서 정규화한 이름 (예: "FrameBlock").
+            GLuint            blockIndex{0};         ///< @c glGetActiveUniformBlock 인덱스.
+            GLuint            bindingPoint{0};       ///< @c glUniformBlockBinding 으로 결속한 binding point.
+            GLint             dataSize{0};           ///< @c GL_UNIFORM_BLOCK_DATA_SIZE (std140 총 크기).
+            UniformBufferUPtr ubo;                   ///< 본 블록 데이터를 담는 UBO (Program 이 소유).
+        };
+
+        /// @brief active uniform block 이 1개 이상 있는지 - Slang UBO 셰이더 식별 게이트.
+        /// @return @c true 면 UBO 셰이더 (T4 의 useUbo 분기 활성), false 면 loose-uniform 셰이더 (else 분기).
+        bool HasUniformBlocks() const { return !mUniformBlocks.empty(); }
+
+        /// @brief 정규화 이름으로 블록 조회.
+        /// @param normalizedName 셰이더 측 @c struct 이름 (예: "FrameBlock"/"DrawBlock"/"MaterialBlock").
+        /// @return 매치 시 @c UniformBlock const ptr, 없으면 @c nullptr.
+        const UniformBlock* FindUniformBlock(const std::string& normalizedName) const;
+
+        /// @brief 모든 블록을 각자의 binding point 에 @c glBindBufferBase (드로우 전 1회 호출).
+        /// @details Program 전환 시 함께 호출 - T4 의 @c lastProg 캐싱과 짝.
+        void BindUniformBlocks() const;
+
+        /**
+         * @brief 정규화 이름 블록의 UBO 에 부분 업로드.
+         * @param normalizedName 블록 이름 ("FrameBlock" 등).
+         * @param data 업로드할 CPU 측 데이터 포인터 (std140 layout 정합 가정).
+         * @param bytes 업로드 바이트 수.
+         * @param offset 블록 내 시작 오프셋 (std140 기준 호출자가 사전 계산, refl.json 인용 가능).
+         * @details 미존재 블록 이름이면 조용히 무시 - 비-UBO 셰이더가 안전하게 호출 가능.
+         */
+        void UpdateUniformBlock(const std::string& normalizedName,
+                                const void* data,
+                                std::size_t bytes,
+                                std::size_t offset) const;
+
     private:
         Program() = default;
 
         /// @brief @c glCreateProgram + attach + @c glLinkProgram 수행. 실패 시 InfoLog 출력 후 false.
         bool TryLink(const std::vector<ShaderPtr> &shaders);
 
+        /// @brief link 직후 호출 - @c glGetActiveUniformBlock* 으로 모든 블록 introspect + UBO 생성.
+        /// @details 비-UBO 셰이더는 @c GL_ACTIVE_UNIFORM_BLOCKS == 0 으로 빈 벡터 유지 (자연 no-op).
+        void BuildUniformBlocks();
+
         /// @brief 내부 GL 프로그램 핸들 - @c glDeleteProgram 대상이자 @c glUseProgram 인자.
         GLuint mProgramAddr{0};
 
         /// @brief active uniform name -> (location, type) 캐시. Program 이 owner (SP6 분리).
         UniformCache mUniformCache;
+
+        /// @brief Slang UBO 블록 자기기술 + UBO 소유 (Phase 2 T3). 비-UBO 셰이더는 비어있음.
+        std::vector<UniformBlock> mUniformBlocks;
     };
 }
 

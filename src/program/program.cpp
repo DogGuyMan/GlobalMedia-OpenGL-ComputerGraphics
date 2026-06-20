@@ -20,7 +20,12 @@
 #include "diagnostics/gl_log.h"
 #include "diagnostics/uniform_diagnostics.h"
 #include <algorithm>
+#include <cctype>      // Phase 2 T3 - NormalizeBlockName 의 isdigit 판정.
+#include <cstdio>      // Phase 2 T3 - UBO 생성 실패 시 stderr 출력 (fail-fast 로그).
+#include <cstdlib>     // Phase 2 T3 - std::abort (UBO 생성 실패 정통 fail-fast).
 #include <type_traits>
+#include <utility>     // Phase 2 T3 - std::move (UniformBlock 보관).
+#include <vector>      // Phase 2 T3 - BuildUniformBlocks 의 이름 버퍼.
 
 // SP1 - RAII 의미론 컴파일 타임 검증.
 // glDeleteProgram 이중 호출 위험 차단 - 명시적 = delete 가 필요.
@@ -49,6 +54,9 @@ namespace SJH
 
         // SP6 - link 성공 직후 UniformCache eager build.
         program->mUniformCache.Build(*program);
+
+        // Phase 2 T3 - Slang UBO 블록 introspection + UBO 객체 생성 (비-UBO 셰이더는 빈 벡터).
+        program->BuildUniformBlocks();
         return program;
     }
 
@@ -81,4 +89,113 @@ namespace SJH
         return SJH::Diagnostics::GLObjectLog::CheckProgramLink(mProgramAddr);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phase 2 T3 - Slang UBO 블록 introspection + 자기기술
+    // ─────────────────────────────────────────────────────────────────────────
+    namespace
+    {
+        /**
+         * @brief Slang GLSL 출력 블록명 "block_<T>_<digits>" 에서 정규화 이름 "<T>" 추출.
+         * @param raw Slang 출력 그대로의 블록명 (예: "block_FrameBlock_0").
+         * @return 정규화 이름 (예: "FrameBlock"). 접두 "block_" 없으면 그대로, 접미 "_<숫자>" 없으면 그대로.
+         * @details 셰이더 측 @c struct 이름과 동일 문자열 키로 호출자가 조회 가능하게 매핑.
+         *          호출자는 @c FindUniformBlock("FrameBlock") 으로 검색.
+         */
+        std::string NormalizeBlockName(const std::string& raw)
+        {
+            std::string s = raw;
+            const std::string prefix = "block_";
+            if (s.rfind(prefix, 0) == 0)
+                s = s.substr(prefix.size());
+
+            const std::size_t us = s.find_last_of('_');
+            if (us != std::string::npos && us + 1 < s.size())
+            {
+                bool allDigit = true;
+                for (std::size_t i = us + 1; i < s.size(); ++i)
+                {
+                    if (!std::isdigit(static_cast<unsigned char>(s[i])))
+                    {
+                        allDigit = false;
+                        break;
+                    }
+                }
+                if (allDigit)
+                    s = s.substr(0, us);
+            }
+            return s;
+        }
+    }
+
+    /// @copydoc Program::BuildUniformBlocks
+    void Program::BuildUniformBlocks()
+    {
+        GLint numBlocks = 0;
+        glGetProgramiv(mProgramAddr, GL_ACTIVE_UNIFORM_BLOCKS, &numBlocks);
+        for (GLint i = 0; i < numBlocks; ++i)
+        {
+            GLint nameLen = 0;
+            glGetActiveUniformBlockiv(mProgramAddr, static_cast<GLuint>(i),
+                                      GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLen);
+            std::string rawName(static_cast<std::size_t>(nameLen > 0 ? nameLen - 1 : 0), '\0');
+            GLsizei written = 0;
+            glGetActiveUniformBlockName(mProgramAddr, static_cast<GLuint>(i),
+                                        nameLen, &written,
+                                        rawName.empty() ? nullptr : &rawName[0]);
+
+            GLint dataSize = 0;
+            glGetActiveUniformBlockiv(mProgramAddr, static_cast<GLuint>(i),
+                                      GL_UNIFORM_BLOCK_DATA_SIZE, &dataSize);
+
+            UniformBlock blk;
+            blk.normalizedName = NormalizeBlockName(rawName);
+            blk.blockIndex     = static_cast<GLuint>(i);
+            blk.bindingPoint   = static_cast<GLuint>(i);   // 블록 인덱스 그대로 binding point (D12).
+            blk.dataSize       = dataSize;
+
+            // 셰이더 측 block index <-> binding point 매핑 결속.
+            glUniformBlockBinding(mProgramAddr, blk.blockIndex, blk.bindingPoint);
+
+            blk.ubo = UniformBuffer::Create(static_cast<std::size_t>(dataSize));
+            if (!blk.ubo)
+            {
+                // fail-fast (사용자 결정 - InitScheduler 와 동일 정책).
+                // src/program 은 spdlog 미사용 (game_deps 미링크). stderr + abort 로 동등.
+                std::fprintf(stderr,
+                             "[Program::BuildUniformBlocks] UBO 생성 실패 - block '%s', "
+                             "dataSize=%d, programAddr=%u\n",
+                             blk.normalizedName.c_str(), dataSize, mProgramAddr);
+                std::abort();
+            }
+            mUniformBlocks.push_back(std::move(blk));
+        }
+    }
+
+    /// @copydoc Program::FindUniformBlock
+    const Program::UniformBlock* Program::FindUniformBlock(const std::string& normalizedName) const
+    {
+        for (const auto& b : mUniformBlocks)
+            if (b.normalizedName == normalizedName)
+                return &b;
+        return nullptr;
+    }
+
+    /// @copydoc Program::BindUniformBlocks
+    void Program::BindUniformBlocks() const
+    {
+        for (const auto& b : mUniformBlocks)
+            if (b.ubo)
+                b.ubo->BindBase(b.bindingPoint);
+    }
+
+    /// @copydoc Program::UpdateUniformBlock
+    void Program::UpdateUniformBlock(const std::string& normalizedName,
+                                     const void* data,
+                                     std::size_t bytes,
+                                     std::size_t offset) const
+    {
+        const UniformBlock* b = FindUniformBlock(normalizedName);
+        if (b && b->ubo)
+            b->ubo->Update(data, bytes, offset);
+    }
 }
