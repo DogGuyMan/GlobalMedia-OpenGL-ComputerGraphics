@@ -63,8 +63,10 @@ namespace TopdownShooter::Stage
 		constexpr const char *kPcbKey = "stage_pcb";                ///< PCB 모델 key.
 		constexpr const char *kPcbModelPath = "resources/model/pcb.fbx"; ///< PCB 모델 경로.
 		constexpr const char *kPhongAlbedoProgKey = "stage_phong_albedo"; ///< PCB 용 Phong+알베도 Program key.
-		constexpr const char *kPhongAlbedoVS = "resources/shaders/phong_tex.vs"; // VS 공유
-		constexpr const char *kPhongAlbedoFS = "resources/shaders/phong_albedo.fs"; ///< PCB 용 Phong 알베도 FS 경로.
+		// Phase 2.5 (S7) - slang phong UBO 셰이더로 전환 (구 phong_tex.vs / phong_albedo.fs loose 판 대체).
+		//   phong.slang -> phong.{vs,fs} (LightBlock UBO + MaterialBlock.baseColor.rgb=albedo). PropertyBlockSetter 우회.
+		constexpr const char *kPhongAlbedoVS = "resources/shaders/phong.vs"; ///< slang phong VS (LightBlock UBO).
+		constexpr const char *kPhongAlbedoFS = "resources/shaders/phong.fs"; ///< slang phong FS (albedo 기반).
 
 		/// @brief PCB 모델용 Phong 알베도 Program 을 idempotent 하게 등록/조회.
 		/// @param reg 자원 레지스트리.
@@ -161,8 +163,9 @@ namespace TopdownShooter::Stage
 		// PCB 모델 자원 등록 및 캐싱
 		SJH::Model *pcbModel = EnsurePcbModel(reg);
 
-		// PCB 머티리얼에 phong_tex 셰이더 주입 - model.cpp 가 저장한
-		// material.diffuse/specular 텍스처를 그대로 활용.
+		// PCB 머티리얼에 slang phong UBO 셰이더 주입 (Phase 2.5 S7).
+		//   model.cpp 가 저장한 material.albedo(Vec3) 를 MaterialBlock.baseColor(Vec4) 로 승격 -
+		//   phong.slang 이 baseColor.rgb 를 albedo 로 사용 (mesh_pass useUbo 분기가 UpdateUniformBlock).
 		SJH::Program *pcbProg = EnsurePhongAlbedoProgram(reg);
 		for (int i = 0; i < pcbModel->GetMaterialCount(); ++i)
 		{
@@ -170,6 +173,12 @@ namespace TopdownShooter::Stage
 			{
 				if (mat->GetProgram() == nullptr)
 					mat->SetProgram(pcbProg);
+				// albedo(Vec3) -> baseColor(Vec4) 승격 (idempotent). UBO MaterialBlock 의 입력.
+				const auto albedoIt = mat->Properties.Vec3s.find("material.albedo");
+				const vmath::vec3 albedo = (albedoIt != mat->Properties.Vec3s.end())
+				                               ? albedoIt->second
+				                               : vmath::vec3(0.8f, 0.8f, 0.8f);
+				mat->Properties.Vec4s["baseColor"] = vmath::vec4(albedo[0], albedo[1], albedo[2], 1.0f);
 			}
 		}
 

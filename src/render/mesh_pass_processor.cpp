@@ -181,17 +181,20 @@ namespace SJH
             if (material != lastMat) {
                 if (useUbo) {
                     // MaterialBlock std140 : { vec4 baseColor @0; } - Material PropertyBlock 의 Vec4s 에서 추출.
+                    //   simple = 색, phong = albedo(.rgb). 둘 다 동일 레이아웃이라 분기 불요.
                     auto it = material->Properties.Vec4s.find("baseColor");
                     const vmath::vec4 base = (it != material->Properties.Vec4s.end())
                                                 ? it->second
                                                 : vmath::vec4(1, 1, 1, 1);   // 기본 흰색.
                     program->UpdateUniformBlock("MaterialBlock", &base,
                                                 sizeof(vmath::vec4), 0);
+                    // S7 (Phase 2.5) - UBO 셰이더는 material 전부 UBO 경로라 PropertyBlockSetter *우회*.
+                    //   phong 의 첫 PropertyBlockSetter callsite 제거 (strangler). 텍스처도 UBO phong 엔 없음.
+                    //   (모듈 자체는 Phase 3 까지 생존 - 비-UBO 셰이더가 아직 사용.)
+                } else {
+                    // 비-UBO (loose) 셰이더만 PropertyBlockSetter - 텍스처/loose uniform 송신 (Phase 3 까지 보존).
+                    PropertyBlockSetter::Set(rc, material->Properties, *program);
                 }
-                // loose 머티리얼 uniform/texture 송신은 항상 시도.
-                //   UBO 셰이더는 schema 에 매칭 cache entry 가 없어 자연 skip (P4 의 의도된 행동).
-                //   비-UBO 셰이더는 기존 그대로 작동.
-                PropertyBlockSetter::Set(rc, material->Properties, *program);
                 lastMat = material;
             }
 
