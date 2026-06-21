@@ -44,6 +44,24 @@ namespace SJH
 {
     // SP-MaterialSSoT - MergeBool 헬퍼 제거. Material 이 진실의 원천 (override 합성 없음).
 
+    namespace
+    {
+        /// @brief UBO 셰이더의 MaterialBlock 멤버를 material Properties 에서 author 이름 매칭으로 일반 업로드.
+        /// @details Phase 3 Slice 0 (D-DPP-1(b)) - 구 baseColor-only 하드코드 대체. 각 typed map 값을
+        ///          @c Program::UpdateUniformMember(name, &v, size) 로 송신 (비-UBO 멤버는 자동 skip).
+        ///          Textures(sampler)는 UBO 불가라 제외 - PropertyBlockSetter 가 별도 바인딩 (Slice 0.5).
+        ///          glm 값의 주소는 void* 로 전달 (value_ptr 불요 - UpdateUniformMember 가 void*).
+        void UploadMaterialUboMembers(const Program& prog, const MaterialPropertyBlock& props)
+        {
+            for (const auto& kv : props.Floats) prog.UpdateUniformMember(kv.first, &kv.second, sizeof(float));
+            for (const auto& kv : props.Ints)   prog.UpdateUniformMember(kv.first, &kv.second, sizeof(int));
+            for (const auto& kv : props.Vec2s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec2));
+            for (const auto& kv : props.Vec3s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec3));
+            for (const auto& kv : props.Vec4s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec4));
+            for (const auto& kv : props.Mat4s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::mat4));
+        }
+    }
+
     void MeshPassProcessor::SortMultiStage()
     {
         // --- 정렬 정책 (Unity TransparencySortMode 정통) ------------------------
@@ -95,6 +113,18 @@ namespace SJH
                             const glm::mat4& viewMat,
                             const glm::mat4& projMat)
     {
+        // ============================================================================
+        // [REVISIT - 설계 재검토 대상] (사용자 직감, 2026-06-21)
+        //   증상: 본 Process 의 분기가 과다 - 구조/책임상 좋지 않다는 직감.
+        //   분기 축 분류 (정직한 진단):
+        //     (1) [전이적, Phase C 에서 소멸] useUbo vs loose(else) ABI 분기 (program/material/model 3곳).
+        //         - 전 셰이더 UBO화(Phase B) + loose 경로/PropertyBlockSetter 제거(Phase C/D-DPP-4) 시 자연 소멸.
+        //     (2) [구조적, 남는 스멜] 한 함수가 (a) DrawCommand kind dispatch(ScreenQuad vs WorldMesh)
+        //         + (b) program/material 전이 추적(lastProg/lastMat) + (c) UBO 멤버 업로드 까지 혼재.
+        //         - 후보 방향: ScreenQuad 경로를 별 함수/패스로 분리(Unreal 은 mesh draw 와 분리),
+        //           transition 추적을 작은 상태객체로, material 업로드를 Applier 로 추출 등.
+        //   조치: 지금은 마킹만 (Phase B 진행 우선). Phase C 이후 (1) 소멸을 보고 (2) 재설계 판단.
+        // ============================================================================
         const Program*       lastProg = nullptr;
         const Material*      lastMat  = nullptr;
 
@@ -177,29 +207,27 @@ namespace SJH
                 lastMat  = nullptr;   // program 바뀌면 material 재바인딩 강제
             }
 
-            // 결정 2: Material 전환 - PropertyBlock -> uniform/texture 송신.
-            //   UBO 시 MaterialBlock 의 baseColor 는 PropertyBlockSetter 의 *자연 skip* 대상 (P4).
-            //   PropertyBlock 의 active uniform 캐시는 UBO 멤버를 location=-1 로 보유 -> glUniform* 가 no-op.
-            //   따라서 baseColor 는 *별도 경로* 로 직접 주입 + PropertyBlockSetter 호출은 보존 (비-UBO 셰이더 + 텍스처 송신용).
+            // 결정 2a: Material 전환 - sampler/loose uniform 송신 (material 변경 시만 - 텍스처는 per-frame 불변).
+            //   Slice 0.5 - GL 4.1 은 sampler 를 UBO 에 못 넣으므로 UBO 셰이더라도 sampler(uTex 등)는 loose glUniform1i.
+            //   PropertyBlockSetter 는 program active uniform 캐시 순회 - UBO 멤버는 location=-1 라 자연 skip,
+            //   sampler 만 바인딩. textureless UBO(phong/simple)는 무해(대상 0). (PropertyBlockSetter 제거는
+            //   Phase C/D-DPP-4 에서 sampler 전용 경로 분리 후.)
             if (material != lastMat) {
-                if (useUbo) {
-                    // MaterialBlock std140 : { vec4 baseColor @0; } - Material PropertyBlock 의 Vec4s 에서 추출.
-                    //   simple = 색, phong = albedo(.rgb), simple_texture = tint. 동일 레이아웃이라 분기 불요.
-                    auto it = material->Properties.Vec4s.find("baseColor");
-                    const glm::vec4 base = (it != material->Properties.Vec4s.end())
-                                                ? it->second
-                                                : glm::vec4(1, 1, 1, 1);   // 기본 흰색.
-                    program->UpdateUniformBlock("MaterialBlock", &base,
-                                                sizeof(glm::vec4), 0);
-                }
-                // Phase 3 Slice 0.5 - sampler/loose uniform 송신 (UBO/loose 공통).
-                //   GL 4.1 은 sampler 를 UBO 에 못 넣으므로 UBO 셰이더라도 sampler(uTex 등)는 loose glUniform1i.
-                //   PropertyBlockSetter 는 program active uniform 캐시를 순회 - UBO 멤버는 location=-1 라
-                //   자연 skip (baseColor 이중송신 없음), sampler 만 바인딩. textureless UBO(phong/simple)는 무해(대상 0).
-                //   (구 S7 의 UBO bypass 해제 - textured UBO 셰이더 합류로 sampler 바인딩 필요. PropertyBlockSetter
-                //    제거는 Phase C/D-DPP-4 에서 sampler 전용 경로 분리 후.)
                 PropertyBlockSetter::Set(rc, material->Properties, *program);
                 lastMat = material;
+            }
+
+            // 결정 2b (Phase 3 Slice 0 - D-DPP-1(b)): UBO MaterialBlock 멤버 일반 업로드 - *매 draw*.
+            //   매 draw 이유: (1) per-frame 멤버(transparent uTime 등), (2) 같은 program 공유 UBO 를 쓰는
+            //   여러 material 간 값 교체. author 이름 매칭(UpdateUniformMember) - 비-UBO 멤버/sampler 자동 skip.
+            if (useUbo) {
+                UploadMaterialUboMembers(*program, material->Properties);
+                // baseColor 미지정 머티리얼은 기본 흰색 (구 하드코드 fallback 이름기반 보존 - phong 등
+                //   baseColor 키 없는 머티리얼이 UBO 초기 0(검정) 으로 떨어지지 않게).
+                if (material->Properties.Vec4s.find("baseColor") == material->Properties.Vec4s.end()) {
+                    const glm::vec4 white(1.0f);
+                    program->UpdateUniformMember("baseColor", &white, sizeof(glm::vec4));
+                }
             }
 
             // 결정 3: PipelineState 적용

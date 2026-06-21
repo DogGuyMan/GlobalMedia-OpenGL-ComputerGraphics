@@ -125,6 +125,37 @@ namespace SJH
             }
             return s;
         }
+
+        /**
+         * @brief UBO 멤버 GL 이름에서 author 멤버명 추출 (Phase 3 Slice 0).
+         * @param raw GL active uniform 이름 (예: "block_MaterialBlock_0.baseColor_0" 또는 "baseColor_0").
+         * @return author 이름 (예: "baseColor"). '.' 뒤(블록 접두 제거) + 접미 "_<숫자>" 제거.
+         * @details @ref NormalizeBlockName 의 멤버 버전 - 셰이더 저작 이름(material Properties 키)과 일치시킨다.
+         */
+        std::string NormalizeMemberName(const std::string& raw)
+        {
+            std::string s = raw;
+            const std::size_t dot = s.find_last_of('.');
+            if (dot != std::string::npos && dot + 1 < s.size())
+                s = s.substr(dot + 1);
+
+            const std::size_t us = s.find_last_of('_');
+            if (us != std::string::npos && us + 1 < s.size())
+            {
+                bool allDigit = true;
+                for (std::size_t k = us + 1; k < s.size(); ++k)
+                {
+                    if (!std::isdigit(static_cast<unsigned char>(s[k])))
+                    {
+                        allDigit = false;
+                        break;
+                    }
+                }
+                if (allDigit)
+                    s = s.substr(0, us);
+            }
+            return s;
+        }
     }
 
     /// @copydoc Program::BuildUniformBlocks
@@ -167,6 +198,35 @@ namespace SJH
                              blk.normalizedName.c_str(), dataSize, mProgramAddr);
                 std::abort();
             }
+            // Phase 3 Slice 0 - 블록 멤버 introspection: author 이름 -> {정규화 블록명, std140 offset}.
+            //   D-DPP-1(b) 일반 material 업로드의 offset 출처. (refl.json 파일 대신 GL introspection -
+            //   Program 자기완결, 새 의존 0. 멤버명은 NormalizeMemberName 으로 author 이름 복원.)
+            GLint memberCount = 0;
+            glGetActiveUniformBlockiv(mProgramAddr, static_cast<GLuint>(i),
+                                      GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &memberCount);
+            if (memberCount > 0)
+            {
+                std::vector<GLint> indices(static_cast<std::size_t>(memberCount));
+                glGetActiveUniformBlockiv(mProgramAddr, static_cast<GLuint>(i),
+                                          GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, indices.data());
+                for (const GLint mi : indices)
+                {
+                    const GLuint uidx = static_cast<GLuint>(mi);
+                    GLint memberOffset = 0;
+                    glGetActiveUniformsiv(mProgramAddr, 1, &uidx, GL_UNIFORM_OFFSET, &memberOffset);
+
+                    GLint memberNameLen = 0;
+                    glGetActiveUniformsiv(mProgramAddr, 1, &uidx, GL_UNIFORM_NAME_LENGTH, &memberNameLen);
+                    std::string memberRaw(static_cast<std::size_t>(memberNameLen > 0 ? memberNameLen - 1 : 0), '\0');
+                    GLsizei memberWritten = 0;
+                    glGetActiveUniformName(mProgramAddr, uidx, memberNameLen, &memberWritten,
+                                           memberRaw.empty() ? nullptr : &memberRaw[0]);
+
+                    mUniformMembers[NormalizeMemberName(memberRaw)] =
+                        UniformMember{ blk.normalizedName, static_cast<std::size_t>(memberOffset) };
+                }
+            }
+
             mUniformBlocks.push_back(std::move(blk));
         }
     }
@@ -197,6 +257,16 @@ namespace SJH
         const UniformBlock* b = FindUniformBlock(normalizedName);
         if (b && b->ubo)
             b->ubo->Update(data, bytes, offset);
+    }
+
+    /// @copydoc Program::UpdateUniformMember
+    void Program::UpdateUniformMember(const std::string& memberName,
+                                      const void* data, std::size_t bytes) const
+    {
+        const auto it = mUniformMembers.find(memberName);
+        if (it == mUniformMembers.end())
+            return;   // 비-UBO 멤버(sampler/loose 값) - 안전 skip.
+        UpdateUniformBlock(it->second.normalizedBlock, data, bytes, it->second.offset);
     }
 
     /// @copydoc Program::DisownUniformBlock

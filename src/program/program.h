@@ -33,6 +33,7 @@
 #include "GL/gl3w.h"
 #include <string>
 #include <vector>
+#include <unordered_map>   // Phase 3 Slice 0 - UBO 멤버 offset 맵
 
 namespace SJH
 {
@@ -159,6 +160,17 @@ namespace SJH
          */
         void DisownUniformBlock(const std::string& normalizedName);
 
+        /**
+         * @brief UBO 멤버를 *author 이름* 으로 업로드 (Phase 3 Slice 0 - D-DPP-1(b) 일반 material 업로드).
+         * @param memberName author 멤버 이름 (예: "baseColor"/"uvScale"/"uTime"). Slang `_N` 접미/블록 접두 제거된 형태.
+         * @param data 업로드 CPU 데이터 포인터 (glm 값의 주소 - @c void* 라 value_ptr 불요).
+         * @param bytes 업로드 바이트 수 (sizeof glm 타입 = std140 멤버 데이터 크기).
+         * @details @ref BuildUniformBlocks 가 GL introspection 으로 구축한 member->{block, std140 offset}
+         *          맵을 조회해 @ref UpdateUniformBlock 위임. 미등록 이름(sampler/비-UBO 값)은 조용히 무시.
+         */
+        void UpdateUniformMember(const std::string& memberName,
+                                 const void* data, std::size_t bytes) const;
+
     private:
         Program() = default;
 
@@ -172,11 +184,30 @@ namespace SJH
         /// @brief 내부 GL 프로그램 핸들 - @c glDeleteProgram 대상이자 @c glUseProgram 인자.
         GLuint mProgramAddr{0};
 
+        // ============================================================================
+        // [REVISIT - 설계 재검토 대상] (사용자 직감, 2026-06-21) - uniform 추적 메커니즘 3중 공존.
+        //   Program 이 uniform introspection 을 3개 병렬 보유: (a) mUniformCache(loose name->loc/type)
+        //   (b) mUniformBlocks(UBO 블록) (c) mUniformMembers(UBO 멤버 offset, Slice 0).
+        //   진단: (a) 는 loose glUniform* 경로 전용 - 전 셰이더 UBO화(Phase B)+PropertyBlockSetter/uniform_cache
+        //         제거(Phase C/D-DPP-4) 시 *소멸*. 그 후 (b)+(c) 만 남아 책임 단일화 가능.
+        //   조치: 지금은 마킹만. Phase C 에서 (a) 제거 후 Program uniform 책임 재정리 판단.
+        // ============================================================================
+
         /// @brief active uniform name -> (location, type) 캐시. Program 이 owner (SP6 분리).
         UniformCache mUniformCache;
 
         /// @brief Slang UBO 블록 자기기술 + UBO 소유 (Phase 2 T3). 비-UBO 셰이더는 비어있음.
         std::vector<UniformBlock> mUniformBlocks;
+
+        /// @brief UBO 멤버 author 이름 -> {정규화 블록명, std140 offset} (Phase 3 Slice 0).
+        /// @details @ref BuildUniformBlocks 가 GL introspection 으로 채움. @ref UpdateUniformMember 가 조회.
+        ///          author 이름 = Slang `_N` 접미 + 블록 접두("block_<T>_N.") 제거된 셰이더 저작 이름.
+        struct UniformMember
+        {
+            std::string normalizedBlock;   ///< 멤버가 속한 블록의 정규화 이름 ("MaterialBlock" 등).
+            std::size_t offset{0};         ///< std140 블록 내 byte offset.
+        };
+        std::unordered_map<std::string, UniformMember> mUniformMembers;
     };
 }
 
