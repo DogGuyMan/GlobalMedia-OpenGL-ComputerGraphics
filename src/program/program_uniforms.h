@@ -5,14 +5,16 @@
  * @details
  *  ### 책임
  *  - uniform 값 setter 6종: @c SetMat4 / @c SetVec4 / @c SetVec3 / @c SetVec2 / @c SetFloat / @c SetInt.
- *  - 광원 struct -> uniform block 일괄 전송 헬퍼 3종: @c SetDirLight / @c SetPointLight / @c SetSpotLight.
- *  - 누락 uniform / 타입 불일치 시 @c Diagnostics::UniformDiagnostics 를 통한 첫 호출 1회 warn.
+ *  - 누락 uniform 시 @c Diagnostics::UniformDiagnostics::NotifyMissing 첫 호출 1회 warn.
  *
  *  ### 비-책임
  *  - [X] @c glUseProgram 바인딩 관리 - @c DeviceContext 가 담당.
- *  - [X] uniform location 캐시 빌드 - @c Program::Create 가 link 직후 @c UniformCache::Build 호출.
- *  - [X] 배열 원소 캐시 삽입 - 비-canonical 이름(@c "arr[3]")은 @c GetLocation 이 -1 반환 시
- *    @c glGetUniformLocation fallback 으로 처리 (캐시 mutation 없음, POLA).
+ *  - [X] uniform location 캐시 - 없음 (Phase C). @c Program::GetLocation 이 live @c glGetUniformLocation.
+ *
+ *  ### Phase C 이후 잔존 사용처 (대부분 UBO 로 이전됨)
+ *  값 uniform 은 전부 UBO 화돼 본 family 의 즉시-GL setter 는 *잔여 loose* 만 다룬다
+ *  (주: sampler unit 설정 @c SetInt - @c ScreenQuadStage 의 uScene 등). 일반 material 값은
+ *  @c MeshPassProcessor 가 UBO 멤버(@c Program::UpdateUniformMember)로 송신.
  *
  *  ### 디자인 동기 - 왜 멤버 함수가 아니라 자유 함수인가
  *  -# **책임 분리 (SRP)** - @c Program 의 본질은 *GL program 의 lifetime + link 상태*.
@@ -41,16 +43,14 @@
  *  | uniform 값 설정 | 본 namespace (자유 함수) |
  *  | uniform location 조회 | @c Program::GetLocation 직접 |
  *
- *  ### 캐시 위치 - Program 내부 멤버 (SP2 완료, SP6 UniformCache 분리)
- *  - 캐시는 @c Program::mUniformCache (@c UniformCache 멤버) - @c Program::GetLocation / @c GetType 으로 공개.
- *  - 자유 함수들은 @c Program::GetLocation (const read-only) 경유 - TU-local static 캐시 제거됨.
- *  - **friend 선언 불필요** - @c GetLocation / @c GetType / @c GetProgramAddr 이 public.
+ *  ### location 조회 (Phase C - 캐시 제거)
+ *  - 자유 함수들은 @c Program::GetLocation (live @c glGetUniformLocation) 경유 - 멤버 캐시 없음.
+ *  - **friend 선언 불필요** - @c GetLocation / @c GetProgramAddr 이 public.
  *
  *  ### 사용 예
  *  @code
- *    auto prog = Program::Create({vs, fs});      // mUniformCache 자동 빌드
- *    Uniforms::SetMat4(*prog, "uModel", data);
- *    Uniforms::SetDirLight(*prog, "dirLight", light, worldDir);
+ *    auto prog = Program::Create({vs, fs});
+ *    Uniforms::SetInt(*prog, "uScene", 0);       // sampler unit (잔여 loose 송신)
  *  @endcode
  *
  * @note 본 헤더는 @c Program 을 forward declaration 만 사용 - @c program.h include 불필요 (의도된 decoupling).
@@ -69,10 +69,8 @@ namespace SJH
     /**
      * @brief GL 프로그램 uniform 값 setter 자유 함수 모음.
      * @details
-     *  SP2 완료 - 캐시는 @c Program 멤버로 이전됨. 본 namespace 의 자유 함수
-     *  family 는 *시그니처 보존* - 내부 구현이 @c prog.GetLocation 을 경유.
-     *  @c BuildCache / @c Forget 자유 함수는 폐기 (멤버 흡수).
-     *  SP6 - @c UniformCache 독립 클래스 분리 이후에도 시그니처 변동 없음.
+     *  본 namespace 의 자유 함수 family 는 @c prog.GetLocation (live 조회) 을 경유해 즉시 @c glUniform*.
+     *  Phase C 이후 값 uniform 은 UBO 로 이전되어 잔존 호출은 주로 sampler unit 설정 등 loose 송신.
      */
     namespace Uniforms
     {
@@ -103,14 +101,13 @@ namespace SJH
         /// @param v 정수 또는 텍스처 유닛 번호.
         void SetInt  (const Program &prog, const char *name, const int& v);
 
-        /// @brief uniform location 조회 - 캐시 우선, 미존재 시 @c glGetUniformLocation fallback.
+        /// @brief uniform location 조회 - @c Program::GetLocation (live @c glGetUniformLocation).
         /// @details 미존재면 @c Diagnostics::UniformDiagnostics::NotifyMissing (첫 호출 1회 warn).
         /// @return 찾은 location, 없으면 @c -1.
         GLint GetLocation(const Program &prog, const char *name);
 
-        // 광원 struct -> uniform block 일괄 전송 헬퍼(SetDirLight/SetPointLight/SetSpotLight)는
-        // 2026-06-11 D6 으로 render/light_ubo_uploader.cpp 파일-로컬 헬퍼로 이주.
-        // (program -> object 역의존 제거 - 유일 호출처가 dispatcher 단독이었음.)
+        // (광원 struct -> uniform 헬퍼 SetDirLight/SetPointLight/SetSpotLight 는 D6 으로 light_ubo_uploader
+        //  로 이주 후 Phase C 에서 LightBlock UBO 전환으로 제거됨 - loose lighting 경로 소멸.)
     }
 }
 

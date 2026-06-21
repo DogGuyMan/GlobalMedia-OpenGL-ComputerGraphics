@@ -1,13 +1,13 @@
 /**
  * @file program.h
- * @brief OpenGL 프로그램 객체 RAII 래퍼 - 셰이더 attach + link + uniform 캐시 소유.
+ * @brief OpenGL 프로그램 객체 RAII 래퍼 - 셰이더 attach + link + UBO 블록/멤버 소유.
  *
  * @details
  *  ### 책임
  *  - 컴파일된 @c Shader 들을 attach + link 하여 GL 프로그램 핸들을 생성.
- *  - link 성공 직후 @c UniformCache 의 eager build 수행 - active uniform schema 를 program 수명과 함께 보유.
+ *  - link 성공 직후 @c BuildUniformBlocks - UBO 블록(의미명 binding point) + 멤버 offset 맵 introspect.
  *  - 소멸자에서 @c glDeleteProgram 자동 호출 (RAII).
- *  - uniform location / type 을 @c GetLocation / @c GetType 으로 외부 query 에 노출.
+ *  - uniform location 을 @c GetLocation (live @c glGetUniformLocation) 으로 노출 (sampler 바인딩용).
  *
  *  ### 비-책임
  *  - [X] uniform 값 설정 - @c SJH::Uniforms 자유 함수 family (@c program_uniforms.h) 가 담당.
@@ -18,16 +18,14 @@
  *  - 외부 노출 인스턴스는 항상 link 완료 상태 - 기본 생성자 @c private.
  *  - @c Create / @c CreateWithVSFS 두 정적 팩토리만 허용. 복사/이동 @c = delete.
  *
- * @note 캐시 분리 이력 (SP6): SP1~SP5 에서는 Program 멤버 unordered_map 이었으나
- *       SP6 에서 @c UniformCache 독립 클래스로 분리 -> SRP 회복.
- *       Program 이 여전히 owner - Material 은 @c const UniformCache* 로 reference.
+ * @note Phase C (D-DPP-5): 구 @c UniformCache (name->loc/type) 멤버 캐시 제거 - 값 uniform 은 UBO,
+ *       sampler location 은 @c GetLocation live 조회. UBO 블록/멤버(@c mUniformBlocks/@c mUniformMembers)만 보유.
  */
 
 #ifndef __SJH_PROGRAM_H__
 #define __SJH_PROGRAM_H__
 
 #include "common/common.h"
-#include "program/uniform_cache.h"   // SP6 - UniformCache 분리
 #include "program/uniform_buffer.h"  // Slang Phase 2 T3 - UBO 블록 owner 멤버
 #include "shader/shader.h"
 #include "GL/gl3w.h"
@@ -46,13 +44,11 @@ namespace SJH
      *          외부 노출 인스턴스는 항상 링크까지 완료된 유효한 GL 핸들을 보유한다.
      *          소멸자에서 @c glDeleteProgram 자동 호출.
      *
-     *  ### Uniform 캐시 - Program 의 *멤버* (SP2 완료, Pattern Y)
-     *  - 캐시는 @c mUniformCache (@c UniformCache 멤버) - resource-attached (SP6 분리).
-     *  - @c Create 가 link 성공 후 @c UniformCache::Build 호출 (eager build).
-     *  - 소멸자에서 멤버가 자동 destroy - 별도 정리 호출 불요.
+     *  ### Uniform 조회 (Phase C, D-DPP-5)
+     *  - 구 @c UniformCache 멤버 캐시 제거 - @c GetLocation 이 live @c glGetUniformLocation 로 직접 조회.
+     *  - 값 uniform 은 전부 UBO(@c mUniformBlocks / @c mUniformMembers) 경로. sampler 만 loose location 조회.
      *  - 호출 패턴: @c Uniforms::SetMat4(*prog, "name", data) - 자유 함수가 @c prog.GetLocation 경유.
      *  @see SJH::Uniforms
-     *  @see SJH::UniformCache
      */
     class Program
     {
@@ -77,7 +73,7 @@ namespace SJH
          */
         static ProgramUPtr CreateWithVSFS(const std::string& vertShaderFilename, const std::string& fragShaderFilename);
 
-        /// @brief @c glDeleteProgram 호출 (핸들이 0 이 아닐 때만). @c mUniformCache 는 멤버 자동 destroy.
+        /// @brief @c glDeleteProgram 호출 (핸들이 0 이 아닐 때만). UBO 멤버는 자동 destroy.
         ~Program();
 
         // SP1 - 자원 핸들 이중 해제 차단. 팩토리 + UPtr 패턴이므로 외부에서
@@ -90,19 +86,12 @@ namespace SJH
         /// @brief 내부 GL 프로그램 핸들 반환 - @c glUseProgram / @c Uniforms 자유 함수의 키.
         GLuint GetProgramAddr() const { return mProgramAddr; }
 
-        /// @brief uniform 이름 -> location 조회 (@c UniformCache 위임).
+        /// @brief uniform 이름 -> location 조회 (live @c glGetUniformLocation).
         /// @param name 셰이더 내 uniform 이름 (null-terminated).
-        /// @return active uniform 이면 location, 미캐시 시 -1 (호출자가 @c glGetUniformLocation fallback).
-        /// @note pure const query - cache mutation 없음. 배열 원소(`arr[3]` 등)는 캐시에 없어 -1 반환.
-        GLint  GetLocation(const char* name) const { return mUniformCache.GetLocation(name); }
-
-        /// @brief uniform 이름 -> GL 타입 (@c GL_FLOAT_MAT4 등). 미캐시 시 @c 0.
-        /// @details @c Diagnostics::UniformDiagnostics::NotifyTypeMismatch 의 비교 기준으로 사용.
-        GLenum GetType(const char* name) const { return mUniformCache.GetType(name); }
-
-        /// @brief active uniform schema 의 const view - @c Material / @c PropertyBlockSetter 가 참조.
-        /// @return Program 수명과 동일한 @c UniformCache const ref.
-        const UniformCache& GetUniformCache() const { return mUniformCache; }
+        /// @return active uniform 이면 location, 비-active(또는 UBO 멤버)면 -1.
+        /// @note Phase C (D-DPP-5) - 구 @c UniformCache 멤버 캐시 제거 후 live 조회로 단순화.
+        ///       호출 빈도(material/program 전환 단위)가 낮아 캐시 불요. UBO 멤버는 -1 반환(자연 skip).
+        GLint  GetLocation(const char* name) const { return glGetUniformLocation(mProgramAddr, name); }
 
         /**
          * @brief Slang 이 출력한 UBO 블록 1개의 자기기술 + 백킹 UBO 객체 (Phase 2 T3).
@@ -184,17 +173,10 @@ namespace SJH
         /// @brief 내부 GL 프로그램 핸들 - @c glDeleteProgram 대상이자 @c glUseProgram 인자.
         GLuint mProgramAddr{0};
 
-        // ============================================================================
-        // [REVISIT - 설계 재검토 대상] (사용자 직감, 2026-06-21) - uniform 추적 메커니즘 3중 공존.
-        //   Program 이 uniform introspection 을 3개 병렬 보유: (a) mUniformCache(loose name->loc/type)
-        //   (b) mUniformBlocks(UBO 블록) (c) mUniformMembers(UBO 멤버 offset, Slice 0).
-        //   진단: (a) 는 loose glUniform* 경로 전용 - 전 셰이더 UBO화(Phase B)+PropertyBlockSetter/uniform_cache
-        //         제거(Phase C/D-DPP-4) 시 *소멸*. 그 후 (b)+(c) 만 남아 책임 단일화 가능.
-        //   조치: 지금은 마킹만. Phase C 에서 (a) 제거 후 Program uniform 책임 재정리 판단.
-        // ============================================================================
-
-        /// @brief active uniform name -> (location, type) 캐시. Program 이 owner (SP6 분리).
-        UniformCache mUniformCache;
+        // Phase C (D-DPP-5, 2026-06-21) - 구 [REVISIT] uniform 추적 3중 공존이 2중으로 정리됨.
+        //   (a) mUniformCache(loose name->loc/type) *제거* - 전 셰이더 UBO화(Gate Bᴳ) + PropertyBlockSetter/
+        //       uniform_cache 모듈 삭제로 loose 값 경로 소멸. sampler location 은 GetLocation(live) 으로 조회.
+        //   남은 2중: (b) mUniformBlocks(UBO 블록) + (c) mUniformMembers(UBO 멤버 offset, Slice 0).
 
         /// @brief Slang UBO 블록 자기기술 + UBO 소유 (Phase 2 T3). 비-UBO 셰이더는 비어있음.
         std::vector<UniformBlock> mUniformBlocks;

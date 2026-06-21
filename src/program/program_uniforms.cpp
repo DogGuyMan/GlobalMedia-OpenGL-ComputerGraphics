@@ -5,24 +5,22 @@
  * @details
  *  ### 책임
  *  - setter (@c SetMat4 / @c SetVec4 / @c SetVec3 / @c SetVec2 / @c SetFloat / @c SetInt) 구현.
- *  - 광원 struct -> uniform block 일괄 전송 (@c SetDirLight / @c SetPointLight / @c SetSpotLight).
- *  - @c GetLocation 편의 함수 - 캐시 우선, 미존재 시 @c glGetUniformLocation fallback + warn.
+ *  - @c GetLocation 편의 함수 - @c Program::GetLocation (live) + 미존재 시 NotifyMissing warn.
  *
  *  ### 비-책임
- *  - [X] uniform location 캐시 빌드/삽입 - @c UniformCache::Build (@c Program::Create 내부) 전담.
+ *  - [X] uniform location 캐시 - 없음 (Phase C). @c Program::GetLocation 이 live @c glGetUniformLocation.
  *  - [X] @c glUseProgram 바인딩 - @c DeviceContext 전담. 본 TU 는 bound state 를 가정만 함.
  *
- *  ### 캐시 경로 (SP2 이후 / SP6 UniformCache 분리 후 동일)
- *  - 각 setter 는 @c prog.GetLocation(name) 으로 캐시를 read-only 조회.
- *  - @c -1 반환 시 @c glGetUniformLocation fallback (배열 원소 등 비-canonical 이름 대응).
- *  - TU-local static @c sCacheRegistry 제거됨 - Program 소멸 시 멤버가 자동 파괴.
+ *  ### location 경로 (Phase C - 캐시 제거)
+ *  - 각 setter 는 @c prog.GetLocation(name) (live @c glGetUniformLocation) 조회 후 @c glUniform*.
+ *  - @c -1 이면 @c NotifyMissing 후 no-op. (타입불일치 진단은 Phase C 에서 제거 - UniformCache GetType 의존이었음.)
  *
  *  ### Program 과의 의존성
  *  - 본 TU 만 @c program/program.h 를 include - public 멤버만 호출.
  *  - 헤더 (@c program_uniforms.h) 는 forward declaration 만 사용 - Program 정의 의존 없음.
  *
- * @note 광원 struct -> uniform block 일괄 전송 헬퍼 3종은 2026-06-11 D6 으로
- *       render/light_ubo_uploader.cpp 로 이주 (program -> object 역의존 제거).
+ * @note 광원 struct -> uniform 헬퍼 3종은 D6 으로 light_ubo_uploader.cpp 이주 후
+ *       Phase C 에서 LightBlock UBO 전환으로 제거됨 (loose lighting 경로 소멸).
  */
 
 #include "program/program.h"
@@ -50,7 +48,7 @@ namespace SJH::Uniforms
             Diagnostics::UniformDiagnostics::NotifyMissing(pid, name);
             return;
         }
-        Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT_MAT4, prog.GetType(name));
+        // Phase C (D-DPP-5) - GetType 기반 타입불일치 진단 제거 (UniformCache 삭제). location 검증만 유지.
         glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(m4));
     }
 
@@ -60,7 +58,6 @@ namespace SJH::Uniforms
         GLint loc = prog.GetLocation(name);
         if (loc < 0) loc = glGetUniformLocation(pid, name);
         if (loc < 0) { Diagnostics::UniformDiagnostics::NotifyMissing(pid, name); return; }
-        Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT_VEC4, prog.GetType(name));
         glUniform4fv(loc, 1, glm::value_ptr(v4));
     }
 
@@ -70,7 +67,6 @@ namespace SJH::Uniforms
         GLint loc = prog.GetLocation(name);
         if (loc < 0) loc = glGetUniformLocation(pid, name);
         if (loc < 0) { Diagnostics::UniformDiagnostics::NotifyMissing(pid, name); return; }
-        Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT_VEC3, prog.GetType(name));
         glUniform3fv(loc, 1, glm::value_ptr(v3));
     }
 
@@ -80,7 +76,6 @@ namespace SJH::Uniforms
         GLint loc = prog.GetLocation(name);
         if (loc < 0) loc = glGetUniformLocation(pid, name);
         if (loc < 0) { Diagnostics::UniformDiagnostics::NotifyMissing(pid, name); return; }
-        Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT_VEC2, prog.GetType(name));
         glUniform2fv(loc, 1, glm::value_ptr(v2));
     }
 
@@ -90,7 +85,6 @@ namespace SJH::Uniforms
         GLint loc = prog.GetLocation(name);
         if (loc < 0) loc = glGetUniformLocation(pid, name);
         if (loc < 0) { Diagnostics::UniformDiagnostics::NotifyMissing(pid, name); return; }
-        Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT, prog.GetType(name));
         glUniform1f(loc, v);
     }
 

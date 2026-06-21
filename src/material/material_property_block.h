@@ -8,7 +8,7 @@
  *  - `TextureBinding` nested struct 로 sampler unit 과 비소유 텍스처 포인터를 묶어 보관.
  *
  *  ### 비-책임
- *  - [X] GL uniform 송신 - draw 시점 `PropertyBlockSetter::Set` 이 책임.
+ *  - [X] GL uniform 송신 - draw 시점 `MeshPassProcessor` (값=UBO 멤버, sampler=BindSamplers) 가 책임.
  *  - [X] 텍스처 GPU 바인딩 - `DeviceContext::BindTexture` 가 책임.
  *  - [X] Program schema 검증 - `Material::SetProgram` 의 EagerBuild 가 책임.
  *
@@ -19,12 +19,12 @@
  *  - `Renderer.SetPropertyBlock(block)` 으로 *renderer 별 override* 전달
  *
  *  본 클래스는 Unity 정통의 *typed map 7 묶음 (Float/Int/Vec2/Vec3/Vec4/Mat4/Texture)* 만 분리.
- *  *적용* (uniform 송신 + 텍스처 바인딩) 은 별도 `PropertyBlockSetter::Set` 책임 (Applier 패턴).
+ *  *적용* (uniform 송신 + 텍스처 바인딩) 은 draw 시점 `MeshPassProcessor` 책임 (값=UBO 멤버, sampler=BindSamplers).
  *
  *  ### 분리 동기 (Material 의 책임 분할)
  *  - **`Material`** = Program 참조 + Pass.Kind + `MaterialPropertyBlock` 1 개 보유 (큰 분류 + 메타)
  *  - **`MaterialPropertyBlock`** = *셰이더 무관 typed properties* (이 클래스)
- *  - **`PropertyBlockSetter`** = *block + Program -> GL 송신* (별도 Applier)
+ *  - **`MeshPassProcessor`** = *block + Program -> GL 송신* (값=UBO 멤버 업로드, sampler=BindSamplers)
  *
  *  세 책임 분리로 Separation of Concerns + 진실의 원천 단일화 만족.
  *

@@ -8,7 +8,7 @@
  *  - `SetTexture` - `TextureBinding{tex, unit}` 을 `Textures` map 에 저장.
  *
  *  ### 비-책임
- *  - [X] GL `glUniform*` 호출 없음 - draw 시점 `PropertyBlockSetter::Set` 전담.
+ *  - [X] GL `glUniform*`/UBO 송신 없음 - draw 시점 `MeshPassProcessor` (UBO 멤버 + BindSamplers) 전담.
  *  - [X] Program uniform 존재 검증 없음 - `Material::SetProgram` 의 EagerBuild 가 사전 prune.
  *
  * @note 구현이 단순(1줄 대입)하므로 인라인화 가능하지만,

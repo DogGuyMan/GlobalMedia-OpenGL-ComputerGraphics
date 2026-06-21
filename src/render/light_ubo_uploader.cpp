@@ -99,96 +99,8 @@ namespace SJH
 		// 셰이더 측 LightBlock 정규화 이름 (Program::NormalizeBlockName: "block_LightBlock_0" -> "LightBlock").
 		const char* const LIGHT_BLOCK_NAME = "LightBlock";
 
-		// ====================================================================
-		//  loose 경로 헬퍼 (구 LightUniformDispatcher 에서 보존 - D6 격리, S4 공존).
-		//  program -> object 역의존을 끊기 위해 광원 struct -> uniform 변환을 익명 ns 에 가둔다.
-		// ====================================================================
-		void SetDirLight(const Program& prog, const char* prefix, const DirLight& light, const glm::vec3& worldDir)
-		{
-			const std::string base = prefix;
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(), worldDir);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(), light.Ambient);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(), light.Diffuse);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(), light.Specular);
-		}
-
-		void SetPointLight(const Program& prog, const char* prefix, const PointLight& light, const glm::vec3& worldPos)
-		{
-			const std::string base = prefix;
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(), worldPos);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(), GetAttenuationCoeff(light.Distance));
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(), light.Ambient);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(), light.Diffuse);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(), light.Specular);
-		}
-
-		void SetSpotLight(const Program& prog, const char* prefix, const SpotLight& light,
-		                  const glm::vec3& worldPos, const glm::vec3& worldDir)
-		{
-			const std::string base = prefix;
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(), worldPos);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(), worldDir);
-			// CPU 는 degree, 셰이더는 cosine - 송신 시점에 변환 (struct 정의 시 의도된 분업).
-			Uniforms::SetFloat(prog, (base + Const::SHADER_PROPERTIE_CUTOFF).c_str(), cosf(glm::radians(light.CutoffAngleDeg)));
-			Uniforms::SetFloat(prog, (base + Const::SHADER_PROPERTIE_OUTER_CUTOFF).c_str(), cosf(glm::radians(light.OuterCutoffAngleDeg)));
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(), GetAttenuationCoeff(light.Distance));
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(), light.Ambient);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(), light.Diffuse);
-			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(), light.Specular);
-		}
-
-		// loose 송신 - 비-UBO lighting program 1개에 광원 일괄 송신 (구 Dispatch 루프 본체).
-		//   MAX 슬롯 전체 순회 - 활성 광원은 값+enabled=1, 슬롯 부족분은 enabled=0 (셰이더 초기화 보장).
-		void LooseDispatch(const Program& prog, DirLight* dir,
-		                   const std::vector<PointLight*>& points,
-		                   const std::vector<SpotLight*>& spots,
-		                   const glm::vec3& viewPos)
-		{
-			auto& rc = DeviceContext::Get();
-			rc.UseProgram(prog);
-
-			Uniforms::SetVec3(prog, Const::UNI_VIEW_POS, viewPos);
-
-			if (dir)
-			{
-				SetDirLight(prog, Const::UNI_DIR_LIGHT, *dir, dir->GetWorldDirection());
-				Uniforms::SetInt(prog, Const::UNI_DIR_LIGHT_ENABLED, 1);
-			}
-			else
-			{
-				Uniforms::SetInt(prog, Const::UNI_DIR_LIGHT_ENABLED, 0);
-			}
-
-			for (std::size_t i = 0; i < static_cast<std::size_t>(Const::MAX_POINT_LIGHTS); ++i)
-			{
-				const std::string idxStr = Const::UNI_POINT_LIGHTS_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
-				const std::string enStr  = Const::UNI_POINT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
-				if (i < points.size())
-				{
-					SetPointLight(prog, idxStr.c_str(), *points[i], points[i]->GetWorldPosition());
-					Uniforms::SetInt(prog, enStr.c_str(), 1);
-				}
-				else
-				{
-					Uniforms::SetInt(prog, enStr.c_str(), 0);
-				}
-			}
-
-			for (std::size_t i = 0; i < static_cast<std::size_t>(Const::MAX_SPOT_LIGHTS); ++i)
-			{
-				const std::string idxStr = Const::UNI_SPOT_LIGHTS_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
-				const std::string enStr  = Const::UNI_SPOT_LIGHTS_ENABLED_PREFIX + std::to_string(i) + Const::STR_INDEX_CLOSE;
-				if (i < spots.size())
-				{
-					SetSpotLight(prog, idxStr.c_str(), *spots[i], spots[i]->GetWorldPosition(), spots[i]->GetWorldDirection());
-					Uniforms::SetInt(prog, enStr.c_str(), 1);
-				}
-				else
-				{
-					Uniforms::SetInt(prog, enStr.c_str(), 0);
-				}
-			}
-		}
+		// Phase C (D-DPP-5, 2026-06-21) - loose 경로 헬퍼(SetDirLight/PointLight/SpotLight) + LooseDispatch 제거.
+		//   Gate Bᴳ 후 phong(유일 lit 셰이더)이 LightBlock UBO 라 loose lighting 소비자 0 -> UBO 경로만 잔존.
 	} // anonymous namespace
 
 	// ctor/dtor out-of-line - mLightBlockUbo(unique_ptr<UniformBuffer>) 가 여기서 complete type.
@@ -207,13 +119,7 @@ namespace SJH
 			spdlog::warn("LightUboUploader - SpotLight {} 개 발견. MAX_SPOT_LIGHTS={} 초과분 무시.",
 			             spots.size(), Const::MAX_SPOT_LIGHTS);
 
-		// 1) loose 경로용 원시 캐시 (BindTo 가 비-UBO lighting program 에 재송신) - 프레임 내 유효, 비소유.
-		mDirPtr  = dir;
-		mPoints  = points;
-		mSpots   = spots;
-		mViewPos = viewPos;
-
-		// 2) std140 LightBlock 패킹.
+		// std140 LightBlock 패킹 (Phase C - loose 캐시 제거, UBO 경로 전용).
 		LightBlockStd140 block{};
 		if (dir)
 		{
@@ -286,11 +192,7 @@ namespace SJH
 					mLightBlockUbo->BindBase(bindingPoint);
 				continue;
 			}
-
-			// loose 경로 - lighting sentinel(UNI_VIEW_POS) 보유 program: glUniform* 송신 (S4 공존).
-			//   UNI_VIEW_POS 가 없으면 lighting 미사용(simple/passthrough/postfx) -> skip.
-			if (prog->GetLocation(Const::UNI_VIEW_POS) >= 0)
-				LooseDispatch(*prog, mDirPtr, mPoints, mSpots, mViewPos);
+			// Phase C (D-DPP-5) - loose 경로 제거. LightBlock UBO 없는 program(simple/skybox/postfx)은 조명 무관 -> skip.
 		}
 	}
 

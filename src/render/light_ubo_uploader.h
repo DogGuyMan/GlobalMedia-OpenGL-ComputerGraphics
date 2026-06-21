@@ -9,15 +9,14 @@
  *  @c FLightShaderParameters / Godot @c uniform_set) = "광원 데이터를 *공유 버퍼* 에 1회 업로드".
  *  본 클래스가 그 공유 LightBlock UBO 를 소유한다 (stateful).
  *
- *  ### 2 경로 공존 (S4 - Phase 3 까지)
- *  - **UBO 경로** (Slang phong UBO 셰이더): @ref Update 가 std140 LightBlock 1회 패킹 + @ref BindTo 가
+ *  ### UBO 경로 (Phase C - loose 경로 폐지, UBO 전용)
+ *  - Slang phong UBO 셰이더: @ref Update 가 std140 LightBlock 1회 패킹 + @ref BindTo 가
  *    각 program 의 LightBlock 소유권을 회수(@c Program::DisownUniformBlock)한 뒤 공유 UBO 를 결속.
- *  - **loose 경로** (비-UBO lighting 셰이더 - phong_tex GLSL 등): @ref BindTo 가 program 순회하며 기존
- *    @c glUniform* 송신 (lighting sentinel @c UNI_VIEW_POS 로 식별). Phase 3 PropertyBlockSetter 제거 시 함께 절단.
+ *  - (구 loose glUniform* 경로는 Phase C 에서 제거 - 전 lit 셰이더가 LightBlock UBO 라 소비자 0.)
  *
  *  ### 책임 분할 (D-LUD-2 - Dispatch -> Update / BindTo)
- *  - @ref Update : per-frame 1회 - 광원 -> std140 LightBlock UBO 패킹 + loose 경로용 원시 캐시.
- *  - @ref BindTo : program 순회 - UBO program 은 공유 UBO 결속 / loose program 은 glUniform* 송신.
+ *  - @ref Update : per-frame 1회 - 광원 -> std140 LightBlock UBO 패킹.
+ *  - @ref BindTo : program 순회 - LightBlock 보유 program 에 공유 UBO 결속 (그 외 skip).
  *
  *  ### 비-책임
  *  - [X] Light 컴포넌트 수집 (SceneContext) -> @c SceneRenderer::RenderWithCamera 담당.
@@ -49,7 +48,7 @@ namespace SJH
 	class SpotLight;
 
 	/**
-	 * @brief 수집된 Light 를 per-frame 공유 LightBlock UBO 로 패킹(UBO 경로) + program 들에 송신(loose 경로).
+	 * @brief 수집된 Light 를 per-frame 공유 LightBlock UBO 로 패킹 + LightBlock 보유 program 에 결속.
 	 * @details O4 승격 (D-LUD) - 구 @c LightUniformDispatcher 의 UBO owner 화. 자세한 2 경로 공존은 파일 헤더 참조.
 	 */
 	class LightUboUploader
@@ -59,7 +58,7 @@ namespace SJH
 		/// @brief out-of-line - @c mLightBlockUbo 가 incomplete @c UniformBuffer 의 unique_ptr 이라 .cpp 에서 정의.
 		~LightUboUploader();
 
-		/// @brief per-frame 1회 - 수집된 광원을 std140 LightBlock UBO 로 패킹 + loose 경로용 원시 캐시.
+		/// @brief per-frame 1회 - 수집된 광원을 std140 LightBlock UBO 로 패킹 (공유 UBO 에 업로드).
 		/// @param dir     활성 DirLight 포인터. nullptr 이면 @c dirLightEnabled = 0.
 		/// @param points  활성 PointLight 목록 (@c MAX_POINT_LIGHTS 초과분 warn + 무시).
 		/// @param spots   활성 SpotLight 목록 (@c MAX_SPOT_LIGHTS 초과분 warn + 무시).
@@ -71,20 +70,14 @@ namespace SJH
 
 		/// @brief @ref Update 직후 - @p programs 에 전달.
 		/// @param programs @c ResourceRegistry::GetAllPrograms() 스냅샷 (외부 push - D-1).
-		/// @details LightBlock 보유 program = 공유 UBO 결속 (소유권 회수). lighting sentinel(@c UNI_VIEW_POS)
-		///          보유 loose program = @c glUniform* 송신. 그 외(simple/postfx) = skip.
+		/// @details LightBlock 보유 program = 공유 UBO 결속 (소유권 회수 후 BindBase). 그 외(simple/skybox/postfx) = skip.
 		void BindTo(const std::vector<Program*>& programs);
 
 	  private:
 		/// @brief per-frame 공유 LightBlock UBO (lazy create, O4 owner). std140 size = sizeof(LightBlockStd140).
 		///        UniformBuffer 는 forward-decl (헤더 GL-free) - .cpp 에서 complete type 으로 다룬다.
+		///        Phase C (D-DPP-5) - loose 경로 제거로 구 프레임 캐시(mDirPtr/mPoints/mSpots/mViewPos) 삭제.
 		std::unique_ptr<UniformBuffer> mLightBlockUbo;
-
-		// loose 경로용 프레임 캐시 (Update 가 채우고 BindTo 가 비-UBO lighting program 에 재송신). *비소유*.
-		DirLight*                mDirPtr{nullptr};
-		std::vector<PointLight*> mPoints;
-		std::vector<SpotLight*>  mSpots;
-		glm::vec3              mViewPos{glm::vec3(0.0f, 0.0f, 0.0f)};
 	};
 
 } // namespace SJH

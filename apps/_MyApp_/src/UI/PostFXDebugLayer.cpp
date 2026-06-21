@@ -8,7 +8,7 @@
  *  - OnBuildUI: mPasses 순회 -> Component nullptr/Enabled/mMaterial 3단계 가드
  *    -> entry.Name 분기로 전용 위젯 빌드.
  *  - gamma 패스: SliderFloat 변경 시 @c mGamma 와 @c props.Floats["gamma"] 동시 갱신
- *    (셰이더 uniform 은 PropertyBlockSetter 가 props 에서 읽어 전송).
+ *    (셰이더 uniform 은 draw 시점 mesh_pass 가 props 에서 읽어 UBO 멤버로 전송).
  *  - fog 패스: uFogMode 0=Linear / 1=Exp / 2=Exp2.
  */
 #include "UI/PostFXDebugLayer.h"

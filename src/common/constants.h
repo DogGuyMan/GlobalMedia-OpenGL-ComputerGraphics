@@ -241,7 +241,7 @@ namespace SJH::Const
 	inline constexpr auto UNI_DIR_LIGHT_ENABLED = "dirLightEnabled";
 	/// @}
 
-	/// @brief material / texture builtin uniform - @c PropertyBlockSetter 가 송신.
+	/// @brief material / texture builtin uniform - draw 시점 UBO 멤버 업로드 + BindSamplers 가 송신.
 	/// @{
 	inline constexpr auto UNI_TEX = "tex";
 	inline constexpr auto UNI_POSTPROCESS_FRAMETEXTURE = "frameTexture";

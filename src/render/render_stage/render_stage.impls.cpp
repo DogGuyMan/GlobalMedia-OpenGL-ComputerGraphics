@@ -18,7 +18,7 @@
  *    -> **EBO 재핀**(Effekseer/Box2D VAO-EBO 오염 방어) -> FBO 목록 순서대로 합성(첫 replace, 2+ alpha blend).
  *
  *  ### 비-책임 (공통)
- *  - [X] GL uniform 직접 송신 - LightUboUploader / PropertyBlockSetter 위임.
+ *  - [X] GL uniform 직접 송신 - LightUboUploader(LightBlock UBO) / MeshPassProcessor(UBO 멤버+BindSamplers) 위임.
  *  - [X] GL 상태 머신 전환 - MeshPassProcessor / 본 stage -> @c DeviceContext::ApplyPipelineState 위임 (D-RS-1).
  *  - [X] FBO / Program / Mesh 생성 및 소유 - ResourceRegistry 책임.
  */

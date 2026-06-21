@@ -10,7 +10,7 @@
  *
  *  ### 비-책임 (분리된 책임)
  *  - [X] GL state machine (stencil/depth/cull/blend) 캐싱/적용 -> @c DeviceContext::ApplyPipelineState 위임 (D-RS-1).
- *  - [X] Material properties (uniform/texture) 송신 -> @c PropertyBlockSetter 위임.
+ *  - [X] Material 값 uniform 송신 -> @c Program::UpdateUniformMember (UBO 멤버, Phase C). sampler 만 본 TU 의 BindSamplers.
  *
  *  ### DrawCommand 구조
  *  두 가지 Kind 를 구분:
@@ -83,7 +83,7 @@ namespace SJH
      *  - @c Process - 정렬된 command 발행 (Program/Material 전환 + Applier 위임 + draw).
      *
      *  GL state machine (stencil/depth/cull/blend) 은 @c DeviceContext::ApplyPipelineState 에 위임 (D-RS-1).
-     *  Material properties (uniform/texture) 는 @c PropertyBlockSetter 에 위임.
+     *  Material 값은 UBO 멤버(@c UpdateUniformMember), sampler 는 본 TU 의 @c BindSamplers (Phase C).
      */
     class MeshPassProcessor
     {
@@ -121,8 +121,8 @@ namespace SJH
 
         /// @brief 정렬된 DrawCommand 를 순서대로 발행 - Program/Material 전환 + PipelineState 적용 + draw.
         /// @details
-        ///  - Program 전환 시 @c DeviceContext::UseProgram + view/proj uniform 송신.
-        ///  - Material 전환 시 @c PropertyBlockSetter::Set (PropertyBlock -> uniform/texture 송신).
+        ///  - Program 전환 시 @c DeviceContext::UseProgram + FrameBlock(view/proj) UBO 갱신.
+        ///  - Material 전환 시 @c BindSamplers (sampler 바인딩) + per-draw UBO 멤버 업로드.
         ///  - 매 command 마다 @c DeviceContext::ApplyPipelineState (Pass.PipelineState -> GL state machine, D-RS-1).
         ///  - Process 진입 시 @c DeviceContext::InvalidateStateCache - per-Process 캐시 무효화 (foreign GL 대비).
         /// @param rc      DeviceContext 레퍼런스 (UseProgram/BindVAO/DrawIndexed 등).

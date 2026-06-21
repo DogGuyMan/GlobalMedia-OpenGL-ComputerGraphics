@@ -2,7 +2,7 @@
 // 기존 simple_texture.vs + simple_texture.fs 등가 - texture(uTex, uv) * baseColor (라이팅 무관).
 // 저작 규칙(D11): 3블록 UBO 분할 - FrameBlock(view/proj) / DrawBlock(model) / MaterialBlock(baseColor).
 // 샘플러 uTex 는 GL 4.1 에서 UBO 불가 -> top-level loose (생성 GLSL 이름 'uTex' 유지가
-//   PropertyBlockSetter 텍스처 바인딩 키 - mesh_pass useUbo 분기가 sampler 만 loose 바인딩, Slice 0.5).
+//   BindSamplers 텍스처 바인딩 키 - mesh_pass 가 sampler 만 loose 바인딩, Slice 0.5).
 // 생성물: simple_texture.vs (vsMain) / simple_texture.fs (fsMain) + simple_texture.refl.json
 // 참고: 기존 GLSL 은 vsPosition/vsNormal 도 out 했으나 FS 가 uv 만 소비 -> varying 은 uv 1개만 (link 함정 회피).
 

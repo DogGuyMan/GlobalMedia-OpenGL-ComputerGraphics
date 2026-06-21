@@ -1,7 +1,6 @@
 add_library(sjhopengl_program STATIC
     program.cpp
-    program_uniforms.cpp
-    uniform_cache.cpp         # SP6 T1 — Program 의 UniformCache 분리.
+    program_uniforms.cpp      # Phase C — GetLocation live 화 (구 uniform_cache 삭제).
     uniform_buffer.cpp        # Slang Phase 2 T2 — std140 UBO RAII (사이클 회피: buffer 모듈 아닌 program 내부).
 )
 add_library(SJH::program ALIAS sjhopengl_program)

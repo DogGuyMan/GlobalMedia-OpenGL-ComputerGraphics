@@ -177,17 +177,17 @@ namespace TopdownShooter::Playable
 	///          vec3/int 타입 초기값(@c uFogColor / @c FOG_MODE / @c uVignetteColor) 은
 	///          InitFloats 에 표현 불가능해 startup 에서 Material 에 직접 set.
 	const std::vector<SJH::Render::PostFXStageConfig> POSTFX_PROGRAM_CONFIGS = {
-	    {PASS_GAMMA, "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/gamma.fs", {{"gamma", 1.0f}}},
-	    {PASS_SHARPENING, "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
-	    {PASS_BLOOM, "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/bloom.fs",
+	    {PASS_GAMMA, "./resources/shaders/postprocess/gamma.vs", "./resources/shaders/postprocess/gamma.fs", {{"gamma", 1.0f}}},  // Slice 2(B) 자립 VS (Slang UBO)
+	    {PASS_SHARPENING, "./resources/shaders/postprocess/sharpening.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
+	    {PASS_BLOOM, "./resources/shaders/postprocess/bloom.vs", "./resources/shaders/postprocess/bloom.fs",
 	     {{"uBloomThreshold", 0.769f}, {"uBloomSpread", 2.342f}, {"uBloomIntensity", 0.927f}}},
-	    {PASS_FOG, "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/fog.fs",
+	    {PASS_FOG, "./resources/shaders/postprocess/fog.vs", "./resources/shaders/postprocess/fog.fs",
 	     {{"uFogDensity", 0.042f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
-	    {PASS_GRAYSCALE_VIGNETTING, "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/grayscale_vignetting.fs",
+	    {PASS_GRAYSCALE_VIGNETTING, "./resources/shaders/postprocess/grayscale_vignetting.vs", "./resources/shaders/postprocess/grayscale_vignetting.fs",
 	     {{"uGrayscaleAmount", 1.0f}, {"uVignetteAmount", 0.0f}}}, // uVignetteColor(vec3)는 startup 에서 set(VIGNETTE_COLOR).
-	    {PASS_INVERT, "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/invert.fs", {}},
-	    {PASS_BLURRING, "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/blurring.fs", {}},
-	    {PASS_SOBEL, "./resources/shaders/postprocess/postprocess.vs", "./resources/shaders/postprocess/sobel.fs", {}},
+	    {PASS_INVERT, "./resources/shaders/postprocess/invert.vs", "./resources/shaders/postprocess/invert.fs", {}},
+	    {PASS_BLURRING, "./resources/shaders/postprocess/blurring.vs", "./resources/shaders/postprocess/blurring.fs", {}},
+	    {PASS_SOBEL, "./resources/shaders/postprocess/sobel.vs", "./resources/shaders/postprocess/sobel.fs", {}},
 	};
 
 	/// @brief fog 셰이더 @c uFogColor vec3 초기값 -- RGB (20, 36, 10) 어두운 녹색 안개.

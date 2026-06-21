@@ -5,14 +5,14 @@
  * @details
  *  ### 책임 (SP-PipelineSetter 후 단순화, SP-MeshPassProcessor rename)
  *  - DrawCommand 순회 + program/material 전환 시점 결정.
- *  - 각 결정에서 Applier 위임:
- *    - Program 전환 -> @c DeviceContext::UseProgram + view/proj uniform 송신.
- *    - Material 전환 -> @c PropertyBlockSetter::Set (PropertyBlock -> uniform/texture).
+ *  - 각 결정에서 위임:
+ *    - Program 전환 -> @c DeviceContext::UseProgram + FrameBlock(view/proj) UBO 갱신.
+ *    - Material 전환 -> @c BindSamplers (sampler) + per-draw UBO 멤버 업로드 (값, Phase C).
  *    - 매 cmd -> @c DeviceContext::ApplyPipelineState (Pass.PipelineState -> GL state machine, D-RS-1).
  *
  *  ### 분리된 책임 (이전엔 본 파일 안에 있었음)
  *  - GL state machine 전환 (Stencil/Depth/Cull/Blend) -> @c DeviceContext::ApplyPipelineState (D-RS-1 흡수).
- *  - Material properties -> uniform/texture -> @c PropertyBlockSetter.
+ *  - Material 값 uniform -> UBO 멤버 (@c Program::UpdateUniformMember). sampler 는 본 TU 의 @c BindSamplers (Phase C).
  *
  *  @c Process 본문 = 순서 + 조건 결정만 (Orchestrator 정통 - Unreal @c FMeshPassProcessor).
  *
@@ -23,19 +23,19 @@
  *
  *  ### 비-책임
  *  - [X] GL state machine *캐싱/적용 로직* 소유 -> @c DeviceContext::ApplyPipelineState 위임 (호출 시점만 결정).
- *  - [X] uniform/texture 직접 송신 -> @c PropertyBlockSetter 위임.
+ *  - [X] Material 값 uniform -> @c Program::UpdateUniformMember (UBO 멤버). sampler 만 본 TU 의 @c BindSamplers.
  */
 #include "render/mesh_pass_processor.h"
 #include <glm/glm.hpp>
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"     // DrawCommand 의 meshRenderer 경유 접근 (SSoT).
-#include "render/property_block_setter.h"
 #include "program/program.h"
-#include "program/program_uniforms.h"
 #include "object/mesh.h"
 #include "material/material.h"
+#include "material/material_property_block.h"   // Phase C - BindSamplers 의 MaterialPropertyBlock.Textures.
 #include "material/pass.h"
-#include "common/constants.h"
+#include "texture/texture.h"                     // Phase C - BindSamplers 의 Texture::GetTextureID.
+#include "GL/gl3w.h"                             // Phase C - BindSamplers 의 glUniform1i.
 #include "buffer/framebuffer.h"
 #include <algorithm>
 #include <functional>
@@ -49,7 +49,7 @@ namespace SJH
         /// @brief UBO 셰이더의 MaterialBlock 멤버를 material Properties 에서 author 이름 매칭으로 일반 업로드.
         /// @details Phase 3 Slice 0 (D-DPP-1(b)) - 구 baseColor-only 하드코드 대체. 각 typed map 값을
         ///          @c Program::UpdateUniformMember(name, &v, size) 로 송신 (비-UBO 멤버는 자동 skip).
-        ///          Textures(sampler)는 UBO 불가라 제외 - PropertyBlockSetter 가 별도 바인딩 (Slice 0.5).
+        ///          Textures(sampler)는 UBO 불가라 제외 - BindSamplers 가 별도 바인딩 (Slice 0.5).
         ///          glm 값의 주소는 void* 로 전달 (value_ptr 불요 - UpdateUniformMember 가 void*).
         void UploadMaterialUboMembers(const Program& prog, const MaterialPropertyBlock& props)
         {
@@ -59,6 +59,26 @@ namespace SJH
             for (const auto& kv : props.Vec3s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec3));
             for (const auto& kv : props.Vec4s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec4));
             for (const auto& kv : props.Mat4s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::mat4));
+        }
+
+        /// @brief material 의 sampler(texture)를 program 에 바인딩 (Phase C - 구 PropertyBlockSetter 대체).
+        /// @details GL 4.1 은 sampler 를 UBO 에 못 넣으므로 *값* uniform 이 전부 UBO 화돼도 sampler 는 영구 loose.
+        ///          material 이 *설정한* 텍스처(@c block.Textures)만 순회 - 셰이더에 없는 이름은 location<0 으로 skip
+        ///          (구 PropertyBlockSetter 의 schema-outer 와 동일 결과: material 미설정/셰이더 미선언 모두 skip).
+        ///          sampler 는 author 이름 그대로 (Slang `_N` 접미는 toolchain post-process 가 정규화).
+        void BindSamplers(DeviceContext& rc, const MaterialPropertyBlock& block, const Program& prog)
+        {
+            for (const auto& kv : block.Textures)
+            {
+                const auto& binding = kv.second;
+                if (!binding.Tex)
+                    continue;
+                const GLint loc = prog.GetLocation(kv.first.c_str());
+                if (loc < 0)
+                    continue;   // 셰이더가 선언 안 한 sampler - skip (warn 안 함).
+                glUniform1i(loc, binding.Unit);
+                rc.BindTexture(static_cast<GLuint>(binding.Unit), binding.Tex->GetTextureID());
+            }
         }
     }
 
@@ -115,15 +135,14 @@ namespace SJH
     {
         // ============================================================================
         // [REVISIT - 설계 재검토 대상] (사용자 직감, 2026-06-21)
-        //   증상: 본 Process 의 분기가 과다 - 구조/책임상 좋지 않다는 직감.
-        //   분기 축 분류 (정직한 진단):
-        //     (1) [전이적, Phase C 에서 소멸] useUbo vs loose(else) ABI 분기 (program/material/model 3곳).
-        //         - 전 셰이더 UBO화(Phase B) + loose 경로/PropertyBlockSetter 제거(Phase C/D-DPP-4) 시 자연 소멸.
+        //   분기 축 (Phase C 후 갱신):
+        //     (1) [해소됨] useUbo vs loose(else) ABI 분기 - Gate Bᴳ(전 셰이더 UBO) + PropertyBlockSetter/
+        //         uniform_cache 삭제로 loose 행렬 else 분기 제거됨. 남은 useUbo 게이트는 방어적(항상 true).
         //     (2) [구조적, 남는 스멜] 한 함수가 (a) DrawCommand kind dispatch(ScreenQuad vs WorldMesh)
-        //         + (b) program/material 전이 추적(lastProg/lastMat) + (c) UBO 멤버 업로드 까지 혼재.
+        //         + (b) program/material 전이 추적(lastProg/lastMat) + (c) UBO 멤버 업로드 + sampler 바인딩 혼재.
         //         - 후보 방향: ScreenQuad 경로를 별 함수/패스로 분리(Unreal 은 mesh draw 와 분리),
         //           transition 추적을 작은 상태객체로, material 업로드를 Applier 로 추출 등.
-        //   조치: 지금은 마킹만 (Phase B 진행 우선). Phase C 이후 (1) 소멸을 보고 (2) 재설계 판단.
+        //   조치: (1) 해소 완료. (2) 는 후속 세션 재설계 판단 (지금은 마킹만).
         // ============================================================================
         const Program*       lastProg = nullptr;
         const Material*      lastMat  = nullptr;
@@ -156,7 +175,14 @@ namespace SJH
                     cmd.inputFB->GetColorAttachment().get(), 0};
 
                 rc.UseProgram(*prog);
-                PropertyBlockSetter::Set(rc, effectiveMat->Properties, *prog);
+                // Phase 3 Slice 2 - UBO postfx 셰이더 지원 (WorldMesh 와 동형). effect 파라미터(gamma 등)는
+                //   MaterialBlock 일반 업로드, uScene/uDepth 샘플러는 BindSamplers loose 바인딩 (sampler 는 UBO 불가).
+                //   passthrough(비-UBO GLSL blit)는 HasUniformBlocks()==false 라 BindSamplers 의 sampler 만 처리.
+                if (prog->HasUniformBlocks()) {
+                    UploadMaterialUboMembers(*prog, effectiveMat->Properties);
+                    prog->BindUniformBlocks();
+                }
+                BindSamplers(rc, effectiveMat->Properties, *prog);
 
                 rc.BindVAO(mScreenQuadMesh->GetVAO());
                 // VAO 오염 가드 - Effekseer/Box2D 가 EBO 를 덮어쓸 수 있음
@@ -183,11 +209,12 @@ namespace SJH
 
             // Phase 2 T4 - Slang UBO 셰이더 여부 게이트 (program 가 active uniform block 1개 이상 보유).
             //   true  -> UpdateUniformBlock + BindUniformBlocks 경로 (FrameBlock/DrawBlock/MaterialBlock 분할 갱신).
-            //   false -> 기존 loose glUniform* 경로 (비-UBO 셰이더 공존 보존 - phong/skybox/postfx 등 Phase 3 까지 유지).
-            //   행렬은 D13 결정에 따라 비전치 raw 바이트 송신 (R1 = T5 PoC 육안 게이트, 실패 시 T6 전치 분기).
+            //   Phase C (Gate Bᴳ) - 전 WorldMesh 셰이더 UBO 라 false 분기(구 loose glUniform*) 는 제거됨.
+            //     게이트는 방어적 잔존(항상 true). 행렬은 D13 비전치 raw 바이트 송신.
             const bool useUbo = program->HasUniformBlocks();
 
-            // 결정 1: Program 전환 - view/proj 송신 + (UBO 시) BindBufferBase 결속.
+            // 결정 1: Program 전환 - FrameBlock(view/proj) UBO 갱신 + BindBufferBase 결속.
+            //   Phase C (Gate Bᴳ) - 전 WorldMesh 셰이더 UBO 라 loose 행렬 else 분기 제거 (DEAD).
             if (program != lastProg) {
                 rc.UseProgram(*program);
                 if (useUbo) {
@@ -197,23 +224,16 @@ namespace SJH
                     program->UpdateUniformBlock("FrameBlock", &projMat,
                                                 sizeof(glm::mat4), sizeof(glm::mat4));
                     program->BindUniformBlocks();
-                } else {
-                    if (program->GetLocation(Const::UNI_VIEW) >= 0)
-                        Uniforms::SetMat4(*program, Const::UNI_VIEW, viewMat);
-                    if (program->GetLocation(Const::UNI_PROJ) >= 0)
-                        Uniforms::SetMat4(*program, Const::UNI_PROJ, projMat);
                 }
                 lastProg = program;
                 lastMat  = nullptr;   // program 바뀌면 material 재바인딩 강제
             }
 
-            // 결정 2a: Material 전환 - sampler/loose uniform 송신 (material 변경 시만 - 텍스처는 per-frame 불변).
-            //   Slice 0.5 - GL 4.1 은 sampler 를 UBO 에 못 넣으므로 UBO 셰이더라도 sampler(uTex 등)는 loose glUniform1i.
-            //   PropertyBlockSetter 는 program active uniform 캐시 순회 - UBO 멤버는 location=-1 라 자연 skip,
-            //   sampler 만 바인딩. textureless UBO(phong/simple)는 무해(대상 0). (PropertyBlockSetter 제거는
-            //   Phase C/D-DPP-4 에서 sampler 전용 경로 분리 후.)
+            // 결정 2a: Material 전환 - sampler 바인딩 (material 변경 시만 - 텍스처는 per-frame 불변).
+            //   GL 4.1 은 sampler 를 UBO 에 못 넣으므로 *값* uniform 이 전부 UBO 화돼도 sampler 는 영구 loose.
+            //   BindSamplers 가 material.Textures 순회 + GetLocation(live) 로 바인딩 (textureless 머티리얼은 대상 0).
             if (material != lastMat) {
-                PropertyBlockSetter::Set(rc, material->Properties, *program);
+                BindSamplers(rc, material->Properties, *program);
                 lastMat = material;
             }
 
@@ -235,14 +255,11 @@ namespace SJH
             const Pass::PipelineState passState = Pass::DefaultPipelineStateOf(material->GetPass());
             rc.ApplyPipelineState(passState);
 
-            // 결정 4: model 송신 + draw.
+            // 결정 4: model 송신 + draw. (Phase C - loose UNI_MODEL else 제거, DrawBlock UBO 전용)
             if (useUbo) {
                 // DrawBlock std140 : { mat4 uModel @0; } - 비전치 raw (D13).
                 program->UpdateUniformBlock("DrawBlock", &cmd.modelMatrix,
                                             sizeof(glm::mat4), 0);
-            } else {
-                if (program->GetLocation(Const::UNI_MODEL) >= 0)
-                    Uniforms::SetMat4(*program, Const::UNI_MODEL, cmd.modelMatrix);
             }
             rc.BindVAO(mesh->GetVAO());
             rc.DrawIndexed(mesh->GetIndexCount());

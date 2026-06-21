@@ -95,6 +95,22 @@ def normalize_sampler_names(text):
     return text
 
 
+def normalize_array_initializers(text):
+    """Slang 의 배열 brace-초기화(GLSL 420)를 GLSL 410 배열 생성자로 변환.
+
+    Slang 은 'vec2 x[9] = { a, b, ... };' (brace-init, GLSL 420 = ARB_shading_language_420pack)
+    을 낸다. macOS OpenGL 4.1(GLSL 410) 코어는 brace-init 미지원 -> 런타임 컴파일 거부 ->
+    program=null -> 패스 누락(sharpening/sobel 가 이 함정에 걸림. blur 는 offset inline 이라 무사).
+    구 hand-written GLSL 은 'vec2 x[9] = vec2[](a, b, ...)' 생성자(GLSL 1.20+)를 썼다 - 동일 형태로 복원.
+    'vec2 x[9] = {..}' -> 'vec2 x[9] = vec2[](..)'. 'const float y[9] = {..}' -> 'const float y[9] = float[](..)'.
+    (초기화 원소는 vec2(..)/스칼라 등 flat - 중첩 brace 없음 가정 [^{}]*.)
+    """
+    array_init_re = re.compile(
+        r"\b(vec[234]|mat[234]|float|int|uint|bool)(\s+\w+\s*\[\s*\d+\s*\]\s*=\s*)\{([^{}]*)\}")
+    # \1=원소 타입, \2=' name[N] = ', \3=원소들. 생성자 '타입[]( 원소 )' 로 치환 (const 등 선행 한정자는 보존).
+    return array_init_re.sub(r"\1\2\1[](\3)", text)
+
+
 def post_process_glsl_410(text, stage):
     """slangc 의 GLSL 출력을 macOS OpenGL 4.1 (GLSL 410) 호환으로 변환."""
     # 1) version
@@ -107,6 +123,8 @@ def post_process_glsl_410(text, stage):
     text = normalize_varyings(text, stage)
     # 5) sampler global _N 접미사 제거 (author 이름 복원 - 텍스처 바인딩 키 일치)
     text = normalize_sampler_names(text)
+    # 6) 배열 brace-init(GLSL 420) -> 배열 생성자(GLSL 410) (sharpening/sobel 런타임 거부 해소)
+    text = normalize_array_initializers(text)
     return text
 
 

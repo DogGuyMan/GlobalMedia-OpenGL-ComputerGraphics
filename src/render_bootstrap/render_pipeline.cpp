@@ -98,6 +98,9 @@ namespace SJH::Render
 			if (!prog)
 			{
 				spdlog::error("[PostFXChain] 셰이더 로드 실패: {}", def.FragFile);
+				// 정렬 유지 - PassComponents[i] 가 configs[i] 와 1:1 (debug entry positional zip off-by-one 방지).
+				//   실패 패스는 nullptr placeholder (소비자/PostFXDebugLayer 가 null 은 자연 skip).
+				result.PassComponents.push_back(nullptr);
 				continue;
 			}
 
@@ -105,6 +108,7 @@ namespace SJH::Render
 			if (!mat)
 			{
 				spdlog::error("[PostFXChain] Material 생성 실패 (중복 키?): {}", matKey);
+				result.PassComponents.push_back(nullptr);   // 정렬 유지 (위 동일)
 				continue;
 			}
 			mat->SetProgram(prog);
@@ -119,6 +123,7 @@ namespace SJH::Render
 			if (!fb)
 			{
 				spdlog::error("[PostFXChain] FB 생성 실패: {}", def.Name);
+				result.PassComponents.push_back(nullptr);   // 정렬 유지 (위 동일)
 				continue;
 			}
 			auto* fbPtr = fb.get();

@@ -12,8 +12,8 @@
  *  - @c SpriteDissolvePlayable::OnUpdate : t = clamp(elapsed/duration). t >= 1.0 이면
  *    @c mIsFinished = true (dissolved 상태 유지, 액터 비활성/despawn 은 Life 책임).
  *
- * @note @c PropertyBlockSetter 가 GL_BOOL uniform 디스패치를 지원해야 enableHit/enableDissolve 가
- *       실제 업로드된다. 미지원 시 FX 완전 무반응 (sprite_component 주석 참조).
+ * @note enableHit/enableDissolve 는 bool -> SetInt(Ints) 저장 후 draw 시점 UBO MaterialBlock 의
+ *       int 멤버(@c UploadMaterialUboMembers)로 업로드 (Phase C - 구 PropertyBlockSetter GL_BOOL 경로 폐지).
  */
 #include "Playable/SpriteFxPlayable.h"
 

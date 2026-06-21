@@ -8,7 +8,7 @@
  *                 @c Properties.Floats[mUniformName] 에 직접 기록한다.
  *                 maxHp<=0 이면 ZeroDivision 방지를 위해 조기 return.
  * @note Material uniform 기록은 GL draw 호출 전에 이루어진다 -- Properties.Floats 는
- *       draw 시점에 @c PropertyBlockSetter 가 @c glUniform1f 로 업로드한다.
+ *       draw 시점에 mesh_pass 가 UBO MaterialBlock 멤버(@c UpdateUniformMember)로 업로드한다.
  */
 #include "Playable/HpGrayscalePostFX.h"
 

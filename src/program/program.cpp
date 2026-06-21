@@ -4,17 +4,18 @@
  *
  * @details
  *  ### 책임
- *  - @c Create / @c CreateWithVSFS 팩토리 - 셰이더 attach + link + UniformCache eager build.
+ *  - @c Create / @c CreateWithVSFS 팩토리 - 셰이더 attach + link + @c BuildUniformBlocks (UBO introspect).
  *  - @c TryLink - @c glCreateProgram / @c glAttachShader / @c glLinkProgram 순서 캡슐화.
  *  - @c ~Program - @c glDeleteProgram + @c UniformDiagnostics::Invalidate 연계 해제.
+ *  - @c BuildUniformBlocks - UBO 블록(의미명 binding point) + 멤버 offset 맵 introspect (Phase 2/3).
  *
  *  ### 비-책임
  *  - [X] uniform 값 설정 - @c program_uniforms.cpp (@c SJH::Uniforms namespace) 에서 담당.
- *  - [X] @c UniformCache 빌드 로직 - @c UniformCache::Build 에 위임 (SP6).
+ *  - [X] sampler location 캐시 - 없음 (Phase C - @c GetLocation 이 live @c glGetUniformLocation).
  *
  *  ### 컴파일 타임 검증 (@c static_assert)
  *  - RAII 의미론: 복사/이동 생성/대입 모두 @c = delete 확인.
- *  - @c GetLocation / @c GetType 의 @c const 호출 가능성 확인.
+ *  - @c GetLocation 의 @c const 호출 가능성 확인.
  */
 #include "program/program.h"
 #include "diagnostics/gl_log.h"
@@ -38,11 +39,9 @@ static_assert(!std::is_move_constructible_v<SJH::Program>,
 static_assert(!std::is_move_assignable_v<SJH::Program>,
               "SJH::Program must be non-move-assignable (factory + UPtr only)");
 
-// (SP2) GetLocation / GetType 이 const 호출 가능한지 컴파일 타임 검증.
+// (SP2) GetLocation 이 const 호출 가능한지 컴파일 타임 검증. (Phase C - GetType 제거됨)
 static_assert(std::is_invocable_v<decltype(&SJH::Program::GetLocation), const SJH::Program&, const char*>,
               "Program::GetLocation must be const-callable (pure query)");
-static_assert(std::is_invocable_v<decltype(&SJH::Program::GetType), const SJH::Program&, const char*>,
-              "Program::GetType must be const-callable (pure query)");
 
 namespace SJH
 {
@@ -52,10 +51,8 @@ namespace SJH
         if (!program->TryLink(shaders))
             return nullptr;
 
-        // SP6 - link 성공 직후 UniformCache eager build.
-        program->mUniformCache.Build(*program);
-
         // Phase 2 T3 - Slang UBO 블록 introspection + UBO 객체 생성 (비-UBO 셰이더는 빈 벡터).
+        //   Phase C (D-DPP-5) - 구 UniformCache eager build 제거. sampler location 은 GetLocation(live).
         program->BuildUniformBlocks();
         return program;
     }
@@ -156,6 +153,25 @@ namespace SJH
             }
             return s;
         }
+
+        /**
+         * @brief 블록 *의미명* -> 전역 고정 binding point (Phase C 암전 fix, 2026-06-21).
+         * @details glBindBufferBase 의 binding point 는 *전역* GL state 다. 구 `bindingPoint = blockIndex`
+         *          (program-local 인덱스)는 program 마다 0,1,2.. 를 재사용해 **다른 program 의 블록이 같은
+         *          전역 point 를 덮어쓰는 충돌**을 일으켰다 (예: phong LightBlock 이 GL 열거상 point 1 -
+         *          simple 불릿의 DrawBlock(point 1)이 공유 LightBlock 을 덮어써 phong 암전).
+         *          의미명으로 전역 고정하면 모든 program 의 같은 의미 블록이 같은 point, 다른 의미는 다른 point
+         *          -> 충돌 불가. (Unity per-semantic constant buffer slot / Unreal uniform buffer slot 정통.)
+         * @param nextUnknown 미지 블록명용 순차 카운터 (예약 0~3 위 4부터). 현재 셰이더엔 미사용이나 방어적.
+         */
+        GLuint SemanticBindingPoint(const std::string& normalizedName, GLuint& nextUnknown)
+        {
+            if (normalizedName == "FrameBlock")    return 0;
+            if (normalizedName == "DrawBlock")     return 1;
+            if (normalizedName == "MaterialBlock") return 2;
+            if (normalizedName == "LightBlock")    return 3;
+            return nextUnknown++;   // 알려지지 않은 블록 - 예약 0~3 위로 순차 배정.
+        }
     }
 
     /// @copydoc Program::BuildUniformBlocks
@@ -163,6 +179,7 @@ namespace SJH
     {
         GLint numBlocks = 0;
         glGetProgramiv(mProgramAddr, GL_ACTIVE_UNIFORM_BLOCKS, &numBlocks);
+        GLuint nextUnknownBinding = 4;   // 의미명 외 블록용 (예약 0~3 위). 현재 셰이더엔 미발생.
         for (GLint i = 0; i < numBlocks; ++i)
         {
             GLint nameLen = 0;
@@ -181,7 +198,8 @@ namespace SJH
             UniformBlock blk;
             blk.normalizedName = NormalizeBlockName(rawName);
             blk.blockIndex     = static_cast<GLuint>(i);
-            blk.bindingPoint   = static_cast<GLuint>(i);   // 블록 인덱스 그대로 binding point (D12).
+            // Phase C 암전 fix - binding point 를 의미명으로 전역 고정 (구 `= i` 는 program-local 충돌).
+            blk.bindingPoint   = SemanticBindingPoint(blk.normalizedName, nextUnknownBinding);
             blk.dataSize       = dataSize;
 
             // 셰이더 측 block index <-> binding point 매핑 결속.

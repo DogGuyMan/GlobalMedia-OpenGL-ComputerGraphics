@@ -10,7 +10,7 @@
  *
  *  ### 비-책임
  *  - [X] uniform 값 setter - @c SJH::Uniforms 자유 함수 family (@c src/program/ 모듈).
- *  - [X] location 캐싱 - @c Program::mUniformCache (멤버, SP2).
+ *  - [X] location 캐싱 - 없음 (Phase C). @c Program::GetLocation 이 live @c glGetUniformLocation.
  *
  *  ### 설계 - 왜 static (인스턴스 X)
  *  본 클래스 자체에 *인스턴스 상태가 필요 없음* - program 별 dedup 은 익명 네임스페이스

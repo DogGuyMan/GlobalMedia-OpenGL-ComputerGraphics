@@ -139,7 +139,7 @@ namespace TopdownShooter::Bootstrap
 			// DepthWrite off + queue 2500(Opaque 다음). pass.h 의 Kind::Skybox 가 전부 자동 도출.
 			skyboxMat->SetPass(SJH::Pass::Kind::Skybox);
 			// 텍스처 유닛 분리 필수 - TextureBinding.Unit 이 둘 다 기본값 0 이면
-			// 두 sampler 가 같은 유닛을 가리켜 한 텍스처만 읽힌다 (PropertyBlockSetter 가
+			// 두 sampler 가 같은 유닛을 가리켜 한 텍스처만 읽힌다 (BindSamplers 가
 			// binding.Unit 그대로 BindTexture + sampler int 송신).
 			skyboxMat->Properties.Textures["chars"] = {charsTex, 0};
 			skyboxMat->Properties.Textures["noise_tex"] = {noiseTex, 1};

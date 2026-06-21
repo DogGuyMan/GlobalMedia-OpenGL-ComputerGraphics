@@ -10,7 +10,7 @@
  *  - `IsInstance` + `OriginalMaterial` - Clone 추적 (Unreal `UMaterialInstanceDynamic::Parent` 정통)
  *
  *  ### 비-책임
- *  - [X] GL 호출 - uniform 송신은 draw 시점 `PropertyBlockSetter::Set` 책임.
+ *  - [X] GL 호출 - uniform 송신은 draw 시점 `MeshPassProcessor` (값=UBO 멤버, sampler=BindSamplers) 책임.
  *  - [X] 텍스처 GPU 업로드 - `Texture` / `ResourceRegistry` 책임.
  *
  *  ### 정통 매핑
@@ -34,7 +34,7 @@
  *  ### EagerBuild - Properties <-> Program schema 동기화 (SetProgram 시점)
  *  `SetProgram(prog)` 호출 시 `Properties` 의 7 typed map 을 순회하며
  *  `prog->GetLocation(name) < 0` (active uniform 아님) 인 key 는 **prune** 한다.
- *  런타임상 `PropertyBlockSetter` 가 cache outer iteration 으로 active uniform 만 송신해
+ *  런타임상 draw 시점 UBO 멤버 업로드/BindSamplers 가 셰이더에 없는 key 를 자연 skip 해
  *  무해하지만, *오타 조기 발견* + *진단 가시성* 차원에서 사전 정리. stderr 출력.
  *
  *  자세한 흐름: `EngineAPI.md` sec.3.7 / sec.4.3, `architecture.md` sec.11.3.
@@ -66,7 +66,7 @@ namespace SJH
 	 * @details
 	 *  - 자원 소유권은 `ResourceRegistry` 보유 (`unique_ptr`).
 	 *  - `SetPass(Kind)` 한 줄로 depth / blend / queue 7 GL state 자동 결정 (SSoT).
-	 *  - `Properties` bag 에 typed 값을 적재 -> draw 시점 `PropertyBlockSetter::Set` 이 일괄 GL 송신.
+	 *  - `Properties` bag 에 typed 값을 적재 -> draw 시점 `MeshPassProcessor` 가 UBO 멤버 + sampler 로 송신.
 	 *  - `Clone()` 은 private + `ResourceRegistry` friend 전용 - 외부 직접 호출 불가.
 	 */
 	class Material
