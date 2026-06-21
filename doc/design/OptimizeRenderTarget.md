@@ -119,7 +119,7 @@ RT 와 Pass 는 *직교 축*. RT 에 ImGui 책임 박으면 N×M 조합 폭발 (
   ```cpp
   /// @brief 명시 view/proj — 단위 테스트 + 디버그용 (CameraComponent 우회).
   void Render(RenderTarget& defaultTarget,
-              const vmath::mat4& viewMat, const vmath::mat4& projMat);
+              const glm::mat4& viewMat, const glm::mat4& projMat);
   ```
 
 **2 옵션**:
@@ -139,7 +139,7 @@ RT 와 Pass 는 *직교 축*. RT 에 ImGui 책임 박으면 N×M 조합 폭발 (
 **최초 제안**: 셰이더 vec2 → vec4 packing 으로 우회.
 
 **사용자가 더 좋은 해결**: **엔진 자체 확장** — 3 레이어 일관 추가:
-- [src/material/material_property_block.h:49](../../src/material/material_property_block.h#L49) — `std::unordered_map<std::string, vmath::vec2> Vec2s;`
+- [src/material/material_property_block.h:49](../../src/material/material_property_block.h#L49) — `std::unordered_map<std::string, glm::vec2> Vec2s;`
 - [src/material/material_uniforms.cpp:20-23](../../src/material/material_uniforms.cpp#L20-L23) — `SetVec2(Material&, ...)` store-only setter
 - [src/render/property_block_setter.cpp:45-50](../../src/render/property_block_setter.cpp#L45-L50) — `GL_FLOAT_VEC2` dispatch (Cache outer + Block inner)
 

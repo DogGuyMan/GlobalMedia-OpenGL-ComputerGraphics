@@ -40,7 +40,7 @@ namespace SJH::Sprite
 		float rollDeg = 0.0f;
 		if (auto *owner = GetOwner())
 			rollDeg = owner->GetTransform().EulerRot[2];
-		Uniforms::SetFloat(*Material, "uRoll", vmath::radians(rollDeg));
+		Uniforms::SetFloat(*Material, "uRoll", glm::radians(rollDeg));
 
 		// === 피격 (uEnableHit / uTime) ===
 		Uniforms::SetInt(*Material, "uEnableHit", enableHit ? 1 : 0);

@@ -17,7 +17,7 @@ namespace TopdownShooter::Spawns
 {
     void SpawnAudioInstance(SJH::Scene::Actor& fxParent,
                             ::FMOD::Studio::EventDescription* desc,
-                            std::optional<vmath::vec3> pos)
+                            std::optional<glm::vec3> pos)
     {
         if (!desc) return; // 이벤트 미존재 - no-op (LoadEvent 가 nullptr 반환한 경우)
 

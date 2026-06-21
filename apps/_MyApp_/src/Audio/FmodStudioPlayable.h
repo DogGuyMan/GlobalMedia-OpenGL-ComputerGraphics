@@ -39,7 +39,7 @@
 #include "playable/playable_base.h"
 #include <optional>
 #include <string>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace FMOD::Studio { class EventDescription; class EventInstance; }
 
@@ -69,7 +69,7 @@ namespace TopdownShooter::Audio
 		///                 nullptr 이면 warn 후 no-op (안전 -- @c SpawnAudioInstance 의 null 가드).
 		/// @param worldPos 3D 공간음향 위치. @c std::nullopt 이면 2D 이벤트로 재생.
 		explicit FmodStudioPlayable(::FMOD::Studio::EventDescription *desc,
-		                            std::optional<vmath::vec3> worldPos = std::nullopt);
+		                            std::optional<glm::vec3> worldPos = std::nullopt);
 
 		/// @brief 소멸자. @c mInstance 가 살아있으면 @c stop(FMOD_STUDIO_STOP_IMMEDIATE) + @c release.
 		~FmodStudioPlayable() override;
@@ -113,7 +113,7 @@ namespace TopdownShooter::Audio
 		// [[maybe_unused]] -- FMOD 미빌드 시 사용처가 #ifdef 로 빠져 clang
 		// -Werror=unused-private-field 에 걸리는 것을 방지 (raw 포인터 멤버 한정).
 		[[maybe_unused]] ::FMOD::Studio::EventInstance *mInstance = nullptr;  ///< 자체 소유 재생 단위 -- dtor/OnStop 에서 release 책임.
-		std::optional<vmath::vec3>        mWorldPos;                          ///< 3D 이벤트 위치. nullopt 이면 2D 재생.
+		std::optional<glm::vec3>        mWorldPos;                          ///< 3D 이벤트 위치. nullopt 이면 2D 재생.
 	};
 }
 

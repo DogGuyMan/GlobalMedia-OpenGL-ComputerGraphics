@@ -24,7 +24,7 @@
 #include "GL/gl3w.h"
 #include "common/common.h"
 #include "texture/texture.h" // SJH::Texture / SJH::TextureUPtr (CLASS_PTR)
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH::Sprite
 {
@@ -37,10 +37,10 @@ namespace SJH::Sprite
 	 * @param tileSize    정사각 tile 한 변 픽셀 수
 	 * @param atlasWidth  atlas 전체 가로 픽셀 (= cols x tileSize)
 	 * @param atlasHeight atlas 전체 세로 픽셀 (= rows x tileSize)
-	 * @return @c vmath::vec4(uMin, vMin, uSize, vSize). cols <= 0 또는 atlasWidth/Height <= 0 이면 zero rect.
+	 * @return @c glm::vec4(uMin, vMin, uSize, vSize). cols <= 0 또는 atlasWidth/Height <= 0 이면 zero rect.
 	 * @note GL 호출 없음 - 순수 math. 단위 테스트가 GL fixture 없이 검증.
 	 */
-	vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
+	glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
 	                          int atlasWidth, int atlasHeight);
 
 	/**
@@ -53,9 +53,9 @@ namespace SJH::Sprite
 	 * @param tileH       tile 세로 픽셀 (V 방향)
 	 * @param atlasWidth  atlas 전체 가로 픽셀
 	 * @param atlasHeight atlas 전체 세로 픽셀
-	 * @return @c vmath::vec4(uMin, vMin, uSize, vSize). 유효하지 않은 인자이면 zero rect.
+	 * @return @c glm::vec4(uMin, vMin, uSize, vSize). 유효하지 않은 인자이면 zero rect.
 	 */
-	vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
+	glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
 	                          int atlasWidth, int atlasHeight);
 
 	/**
@@ -141,8 +141,8 @@ namespace SJH::Sprite
 
 		/// @brief frameIdx -> atlas UV rect 0..1 정규화. @ref ComputeUVRect 에 위임.
 		/// @param frameIdx 0-based frame index (row-major).
-		/// @return @c vmath::vec4(uMin, vMin, uSize, vSize).
-		vmath::vec4 GetUVRect(int frameIdx) const;
+		/// @return @c glm::vec4(uMin, vMin, uSize, vSize).
+		glm::vec4 GetUVRect(int frameIdx) const;
 
 		/// @brief atlas 에 등록된 전체 frame 수 (cols x rows).
 		int FrameCount() const

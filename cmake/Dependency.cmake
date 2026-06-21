@@ -114,6 +114,11 @@ find_package(spdlog CONFIG REQUIRED)
 # IMPORTED 타겟 'tweeny' 를 직접 노출. 타겟: tweeny
 find_package(tweeny CONFIG REQUIRED)
 
+find_package(glm CONFIG REQUIRED)
+# glm 은 vmath 대체 *전역* 수학 라이브러리 — common.h 등 코어 전반이 사용. project_deps(전역 base)에 합류
+# (vmath 가 include/ 로 전역 노출되던 자리와 동형). 모든 모듈/앱이 project_deps 경유로 glm 획득.
+target_link_libraries(project_deps INTERFACE glm::glm)
+
 # stb — vcpkg (헤더온리, manifest dependency). vcpkg 는 IMPORTED 타겟 대신 Stb_INCLUDE_DIR
 # 변수를 노출하므로, 동명 INTERFACE 타겟 stb_extra 에 그 include 경로를 실어 소비자에 전파한다.
 # (stb_image.h / stb_rect_pack.h 등) 소비자: src/texture(image.cpp 의 STB_IMAGE_IMPLEMENTATION) + game_deps.
@@ -124,6 +129,11 @@ target_include_directories(stb_extra INTERFACE ${Stb_INCLUDE_DIR})
 # nlohmann-json — vcpkg (헤더온리, manifest dependency). JSON 파서/직렬화.
 # 타겟: nlohmann_json::nlohmann_json (find_package 명은 nlohmann_json, port 명은 nlohmann-json).
 find_package(nlohmann_json CONFIG REQUIRED)
+
+# imgui — vcpkg (override 1.53). 코어(imgui::imgui)만 제공 — GLFW 3.0.4 호환 마지막 태그라 핀.
+# GLFW 백엔드(imgui_impl_glfw_gl3)는 vcpkg 1.53 port 에 없어 apps/_MyApp_/third_party/imgui 로 vendoring.
+# game_deps 합류 (실 사용은 _MyApp_ UI). imguizmo 는 imgui 1.53 비호환이라 미사용(드롭).
+find_package(imgui CONFIG REQUIRED)
 
 # ====== 하위 호환 래퍼 (bare 타겟명 -> vcpkg 네임스페이스 타겟) ======
 # 일부 모듈 CMakeLists (src/object, src/common, src/diagnostics, src/resource_registry,
@@ -148,8 +158,10 @@ target_link_libraries(game_deps INTERFACE
     EffekseerRendererGL
     assimp::assimp
     spdlog::spdlog
+    imgui::imgui
     tweeny stb_extra
     nlohmann_json::nlohmann_json)
+    # glm::glm 은 project_deps(전역 base)로 이주 — 코어 모듈도 사용하므로 game_deps 만으론 부족.
 # SYSTEM 인클루드 — 서드파티 헤더(Effekseer/Tweeny/Box2D 등)는 Debug 의
 # -Wall -Werror 대상에서 제외한다. (예: <Effekseer/Effekseer.h> 의 -Wmacro-redefined,
 #  -Woverloaded-virtual 가 -Werror 로 빌드를 깨지 않도록.)

@@ -38,7 +38,7 @@
 // Effekseer 의 macOS gl3.h 와 gl.h+gl3.h 충돌(PFNGLGETPOINTERVPROC)을 일으키므로 .cpp 에만 include.
 #include <memory>
 #include <vector>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -67,7 +67,7 @@ namespace SJH
 		void Update(DirLight* dir,
 		            const std::vector<PointLight*>& points,
 		            const std::vector<SpotLight*>& spots,
-		            const vmath::vec3& viewPos);
+		            const glm::vec3& viewPos);
 
 		/// @brief @ref Update 직후 - @p programs 에 전달.
 		/// @param programs @c ResourceRegistry::GetAllPrograms() 스냅샷 (외부 push - D-1).
@@ -84,7 +84,7 @@ namespace SJH
 		DirLight*                mDirPtr{nullptr};
 		std::vector<PointLight*> mPoints;
 		std::vector<SpotLight*>  mSpots;
-		vmath::vec3              mViewPos{vmath::vec3(0.0f, 0.0f, 0.0f)};
+		glm::vec3              mViewPos{glm::vec3(0.0f, 0.0f, 0.0f)};
 	};
 
 } // namespace SJH

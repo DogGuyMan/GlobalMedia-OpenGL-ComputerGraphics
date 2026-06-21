@@ -35,6 +35,13 @@ sjh_compile_slang(_PHONG_VS   ${PHONG_SLANG} vsMain vertex   glsl glsl_410 ${_sl
 sjh_compile_slang(_PHONG_FS   ${PHONG_SLANG} fsMain fragment glsl glsl_410 ${_slang_gen_dir}/phong.fs)
 sjh_reflect_slang(_PHONG_REFL ${PHONG_SLANG} fsMain fragment ${_slang_gen_dir}/phong.refl.json)
 
+# === simple_texture.slang (Phase 3 Slice 1-1 - texture(uTex,uv)*baseColor, ground 데칼 사용) ===
+# 3블록 UBO + uTex 샘플러(loose). 기존 hand-written simple_texture.{vs,fs} 대체 (소스 GLSL 삭제됨).
+set(SIMPLE_TEXTURE_SLANG ${CMAKE_CURRENT_SOURCE_DIR}/simple_texture.slang)
+sjh_compile_slang(_SIMPLE_TEXTURE_VS   ${SIMPLE_TEXTURE_SLANG} vsMain vertex   glsl glsl_410 ${_slang_gen_dir}/simple_texture.vs)
+sjh_compile_slang(_SIMPLE_TEXTURE_FS   ${SIMPLE_TEXTURE_SLANG} fsMain fragment glsl glsl_410 ${_slang_gen_dir}/simple_texture.fs)
+sjh_reflect_slang(_SIMPLE_TEXTURE_REFL ${SIMPLE_TEXTURE_SLANG} fsMain fragment ${_slang_gen_dir}/simple_texture.refl.json)
+
 # === overlay 타겟 - 매 빌드 실행으로 셰이더-only 변경 시에도 복사 보장 ===
 # custom target 은 매 빌드 실행되므로 셰이더만 바뀌어(=${CHAPTER_NAME} relink 없이) 도 복사 보장.
 #   (POST_BUILD overlay 는 target relink 시에만 실행돼 셰이더-only 변경 시 stale 산출을 남겼다 - 2026-06-21 fix).
@@ -42,6 +49,7 @@ sjh_reflect_slang(_PHONG_REFL ${PHONG_SLANG} fsMain fragment ${_slang_gen_dir}/p
 add_custom_target(${CHAPTER_NAME}_shaders ALL
     DEPENDS ${_SIMPLE_VS} ${_SIMPLE_FS} ${_SIMPLE_WVS} ${_SIMPLE_WFS} ${_SIMPLE_REFL}
             ${_PHONG_VS} ${_PHONG_FS} ${_PHONG_REFL}
+            ${_SIMPLE_TEXTURE_VS} ${_SIMPLE_TEXTURE_FS} ${_SIMPLE_TEXTURE_REFL}
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${_slang_gen_dir} ${_app_binary_dir}/resources/shaders
     COMMENT "${CHAPTER_NAME} Slang 셰이더 생성 + resources/shaders overlay")

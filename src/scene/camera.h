@@ -15,8 +15,8 @@
  *  - [X] 렌더 실행 - @c SceneRenderer 가 담당.
  *  - [X] 독립 생성 - 반드시 Actor 에 부착. 정상 생성 경로 = @c CreateCameraActor().
  *
- * @note @c vmath::ortho 는 @c m[3][2] 부호 버그 있음 - ortho 행렬은 본 파일에서 직접 구현.
- *       sb7 수정 불가 정책(@c sb7code_immutable.md) 준수.
+ * @note Ortho 행렬은 OpenGL spec 기준으로 본 파일에서 직접 column-major 구현
+ *       (@c glm::ortho 로 대체 가능 - 부호/규약 검산 가시성 위해 자작 유지).
  */
 
 #ifndef __SJH_SCENE_CAMERA_H__
@@ -25,7 +25,7 @@
 #include "scene/actor.h" // Component + Actor::GetWorldMatrix
 #include "scene/layer.h" // Layer, ToBits (SP5 Task 3)
 #include <cstdint>       // uint64_t for cullingMask (SP5 Task 3)
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -99,16 +99,16 @@ namespace SJH::Scene
 
 		/// @brief view 행렬 - owner Transform 기반. Lock 중이면 lookat(owner, target).
 		/// @note owner 미부착 시 assert. `Scene::CreateCameraActor` 로 생성하면 자동 충족.
-		vmath::mat4 GetViewMatrix() const;
+		glm::mat4 GetViewMatrix() const;
 
 		/// @brief perspective(fovY, aspect, near, far).
-		vmath::mat4 GetProjectionMatrix() const;
+		glm::mat4 GetProjectionMatrix() const;
 
 		/// @brief GetProjectionMatrix() 의 역행렬 - 닫힌 해(closed-form).
 		/// @details perspective/ortho 둘 다 sparse 구조라 cofactor 일반 inverse 불필요.
 		///   NDC->view 복원(fog 등 deferred 효과)용. GetProjectionMatrix() 와 동일하게
 		///   IsOrthographic 분기. 범용 행렬엔 부적합 - 투영 전용.
-		vmath::mat4 GetInverseProjectionMatrix() const;
+		glm::mat4 GetInverseProjectionMatrix() const;
 
 		// -- TargetLock - Unity Cinemachine Composer 정통 ---------------------
 		/// @brief 특정 Actor 를 바라보도록 카메라를 lock.
@@ -164,11 +164,6 @@ namespace SJH::Scene
 		}
 
 	  private:
-		/// @brief Affine 4x4 행렬(R|t)의 역행렬 - 회전 transpose + translate negate.
-		/// @details 일반 inverse 불필요 (scale=1 가정). @c vmath 가 inverse 를 미제공하므로 자작.
-		/// @param m Column-major affine 행렬.
-		static vmath::mat4 InverseAffine(const vmath::mat4 &m);
-
 		RenderTarget *mTargetRT  = nullptr; ///< 비소유 렌더 대상. nullptr = default backbuffer.
 		const Actor  *mLockTarget = nullptr; ///< TargetLock 대상 Actor (비소유).
 	};

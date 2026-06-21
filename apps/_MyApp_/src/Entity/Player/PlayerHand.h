@@ -31,7 +31,7 @@
 #include "Entity/Constants.h"
 #include "Tween/TweenPlayable.h" // 발사 핀치 복귀 (Tweeny Playable)
 #include <memory>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Controller
 {

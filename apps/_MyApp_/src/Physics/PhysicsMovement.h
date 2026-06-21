@@ -76,7 +76,7 @@ namespace TopdownShooter::Physics
         ///          dir 이 영벡터이면 즉시 정지. @p dt 는 미사용(인터페이스 호환용).
         /// @param dir 이동 방향 (XZ 좌표계, 임의 크기 허용 -- 내부 정규화).
         /// @param dt  미사용 (b2World::Step 이 시간 처리).
-        void DoForward(vmath::vec2 dir, float /*dt*/) override
+        void DoForward(glm::vec2 dir, float /*dt*/) override
         {
             if (!mPhysicsBody || !mPhysicsBody->GetBody()) return;
             if (dir[0] == 0.0f && dir[1] == 0.0f) {
@@ -84,7 +84,7 @@ namespace TopdownShooter::Physics
                 return;
             }
             // dir XZ  Box2D XY (Z  -Y, spec sec.4.4)
-            vmath::vec2 n = vmath::normalize(dir);
+            glm::vec2 n = glm::normalize(dir);
             const float speed = mMoveSpeed.GetValue();
             mPhysicsBody->GetBody()->SetLinearVelocity(b2Vec2(n[0] * speed, -n[1] * speed));
         }

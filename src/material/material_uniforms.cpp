@@ -32,25 +32,25 @@ namespace SJH::Uniforms
     }
 
     /// @brief vec2 값을 @c mat.Properties.Vec2s 에 store.
-    void SetVec2(Material& mat, const char* name, const vmath::vec2& v)
+    void SetVec2(Material& mat, const char* name, const glm::vec2& v)
     {
         mat.Properties.Vec2s[name] = v;
     }
 
     /// @brief vec3 값을 @c mat.Properties.Vec3s 에 store.
-    void SetVec3(Material& mat, const char* name, const vmath::vec3& v)
+    void SetVec3(Material& mat, const char* name, const glm::vec3& v)
     {
         mat.Properties.Vec3s[name] = v;
     }
 
     /// @brief vec4 값을 @c mat.Properties.Vec4s 에 store.
-    void SetVec4(Material& mat, const char* name, const vmath::vec4& v)
+    void SetVec4(Material& mat, const char* name, const glm::vec4& v)
     {
         mat.Properties.Vec4s[name] = v;
     }
 
     /// @brief mat4 값을 @c mat.Properties.Mat4s 에 store.
-    void SetMat4(Material& mat, const char* name, const vmath::mat4& v)
+    void SetMat4(Material& mat, const char* name, const glm::mat4& v)
     {
         mat.Properties.Mat4s[name] = v;
     }

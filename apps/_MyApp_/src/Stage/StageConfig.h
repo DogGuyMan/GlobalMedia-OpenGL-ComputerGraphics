@@ -23,7 +23,7 @@
 #include "Stage/Stage.h"
 #include "Stage/Constants.h"
 #include <vector>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 // b2World / ResourceRegistry forward decl - heavy include 회피.
 class b2World;
@@ -44,7 +44,7 @@ namespace TopdownShooter::Stage
         SJH::ResourceRegistry* registry        = nullptr;   // 필수
         float                  arenaHalfExtent = ARENA_HALF_EXTENT; // 벽 안쪽 절반 크기
         float                  wallThickness   = WALL_THICKNESS;
-        std::vector<vmath::vec2> pickupPositions = { vmath::vec2(0.0f, 3.0f) };
+        std::vector<glm::vec2> pickupPositions = { glm::vec2(0.0f, 3.0f) };
         EStageStatus           startStatus     = EStageStatus::Title;
     };
 }

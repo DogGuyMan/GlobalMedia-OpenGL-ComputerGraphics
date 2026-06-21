@@ -27,7 +27,7 @@
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <cstdint>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Physics::Components
 {
@@ -41,8 +41,8 @@ namespace TopdownShooter::Physics::Components
 	{
 		b2World*    world          = nullptr;       ///< 생성 대상 b2World (nullptr 이면 MakeBody 가 nullptr 반환).
 		b2BodyType  bodyType       = b2_dynamicBody;             ///< Wall/Pickup=static, Bullet=kinematic.
-		vmath::vec2 startPosition  = vmath::vec2(0.0f, 0.0f);   ///< 물리 2D 평면 초기 위치.
-		vmath::vec2 linearVelocity = vmath::vec2(0.0f, 0.0f);   ///< Bullet 초기 속도 (그 외 0).
+		glm::vec2 startPosition  = glm::vec2(0.0f, 0.0f);   ///< 물리 2D 평면 초기 위치.
+		glm::vec2 linearVelocity = glm::vec2(0.0f, 0.0f);   ///< Bullet 초기 속도 (그 외 0).
 		float       linearDamping  = 0.0f;          ///< 공기 저항 계수 (0 = 감쇠 없음).
 		float       density        = 1.0f;          ///< 단위 면적당 질량 (b2FixtureDef.density).
 		float       friction       = 0.2f;          ///< b2FixtureDef 기본값 -- friction 미설정 site(벽/픽업/총알) 보존.
@@ -60,7 +60,7 @@ namespace TopdownShooter::Physics::Components
 	 *
 	 *  ### 좌표계 (spec sec.4.4)
 	 *  - 물리: b2Vec2(x, y) 2D XY 평면
-	 *  - 렌더: Transform.Translate = vmath::vec3(x, heightOffset, -y) 3D XZ 평면 (top-down)
+	 *  - 렌더: Transform.Translate = glm::vec3(x, heightOffset, -y) 3D XZ 평면 (top-down)
 	 *
 	 *  ### Sensor (Unity Collider.isTrigger 매핑)
 	 *  - @c mIsSensor=true  -> @c b2Fixture::SetSensor(true). 물리 충돌 없음, 이벤트만.

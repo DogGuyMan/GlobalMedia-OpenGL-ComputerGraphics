@@ -20,7 +20,7 @@
 #define __TOPDOWNSHOOTER_ENTITY_ENEMY_SIMPLE_PURSUE_AI_H__
 
 #include "scene/actor.h"
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 class b2Body;
 

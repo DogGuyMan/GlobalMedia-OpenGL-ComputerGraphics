@@ -22,7 +22,7 @@
 #include "material/material.h"
 #include <assimp/material.h>
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -104,7 +104,7 @@ namespace SJH
             aiColor4D aiDiffColor(0.8f, 0.8f, 0.8f, 1.0f);
             aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, aiDiffColor);
             glMaterial->Properties.Vec3s["material.albedo"] =
-                vmath::vec3(aiDiffColor.r, aiDiffColor.g, aiDiffColor.b);
+                glm::vec3(aiDiffColor.r, aiDiffColor.g, aiDiffColor.b);
 
             mMaterials.push_back(std::move(glMaterial)); //  m_materials -> mMaterials
         }

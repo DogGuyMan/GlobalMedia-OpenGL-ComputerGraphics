@@ -20,7 +20,7 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::HUD
 {
@@ -74,7 +74,7 @@ namespace TopdownShooter::HUD
 		// 4) 자식 Actor - local Translate=0 (빌보드가 부모 center 에서 cameraUp 으로 띄움),
 		//    Scale 이 바 가로x세로. 부모 world transform 이 center 를 결정.
 		auto bar = std::make_unique<SJH::Scene::Actor>("HealthBar");
-		bar->GetTransform().Scale = vmath::vec3(cfg.size[0], cfg.size[1], 1.0f);
+		bar->GetTransform().Scale = glm::vec3(cfg.size[0], cfg.size[1], 1.0f);
 		auto *barPtr = target.AddChild(std::move(bar));
 
 		// 5) MeshRenderer(QuadMesh, Material, +10) + Driver(Life->uFill).

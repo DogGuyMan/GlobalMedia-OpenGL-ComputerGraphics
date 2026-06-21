@@ -15,7 +15,7 @@
 #endif
 #include <spdlog/spdlog.h>
 #include <string>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Audio
 {
@@ -152,7 +152,7 @@ namespace TopdownShooter::Audio
 #endif
 	}
 
-	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
+	void AudioSystem::SetListener(const glm::vec3 &pos, const glm::vec3 &forward, const glm::vec3 &up)
 	{
 #ifdef SJH_HAS_FMOD
 		// Studio listener - position/velocity/forward/up 4벡터를 FMOD_3D_ATTRIBUTES 한 struct 로 묶어 송신.

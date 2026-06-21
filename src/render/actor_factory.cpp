@@ -26,7 +26,7 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH::Scene
 {
@@ -55,7 +55,7 @@ namespace SJH::Scene
     {
         auto skyboxActor = std::make_unique<Actor>(std::move(name));
         // 스카이박스 모델이 카메라 클리핑 범위를 벗어나지 않게 넉넉한 크기로 스케일.
-        skyboxActor->GetTransform().Scale = vmath::vec3(scale, scale, scale);
+        skyboxActor->GetTransform().Scale = glm::vec3(scale, scale, scale);
         skyboxActor->AddComponent<MeshRenderer>(skyboxMesh, skyboxMat);
         return skyboxActor;
     }

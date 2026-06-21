@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <cstring>
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -115,7 +115,7 @@ namespace SJH
         std::memset(mImageDataPtr, 255, mWidth * mHeight * mChannelCount);
     }
 
-    void Image::SetSingleColorImage(const vmath::vec4 &color)
+    void Image::SetSingleColorImage(const glm::vec4 &color)
     {
         auto v = color * 255.0f;
         uint8_t rgba[4] = {

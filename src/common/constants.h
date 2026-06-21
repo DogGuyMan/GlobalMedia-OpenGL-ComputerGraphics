@@ -25,7 +25,7 @@
 #ifndef __SJH_CONSTANTS_H__
 #define __SJH_CONSTANTS_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include <vector>
 #include "GL/gl3w.h"
 namespace SJH::Const
@@ -50,22 +50,22 @@ namespace SJH::Const
 		    VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE + VERTEX_NORMAL_SIZE + VERTEX_UV_SIZE;
 
 		/// @brief 배경 클리어 색 (불투명 검정).
-		const vmath::vec4 COLOR_BG = vmath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		const glm::vec4 COLOR_BG = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		/// @brief 정점 4개짜리 메시의 흰색 색상 벡터.
-		const std::vector<vmath::vec4> COLOR_ALL_WHITE_4(4, vmath::vec4(1.0f));
+		const std::vector<glm::vec4> COLOR_ALL_WHITE_4(4, glm::vec4(1.0f));
 		/// @brief 정점 6개짜리 메시의 흰색 색상 벡터.
-		const std::vector<vmath::vec4> COLOR_ALL_WHITE_6(6, vmath::vec4(1.0f));
+		const std::vector<glm::vec4> COLOR_ALL_WHITE_6(6, glm::vec4(1.0f));
 
 		/// @brief 삼각형 원형 UV - 아래-왼쪽, 아래-오른쪽, 위-중앙.
-		const std::vector<vmath::vec2> TRIANGLE_BASE_MESH_UVS{
+		const std::vector<glm::vec2> TRIANGLE_BASE_MESH_UVS{
 		    {0.0, 0.0}, {1.0, 0.0}, {0.5, 1.0}};
 
 		/// @brief 삼각형 원형 UV (Y 반전) - 위-왼쪽, 위-오른쪽, 아래-중앙.
-		const std::vector<vmath::vec2> TRIANGLE_BASE_INV_MESH_UVS{
+		const std::vector<glm::vec2> TRIANGLE_BASE_INV_MESH_UVS{
 		    {0.0, 1.0}, {1.0, 1.0}, {0.5, 0.0}};
 
 		/// @brief 사각형 원형 UV - CCW 순서(좌하->우하->우상->좌상).
-		const std::vector<vmath::vec2> QUAD_BASE_MESH_UVS{
+		const std::vector<glm::vec2> QUAD_BASE_MESH_UVS{
 		    {0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
 
 		/// @brief 삼각형 정면 인덱스 (CCW).
@@ -80,14 +80,14 @@ namespace SJH::Const
 		const std::vector<GLuint> QUAD_MESH_UVS_FAN = {0, 1, 2, 0, 2, 3};
 
 		/// @brief 정삼각형 원형 위치 (XY 평면, 단위 크기).
-		const std::vector<vmath::vec4> TRIANGLE_BASE_POSITION = {
+		const std::vector<glm::vec4> TRIANGLE_BASE_POSITION = {
 		    {0.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 0.0, 1.0},
 		    {0.5, 0.866f, 0.0, 1.0},
 		};
 
 		/// @brief 정사면체 원형 위치 4개 (v[3] = apex).
-		const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
+		const std::vector<glm::vec4> TETRA_BASE_POSITION = {
 		    {0.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 0.0, 1.0},
 		    {0.5, 0.0, 0.866f, 1.0},
@@ -101,7 +101,7 @@ namespace SJH::Const
 		    {1, 0, 3}, {2, 1, 3}, {0, 2, 3}, {0, 1, 2}};
 
 		/// @brief 콘 옆면 원형 위치 5개 (v[4] = apex).
-		const std::vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
+		const std::vector<glm::vec4> CONE_SIDE_BASE_POSITION = {
 		    {0.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 1.0, 1.0},
@@ -109,7 +109,7 @@ namespace SJH::Const
 		    {0.5, 1.0, 0.5, 1.0}};
 
 		/// @brief 콘 바닥면 원형 위치 4개 (@c CONE_SIDE_BASE_POSITION[0..3]).
-		const std::vector<vmath::vec4> CONE_BOTTOM_BASE_POSITION = {
+		const std::vector<glm::vec4> CONE_BOTTOM_BASE_POSITION = {
 		    CONE_SIDE_BASE_POSITION[0],
 		    CONE_SIDE_BASE_POSITION[1],
 		    CONE_SIDE_BASE_POSITION[2],
@@ -120,7 +120,7 @@ namespace SJH::Const
 		    {1, 0, 4}, {2, 1, 4}, {3, 2, 4}, {0, 3, 4}};
 
 		/// @brief 단위 사각형 원형 위치 4개 (XY 평면, CCW).
-		const std::vector<vmath::vec4> QUAD_BASE_POSITION = {
+		const std::vector<glm::vec4> QUAD_BASE_POSITION = {
 		    {0.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 0.0, 1.0},
 		    {1.0, 1.0, 0.0, 1.0},
@@ -128,7 +128,7 @@ namespace SJH::Const
 		};
 
 		/// @brief 사각형을 삼각형 2개로 분할한 6정점 배열 (@c GL_TRIANGLES 직접 사용용).
-		const std::vector<vmath::vec4> QUAD_BASE_FACED_POSITION = {
+		const std::vector<glm::vec4> QUAD_BASE_FACED_POSITION = {
 		    QUAD_BASE_POSITION[0],
 		    QUAD_BASE_POSITION[1],
 		    QUAD_BASE_POSITION[2],
@@ -137,7 +137,7 @@ namespace SJH::Const
 		    QUAD_BASE_POSITION[3]};
 
 		/// @brief 단위 큐브 고유 정점 8개.
-		const std::vector<vmath::vec4> CUBE_BASE_POSITIONS = {
+		const std::vector<glm::vec4> CUBE_BASE_POSITIONS = {
 		    {0.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 0.0, 1.0},
 		    {1.0, 0.0, 1.0, 1.0},
@@ -147,9 +147,9 @@ namespace SJH::Const
 		    {1.0, 1.0, 1.0, 1.0},
 		    {0.0, 1.0, 1.0, 1.0}};
 
-		/// @brief 큐브 6면 분할 정점 배열 (@c std::vector<vmath::vec4>[6] C-array).
+		/// @brief 큐브 6면 분할 정점 배열 (@c std::vector<glm::vec4>[6] C-array).
 		/// @details chapter7 원본 형태 그대로 유지. 각 면은 삼각형 2개(6정점).
-		const std::vector<vmath::vec4> CUBE_QUAD_BASE_FACED_POSITION[6] = {
+		const std::vector<glm::vec4> CUBE_QUAD_BASE_FACED_POSITION[6] = {
 		    {CUBE_BASE_POSITIONS[1], CUBE_BASE_POSITIONS[0], CUBE_BASE_POSITIONS[4], CUBE_BASE_POSITIONS[1], CUBE_BASE_POSITIONS[4], CUBE_BASE_POSITIONS[5]},
 		    {CUBE_BASE_POSITIONS[2], CUBE_BASE_POSITIONS[1], CUBE_BASE_POSITIONS[5], CUBE_BASE_POSITIONS[2], CUBE_BASE_POSITIONS[5], CUBE_BASE_POSITIONS[6]},
 		    {CUBE_BASE_POSITIONS[3], CUBE_BASE_POSITIONS[2], CUBE_BASE_POSITIONS[6], CUBE_BASE_POSITIONS[3], CUBE_BASE_POSITIONS[6], CUBE_BASE_POSITIONS[7]},

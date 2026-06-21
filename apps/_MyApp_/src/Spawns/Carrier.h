@@ -25,7 +25,7 @@
 #include "scene/actor.h"
 #include <functional>
 #include <utility>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Spawn::Carrier
 {
@@ -40,7 +40,7 @@ namespace TopdownShooter::Spawn::Carrier
 	{
 	  public:
 		/// @brief 타격 지점(world 좌표)을 받아 추가 연출(스파크 FX 등)을 트리거하는 콜백 시그니처.
-		using HitFx = std::function<void(const vmath::vec3 &)>;
+		using HitFx = std::function<void(const glm::vec3 &)>;
 
 		/// @brief 발사 주체 지정 (Fluent). 자가 피해 방지에 사용 - @c Deliver 가 target==owner 면 무시.
 		/// @param o 발사자 Actor.
@@ -72,7 +72,7 @@ namespace TopdownShooter::Spawn::Carrier
 		/// @details target 이 null/자기자신/비활성이면 무시. HitFx 는 target 위치(spawn-at-point seam)로 호출.
 		/// @param target        피해 대상 Actor.
 		/// @param knockbackDir  넉백 방향 (world XZ in - IImpulsable 계약이 box2d 로 변환).
-		void Deliver(SJH::Scene::Actor *target, vmath::vec2 knockbackDir)
+		void Deliver(SJH::Scene::Actor *target, glm::vec2 knockbackDir)
 		{
 			if (!target || target == mOwnerEntity || !target->IsActive())
 				return;
@@ -107,7 +107,7 @@ namespace TopdownShooter::Spawn::Carrier
 		/// @brief 비행 방향 주입 (box2d XY, 정규화 가정) - 넉백 방향 소스.
 		///        위치차분(enemy-bullet)은 접촉 시 관통 깊이에 따라 불안정/역전되므로 비행방향을 쓴다.
 		/// @param box2dDir box2d 평면 비행 방향.
-		void SetLaunchDir(vmath::vec2 box2dDir)
+		void SetLaunchDir(glm::vec2 box2dDir)
 		{
 			mLaunchDir = box2dDir;
 		}
@@ -159,11 +159,11 @@ namespace TopdownShooter::Spawn::Carrier
 			// 넉백 방향 = 총알 비행 방향(=플레이어->타겟 진행 방향, 안정).
 			// box2d XY(mLaunchDir) -> world XZ(x, -y): IImpulsable::DoImpulse 계약이 world XZ in -> box2d 변환.
 			// (위치차분(enemy-bullet)은 관통 깊이로 부호가 뒤집혀 "플레이어 쪽 돌진" 버그를 유발 -> 폐기.)
-			Deliver(other, vmath::vec2(mLaunchDir[0], -mLaunchDir[1]));
+			Deliver(other, glm::vec2(mLaunchDir[0], -mLaunchDir[1]));
 			DoDie();
 		}
 
-		vmath::vec2 mLaunchDir{0.0f, 0.0f}; // box2d XY 비행방향 (SetLaunchDir 주입)
+		glm::vec2 mLaunchDir{0.0f, 0.0f}; // box2d XY 비행방향 (SetLaunchDir 주입)
 		bool mAlive = true;
 		bool mPendingDisable = false;
 	};
@@ -191,13 +191,13 @@ namespace TopdownShooter::Spawn::Carrier
 		{
 			if (mOwnerEntity != nullptr && !mOwnerEntity->GetComponent<Entity::ILivable>()->IsAlive())
 				return;
-			Deliver(other, vmath::vec2(0.0f));
+			Deliver(other, glm::vec2(0.0f));
 		}
 		void OnTriggerEnter(SJH::Scene::Actor *other) override
 		{
 			if (mOwnerEntity != nullptr && !mOwnerEntity->GetComponent<Entity::ILivable>()->IsAlive())
 				return;
-			Deliver(other, vmath::vec2(0.0f));
+			Deliver(other, glm::vec2(0.0f));
 		}
 	};
 }; // namespace TopdownShooter::Spawn::Carrier

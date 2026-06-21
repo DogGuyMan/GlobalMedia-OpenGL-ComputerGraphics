@@ -59,7 +59,7 @@ namespace TopdownShooter::Spawns
 			/// @param damage     틱당 데미지.
 			/// @param range      레이캐스트 최대 거리.
 			/// @param ignore     레이캐스트 무시 Actor (발사 주체 자해 방지). nullptr 허용.
-			RotatingHitscanLaser(b2World *world, vmath::vec2 startBox2d, float startAngle,
+			RotatingHitscanLaser(b2World *world, glm::vec2 startBox2d, float startAngle,
 			                     int damage, float range, SJH::Scene::Actor *ignore)
 			    : mWorld(world), mStart(startBox2d), mStartAngle(startAngle),
 			      mRange(range), mDamage(damage), mIgnore(ignore),
@@ -77,7 +77,7 @@ namespace TopdownShooter::Spawns
 
 				const float       elapsed = mTimer.GetPassedTime();
 				const float       theta   = mStartAngle + Entity::ULTIMATE_ROT_PER_SEC * elapsed;
-				const vmath::vec2 dir(std::cos(theta), std::sin(theta));
+				const glm::vec2 dir(std::cos(theta), std::sin(theta));
 
 				auto hits = Physics::RaycastAll(*mWorld, mStart, dir, mRange,
 				                                Physics::PhysicsLayer::Enemy, mIgnore);
@@ -95,7 +95,7 @@ namespace TopdownShooter::Spawns
 
 		  private:
 			b2World           *mWorld;       ///< Box2D 물리 월드 - RaycastAll 레이캐스트 대상.
-			vmath::vec2        mStart;       ///< box2d 시작점(플레이어). OpenGL (x,-z) 로 변환된 값.
+			glm::vec2        mStart;       ///< box2d 시작점(플레이어). OpenGL (x,-z) 로 변환된 값.
 			float              mStartAngle;  ///< box2d 시작 각도(라디안). 매 프레임 elapsed * ROT_PER_SEC 누적.
 			float              mRange;       ///< 레이캐스트 최대 거리 (ULTIMATE_RANGE 상수).
 			int                mDamage;      ///< 틱당 데미지 (ULTIMATE_DAMAGE 상수).
@@ -105,7 +105,7 @@ namespace TopdownShooter::Spawns
 		};
 	} // namespace
 
-	void SpawnUltimateLaser(b2World *world, const vmath::vec3 &centerWorld,
+	void SpawnUltimateLaser(b2World *world, const glm::vec3 &centerWorld,
 	                        float startAngleBox2d, SJH::Scene::Actor *shooter)
 	{
 		if (world == nullptr) return;
@@ -116,7 +116,7 @@ namespace TopdownShooter::Spawns
 		a->GetTransform().Translate = centerWorld;
 
 		// 데미지 - box2d 회전 히트스캔 (RaycastAll Enemy, 적별 0.2s 틱). world=(x,h,-z) -> box2d=(x,-z).
-		const vmath::vec2 startBox2d(centerWorld[0], -centerWorld[2]);
+		const glm::vec2 startBox2d(centerWorld[0], -centerWorld[2]);
 		a->AddComponent<RotatingHitscanLaser>(world, startBox2d, startAngleBox2d,
 		                                      Entity::ULTIMATE_DAMAGE, Entity::ULTIMATE_RANGE, shooter);
 

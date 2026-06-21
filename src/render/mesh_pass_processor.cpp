@@ -26,7 +26,7 @@
  *  - [X] uniform/texture 직접 송신 -> @c PropertyBlockSetter 위임.
  */
 #include "render/mesh_pass_processor.h"
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"     // DrawCommand 의 meshRenderer 경유 접근 (SSoT).
 #include "render/property_block_setter.h"
@@ -92,8 +92,8 @@ namespace SJH
     }
 
     void MeshPassProcessor::Process(DeviceContext& rc,
-                            const vmath::mat4& viewMat,
-                            const vmath::mat4& projMat)
+                            const glm::mat4& viewMat,
+                            const glm::mat4& projMat)
     {
         const Program*       lastProg = nullptr;
         const Material*      lastMat  = nullptr;
@@ -163,9 +163,9 @@ namespace SJH
                 if (useUbo) {
                     // FrameBlock std140 : { mat4 uView @0; mat4 uProj @64; } - 비전치 raw 바이트 (D13).
                     program->UpdateUniformBlock("FrameBlock", &viewMat,
-                                                sizeof(vmath::mat4), 0);
+                                                sizeof(glm::mat4), 0);
                     program->UpdateUniformBlock("FrameBlock", &projMat,
-                                                sizeof(vmath::mat4), sizeof(vmath::mat4));
+                                                sizeof(glm::mat4), sizeof(glm::mat4));
                     program->BindUniformBlocks();
                 } else {
                     if (program->GetLocation(Const::UNI_VIEW) >= 0)
@@ -184,20 +184,21 @@ namespace SJH
             if (material != lastMat) {
                 if (useUbo) {
                     // MaterialBlock std140 : { vec4 baseColor @0; } - Material PropertyBlock 의 Vec4s 에서 추출.
-                    //   simple = 색, phong = albedo(.rgb). 둘 다 동일 레이아웃이라 분기 불요.
+                    //   simple = 색, phong = albedo(.rgb), simple_texture = tint. 동일 레이아웃이라 분기 불요.
                     auto it = material->Properties.Vec4s.find("baseColor");
-                    const vmath::vec4 base = (it != material->Properties.Vec4s.end())
+                    const glm::vec4 base = (it != material->Properties.Vec4s.end())
                                                 ? it->second
-                                                : vmath::vec4(1, 1, 1, 1);   // 기본 흰색.
+                                                : glm::vec4(1, 1, 1, 1);   // 기본 흰색.
                     program->UpdateUniformBlock("MaterialBlock", &base,
-                                                sizeof(vmath::vec4), 0);
-                    // S7 (Phase 2.5) - UBO 셰이더는 material 전부 UBO 경로라 PropertyBlockSetter *우회*.
-                    //   phong 의 첫 PropertyBlockSetter callsite 제거 (strangler). 텍스처도 UBO phong 엔 없음.
-                    //   (모듈 자체는 Phase 3 까지 생존 - 비-UBO 셰이더가 아직 사용.)
-                } else {
-                    // 비-UBO (loose) 셰이더만 PropertyBlockSetter - 텍스처/loose uniform 송신 (Phase 3 까지 보존).
-                    PropertyBlockSetter::Set(rc, material->Properties, *program);
+                                                sizeof(glm::vec4), 0);
                 }
+                // Phase 3 Slice 0.5 - sampler/loose uniform 송신 (UBO/loose 공통).
+                //   GL 4.1 은 sampler 를 UBO 에 못 넣으므로 UBO 셰이더라도 sampler(uTex 등)는 loose glUniform1i.
+                //   PropertyBlockSetter 는 program active uniform 캐시를 순회 - UBO 멤버는 location=-1 라
+                //   자연 skip (baseColor 이중송신 없음), sampler 만 바인딩. textureless UBO(phong/simple)는 무해(대상 0).
+                //   (구 S7 의 UBO bypass 해제 - textured UBO 셰이더 합류로 sampler 바인딩 필요. PropertyBlockSetter
+                //    제거는 Phase C/D-DPP-4 에서 sampler 전용 경로 분리 후.)
+                PropertyBlockSetter::Set(rc, material->Properties, *program);
                 lastMat = material;
             }
 
@@ -210,7 +211,7 @@ namespace SJH
             if (useUbo) {
                 // DrawBlock std140 : { mat4 uModel @0; } - 비전치 raw (D13).
                 program->UpdateUniformBlock("DrawBlock", &cmd.modelMatrix,
-                                            sizeof(vmath::mat4), 0);
+                                            sizeof(glm::mat4), 0);
             } else {
                 if (program->GetLocation(Const::UNI_MODEL) >= 0)
                     Uniforms::SetMat4(*program, Const::UNI_MODEL, cmd.modelMatrix);

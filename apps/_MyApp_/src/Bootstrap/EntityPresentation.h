@@ -20,7 +20,7 @@
 #ifndef __TOPDOWNSHOOTER_BOOTSTRAP_ENTITY_PRESENTATION_H__
 #define __TOPDOWNSHOOTER_BOOTSTRAP_ENTITY_PRESENTATION_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include "Bootstrap/Constants.h"
 #include "HUD/Constants.h"
 
@@ -42,7 +42,7 @@ namespace TopdownShooter::Bootstrap
 	{
 		float       dissolveSeconds   = PLAYER_DISSOLVE_SECONDS;  // "death" SpriteDissolve 길이
 		float       deathDelaySeconds = PLAYER_DEATH_DELAY;       // 사망 후 비활성 지연(=dissolve 가시화 창)
-		vmath::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 - HUD 단일 소스, C3)
+		glm::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 - HUD 단일 소스, C3)
 	};
 
 	/// @brief Player/Enemy 공통 연출 클러스터 부착 - *pre-entry*(AddChild 전) 호출.

@@ -17,17 +17,17 @@
 #ifndef _TOPDOWNSHOOTER_HUD_CONSTANTS__
 #define _TOPDOWNSHOOTER_HUD_CONSTANTS__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::HUD
 {
 	// 머리 위 분절형 체력바 외형/배치. (Bootstrap EntityPresentation 의 healthBarColor 기본도 FILL 참조 - C3.)
-	const     vmath::vec4 HEALTHBAR_FILL_COLOR      = vmath::vec4(0.13f, 1.0f, 0.0f, 1.0f); ///< 채워진 조각 색 (레퍼런스 녹색, RGBA).
-	const     vmath::vec4 HEALTHBAR_BG_COLOR        = vmath::vec4(0.0f, 0.0f, 0.0f, 0.55f); ///< 빈 트랙 색 (반투명 검정, RGBA).
+	const     glm::vec4 HEALTHBAR_FILL_COLOR      = glm::vec4(0.13f, 1.0f, 0.0f, 1.0f); ///< 채워진 조각 색 (레퍼런스 녹색, RGBA).
+	const     glm::vec4 HEALTHBAR_BG_COLOR        = glm::vec4(0.0f, 0.0f, 0.0f, 0.55f); ///< 빈 트랙 색 (반투명 검정, RGBA).
 	constexpr float       HEALTHBAR_SEGMENT_COUNT   = 5.0f;                                 ///< 바를 나누는 분절 조각 수.
 	constexpr float       HEALTHBAR_SEGMENT_SPACING = 0.08f;                                ///< 조각 사이 간격 (UV 비율).
 	constexpr float       HEALTHBAR_HEAD_OFFSET     = 0.5f;                                 ///< cameraUp 방향으로 머리 위에 띄우는 거리.
-	const     vmath::vec2 HEALTHBAR_SIZE            = vmath::vec2(1.2f, 0.18f);             ///< 바 크기 (가로 x 세로).
+	const     glm::vec2 HEALTHBAR_SIZE            = glm::vec2(1.2f, 0.18f);             ///< 바 크기 (가로 x 세로).
 } // namespace TopdownShooter::HUD
 
 #endif //_TOPDOWNSHOOTER_HUD_CONSTANTS__

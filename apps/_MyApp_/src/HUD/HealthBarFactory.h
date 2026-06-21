@@ -21,7 +21,7 @@
 #ifndef __TOPDOWNSHOOTER_HUD_HEALTHBAR_FACTORY_H__
 #define __TOPDOWNSHOOTER_HUD_HEALTHBAR_FACTORY_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include "HUD/Constants.h"
 
 namespace SJH::Scene
@@ -37,12 +37,12 @@ namespace TopdownShooter::HUD
 	 */
 	struct HealthBarConfig
 	{
-		vmath::vec4 fillColor      = HEALTHBAR_FILL_COLOR;      ///< 채워진 조각 색 (레퍼런스 녹색).
-		vmath::vec4 bgColor        = HEALTHBAR_BG_COLOR;        ///< 빈 조각 트랙 색.
+		glm::vec4 fillColor      = HEALTHBAR_FILL_COLOR;      ///< 채워진 조각 색 (레퍼런스 녹색).
+		glm::vec4 bgColor        = HEALTHBAR_BG_COLOR;        ///< 빈 조각 트랙 색.
 		float       segmentCount   = HEALTHBAR_SEGMENT_COUNT;   ///< 바를 나누는 분절 조각 수.
 		float       segmentSpacing = HEALTHBAR_SEGMENT_SPACING; ///< 조각 사이 간격.
 		float       headOffset     = HEALTHBAR_HEAD_OFFSET;     ///< cameraUp 방향 머리 위 거리.
-		vmath::vec2 size           = HEALTHBAR_SIZE;            ///< 바 크기 (가로 x 세로).
+		glm::vec2 size           = HEALTHBAR_SIZE;            ///< 바 크기 (가로 x 세로).
 	};
 
 	/// @brief target 의 Life(ILivable) 에 묶인 체력바 자식 Actor 를 생성/부착.

@@ -88,17 +88,17 @@ namespace TopdownShooter::Stage
         return static_cast<int>(mEnemies.size()); // mEnemies = 생존만 (사망 즉시 dying 이동) - 폴링 없음
     }
 
-    vmath::vec2 WaveController::RandomEdgePos() const
+    glm::vec2 WaveController::RandomEdgePos() const
     {
         const float h    = mArenaHalfExtent - 0.5f;
         const int   side = rand() % 4;
         const float t    = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 2.0f * h - h;
         switch (side)
         {
-        case 0:  return vmath::vec2(-h,  t);
-        case 1:  return vmath::vec2( h,  t);
-        case 2:  return vmath::vec2( t, -h);
-        default: return vmath::vec2( t,  h);
+        case 0:  return glm::vec2(-h,  t);
+        case 1:  return glm::vec2( h,  t);
+        case 2:  return glm::vec2( t, -h);
+        default: return glm::vec2( t,  h);
         }
     }
 

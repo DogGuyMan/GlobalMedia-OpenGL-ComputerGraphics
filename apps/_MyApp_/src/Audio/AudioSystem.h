@@ -28,7 +28,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 // fwd - FMOD 헤더는 .cpp 안에서만
 namespace FMOD
@@ -84,9 +84,9 @@ namespace TopdownShooter::Audio
 		/// @param pos     listener(카메라) 월드 좌표.
 		/// @param forward listener 바라보는 방향 (단위 벡터 권장).
 		/// @param up      listener up 벡터 (forward 와 수직 + 단위 길이 권장).
-		void SetListener(const vmath::vec3 &pos,
-		                 const vmath::vec3 &forward = vmath::vec3(0.0f, 0.0f, -1.0f),
-		                 const vmath::vec3 &up      = vmath::vec3(0.0f, 1.0f, 0.0f));
+		void SetListener(const glm::vec3 &pos,
+		                 const glm::vec3 &forward = glm::vec3(0.0f, 0.0f, -1.0f),
+		                 const glm::vec3 &up      = glm::vec3(0.0f, 1.0f, 0.0f));
 
 		/// @brief @p path (예: "resources/banks/Master.bank") 의 bank 를 *로드*.
 		/// @details 로드된 bank 는 @c mBanks 에 보관되어 @c Shutdown 시 일괄 언로드. 실패 시 push 안 함.

@@ -87,7 +87,7 @@ namespace TopdownShooter::Entity
 		// -- Impulse 위임 (IImpulsable) - 넉백/대시 --
 		/// @brief 일회성 속도 버스트(넉백/대시) - Impulse 위임.
 		/// @param dir 임펄스 방향 (world XZ).
-		void DoImpulse(vmath::vec2 dir) override;
+		void DoImpulse(glm::vec2 dir) override;
 		/// @brief 임펄스 버스트 활성 창 여부 - 이동 suppress 게이트로 사용.
 		/// @return 버스트가 활성 중이면 true (Impulse 미캐시 시 false).
 		bool IsImpulseActive() const override; // 버스트 활성 창 = 이동 suppress 게이트

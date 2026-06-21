@@ -29,12 +29,13 @@
 #include "program/program_uniforms.h"
 #include "diagnostics/uniform_diagnostics.h"
 #include "GL/gl3w.h"        // glGetUniformLocation, glUniform*, GL_FALSE 등 직접 include (strict includes)
+#include <glm/gtc/type_ptr.hpp> // glm::value_ptr - glm 은 vmath 와 달리 암시적 float* 변환 없음
 
 namespace SJH::Uniforms
 {
     // === 진입점들 - prog.GetLocation (read-only) + -1 fallback + 진단. friend 권한 불필요. ===
 
-    void SetMat4(const Program &prog, const char *name, const vmath::mat4& m4)
+    void SetMat4(const Program &prog, const char *name, const glm::mat4& m4)
     {
         const GLuint pid = prog.GetProgramAddr();
         GLint loc = prog.GetLocation(name);
@@ -50,37 +51,37 @@ namespace SJH::Uniforms
             return;
         }
         Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT_MAT4, prog.GetType(name));
-        glUniformMatrix4fv(loc, 1, GL_FALSE, (const float*)m4);
+        glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(m4));
     }
 
-    void SetVec4(const Program &prog, const char *name, const vmath::vec4& v4)
+    void SetVec4(const Program &prog, const char *name, const glm::vec4& v4)
     {
         const GLuint pid = prog.GetProgramAddr();
         GLint loc = prog.GetLocation(name);
         if (loc < 0) loc = glGetUniformLocation(pid, name);
         if (loc < 0) { Diagnostics::UniformDiagnostics::NotifyMissing(pid, name); return; }
         Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT_VEC4, prog.GetType(name));
-        glUniform4fv(loc, 1, (const float*)v4);
+        glUniform4fv(loc, 1, glm::value_ptr(v4));
     }
 
-    void SetVec3(const Program &prog, const char *name, const vmath::vec3& v3)
+    void SetVec3(const Program &prog, const char *name, const glm::vec3& v3)
     {
         const GLuint pid = prog.GetProgramAddr();
         GLint loc = prog.GetLocation(name);
         if (loc < 0) loc = glGetUniformLocation(pid, name);
         if (loc < 0) { Diagnostics::UniformDiagnostics::NotifyMissing(pid, name); return; }
         Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT_VEC3, prog.GetType(name));
-        glUniform3fv(loc, 1, (const float*)v3);
+        glUniform3fv(loc, 1, glm::value_ptr(v3));
     }
 
-    void SetVec2(const Program &prog, const char *name, const vmath::vec2& v2)
+    void SetVec2(const Program &prog, const char *name, const glm::vec2& v2)
     {
         const GLuint pid = prog.GetProgramAddr();
         GLint loc = prog.GetLocation(name);
         if (loc < 0) loc = glGetUniformLocation(pid, name);
         if (loc < 0) { Diagnostics::UniformDiagnostics::NotifyMissing(pid, name); return; }
         Diagnostics::UniformDiagnostics::NotifyTypeMismatch(pid, name, GL_FLOAT_VEC2, prog.GetType(name));
-        glUniform2fv(loc, 1, (const float*)v2);
+        glUniform2fv(loc, 1, glm::value_ptr(v2));
     }
 
     void SetFloat(const Program &prog, const char *name, const float& v)

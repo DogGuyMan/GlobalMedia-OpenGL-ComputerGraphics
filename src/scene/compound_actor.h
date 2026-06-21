@@ -22,7 +22,7 @@
 #include "scene/actor.h"
 #include <memory>
 #include <string>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH::Scene
 {
@@ -69,7 +69,7 @@ namespace SJH::Scene
     /// @return 비편입 Actor @c unique_ptr.
     std::unique_ptr<Actor> CreateDirLightActor(
         std::string name,
-        vmath::vec3 direction = vmath::vec3(0.0f, -1.0f, 0.0f));
+        glm::vec3 direction = glm::vec3(0.0f, -1.0f, 0.0f));
 
     /// @brief PointLightActor 생성 - Actor + Transform(위치 매핑) + PointLight 컴포넌트.
     /// @param name     Actor 이름.
@@ -78,7 +78,7 @@ namespace SJH::Scene
     /// @return 비편입 Actor @c unique_ptr.
     std::unique_ptr<Actor> CreatePointLightActor(
         std::string name,
-        vmath::vec3 position,
+        glm::vec3 position,
         float distance = 32.0f);
 
     /// @brief SpotLightActor 생성 - Actor + Transform(위치 + 방향) + SpotLight 컴포넌트.
@@ -90,8 +90,8 @@ namespace SJH::Scene
     /// @return 비편입 Actor @c unique_ptr.
     std::unique_ptr<Actor> CreateSpotLightActor(
         std::string name,
-        vmath::vec3 position,
-        vmath::vec3 direction = vmath::vec3(0.0f, -1.0f, 0.0f),
+        glm::vec3 position,
+        glm::vec3 direction = glm::vec3(0.0f, -1.0f, 0.0f),
         float innerCutoffDeg = 12.5f,
         float outerCutoffDeg = 17.5f);
 } // namespace SJH::Scene

@@ -16,7 +16,7 @@ target_include_directories(myapp_tween
 target_link_libraries(myapp_tween
     INTERFACE
         SJH::playable   # PlayableBase 베이스
-        project_deps    # vmath
+        project_deps    #
         game_deps       # tweeny header-only
 )
 

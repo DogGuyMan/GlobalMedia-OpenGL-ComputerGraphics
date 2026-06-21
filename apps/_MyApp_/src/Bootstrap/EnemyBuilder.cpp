@@ -49,7 +49,7 @@
 #include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
 #include <box2d/box2d.h>               // b2Shape / b2PolygonShape / b2Fixture
 #include <spdlog/spdlog.h>             // spdlog::error (자원 로드 실패 가드)
-#include <vmath.h>                         // vmath::vec3 (Transform.Scale)
+#include <glm/glm.hpp>                         // glm::vec3 (Transform.Scale)
 
 #include <algorithm>                   // std::max
 #include <memory>  // std::make_unique (Join 자식 생성)
@@ -120,7 +120,7 @@ namespace TopdownShooter::Bootstrap
 				shadowMat->SetProgram(prog);
 				shadowMat->SetPass(SJH::Pass::Kind::Transparent);
 				shadowMat->Properties.Textures["uTex"]   = {shadowTex, 0};
-				shadowMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 1.0f, 1.0f, 0.5f);
+				shadowMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f);
 			}
 			SJH::Material *hitMat = reg.FindSharedMaterial("hitrange_decal_mat");
 			if (!hitMat)
@@ -134,7 +134,7 @@ namespace TopdownShooter::Bootstrap
 				hitMat->SetProgram(prog);
 				hitMat->SetPass(SJH::Pass::Kind::Transparent);
 				hitMat->Properties.Textures["uTex"]   = {circleTex, 0};
-				hitMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 0.0f, 0.0f, 0.45f);
+				hitMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 0.0f, 0.0f, 0.45f);
 			}
 
 			// -- 충돌 반경 (첫 fixture) --
@@ -168,14 +168,14 @@ namespace TopdownShooter::Bootstrap
 			auto *shadow = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_shadow"));
 			shadow->AddComponent<SJH::Scene::MeshRenderer>(plane, shadowMat, /*queueOffset*/ 0);
 			shadow->GetTransform().EulerRot[0] = -90.0f;                        // XY -> XZ 눕힘
-			shadow->GetTransform().Scale       = vmath::vec3(shadowD, 1.0f, shadowD);
-			shadow->GetTransform().Translate   = vmath::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
+			shadow->GetTransform().Scale       = glm::vec3(shadowD, 1.0f, shadowD);
+			shadow->GetTransform().Translate   = glm::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
 
 			auto *circle = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_hitrange"));
 			circle->AddComponent<SJH::Scene::MeshRenderer>(plane, hitMat, /*queueOffset*/ 1);
 			circle->GetTransform().EulerRot[0] = -90.0f;
-			circle->GetTransform().Scale       = vmath::vec3(hitD, 1.0f, hitD);
-			circle->GetTransform().Translate   = vmath::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
+			circle->GetTransform().Scale       = glm::vec3(hitD, 1.0f, hitD);
+			circle->GetTransform().Translate   = glm::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
 		}
 	} // namespace
 
@@ -210,7 +210,7 @@ namespace TopdownShooter::Bootstrap
         //       그래서 child 를 self-loop(PingPong 자가 왕복) 로 두고, par 는 묶음+동시 Play 만 담당.
         {
             SJH::Scene::Actor* self      = renderActor;            // root 자식 - 주소 안정(enemy children 보유)
-            const vmath::vec3  baseScale = renderActor->GetTransform().Scale; // 신규 Actor 기본 (1,1,1)
+            const glm::vec3  baseScale = renderActor->GetTransform().Scale; // 신규 Actor 기본 (1,1,1)
 
             // child A - Y 스케일 펄스 (0.4초 편도, 왕복 0.8초)
             auto scaleTween = tweeny::from(0.85f).to(1.15f)
@@ -219,7 +219,7 @@ namespace TopdownShooter::Bootstrap
             auto scaleTw = std::make_unique<Tween::TweenPlayable<float>>(
                 std::move(scaleTween),
                 [self, baseScale](float s) {
-                    self->GetTransform().Scale = vmath::vec3(baseScale[0], baseScale[1] * s, baseScale[2]);
+                    self->GetTransform().Scale = glm::vec3(baseScale[0], baseScale[1] * s, baseScale[2]);
                 },
                 Tween::TweenPlayable<float>::LoopMode::PingPong);
             scaleTw->SetIsLoop(true);   // child 자가 루프 (par 가 아니라 child 가 무한 반복)
@@ -271,8 +271,8 @@ namespace TopdownShooter::Bootstrap
 
         // hit FX seam - 적 Life 피격 시 hit.efk (Player 와 공통, 빌더가 VFX::Spawn 주입).
         if (auto* life = enemy->GetComponent<Entity::Components::Life>())
-            life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); })
-                .SetOnDamageNumber([](int d, const vmath::vec3& p) { WorldText::SpawnDamage(d, p); });
+            life->SetOnHitFx([](const glm::vec3& p) { VFX::Spawn("hit", p); })
+                .SetOnDamageNumber([](int d, const glm::vec3& p) { WorldText::SpawnDamage(d, p); });
 
         // 발밑 그림자 + 피격범위 원 (groundActor 자식, renderActor 와 형제). AddChild 전 = pre-entry.
 		AttachGroundDecals(*enemy, ENEMY_DECAL_Y);

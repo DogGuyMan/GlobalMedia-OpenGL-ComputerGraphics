@@ -21,24 +21,24 @@
 #define __TOPDOWNSHOOTER_SPAWNS_COMBAT_SEQUENCES_H__
 
 #include "Spawns/SequenceContext.h"
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Spawns
 {
     /// @brief 적 피격 임팩트 - VfxInstance(spark) + AudioInstance(event:/Hit) @pos. 둘 다 단발 자동 despawn.
     /// @param ctx      의존 묶음 (@c fxRoot / @c vfx / @c reg 가 유효해야 VFX 스폰).
     /// @param worldPos 스폰 위치 (월드 좌표).
-    void SpawnHitSpark(const SequenceContext& ctx, const vmath::vec3& worldPos);
+    void SpawnHitSpark(const SequenceContext& ctx, const glm::vec3& worldPos);
 
     /// @brief 적 사망 - VfxInstance(explosion) + AudioInstance(event:/EnemyDeath) @pos.
     /// @param ctx      의존 묶음 (@c fxRoot 필수; @c vfx/@c reg 유효 시 VFX, @c audio 유효 시 사운드).
     /// @param worldPos 스폰 위치 (월드 좌표).
-    void SpawnEnemyDeathFX(const SequenceContext& ctx, const vmath::vec3& worldPos);
+    void SpawnEnemyDeathFX(const SequenceContext& ctx, const glm::vec3& worldPos);
 
     /// @brief 픽업 - AudioInstance(event:/Pickup) @pos (오디오 전용, VFX 없음).
     /// @param ctx      의존 묶음 (@c fxRoot + @c audio 가 유효해야 실행).
     /// @param worldPos 스폰 위치 (월드 좌표).
-    void SpawnPickupChime(const SequenceContext& ctx, const vmath::vec3& worldPos);
+    void SpawnPickupChime(const SequenceContext& ctx, const glm::vec3& worldPos);
 }
 
 #endif // __TOPDOWNSHOOTER_SPAWNS_COMBAT_SEQUENCES_H__

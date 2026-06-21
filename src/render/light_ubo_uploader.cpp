@@ -45,35 +45,35 @@ namespace SJH
 		// ====================================================================
 		struct DirLightStd140
 		{
-			vmath::vec3 direction; float pad0;
-			vmath::vec3 ambient;   float pad1;
-			vmath::vec3 diffuse;   float pad2;
-			vmath::vec3 specular;  float pad3;
+			glm::vec3 direction; float pad0;
+			glm::vec3 ambient;   float pad1;
+			glm::vec3 diffuse;   float pad2;
+			glm::vec3 specular;  float pad3;
 		};
 		struct PointLightStd140
 		{
-			vmath::vec3 position;    float pad0;
-			vmath::vec3 attenuation; float pad1;
-			vmath::vec3 ambient;     float pad2;
-			vmath::vec3 diffuse;     float pad3;
-			vmath::vec3 specular;    float pad4;
+			glm::vec3 position;    float pad0;
+			glm::vec3 attenuation; float pad1;
+			glm::vec3 ambient;     float pad2;
+			glm::vec3 diffuse;     float pad3;
+			glm::vec3 specular;    float pad4;
 		};
 		struct SpotLightStd140
 		{
-			vmath::vec3 position;    float pad0;       // @0   position(12) + pad
-			vmath::vec3 direction;   float cutoff;     // @16  direction(12) + cutoff @28 (4번째 슬롯)
+			glm::vec3 position;    float pad0;       // @0   position(12) + pad
+			glm::vec3 direction;   float cutoff;     // @16  direction(12) + cutoff @28 (4번째 슬롯)
 			float       outerCutoff; float pad1[3];    // @32  outerCutoff + pad -> @48
-			vmath::vec3 attenuation; float pad2;        // @48
-			vmath::vec3 ambient;     float pad3;        // @64
-			vmath::vec3 diffuse;     float pad4;        // @80
-			vmath::vec3 specular;    float pad5;        // @96
+			glm::vec3 attenuation; float pad2;        // @48
+			glm::vec3 ambient;     float pad3;        // @64
+			glm::vec3 diffuse;     float pad4;        // @80
+			glm::vec3 specular;    float pad5;        // @96
 		};
 		struct LightBlockStd140
 		{
 			DirLightStd140   dirLight;                              // @0
 			PointLightStd140 pointLights[Const::MAX_POINT_LIGHTS];  // @64
 			SpotLightStd140  spotLights[Const::MAX_SPOT_LIGHTS];    // @1344
-			vmath::vec3      viewPos;                               // @3136
+			glm::vec3      viewPos;                               // @3136
 			std::int32_t     dirLightEnabled;                      // @3148
 			std::int32_t     numPointLights;                       // @3152
 			std::int32_t     numSpotLights;                        // @3156
@@ -81,7 +81,7 @@ namespace SJH
 		};
 
 		// 컴파일타임 std140 정합 검증 (phong.refl.json offset 과 1:1) - 어긋나면 빌드 차단.
-		static_assert(sizeof(vmath::vec3) == 12, "vmath::vec3 must be 12B for std140 mirror");
+		static_assert(sizeof(glm::vec3) == 12, "glm::vec3 must be 12B for std140 mirror");
 		static_assert(sizeof(DirLightStd140) == 64, "DirLightStd140 std140 size");
 		static_assert(sizeof(PointLightStd140) == 80, "PointLightStd140 std140 stride");
 		static_assert(sizeof(SpotLightStd140) == 112, "SpotLightStd140 std140 stride");
@@ -103,7 +103,7 @@ namespace SJH
 		//  loose 경로 헬퍼 (구 LightUniformDispatcher 에서 보존 - D6 격리, S4 공존).
 		//  program -> object 역의존을 끊기 위해 광원 struct -> uniform 변환을 익명 ns 에 가둔다.
 		// ====================================================================
-		void SetDirLight(const Program& prog, const char* prefix, const DirLight& light, const vmath::vec3& worldDir)
+		void SetDirLight(const Program& prog, const char* prefix, const DirLight& light, const glm::vec3& worldDir)
 		{
 			const std::string base = prefix;
 			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(), worldDir);
@@ -112,7 +112,7 @@ namespace SJH
 			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_SPECULAR).c_str(), light.Specular);
 		}
 
-		void SetPointLight(const Program& prog, const char* prefix, const PointLight& light, const vmath::vec3& worldPos)
+		void SetPointLight(const Program& prog, const char* prefix, const PointLight& light, const glm::vec3& worldPos)
 		{
 			const std::string base = prefix;
 			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(), worldPos);
@@ -123,14 +123,14 @@ namespace SJH
 		}
 
 		void SetSpotLight(const Program& prog, const char* prefix, const SpotLight& light,
-		                  const vmath::vec3& worldPos, const vmath::vec3& worldDir)
+		                  const glm::vec3& worldPos, const glm::vec3& worldDir)
 		{
 			const std::string base = prefix;
 			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_POSITION).c_str(), worldPos);
 			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIRECTION).c_str(), worldDir);
 			// CPU 는 degree, 셰이더는 cosine - 송신 시점에 변환 (struct 정의 시 의도된 분업).
-			Uniforms::SetFloat(prog, (base + Const::SHADER_PROPERTIE_CUTOFF).c_str(), cosf(vmath::radians(light.CutoffAngleDeg)));
-			Uniforms::SetFloat(prog, (base + Const::SHADER_PROPERTIE_OUTER_CUTOFF).c_str(), cosf(vmath::radians(light.OuterCutoffAngleDeg)));
+			Uniforms::SetFloat(prog, (base + Const::SHADER_PROPERTIE_CUTOFF).c_str(), cosf(glm::radians(light.CutoffAngleDeg)));
+			Uniforms::SetFloat(prog, (base + Const::SHADER_PROPERTIE_OUTER_CUTOFF).c_str(), cosf(glm::radians(light.OuterCutoffAngleDeg)));
 			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_ATTENUATION).c_str(), GetAttenuationCoeff(light.Distance));
 			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_AMBIENT).c_str(), light.Ambient);
 			Uniforms::SetVec3(prog, (base + Const::SHADER_PROPERTIE_DIFFUSE).c_str(), light.Diffuse);
@@ -142,7 +142,7 @@ namespace SJH
 		void LooseDispatch(const Program& prog, DirLight* dir,
 		                   const std::vector<PointLight*>& points,
 		                   const std::vector<SpotLight*>& spots,
-		                   const vmath::vec3& viewPos)
+		                   const glm::vec3& viewPos)
 		{
 			auto& rc = DeviceContext::Get();
 			rc.UseProgram(prog);
@@ -198,7 +198,7 @@ namespace SJH
 	void LightUboUploader::Update(DirLight* dir,
 	                              const std::vector<PointLight*>& points,
 	                              const std::vector<SpotLight*>& spots,
-	                              const vmath::vec3& viewPos)
+	                              const glm::vec3& viewPos)
 	{
 		if (static_cast<int>(points.size()) > Const::MAX_POINT_LIGHTS)
 			spdlog::warn("LightUboUploader - PointLight {} 개 발견. MAX_POINT_LIGHTS={} 초과분 무시.",
@@ -244,8 +244,8 @@ namespace SJH
 			const SpotLight& src = *spots[i];
 			dst.position    = src.GetWorldPosition();
 			dst.direction   = src.GetWorldDirection();
-			dst.cutoff      = cosf(vmath::radians(src.CutoffAngleDeg));
-			dst.outerCutoff = cosf(vmath::radians(src.OuterCutoffAngleDeg));
+			dst.cutoff      = cosf(glm::radians(src.CutoffAngleDeg));
+			dst.outerCutoff = cosf(glm::radians(src.OuterCutoffAngleDeg));
 			dst.attenuation = GetAttenuationCoeff(src.Distance);
 			dst.ambient     = src.Ambient;
 			dst.diffuse     = src.Diffuse;

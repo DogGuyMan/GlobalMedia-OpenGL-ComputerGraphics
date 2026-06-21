@@ -22,7 +22,7 @@
 #include <GLFW/glfw3.h>
 #include <cassert>
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace
 {
@@ -153,6 +153,6 @@ namespace TopdownShooter::Controller
 		             + forward * (-mMoveDelta[2]);
 
 		// 누적값 리셋.
-		mMoveDelta = vmath::vec3(0.0f);
+		mMoveDelta = glm::vec3(0.0f);
 	}
 } // namespace TopdownShooter

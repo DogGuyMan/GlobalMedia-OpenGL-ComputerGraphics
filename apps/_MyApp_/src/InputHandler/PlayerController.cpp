@@ -58,7 +58,7 @@
 #include <cmath>
 #include <spdlog/spdlog.h>
 #include <utility>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Controller
 {
@@ -69,7 +69,7 @@ namespace TopdownShooter::Controller
 	/// @param r   [min, max) 구간 (r[0]=min, r[1]=max).
 	/// @return @p deg 가 구간 안이면 true.
 	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
-	bool InRange(float deg, const vmath::vec2 &r)
+	bool InRange(float deg, const glm::vec2 &r)
 	{
 		return (r[0] <= r[1]) ? (deg >= r[0] && deg < r[1]) : (deg >= r[0] || deg < r[1]);
 	}
@@ -85,7 +85,7 @@ namespace TopdownShooter::Controller
 	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
 	// !dir=(x,z) -> theta=normalize360(deg(atan2(-z,x))) -> 4범위 중 포함 필드. no-match=fallback.
 	TopdownShooter::Entity::EFacing QuantizeByThreshold(
-	    vmath::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
+	    glm::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
 	    TopdownShooter::Entity::EFacing fallback)
 	{
 		namespace E = TopdownShooter::Entity;
@@ -124,21 +124,21 @@ namespace TopdownShooter::Controller
 		// 대각 sqrt2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
 		// (held 핸들러는 매 프레임 호출 -> 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec sec.2.)
 		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { 
-			mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); 
+			mInputValue += glm::vec3(0.0f, 0.0f, -1.0f); 
 		});
 		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { 
-			mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); 
+			mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); 
 		});
 		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { 
-			mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); 
+			mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); 
 		});
 		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { 
-			mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); 
+			mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); 
 		});
 		mKeyboardInput->BindHeldHandler(Action::DashImpulse, [this] {
 			if (auto *owner = GetOwner())
 			{
-				const vmath::vec2 aimXZ(mPrevInputValue[0], mPrevInputValue[2]);
+				const glm::vec2 aimXZ(mPrevInputValue[0], mPrevInputValue[2]);
 				if(auto* pe = owner->GetComponent<Entity::IPlayerCommand>()) {
 					pe->Dash(aimXZ);
 					return;
@@ -372,9 +372,9 @@ namespace TopdownShooter::Controller
 		{
 			namespace E = TopdownShooter::Entity;
 			const bool attacking = (mAttackTimer != nullptr && !mAttackTimer->IsTimesUp()); // tick은 BaseEntity가
-			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]);                        // * 리셋 전
+			const glm::vec2 velXZ(mInputValue[0], mInputValue[2]);                        // * 리셋 전
 			const bool moving = (velXZ[0] * velXZ[0] + velXZ[1] * velXZ[1]) > 0.001f;
-			const vmath::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
+			const glm::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
 
 			E::EFacing facing = attacking ? QuantizeByThreshold(aimXZ, TopdownShooter::Playable::PLAYER_FACING_THRESHOLD, mLastFacing)
 			                    : moving  ? QuantizeByThreshold(velXZ, TopdownShooter::Playable::PLAYER_FACING_THRESHOLD, mLastFacing)
@@ -387,7 +387,7 @@ namespace TopdownShooter::Controller
 
 		// 누적값 리셋.
 		mPrevInputValue = mInputValue;
-		mInputValue = vmath::vec3(0.0f);
+		mInputValue = glm::vec3(0.0f);
 	}
 
 	/// @brief 마우스 커서를 Ground(y=0) 평면에 raycast 해 조준 멤버를 갱신.
@@ -435,31 +435,31 @@ namespace TopdownShooter::Controller
 		const float ndcX = 2.0f * static_cast<float>(mx) / static_cast<float>(ww) - 1.0f;
 		const float ndcY = 1.0f - 2.0f * static_cast<float>(my) / static_cast<float>(wh);
 
-		// 카메라 world basis - owner WorldMatrix 의 컬럼. (vmath 는 일반 inverse 미제공 ->
-		// proj/view 역행렬 대신 fov/aspect 로 view-space ray 를 직접 구성해 world 로 회전.)
-		const vmath::mat4 camW = mCamera->GetOwner()->GetWorldMatrix();
-		const vmath::vec3 right(camW[0][0], camW[0][1], camW[0][2]);
-		const vmath::vec3 up(camW[1][0], camW[1][1], camW[1][2]);
-		const vmath::vec3 forward(-camW[2][0], -camW[2][1], -camW[2][2]); // -Z 컬럼 = forward
-		const vmath::vec3 camPos(camW[3][0], camW[3][1], camW[3][2]);
+		// 카메라 world basis - owner WorldMatrix 의 컬럼. (proj/view 역행렬을 쓰지 않고
+		// fov/aspect 로 view-space ray 를 직접 구성해 world 로 회전 - 역행렬 회피.)
+		const glm::mat4 camW = mCamera->GetOwner()->GetWorldMatrix();
+		const glm::vec3 right(camW[0][0], camW[0][1], camW[0][2]);
+		const glm::vec3 up(camW[1][0], camW[1][1], camW[1][2]);
+		const glm::vec3 forward(-camW[2][0], -camW[2][1], -camW[2][2]); // -Z 컬럼 = forward
+		const glm::vec3 camPos(camW[3][0], camW[3][1], camW[3][2]);
 
-		const float tanHalf = std::tan(vmath::radians(mCamera->FovYDeg * 0.5f));
+		const float tanHalf = std::tan(glm::radians(mCamera->FovYDeg * 0.5f));
 		const float aspect = mCamera->Aspect;
-		const vmath::vec3 dir =
-		    normalize(right * (ndcX * aspect * tanHalf) + up * (ndcY * tanHalf) + forward);
+		const glm::vec3 dir =
+		    glm::normalize(right * (ndcX * aspect * tanHalf) + up * (ndcY * tanHalf) + forward);
 
 		// === 화면(NDC) 정규화 조준 강도 mAimScreenT - 플레이어를 NDC 에 투영해 커서 NDC 와의 거리. ===
 		// 손 spread 보간용. 화면 가장자리(NDC 1.0)에서 포화(1). ground 교차 성공 여부와 무관(여기서 미리 산출).
-		// mat*vec 미지원(vmath) -> 커서 ray 와 동일 basis/규약으로 직접 투영:
+		// 커서 ray 와 동일 basis/규약으로 직접 투영 (mat*vec 대신 dot 분해):
 		//   depth = dot(rel, forward), ndc = dot(rel, right|up) / (depth * (aspect)tanHalf).
 		if (SJH::Scene::Actor *pl = GetOwner())
 		{
-			const vmath::vec3 rel = pl->GetTransform().Translate - camPos;
-			const float depth = vmath::dot(rel, forward); // view forward 깊이 (>0 = 카메라 앞)
+			const glm::vec3 rel = pl->GetTransform().Translate - camPos;
+			const float depth = glm::dot(rel, forward); // view forward 깊이 (>0 = 카메라 앞)
 			if (depth > 1e-4f)
 			{
-				const float pNdcX = vmath::dot(rel, right) / (depth * aspect * tanHalf);
-				const float pNdcY = vmath::dot(rel, up) / (depth * tanHalf);
+				const float pNdcX = glm::dot(rel, right) / (depth * aspect * tanHalf);
+				const float pNdcY = glm::dot(rel, up) / (depth * tanHalf);
 				const float sdx = ndcX - pNdcX;
 				const float sdy = ndcY - pNdcY;
 				const float st = std::sqrt(sdx * sdx + sdy * sdy);
@@ -479,15 +479,15 @@ namespace TopdownShooter::Controller
 			mAimValid = false;
 			return false;
 		}
-		const vmath::vec3 hit = camPos + dir * t;
+		const glm::vec3 hit = camPos + dir * t;
 
 		// === PlayerActor(owner) -> 커서 Ground 좌표 = 조준 Vector 추출 (XZ 평면) ===
 		SJH::Scene::Actor *player = GetOwner();
-		const vmath::vec3 playerPos = (player != nullptr) ? player->GetTransform().Translate : vmath::vec3(0.0f);
+		const glm::vec3 playerPos = (player != nullptr) ? player->GetTransform().Translate : glm::vec3(0.0f);
 
-		vmath::vec3 aim = hit - playerPos;
+		glm::vec3 aim = hit - playerPos;
 		aim[1] = 0.0f; // 탑다운 조준 - 높이 성분 제거 (XZ 평면)
-		const float dist = vmath::length(aim);
+		const float dist = glm::length(aim);
 
 		mAimPoint = hit;
 		mAimDistance = dist; // 손 spread 보간 등 거리 소비자용 (방향이 무효여도 거리는 유효)
@@ -496,7 +496,7 @@ namespace TopdownShooter::Controller
 		{
 			mAimDirection = aim * (1.0f / dist);
 			// facing Y각 (degree) - spec sec.1: theta = degrees(atan2(-dir.x, -dir.z)). forward(-Z)=0, +X=-90.
-			mAimAngleY = vmath::degrees(std::atan2(-mAimDirection[0], -mAimDirection[2]));
+			mAimAngleY = glm::degrees(std::atan2(-mAimDirection[0], -mAimDirection[2]));
 		}
 		// dist~=0 (커서가 player 위) - 방향/각도는 직전값 유지 (snap 방지). mAimPoint 만 갱신.
 		return true;
@@ -528,7 +528,7 @@ namespace TopdownShooter::Controller
 		{
 			auto *pe = owner->GetComponent<Entity::IPlayerCommand>();
 			if (pe != nullptr)
-				pe->UseWeapon(vmath::vec2(mAimDirection[0], -mAimDirection[2]));
+				pe->UseWeapon(glm::vec2(mAimDirection[0], -mAimDirection[2]));
 		}
 
 		// 오디오/VFX Composite (onFire) - 주입됐으면.

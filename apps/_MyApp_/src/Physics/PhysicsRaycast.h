@@ -27,7 +27,7 @@
 #include "Physics/PhysicsLayer.h"
 #include <box2d/box2d.h>
 #include <vector>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH::Scene { class Actor; }
 
@@ -45,8 +45,8 @@ namespace TopdownShooter::Physics
 	{
 		b2Body*            body     = nullptr;                  ///< 맞은 body (miss 면 nullptr).
 		SJH::Scene::Actor* actor    = nullptr;                  ///< body userdata 에서 복원한 owner Actor (없으면 nullptr).
-		vmath::vec2        point    = vmath::vec2(0.0f, 0.0f);  ///< 월드 충돌 좌표 (물리 2D 평면).
-		vmath::vec2        normal   = vmath::vec2(0.0f, 0.0f);  ///< 충돌 표면 법선 벡터 (물리 2D 평면).
+		glm::vec2        point    = glm::vec2(0.0f, 0.0f);  ///< 월드 충돌 좌표 (물리 2D 평면).
+		glm::vec2        normal   = glm::vec2(0.0f, 0.0f);  ///< 충돌 표면 법선 벡터 (물리 2D 평면).
 		float              distance = 0.0f;                     ///< start 로부터 실제 거리 (= fraction * maxDistance).
 		float              fraction = 0.0f;                     ///< maxDistance 대비 [0, 1] 비율.
 		bool               hit      = false;                    ///< 명시적 성공 플래그. false 이면 miss.
@@ -62,7 +62,7 @@ namespace TopdownShooter::Physics
 	/// @param maxDistance 최대 검사 거리.
 	/// @return 가장 가까운 @c RaycastHit. miss 이면 @c hit=false.
 	RaycastHit Raycast(b2Body* body,
-	                   vmath::vec2 start, vmath::vec2 dir, float maxDistance);
+	                   glm::vec2 start, glm::vec2 dir, float maxDistance);
 
 	/// @brief 월드 최근접 단일 hit 질의 -- Unity @c Physics2D.Raycast / Unreal @c LineTraceSingleByChannel 정통.
 	/// @details 내부적으로 @c b2World::RayCast + @c ClosestCallback 을 사용.
@@ -76,7 +76,7 @@ namespace TopdownShooter::Physics
 	/// @param hitSensors  false(기본) 이면 isSensor fixture 통과 (Unity @c QueryTriggerInteraction.Ignore).
 	/// @return 최근접 @c RaycastHit. miss 이면 @c hit=false.
 	RaycastHit RaycastClosest(b2World& world,
-	                          vmath::vec2 start, vmath::vec2 dir, float maxDistance,
+	                          glm::vec2 start, glm::vec2 dir, float maxDistance,
 	                          PhysicsLayer mask,
 	                          SJH::Scene::Actor* ignore = nullptr,
 	                          bool hitSensors = false);
@@ -95,7 +95,7 @@ namespace TopdownShooter::Physics
 	/// @param hitSensors  false(기본) 이면 sensor fixture 통과.
 	/// @return 경로상 모든 hit (fraction 오름차순, body 단위 dedup). miss 이면 빈 vector.
 	std::vector<RaycastHit> RaycastAll(b2World& world,
-	                                   vmath::vec2 start, vmath::vec2 dir, float maxDistance,
+	                                   glm::vec2 start, glm::vec2 dir, float maxDistance,
 	                                   PhysicsLayer mask,
 	                                   SJH::Scene::Actor* ignore = nullptr,
 	                                   bool hitSensors = false);

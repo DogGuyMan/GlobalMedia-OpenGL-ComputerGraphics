@@ -28,7 +28,7 @@
 #include <functional>
 #include <string>
 #include <utility>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 // fwd - UseWeapon 이 bullet body 를 생성할 물리 월드 (포인터 멤버 - 전방 선언으로 충분).
 class b2World;
@@ -49,7 +49,7 @@ namespace TopdownShooter::Entity::Components
 		Algebraic::Numeric::Stat Damage;                                     ///< 공격력 Stat (modifier 스택 적용 가능, NumericType::Power).
 		const std::string WeaponName;                                         ///< 무기 이름 (ShowInfo 로깅 + 식별용).
 		b2World *mWorld = nullptr;                                            ///< 총알 body 를 등록할 Box2D 월드 (비소유, SetWorld 주입).
-		std::function<void(const vmath::vec3 &pos, float yaw)> mOnFireFx;    ///< 발사 시 총구 위치(pos) + 방향(yaw 라디안) FX seam (빌더 주입, nullptr = no-op).
+		std::function<void(const glm::vec3 &pos, float yaw)> mOnFireFx;    ///< 발사 시 총구 위치(pos) + 방향(yaw 라디안) FX seam (빌더 주입, nullptr = no-op).
 
 	  public:
 		/// @brief 공격력과 이름으로 무기 생성.
@@ -69,7 +69,7 @@ namespace TopdownShooter::Entity::Components
 		}
 
 		/// @brief 발사 시 총구 위치+방향(yaw 라디안)으로 발동할 FX seam 주입 (빌더 전용 fluent).
-		Weapon &SetOnFireFx(std::function<void(const vmath::vec3 &, float)> fx)
+		Weapon &SetOnFireFx(std::function<void(const glm::vec3 &, float)> fx)
 		{
 			mOnFireFx = std::move(fx);
 			return *this;
@@ -80,7 +80,7 @@ namespace TopdownShooter::Entity::Components
 
 		/// @brief box2dForward 방향(정규화 가정)으로 단발 bullet 스폰.
 		/// @param box2dForward box2d 좌표계 발사 방향 = (aimDir.x, -aimDir.z). mWorld 미주입 시 no-op.
-		void UseWeapon(vmath::vec2 box2dForward) const;
+		void UseWeapon(glm::vec2 box2dForward) const;
 
 		// === Component lifecycle -- 데이터 전용 컴포넌트라 no-op (추상 베이스 충족) ===
 		/// @brief 씬 진입 시 초기화 (데이터 전용 - no-op).

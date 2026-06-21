@@ -37,7 +37,7 @@ namespace TopdownShooter::Entity
 	void BaseEntity::DoDie()               { if (mLife) mLife->DoDie(); }
 
 	// IImpulsable 위임 - 넉백/대시 버스트.
-	void BaseEntity::DoImpulse(vmath::vec2 dir) { if (mImpulse) mImpulse->DoImpulse(dir); }
+	void BaseEntity::DoImpulse(glm::vec2 dir) { if (mImpulse) mImpulse->DoImpulse(dir); }
 	bool BaseEntity::IsImpulseActive() const   { return mImpulse && mImpulse->IsActive(); }
 
 	// named playable 재생 위임 - Director 미캐시 시 무시.

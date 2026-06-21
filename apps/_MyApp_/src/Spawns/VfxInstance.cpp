@@ -23,7 +23,7 @@
 namespace TopdownShooter::Spawns
 {
     void SpawnVfxInstance(SJH::Scene::Actor& fxParent, VFX::VFXSystem* vfx,
-                          SJH::Effect* effect, const vmath::vec3& pos, float yaw)
+                          SJH::Effect* effect, const glm::vec3& pos, float yaw)
     {
         if (!vfx || !effect) return; // 이펙트/시스템 미존재 - no-op
 

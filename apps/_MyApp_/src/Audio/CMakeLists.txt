@@ -19,7 +19,7 @@ target_include_directories(myapp_audio
 target_link_libraries(myapp_audio
     PUBLIC
         SJH::playable   # PlayableBase 베이스 (헤더 노출)
-        project_deps    # vmath / GL — 헤더 안에서 사용 가능성
+        project_deps    # GL — 헤더 안에서 사용 가능성
         game_deps       # fmod / fmodstudio 헤더 + lib 자동 link (FMOD 설치 가정)
     PRIVATE
         spdlog          # warn-once 패턴 (.cpp 안에서만)

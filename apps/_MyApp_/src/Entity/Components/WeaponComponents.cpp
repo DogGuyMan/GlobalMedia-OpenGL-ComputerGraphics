@@ -24,7 +24,7 @@
 
 #include <cmath>
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Entity::Components
 {
@@ -43,7 +43,7 @@ namespace TopdownShooter::Entity::Components
 	///  4. @c mOnFireFx seam 발동 - box2dForward -> world 방향 변환 후 yaw(atan2) 계산.
 	///     yaw 컨벤션은 PlayerController facing 각과 동일(EffekseerPlayable SetRotation 호환).
 	/// @param box2dForward box2d 좌표계 발사 방향 벡터 (= aimDir.x, -aimDir.z, 정규화 가정).
-	void Weapon::UseWeapon(vmath::vec2 box2dForward) const
+	void Weapon::UseWeapon(glm::vec2 box2dForward) const
 	{
 		if (mWorld == nullptr)
 		{
@@ -55,8 +55,8 @@ namespace TopdownShooter::Entity::Components
 			return;
 
 		// owner world pos -> box2d. PhysicsSystem: box2d->world = (x, h, -y) -> box2d = (world.x, -world.z).
-		const vmath::vec3 wp = owner->GetTransform().Translate;
-		const vmath::vec2 b2pos(wp[0], -wp[2]);
+		const glm::vec3 wp = owner->GetTransform().Translate;
+		const glm::vec2 b2pos(wp[0], -wp[2]);
 
 		Bullet::BulletConfig bc;
 		bc.world    = mWorld;
@@ -71,9 +71,9 @@ namespace TopdownShooter::Entity::Components
 		// box2dForward(=aimDir.x, -aimDir.z) -> world 방향 (x, 0, -y). yaw 컨벤션은 PlayerController facing 각과 동일.
 		if (mOnFireFx)
 		{
-			const vmath::vec3 worldDir(box2dForward[0], 0.0f, -box2dForward[1]);
+			const glm::vec3 worldDir(box2dForward[0], 0.0f, -box2dForward[1]);
 			const float       yaw       = std::atan2(-worldDir[0], -worldDir[2]); // 라디안 -- EffekseerPlayable SetRotation
-			const vmath::vec3 muzzlePos = wp + worldDir * 0.5f;                    // 총구 끝 = 플레이어 중심 + forward*0.5
+			const glm::vec3 muzzlePos = wp + worldDir * 0.5f;                    // 총구 끝 = 플레이어 중심 + forward*0.5
 			mOnFireFx(muzzlePos, yaw);
 		}
 	}

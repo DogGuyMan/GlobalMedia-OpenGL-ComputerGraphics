@@ -69,7 +69,7 @@ namespace TopdownShooter::Physics::Components
 		/// @brief b2PolygonShape(SetAsBox) + BodyConfig 로 body 즉시 생성.
 		/// @param cfg  body 공통 설정 (world, bodyType, position, sensor, filter 등).
 		/// @param size 박스 전체 크기 (반폭 = size[0]*0.5, 반높이 = size[1]*0.5 로 변환됨).
-		BoxBody(const BodyConfig& cfg, vmath::vec2 size)
+		BoxBody(const BodyConfig& cfg, glm::vec2 size)
 		{
 			b2Body* body = MakeBody(cfg);
 			if (body != nullptr)

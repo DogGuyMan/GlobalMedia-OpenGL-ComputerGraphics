@@ -40,12 +40,12 @@
 #include <cmath>
 #include <memory>
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Entity
 {
 	PlayerSingleHand::PlayerSingleHand(float spreadDeg, float radius, float yOffset, float scale)
-	    : mSpreadRad(vmath::radians(spreadDeg)), mRadius(radius), mYOffset(yOffset), mScale(scale)
+	    : mSpreadRad(glm::radians(spreadDeg)), mRadius(radius), mYOffset(yOffset), mScale(scale)
 	{
 	}
 
@@ -61,18 +61,18 @@ namespace TopdownShooter::Entity
 			return;
 		auto &tr = owner->GetTransform();
 		// forward = -Z. local = (sin(spread)*r, yOffset, -cos(spread)*r).
-		tr.Translate = vmath::vec3(
+		tr.Translate = glm::vec3(
 		    std::sin(mSpreadRad) * mRadius,
 		    mYOffset,
 		    -std::cos(mSpreadRad) * mRadius);
 		// 시각 크기 - Translate(궤도 오프셋)와 직교. SetTransformWithVectors 로 한꺼번에 세팅하면
 		// Translate 가 (0,0,0) 으로 덮여 궤도가 깨지므로, Scale 만 별도로 둔다 (단일 소유).
-		tr.Scale = vmath::vec3(mScale, mScale, mScale);
+		tr.Scale = glm::vec3(mScale, mScale, mScale);
 	}
 
 	void PlayerSingleHand::SetSpreadDeg(float spreadDeg)
 	{
-		mSpreadRad = vmath::radians(spreadDeg);
+		mSpreadRad = glm::radians(spreadDeg);
 		ApplyLocalOffset(); // 각도 갱신 즉시 local 위치 재적용 (Scale/궤도와 직교)
 	}
 

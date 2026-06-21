@@ -4,7 +4,7 @@
 #include "playable/playable_base.h"
 #include "resource_registry/effect.h"   // SJH::Effect
 #include <Effekseer.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::VFX
 {
@@ -21,7 +21,7 @@ namespace TopdownShooter::VFX
 	  public:
 		EffekseerPlayable(::Effekseer::ManagerRef manager,
 		                  SJH::Effect            *effect,
-		                  const vmath::vec3      &spawnPos = vmath::vec3(0.0f),
+		                  const glm::vec3      &spawnPos = glm::vec3(0.0f),
 		                  TrackPolicy             track    = TrackPolicy::Static,
 		                  float                   yawRad   = 0.0f);
 		~EffekseerPlayable() override;
@@ -44,7 +44,7 @@ namespace TopdownShooter::VFX
 		::Effekseer::ManagerRef mManager;
 		SJH::Effect            *mEffect         = nullptr;
 		::Effekseer::Handle     mHandle         = -1;   // -1 = invalid
-		vmath::vec3             mSpawnPos{0.0f};
+		glm::vec3             mSpawnPos{0.0f};
 		TrackPolicy             mTrack          = TrackPolicy::Static;
 		float                   mYaw            = 0.0f; // Y축 시작 회전(라디안). 0 = 회전 없음
 		float                   mSpinRadPerSec  = 0.0f; // 매 프레임 회전 속도(rad/sec). 0 = 비회전

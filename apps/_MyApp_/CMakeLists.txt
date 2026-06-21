@@ -1,15 +1,13 @@
 # 챕터 타겟 이름을 현재 CMakeLists.txt source 디렉토리 위치로 사용할 것
 get_filename_component(CHAPTER_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
-# === ImGui v1.53 — client-side 직접 통합 (Core Module 아님) ===
-# migrate_demo 와 동일 패턴. v1.53 는 GLFW(3.0.4) 호환 마지막 태그 (memory: imgui_v1_53_glfw_compat).
-set(IMGUI_ROOT ${CMAKE_SOURCE_DIR}/extern/imgui)
-set(IMGUI_GL3  ${IMGUI_ROOT}/examples/opengl3_example)
+# === ImGui v1.53 — 코어는 vcpkg(override 1.53), GLFW 백엔드만 vendoring ===
+# vcpkg imgui 1.53 = 코어(imgui::imgui)만 제공 (find_package 는 cmake/Dependency.cmake).
+# v1.53 GLFW 3.0.4 호환 백엔드(imgui_impl_glfw_gl3)는 vcpkg 에 없어 third_party/imgui 로 vendoring.
+# (v1.53 = GLFW 3.0.4 호환 마지막 태그; 신버전은 3.1+ 요구 -> sb7 충돌. memory: imgui_v1_53_glfw_compat.)
+set(IMGUI_BACKEND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui)
 set(IMGUI_SRC
-    ${IMGUI_ROOT}/imgui.cpp
-    ${IMGUI_ROOT}/imgui_draw.cpp
-    ${IMGUI_ROOT}/imgui_demo.cpp
-    ${IMGUI_GL3}/imgui_impl_glfw_gl3.cpp
+    ${IMGUI_BACKEND_DIR}/imgui_impl_glfw_gl3.cpp
 )
 
 # 클라이언트 사이드 스크립트 (Algebraic / Entity / Input) — MyApp::Client INTERFACE 우산 노출.
@@ -27,8 +25,7 @@ add_executable(${CHAPTER_NAME} main.cpp ${IMGUI_SRC} ${UI_SRC})
 
 target_include_directories(${CHAPTER_NAME} PRIVATE
     ${CMAKE_CURRENT_DIR}
-    ${IMGUI_ROOT}
-    ${IMGUI_GL3}
+    ${IMGUI_BACKEND_DIR}   # imgui_impl_glfw_gl3.h (코어 imgui.h 는 imgui::imgui 가 전파)
 )
 
 # ImGui v1.53 deprecation 경고가 -Werror 와 충돌 — 챕터 한정 침묵.
@@ -43,6 +40,7 @@ target_link_libraries(${CHAPTER_NAME} PRIVATE
     game_deps
     SJH::engine          # M1 — SJH::sprite 등 코어 모듈 우산 link
     MyApp::Client        # 클라이언트 사이드 스크립트 (Algebraic / Entity / Input / Physics)
+    # imgui::imgui (v1.53 코어) 는 game_deps 경유. GLFW 백엔드만 위 IMGUI_SRC 로 vendoring.
 )
 
 if(MSVC)

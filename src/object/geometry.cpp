@@ -15,7 +15,7 @@
  */
 #include "object/geometry.h"
 #include "common/constants.h"
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include <assimp/mesh.h>
 #include <cmath>
 
@@ -29,21 +29,21 @@ namespace SJH
         using namespace Const::GEOMETRY;
 
         // === Utility functions ===
-        vmath::vec3 ComputeFaceNormal(const vmath::vec4 &p0,
-                                      const vmath::vec4 &p1,
-                                      const vmath::vec4 &p2)
+        glm::vec3 ComputeFaceNormal(const glm::vec4 &p0,
+                                      const glm::vec4 &p1,
+                                      const glm::vec4 &p2)
         {
-            vmath::vec3 e1 = vmath::vec3(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
-            vmath::vec3 e2 = vmath::vec3(p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]);
-            return vmath::normalize(vmath::cross(e1, e2));
+            glm::vec3 e1 = glm::vec3(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
+            glm::vec3 e2 = glm::vec3(p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]);
+            return glm::normalize(glm::cross(e1, e2));
         }
 
         void PushVertex(std::vector<GLfloat> &vertices,
-                        const vmath::vec4 pos,
-                        const vmath::vec4 color,
-                        const vmath::vec3 normal,
-                        const vmath::vec2 uv,
-                        const vmath::vec3 &offset)
+                        const glm::vec4 pos,
+                        const glm::vec4 color,
+                        const glm::vec3 normal,
+                        const glm::vec2 uv,
+                        const glm::vec3 &offset)
         {
             vertices.push_back(pos[0] + offset[0]);
             vertices.push_back(pos[1] + offset[1]);
@@ -67,19 +67,19 @@ namespace SJH
         void BuildTriangleIndexed(
             std::vector<GLfloat> &vertices,
             std::vector<GLuint> &indices,
-            const std::vector<vmath::vec4> &positions,
-            const std::vector<vmath::vec4> &colors,
-            const std::vector<vmath::vec2> &uvs,
+            const std::vector<glm::vec4> &positions,
+            const std::vector<glm::vec4> &colors,
+            const std::vector<glm::vec2> &uvs,
             const std::vector<GLuint> &position_idxs,
-            const vmath::vec3 &offset,
+            const glm::vec3 &offset,
             const std::vector<GLuint> &face_idxs)
         {
             const GLuint base = static_cast<GLuint>(vertices.size() / VERTEX_LEN);
 
-            const vmath::vec4 &fp0 = positions[position_idxs[face_idxs[0]]];
-            const vmath::vec4 &fp1 = positions[position_idxs[face_idxs[1]]];
-            const vmath::vec4 &fp2 = positions[position_idxs[face_idxs[2]]];
-            const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
+            const glm::vec4 &fp0 = positions[position_idxs[face_idxs[0]]];
+            const glm::vec4 &fp1 = positions[position_idxs[face_idxs[1]]];
+            const glm::vec4 &fp2 = positions[position_idxs[face_idxs[2]]];
+            const glm::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
 
             // 삼각형은 3 정점 = 3 unique. 인덱스도 0,1,2 그대로.
             for (size_t i = 0; i < 3; i++)
@@ -95,19 +95,19 @@ namespace SJH
         void BuildQuadIndexed(
             std::vector<GLfloat> &vertices,
             std::vector<GLuint> &indices,
-            const std::vector<vmath::vec4> &positions,
-            const std::vector<vmath::vec4> &colors,
-            const std::vector<vmath::vec2> &uvs,
+            const std::vector<glm::vec4> &positions,
+            const std::vector<glm::vec4> &colors,
+            const std::vector<glm::vec2> &uvs,
             const std::vector<GLuint> &position_idxs,
-            const vmath::vec3 &offset,
+            const glm::vec3 &offset,
             const std::vector<GLuint> &face_idxs)
         {
             const GLuint base = static_cast<GLuint>(vertices.size() / VERTEX_LEN);
 
-            const vmath::vec4 &fp0 = positions[position_idxs[face_idxs[0]]];
-            const vmath::vec4 &fp1 = positions[position_idxs[face_idxs[1]]];
-            const vmath::vec4 &fp2 = positions[position_idxs[face_idxs[2]]];
-            const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
+            const glm::vec4 &fp0 = positions[position_idxs[face_idxs[0]]];
+            const glm::vec4 &fp1 = positions[position_idxs[face_idxs[1]]];
+            const glm::vec4 &fp2 = positions[position_idxs[face_idxs[2]]];
+            const glm::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
 
             // 펼친 6 정점을 순회하며 (position_idxs[k], QUAD_MESH_UVS_FAN[k]) 쌍을 키로 dedupe.
             // FRONT/BACK 모두 자동 처리 - winding 반전은 face_idxs reorder 가 인덱스 순서를 바꿔서 해결.
@@ -149,7 +149,7 @@ namespace SJH
         }
 
         void BuildCubeIndexed(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
-                              const vmath::vec3 &offset, bool back_face)
+                              const glm::vec3 &offset, bool back_face)
         {
             const auto &face_idxs = back_face ? QUAD_FACE_INDICES_BACK : QUAD_FACE_INDICES;
             for (size_t f = 0; f < 6; f++)
@@ -160,7 +160,7 @@ namespace SJH
         }
 
         void BuildConeIndexed(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
-                              const vmath::vec3 &offset, bool back_face)
+                              const glm::vec3 &offset, bool back_face)
         {
             const auto &tri_idxs = back_face ? TRIANGLE_FACE_INDICES_BACK : TRIANGLE_FACE_INDICES;
             const auto &quad_idxs = back_face ? QUAD_FACE_INDICES_BACK : QUAD_FACE_INDICES;
@@ -176,7 +176,7 @@ namespace SJH
         }
 
         void BuildTetrahedronIndexed(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
-                                     const vmath::vec3 &offset, bool back_face)
+                                     const glm::vec3 &offset, bool back_face)
         {
             const auto &tri_idxs = back_face ? TRIANGLE_FACE_INDICES_BACK : TRIANGLE_FACE_INDICES;
             for (size_t f = 0; f < 4; f++)
@@ -187,7 +187,7 @@ namespace SJH
         }
 
         void BuildOctahedronIndexed(std::vector<GLfloat> &vertices, std::vector<GLuint> &indices,
-                                    const vmath::vec3 &offset, bool back_face)
+                                    const glm::vec3 &offset, bool back_face)
         {
             // 위,아래 사각뿔(CONE_SIDE 의 y 축 거울상). 기본은 윗절반=FRONT, 아랫절반=BACK
             // (xz 거울상이라 서로 반대 winding). back_face=true 면 둘 다 뒤집음.
@@ -200,8 +200,8 @@ namespace SJH
                                      TRIANGLE_BASE_MESH_UVS, CONE_SIDE_FACE_INDICES[f],
                                      offset, top_idxs);
 
-            std::vector<vmath::vec4> coneDownSideBasePosition;
-            vmath::mat4 xzMirrorMat = vmath::mat4::identity();
+            std::vector<glm::vec4> coneDownSideBasePosition;
+            glm::mat4 xzMirrorMat = glm::mat4(1.0f);
             xzMirrorMat[1][1] = -1;
             for (const auto &pos : CONE_SIDE_BASE_POSITION)
                 coneDownSideBasePosition.push_back(pos * xzMirrorMat);
@@ -217,7 +217,7 @@ namespace SJH
                               double us, double ue, int uRes,
                               double vs, double ve, int vRes,
                               float radius,
-                              const vmath::vec3 &offset, bool back_face)
+                              const glm::vec3 &offset, bool back_face)
         {
             // XZ 평면 원판/고리(ring). vs=0 -> 꽉찬 디스크, vs>0 -> ring.
             int numCols = uRes + 1;
@@ -228,9 +228,9 @@ namespace SJH
             double deltaRad = (ve - vs) / (float)vRes;
             double deltaAngle = (ue - us) / (float)uRes;
 
-            const vmath::vec3 diskNormal = back_face ? vmath::vec3(0.0f, -1.0f, 0.0f)
-                                                    : vmath::vec3(0.0f, 1.0f, 0.0f);
-            const vmath::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
+            const glm::vec3 diskNormal = back_face ? glm::vec3(0.0f, -1.0f, 0.0f)
+                                                    : glm::vec3(0.0f, 1.0f, 0.0f);
+            const glm::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 
             for (int row = 0; row < numRows; row++)
             {
@@ -239,12 +239,12 @@ namespace SJH
                     double currentRad = (vs + row * deltaRad) * radius;
                     double currentAngle = (us + col * deltaAngle);
 
-                    vmath::vec4 pos(
+                    glm::vec4 pos(
                         (float)(currentRad * cos(currentAngle)),
                         0.0f,
                         (float)(-currentRad * sin(currentAngle)),
                         1.0f);
-                    vmath::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
+                    glm::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
                     PushVertex(vertices, pos, white, diskNormal, uv, offset);
                 }
             }
@@ -288,7 +288,7 @@ namespace SJH
                                   double us, double ue, int uRes,
                                   double vs, double ve, int vRes,
                                   float radius, float height,
-                                  const vmath::vec3 &offset, bool back_face)
+                                  const glm::vec3 &offset, bool back_face)
         {
             // XZ 평면에 base, +Y 로 높이 height. 법선은 축에서 바깥으로 (xz 라디알).
             int numCols = uRes + 1;
@@ -299,7 +299,7 @@ namespace SJH
             double deltaV = (ve - vs) / (float)vRes;
             double deltaAngle = (ue - us) / (float)uRes;
 
-            const vmath::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
+            const glm::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 
             for (int row = 0; row < numRows; row++)
             {
@@ -308,14 +308,14 @@ namespace SJH
                     double currentV = (vs + row * deltaV) * height;
                     double currentAngle = (us + col * deltaAngle);
 
-                    vmath::vec4 pos(
+                    glm::vec4 pos(
                         (float)(radius * cos(currentAngle)),
                         (float)currentV,
                         (float)(-radius * sin(currentAngle)),
                         1.0f);
-                    vmath::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
-                    vmath::vec3 outN((float)cos(currentAngle), 0.0f, (float)-sin(currentAngle));
-                    vmath::vec3 normal = back_face ? -outN : outN;
+                    glm::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
+                    glm::vec3 outN((float)cos(currentAngle), 0.0f, (float)-sin(currentAngle));
+                    glm::vec3 normal = back_face ? -outN : outN;
                     PushVertex(vertices, pos, white, normal, uv, offset);
                 }
             }
@@ -354,7 +354,7 @@ namespace SJH
                                     double us, double ue, int uRes,
                                     double vs, double ve, int vRes,
                                     float radius,
-                                    const vmath::vec3 &offset, bool back_face)
+                                    const glm::vec3 &offset, bool back_face)
         {
             // 북반구(+Y), 중심 원점. 법선 = 중심->정점 (구면).
             int numCols = uRes + 1;
@@ -365,7 +365,7 @@ namespace SJH
             double deltaV = (ve - vs) / (float)vRes;
             double deltaAngle = (ue - us) / (float)uRes;
 
-            const vmath::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
+            const glm::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 
             for (int row = 0; row < numRows; row++)
             {
@@ -382,10 +382,10 @@ namespace SJH
                     float py = (float)y;
                     float pz = (float)(-r * sin(currentAngle));
 
-                    vmath::vec4 pos(px, py, pz, 1.0f);
-                    vmath::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
-                    vmath::vec3 outN = vmath::normalize(vmath::vec3(px, py, pz));
-                    vmath::vec3 normal = back_face ? -outN : outN;
+                    glm::vec4 pos(px, py, pz, 1.0f);
+                    glm::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
+                    glm::vec3 outN = glm::normalize(glm::vec3(px, py, pz));
+                    glm::vec3 normal = back_face ? -outN : outN;
                     PushVertex(vertices, pos, white, normal, uv, offset);
                 }
             }
@@ -424,7 +424,7 @@ namespace SJH
                                 double us, double ue, int uRes,
                                 double vs, double ve, int vRes,
                                 float radius,
-                                const vmath::vec3 &offset, bool back_face)
+                                const glm::vec3 &offset, bool back_face)
         {
             // 완전구, 중심 원점. 법선 = 중심->정점 (구면). HemiSphere 와 동일 구조이되
             // 위도(latitude) 범위만 [0,PI/2] -> [-PI/2,+PI/2] 로 확장 (v=0 남극, v=1 북극).
@@ -436,7 +436,7 @@ namespace SJH
             double deltaV = (ve - vs) / (float)vRes;
             double deltaAngle = (ue - us) / (float)uRes;
 
-            const vmath::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
+            const glm::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 
             for (int row = 0; row < numRows; row++)
             {
@@ -453,10 +453,10 @@ namespace SJH
                     float py = (float)y;
                     float pz = (float)(-r * sin(currentAngle));
 
-                    vmath::vec4 pos(px, py, pz, 1.0f);
-                    vmath::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
-                    vmath::vec3 outN = vmath::normalize(vmath::vec3(px, py, pz));
-                    vmath::vec3 normal = back_face ? -outN : outN;
+                    glm::vec4 pos(px, py, pz, 1.0f);
+                    glm::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
+                    glm::vec3 outN = glm::normalize(glm::vec3(px, py, pz));
+                    glm::vec3 normal = back_face ? -outN : outN;
                     PushVertex(vertices, pos, white, normal, uv, offset);
                 }
             }
@@ -505,9 +505,9 @@ namespace SJH
             {
                 const size_t b = i * STRIDE;
                 Vertex v;
-                v.position = vmath::vec3(raw[b + 0], raw[b + 1], raw[b + 2]);
-                v.normal = vmath::vec3(raw[b + 8], raw[b + 9], raw[b + 10]);
-                v.texCoord = vmath::vec2(raw[b + 11], raw[b + 12]);
+                v.position = glm::vec3(raw[b + 0], raw[b + 1], raw[b + 2]);
+                v.normal = glm::vec3(raw[b + 8], raw[b + 9], raw[b + 10]);
+                v.texCoord = glm::vec2(raw[b + 11], raw[b + 12]);
                 data.vertices.push_back(v);
             }
             data.indices.reserve(idx.size());
@@ -524,7 +524,7 @@ namespace SJH
             std::vector<GLfloat> raw;
             std::vector<GLuint> idx;
             BuildCubeIndexed(
-                raw, idx, vmath::vec3(-0.5f, -0.5f, -0.5f), back_face);
+                raw, idx, glm::vec3(-0.5f, -0.5f, -0.5f), back_face);
             return FromInterleaved(raw, idx);
         }
 
@@ -555,7 +555,7 @@ namespace SJH
                 raw, idx,
                 QUAD_BASE_POSITION, COLOR_ALL_WHITE_6, QUAD_BASE_MESH_UVS,
                 QUAD_MESH_UVS_FAN,
-                vmath::vec3(-0.5f, -0.5f, 0.0f),
+                glm::vec3(-0.5f, -0.5f, 0.0f),
                 back_face ? QUAD_FACE_INDICES_BACK : QUAD_FACE_INDICES);
             return FromInterleaved(raw, idx);
         }
@@ -565,7 +565,7 @@ namespace SJH
             std::vector<GLfloat> raw;
             std::vector<GLuint> idx;
             BuildConeIndexed(
-                raw, idx, vmath::vec3(-0.5f, -0.5f, -0.5f), back_face);
+                raw, idx, glm::vec3(-0.5f, -0.5f, -0.5f), back_face);
             return FromInterleaved(raw, idx);
         }
 
@@ -574,7 +574,7 @@ namespace SJH
             std::vector<GLfloat> raw;
             std::vector<GLuint> idx;
             BuildTetrahedronIndexed(
-                raw, idx, vmath::vec3(-0.5f, -0.5f, -0.5f), back_face);
+                raw, idx, glm::vec3(-0.5f, -0.5f, -0.5f), back_face);
             return FromInterleaved(raw, idx);
         }
 
@@ -583,7 +583,7 @@ namespace SJH
             std::vector<GLfloat> raw;
             std::vector<GLuint> idx;
             BuildOctahedronIndexed(
-                raw, idx, vmath::vec3(-0.5f, -0.5f, -0.5f), back_face);
+                raw, idx, glm::vec3(-0.5f, -0.5f, -0.5f), back_face);
             return FromInterleaved(raw, idx);
         }
 
@@ -595,7 +595,7 @@ namespace SJH
             std::vector<GLuint> idx;
             BuildDiskIndexed(
                 raw, idx, us, ue, uRes, vs, ve, vRes,
-                radius, vmath::vec3(0.0f, 0.0f, 0.0f), back_face);
+                radius, glm::vec3(0.0f, 0.0f, 0.0f), back_face);
             return FromInterleaved(raw, idx);
         }
 
@@ -607,7 +607,7 @@ namespace SJH
             std::vector<GLuint> idx;
             BuildCylinderIndexed(
                 raw, idx, us, ue, uRes, vs, ve, vRes,
-                radius, height, vmath::vec3(0.0f, 0.0f, 0.0f), back_face);
+                radius, height, glm::vec3(0.0f, 0.0f, 0.0f), back_face);
             return FromInterleaved(raw, idx);
         }
 
@@ -619,7 +619,7 @@ namespace SJH
             std::vector<GLuint> idx;
             BuildHemiSphereIndexed(
                 raw, idx, us, ue, uRes, vs, ve, vRes,
-                radius, vmath::vec3(0.0f, 0.0f, 0.0f), back_face);
+                radius, glm::vec3(0.0f, 0.0f, 0.0f), back_face);
             return FromInterleaved(raw, idx);
         }
 
@@ -631,7 +631,7 @@ namespace SJH
             std::vector<GLuint> idx;
             BuildSphereIndexed(
                 raw, idx, us, ue, uRes, vs, ve, vRes,
-                radius, vmath::vec3(0.0f, 0.0f, 0.0f), back_face);
+                radius, glm::vec3(0.0f, 0.0f, 0.0f), back_face);
             return FromInterleaved(raw, idx);
         }
 
@@ -644,9 +644,9 @@ namespace SJH
             for (uint32_t i = 0; i < mesh->mNumVertices; i++)
             {
                 auto &v = data.vertices[i];
-                v.position = vmath::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
-                v.normal = vmath::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
-                v.texCoord = vmath::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
+                v.position = glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+                v.normal = glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
+                v.texCoord = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
             }
 
             data.indices.resize(static_cast<size_t>(mesh->mNumFaces) * 3);

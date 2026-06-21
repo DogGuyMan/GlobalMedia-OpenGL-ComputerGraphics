@@ -37,7 +37,7 @@
 #include "GL/gl3w.h"
 #include <string>
 #include <unordered_map>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -71,16 +71,16 @@ namespace SJH
         std::unordered_map<std::string, int> Ints;
 
         /// @brief vec2 uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, vmath::vec2> Vec2s;
+        std::unordered_map<std::string, glm::vec2> Vec2s;
 
         /// @brief vec3 uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, vmath::vec3> Vec3s;
+        std::unordered_map<std::string, glm::vec3> Vec3s;
 
         /// @brief vec4 uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, vmath::vec4> Vec4s;
+        std::unordered_map<std::string, glm::vec4> Vec4s;
 
         /// @brief mat4 uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, vmath::mat4> Mat4s;
+        std::unordered_map<std::string, glm::mat4> Mat4s;
 
         /// @brief 텍스처 바인딩 map. 키 = 셰이더 sampler uniform 이름 (예: `"uAlbedo"`).
         std::unordered_map<std::string, TextureBinding> Textures;

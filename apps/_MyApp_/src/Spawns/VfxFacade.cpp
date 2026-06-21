@@ -27,12 +27,25 @@
 #include "Spawns/VfxInstance.h"                     // VFX::Spawn/SetSpawnContext 선언 + Spawns::SpawnVfxInstance
 #include "resource_registry/resource_registry.h"   // SJH::ResourceRegistry::Get().FindEffect
 
+#include <glm/glm.hpp> // glm::vec3 (PendingVfx 멤버 -- 직접 의존 명시)
+#include <string>
+#include <vector>
+
 namespace TopdownShooter::VFX
 {
     namespace
     {
         SJH::Scene::Actor* gFxRoot = nullptr; ///< main 등록 -- Director.Root() 자식 "FxRoot".
         VFXSystem*         gVfx    = nullptr; ///< main 등록 -- VFXSystem 포인터.
+
+        /// @brief 지연 스폰 요청 1건 -- Spawn 이 적재, FlushSpawns 가 Director::Update 밖에서 소비.
+        struct PendingVfx
+        {
+            std::string key; ///< ResourceRegistry Effect 키 (값 보유 -- 호출측 수명 무관).
+            glm::vec3 pos; ///< 월드 스폰 위치 (데미지 시점 캡처).
+            float       yaw; ///< Y 축 회전(라디안).
+        };
+        std::vector<PendingVfx> gPending; ///< 이번 프레임 누적 스폰 요청. FlushSpawns 가 drain.
     }
 
     void SetSpawnContext(SJH::Scene::Actor* fxRoot, VFXSystem* vfx)
@@ -41,11 +54,28 @@ namespace TopdownShooter::VFX
         gVfx    = vfx;
     }
 
-    void Spawn(const char* key, const vmath::vec3& pos, float yaw)
+    void Spawn(const char* key, const glm::vec3& pos, float yaw)
     {
         if (gFxRoot == nullptr || gVfx == nullptr) return;     // 미등록 - no-op
-        SJH::Effect* fx = SJH::ResourceRegistry::Get().FindEffect(key);
-        Spawns::SpawnVfxInstance(*gFxRoot, gVfx, fx, pos, yaw); // fx nullptr 면 SpawnVfxInstance 내부 guard
+        // [!] 즉시 AddChild 금지 -- Spawn 은 Life seam 경유로 Director::Update 순회 *도중*
+        //     (UltimateLaser 의 RaycastAll->DoDamaged) 호출될 수 있다. 순회 중 fxRoot->AddChild 는
+        //     mChildren 재할당 -> 라이브 iterator 무효화(use-after-free) 유발. 요청만 적재하고
+        //     실제 AddChild 는 FlushSpawns(Director::Update 밖)가 수행한다 (SweepDespawned 대칭).
+        gPending.push_back(PendingVfx{key, pos, yaw});
+    }
+
+    void FlushSpawns()
+    {
+        if (gPending.empty()) return;
+        // 재진입 안전 -- flush 도중 새 Spawn 요청은 다음 프레임 batch 로 (gPending 비운 뒤 소비).
+        std::vector<PendingVfx> batch;
+        batch.swap(gPending);
+        if (gFxRoot == nullptr || gVfx == nullptr) return;     // 컨텍스트 해제됨 - 잔여 요청 폐기
+        for (const auto& p : batch)
+        {
+            SJH::Effect* fx = SJH::ResourceRegistry::Get().FindEffect(p.key.c_str());
+            Spawns::SpawnVfxInstance(*gFxRoot, gVfx, fx, p.pos, p.yaw); // fx nullptr 면 내부 guard
+        }
     }
 
     SJH::Scene::Actor* GetSpawnFxRoot() { return gFxRoot; }

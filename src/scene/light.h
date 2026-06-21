@@ -22,7 +22,7 @@
 #ifndef __SJH_SCENE_LIGHT_H__
 #define __SJH_SCENE_LIGHT_H__
 #include "scene/actor.h" // Component base + Actor::GetWorldMatrix (모두 inline -> link 의존 0)
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -40,16 +40,16 @@ namespace SJH
 	{
 	  public:
 		/// @brief Ambient 항 색상 (RGB, 0~1). 셰이더 uniform `light.ambient`.
-		vmath::vec3 Ambient{vmath::vec3(0.1f, 0.1f, 0.1f)};
+		glm::vec3 Ambient{glm::vec3(0.1f, 0.1f, 0.1f)};
 
 		/// @brief Diffuse 항 색상 (RGB, 0~1). 셰이더 uniform `light.diffuse`.
-		vmath::vec3 Diffuse{vmath::vec3(0.5f, 0.5f, 0.5f)};
+		glm::vec3 Diffuse{glm::vec3(0.5f, 0.5f, 0.5f)};
 
 		/// @brief Specular 항 색상 (RGB, 0~1). 셰이더 uniform `light.specular`.
-		vmath::vec3 Specular{vmath::vec3(1.0f, 1.0f, 1.0f)};
+		glm::vec3 Specular{glm::vec3(1.0f, 1.0f, 1.0f)};
 
 		/// @brief Owner Actor 의 worldMatrix forward(-Z 컬럼) 정규화. Owner 없을 때 (-Z) fallback.
-		vmath::vec3 GetWorldDirection() const;
+		glm::vec3 GetWorldDirection() const;
 
 		// SP-SceneContext+ProgramRegistry (2026-05-26) - Cocos cc::Light 정통 자동 등록.
 		// OnEnter 에서 Director::GetContext().AddLight(this), OnExit 에서 Remove.
@@ -79,16 +79,16 @@ namespace SJH
 		float Distance{32.0f};
 
 		/// @brief Ambient 항 색상 (RGB, 0~1).
-		vmath::vec3 Ambient{vmath::vec3(0.1f, 0.1f, 0.1f)};
+		glm::vec3 Ambient{glm::vec3(0.1f, 0.1f, 0.1f)};
 
 		/// @brief Diffuse 항 색상 (RGB, 0~1).
-		vmath::vec3 Diffuse{vmath::vec3(0.5f, 0.5f, 0.5f)};
+		glm::vec3 Diffuse{glm::vec3(0.5f, 0.5f, 0.5f)};
 
 		/// @brief Specular 항 색상 (RGB, 0~1).
-		vmath::vec3 Specular{vmath::vec3(1.0f, 1.0f, 1.0f)};
+		glm::vec3 Specular{glm::vec3(1.0f, 1.0f, 1.0f)};
 
 		/// @brief Owner Actor 의 worldMatrix translate column. Owner 없을 때 원점.
-		vmath::vec3 GetWorldPosition() const;
+		glm::vec3 GetWorldPosition() const;
 
 		// SP-SceneContext+ProgramRegistry (2026-05-26) - Cocos cc::Light 정통 자동 등록.
 		virtual void OnEnter() override;
@@ -118,16 +118,16 @@ namespace SJH
 		float Distance{32.0f};
 
 		/// @brief Ambient 항 색상 (RGB, 0~1). 셰이더 uniform `light.ambient`.
-		vmath::vec3 Ambient{vmath::vec3(0.1f, 0.1f, 0.1f)};
+		glm::vec3 Ambient{glm::vec3(0.1f, 0.1f, 0.1f)};
 		/// @brief Diffuse 항 색상 (RGB, 0~1). 셰이더 uniform `light.diffuse`.
-		vmath::vec3 Diffuse{vmath::vec3(0.5f, 0.5f, 0.5f)};
+		glm::vec3 Diffuse{glm::vec3(0.5f, 0.5f, 0.5f)};
 		/// @brief Specular 항 색상 (RGB, 0~1). 셰이더 uniform `light.specular`.
-		vmath::vec3 Specular{vmath::vec3(1.0f, 1.0f, 1.0f)};
+		glm::vec3 Specular{glm::vec3(1.0f, 1.0f, 1.0f)};
 
 		/// @brief Owner Actor 의 worldMatrix translate column. Owner 없을 때 원점.
-		vmath::vec3 GetWorldPosition() const;
+		glm::vec3 GetWorldPosition() const;
 		/// @brief Owner Actor 의 worldMatrix forward(-Z 컬럼) 정규화. Owner 없을 때 (-Z) fallback.
-		vmath::vec3 GetWorldDirection() const;
+		glm::vec3 GetWorldDirection() const;
 
 		// SP-SceneContext+ProgramRegistry (2026-05-26) - Cocos cc::Light 정통 자동 등록.
 		virtual void OnEnter() override;

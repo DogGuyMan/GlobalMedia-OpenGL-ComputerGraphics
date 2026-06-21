@@ -86,7 +86,7 @@ namespace SJH::SpriteResources
 		inst->Properties.Textures["uAtlas"] = {atlas->GetTexture(), /*unit=*/0};
 		Uniforms::SetVec4(*inst, "uUvRect", atlas->GetUVRect(/*frameIdx=*/0));
 		Uniforms::SetFloat(*inst, "uFlipX", 1.0f);
-		Uniforms::SetVec4(*inst, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		Uniforms::SetVec4(*inst, "uTint", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 		return inst;
 	}
 } // namespace SJH::SpriteResources

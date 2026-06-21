@@ -35,7 +35,7 @@
 #include "scene/camera.h"
 
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::VFX
 {
@@ -74,8 +74,8 @@ namespace TopdownShooter::VFX
 		SJH::DeviceContext::Get().BindTarget(*rt);
 
 		// Effekseer 자체 GL state setup + Draw (D-2 - state 명시 set 하지 않음).
-		const vmath::mat4 view = mWorldCam->GetViewMatrix();
-		const vmath::mat4 proj = mWorldCam->GetProjectionMatrix();
+		const glm::mat4 view = mWorldCam->GetViewMatrix();
+		const glm::mat4 proj = mWorldCam->GetProjectionMatrix();
 		mVFX->Draw(&view[0][0], &proj[0][0]);
 
 		// D-RS-2 - Effekseer 가 depth/blend/cull 등 GL state 를 DeviceContext 캐시 뒤에서 바꾼다.

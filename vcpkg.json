@@ -1,20 +1,23 @@
 {
-    "$comment": "builtin-baseline=로컬 vcpkg HEAD(각자 로컬 버전 DB 사용). override 는 메이저 변경 위험분만: box2d 2.4.1(v3=36파일 깨짐), assimp 5.4.3(6.x 회피).",
+    "$comment": "builtin-baseline=로컬 vcpkg HEAD(각자 로컬 버전 DB 사용). override 는 메이저 변경 위험분만: box2d 2.4.1(v3=36파일 깨짐), assimp 5.4.3(6.x 회피), imgui 1.53(GLFW 3.0.4 호환 마지막; 신버전은 3.1+ 요구라 sb7 충돌). imgui 는 코어만 vcpkg, GLFW 백엔드는 apps/_MyApp_/third_party/imgui vendoring.",
     "name": "opengl-computergraphics",
     "version-string": "0.1.0",
     "builtin-baseline": "39a6cc0e44641977a7ccdfdb01a14eaf832aa330",
     "dependencies": [
         "box2d",
+        "glm",
         "spdlog",
         "assimp",
         "tweeny",
         "stb",
         "catch2",
-        "nlohmann-json"
+        "nlohmann-json",
+        "imgui"
     ],
     "overrides": [
         { "name": "box2d", "version": "2.4.1" },
-        { "name": "assimp", "version": "5.4.3" }
+        { "name": "assimp", "version": "5.4.3" },
+        { "name": "imgui", "version": "1.53" }
     ],
     "$comment-configuration": "box2d 2.4.1 arm64 테스트 빌드 버그 교정 overlay-ports 등록(필드명 구 spelling 필수). port 레시피는 vcpkg-overlay-ports/box2d/ 디렉토리(인라인 불가).",
     "vcpkg-configuration": {

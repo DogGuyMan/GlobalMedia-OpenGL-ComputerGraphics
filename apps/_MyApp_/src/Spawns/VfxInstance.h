@@ -23,7 +23,7 @@
 #ifndef __TOPDOWNSHOOTER_SPAWNS_VFX_INSTANCE_H__
 #define __TOPDOWNSHOOTER_SPAWNS_VFX_INSTANCE_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 // fwd
 namespace SJH { class Effect; }
@@ -49,7 +49,7 @@ namespace TopdownShooter::Spawns
     /// @param pos      이펙트 월드 스폰 위치.
     /// @param yaw      Y 축 회전(라디안). 기본 0 (회전 없음).
     void SpawnVfxInstance(SJH::Scene::Actor& fxParent, VFX::VFXSystem* vfx,
-                          SJH::Effect* effect, const vmath::vec3& pos, float yaw = 0.0f);
+                          SJH::Effect* effect, const glm::vec3& pos, float yaw = 0.0f);
 }
 
 namespace TopdownShooter::VFX
@@ -70,7 +70,14 @@ namespace TopdownShooter::VFX
     /// @param key @c ResourceRegistry 에 등록된 Effect 키.
     /// @param pos 월드 스폰 위치.
     /// @param yaw Y 축 회전(라디안) -- 발사 방향 등. 기본 0 (회전 없음).
-    void Spawn(const char* key, const vmath::vec3& pos, float yaw = 0.0f);
+    void Spawn(const char* key, const glm::vec3& pos, float yaw = 0.0f);
+
+    /// @brief 적재된 지연 VFX 스폰 요청을 일괄 처리 (Director::Update 밖에서 1회/프레임 호출).
+    /// @details @c Spawn 이 순회 중(@c UltimateLaser 의 RaycastAll->DoDamaged seam) 호출돼도 즉시
+    ///          AddChild 하지 않고 큐에 적재하므로, main 루프가 @c Director::Update 종료 후 이 함수를
+    ///          호출해 실제 스폰을 수행한다 (라이브 iterator 무효화 회피 -- @c WaveController::SweepDespawned
+    ///          와 동일 deferred 패턴). 컨텍스트 미등록이면 잔여 요청을 폐기하고 no-op.
+    void FlushSpawns();
 
     /// @brief 등록된 스폰 컨텍스트 fxRoot 접근자.
     ///        단발 @c Spawn 으로 처리 불가한 합성 VFX(회전/지속 이펙트, UltimateLaser 등) 용.

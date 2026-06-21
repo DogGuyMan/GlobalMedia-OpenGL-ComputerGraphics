@@ -20,7 +20,7 @@
 #define __TOPDOWNSHOOTER_BOOTSTRAP_ENEMY_BUILDER_H__
 
 #include "Entity/Constants.h"
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 class b2World;
 namespace SJH::Scene { class Actor; }
@@ -35,13 +35,13 @@ namespace TopdownShooter::Bootstrap
         b2World*           world        = nullptr;   ///< 적 body 를 생성할 Box2D 월드 (factory 로 전달)
         SJH::Scene::Actor* spawnParent  = nullptr;   ///< 적 child 부착 부모 (WaveController.mSpawnParent)
         SJH::Scene::Actor* playerTarget = nullptr;   ///< SimplePursueAI 추적 대상
-        vmath::vec2        pos          = vmath::vec2(0.0f);  ///< 스폰 월드 좌표 (xy 평면)
+        glm::vec2        pos          = glm::vec2(0.0f);  ///< 스폰 월드 좌표 (xy 평면)
         int                hp           = Entity::ENEMY_HP;       ///< 초기 체력
         float              speed        = Entity::ENEMY_SPEED;    ///< 이동 속도
         int                damage       = Entity::ENEMY_DAMAGE;   ///< 접촉 데미지
         int                variant      = 0;          ///< 0~2 -> ENEMY_FRONT[variant % 3]
         float              spriteFps    = Entity::ENEMY_SPRITE_FPS;        ///< 2프레임 walk 애니 속도
-        vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 - 적 베리에이션)
+        glm::vec4        healthBarColor = glm::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 - 적 베리에이션)
     };
 
     /// @brief 적 1체 조립 - CreateEnemyActor + ENEMY_FRONT 스프라이트/애니 + spawnParent 부착.

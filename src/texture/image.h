@@ -22,7 +22,7 @@
 #include <string>
 #include "common/common.h"
 #include "GL/gl3w.h"
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -87,7 +87,7 @@ namespace SJH
         void SetWhiteImage();
         /// @brief 전체 픽셀 버퍼를 단색 @p color (RGBA, 0~1) 로 채움.
         /// @param color RGBA 색상 (각 채널 0.0f ~ 1.0f).
-        void SetSingleColorImage(const vmath::vec4 &color);
+        void SetSingleColorImage(const glm::vec4 &color);
 
     private:
         bool LoadWithStb(const std::string &filepath);

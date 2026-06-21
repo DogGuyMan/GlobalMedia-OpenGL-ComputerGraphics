@@ -24,11 +24,11 @@
 
 namespace SJH::Sprite
 {
-    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
+    glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
                                int atlasWidth, int atlasHeight)
     {
         if (cols <= 0 || atlasWidth <= 0 || atlasHeight <= 0) {
-            return vmath::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+            return glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
         }
         int col = frameIdx % cols;
         int row = frameIdx / cols;
@@ -36,10 +36,10 @@ namespace SJH::Sprite
         float v  = static_cast<float>(row * tileH) / static_cast<float>(atlasHeight);
         float du = static_cast<float>(tileW)       / static_cast<float>(atlasWidth);
         float dv = static_cast<float>(tileH)       / static_cast<float>(atlasHeight);
-        return vmath::vec4(u, v, du, dv);
+        return glm::vec4(u, v, du, dv);
     }
 
-    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
+    glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
                                int atlasWidth, int atlasHeight)
     {
         // 정사각 편의 오버로드 - tileW=tileH=tileSize 위임 (기존 시그니처/단위 테스트 호환).
@@ -125,7 +125,7 @@ namespace SJH::Sprite
         mTexture.reset();   // SJH::Texture::~Texture 가 glDeleteTextures 자동 호출
     }
 
-    vmath::vec4 UniformAtlas::GetUVRect(int frameIdx) const
+    glm::vec4 UniformAtlas::GetUVRect(int frameIdx) const
     {
         return ComputeUVRect(frameIdx, mCols, mTileSize, mTileHeight, mAtlasWidth, mAtlasHeight);
     }

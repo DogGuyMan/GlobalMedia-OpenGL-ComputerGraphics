@@ -39,7 +39,7 @@
 #include <GL/glcorearb.h> // GL_TRIANGLES
 #include <box2d/box2d.h>
 #include <memory>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Entity::Bullet
 {
@@ -51,8 +51,8 @@ namespace TopdownShooter::Entity::Bullet
     struct BulletConfig
     {
         b2World*    world;                   ///< 총알 body 를 등록할 Box2D 월드 (비소유).
-        vmath::vec2 pos;                     ///< 스폰 위치(box2d 좌표계).
-        vmath::vec2 dir;                     ///< 발사 방향(정규화된 단위 벡터, box2d 좌표계).
+        glm::vec2 pos;                     ///< 스폰 위치(box2d 좌표계).
+        glm::vec2 dir;                     ///< 발사 방향(정규화된 단위 벡터, box2d 좌표계).
         float       speed    = BULLET_SPEED;   ///< 총알 초기 속력(units/sec).
         int         damage   = BULLET_DAMAGE;  ///< 적에게 가할 데미지.
         float       lifetime = BULLET_LIFETIME; ///< 총알 최대 수명(초). 초과 시 비활성.
@@ -77,7 +77,7 @@ namespace TopdownShooter::Entity::Bullet
         bc.world          = cfg.world;
         bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 -> 안 떨어짐) - static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
         bc.startPosition  = cfg.pos;
-        bc.linearVelocity = vmath::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
+        bc.linearVelocity = glm::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
         bc.density        = 1.0f;
         bc.isSensor       = true;        // 트리거 - 벽/적 OnTriggerEnter 로 despawn (물리 밀어내기/바운스 없음)
         bc.categoryBits   = Physics::ToBits(Physics::PhysicsLayer::BulletPlayer);
@@ -125,7 +125,7 @@ namespace TopdownShooter::Entity::Bullet
                 {
                     mat->SetProgram(prog);
                     mat->SetPass(SJH::Pass::Kind::Opaque);
-                    mat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 0.0f, 1.0f, 1.0f);
+                    mat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
                 }
             }
 

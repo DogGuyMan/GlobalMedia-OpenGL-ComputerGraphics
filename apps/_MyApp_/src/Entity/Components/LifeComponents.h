@@ -57,9 +57,9 @@ namespace TopdownShooter::Entity::Components
 		Algebraic::Numeric::Stat mMaxHp;          ///< 최대 HP Stat (modifier 확장 가능).
 		int   mCurHp;                              ///< 현재 HP (0 이하 = 사망).
 		bool  mDeathFxFired = false;               ///< one-shot 사망 guard (@c mDead 대체). DoDie 중복 발동 방지.
-		std::function<void(const vmath::vec3 &)> mOnDeathFx;          ///< 사망 위치에 spawn-at-point FX seam (빌더 주입).
-		std::function<void(const vmath::vec3 &)> mOnHitFx;            ///< 피격 위치에 hit FX seam - 적/플레이어 공통 (빌더 주입).
-		std::function<void(int, const vmath::vec3 &)> mOnDamageNumber; ///< 피격 위치에 데미지 숫자 seam (damage+pos, 빌더가 WorldText::SpawnDamage 주입).
+		std::function<void(const glm::vec3 &)> mOnDeathFx;          ///< 사망 위치에 spawn-at-point FX seam (빌더 주입).
+		std::function<void(const glm::vec3 &)> mOnHitFx;            ///< 피격 위치에 hit FX seam - 적/플레이어 공통 (빌더 주입).
+		std::function<void(int, const glm::vec3 &)> mOnDamageNumber; ///< 피격 위치에 데미지 숫자 seam (damage+pos, 빌더가 WorldText::SpawnDamage 주입).
 		std::function<void(SJH::Scene::Actor *)> mOnDeath;             ///< 사망(HP0) observer 통지 seam - WaveController 가 count-down + deferred sweep 수행.
 		IActorPresentation *mSink = nullptr;                           ///< @c OnEnter 에서 1회 캐시하는 연출 sink (비소유).
 
@@ -101,11 +101,11 @@ namespace TopdownShooter::Entity::Components
 		/// @brief i-frame 길이 설정 fluent. @param s 무적 시간(초, >0). @return *this.
 		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
 		/// @brief 사망 위치 FX seam 주입 fluent. @param fx 사망 spawn-at-point 콜백. @return *this.
-		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
+		Life &SetOnDeathFx(std::function<void(const glm::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
 		/// @brief 피격 위치 FX seam 주입 fluent. @param fx hit FX 콜백. @return *this.
-		Life &SetOnHitFx(std::function<void(const vmath::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
+		Life &SetOnHitFx(std::function<void(const glm::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
 		/// @brief 데미지 숫자 seam 주입 fluent. @param fn (damage, pos) 콜백. @return *this.
-		Life &SetOnDamageNumber(std::function<void(int, const vmath::vec3 &)> fn) { mOnDamageNumber = std::move(fn); return *this; }
+		Life &SetOnDamageNumber(std::function<void(int, const glm::vec3 &)> fn) { mOnDamageNumber = std::move(fn); return *this; }
 		/// @brief 사망 observer 콜백 주입 fluent (WaveController count-down 등). @param fn Actor* 콜백. @return *this.
 		Life &SetOnDeath(std::function<void(SJH::Scene::Actor *)> fn) { mOnDeath = std::move(fn); return *this; }
 		/// @brief 사망 연출 지연 설정 fluent. @param s 지연 시간(초, >0). @return *this.
@@ -184,9 +184,9 @@ namespace TopdownShooter::Entity::Components
 			mCurHp -= damage;
 			if (mSink) mSink->ReactDamaged(damage);  // Template-Method forward
 			if (mOnHitFx)                            // 피격 위치에 hit FX (mOnDeathFx 대칭 seam - 빌더가 VFX::Spawn 주입)
-				mOnHitFx(GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f));
+				mOnHitFx(GetOwner() ? GetOwner()->GetTransform().Translate : glm::vec3(0.0f));
 			if (mOnDamageNumber)                     // 피격 위치에 데미지 숫자 (빌더가 WorldText::SpawnDamage 주입)
-				mOnDamageNumber(damage, GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f));
+				mOnDamageNumber(damage, GetOwner() ? GetOwner()->GetTransform().Translate : glm::vec3(0.0f));
 			if (mInvincibleTimer) mInvincibleTimer->Reset();   // passed=0 -> 무적 발동 (없으면 no-op = 무적 없음)
 			if (!IsAlive())
 			{
@@ -202,7 +202,7 @@ namespace TopdownShooter::Entity::Components
 		{
 			if (mDeathFxFired) return;               // one-shot
 			mDeathFxFired = true;
-			const vmath::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f);
+			const glm::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : glm::vec3(0.0f);
 			if (mSink) mSink->ReactDied(pos);        // 디졸브 시작 (sink 가 구동 - 분해 Task 6)
 			if (mOnDeathFx) mOnDeathFx(pos);         // spawn-at-point seam
 			if (mOnDeath) mOnDeath(GetOwner());      // 사망 통지(observer) - countv + 제거 큐 등록은 owner(WaveController)

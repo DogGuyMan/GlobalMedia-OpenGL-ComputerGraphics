@@ -22,7 +22,7 @@
 #ifndef __TOPDOWNSHOOTER_SPAWNS_WORLD_TEXT_INSTANCE_H__
 #define __TOPDOWNSHOOTER_SPAWNS_WORLD_TEXT_INSTANCE_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include <string>
 
 namespace SJH
@@ -41,7 +41,7 @@ namespace TopdownShooter::Spawns
      */
     struct WorldTextStyle
     {
-        vmath::vec4 color       = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f); ///< 텍스트 색상 (RGBA).
+        glm::vec4 color       = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); ///< 텍스트 색상 (RGBA).
         float       charHeight  = 0.5f;    ///< 글리프 높이 -- 월드 단위. 최종 크기 = charHeight x scale.
         float       scale       = 1.0f;    ///< 전체 배율 (Actor.Transform.Scale 합성).
         float       riseHeight  = 0.7f;    ///< 월드 +Y 상승량(배율 영향 없음 -- 필요 시 별도 조정).
@@ -59,7 +59,7 @@ namespace TopdownShooter::Spawns
     /// @param text     표시할 문자열.
     /// @param style    외형/모션 파라미터.
     void SpawnWorldText(SJH::Scene::Actor& fxParent, SJH::Text::BitmapFont* font,
-                        const vmath::vec3& worldPos, const std::string& text,
+                        const glm::vec3& worldPos, const std::string& text,
                         const WorldTextStyle& style);
 }
 
@@ -77,7 +77,13 @@ namespace TopdownShooter::WorldText
     ///        @c VFX::Spawn 대칭 -- 빌더가 @c Life::SetOnDamageNumber seam 에 주입.
     /// @param damage 표시할 피해량 (양수). "-" 접두사는 내부에서 자동 추가.
     /// @param pos    월드 스폰 위치.
-    void SpawnDamage(int damage, const vmath::vec3& pos);
+    void SpawnDamage(int damage, const glm::vec3& pos);
+
+    /// @brief 적재된 지연 데미지 숫자 스폰을 일괄 처리 (Director::Update 밖 1회/프레임).
+    /// @details @c VFX::FlushSpawns 대칭 -- @c SpawnDamage 가 순회 *도중*(UltimateLaser) 호출돼도 큐에
+    ///          적재만 하고, 실제 @c SpawnWorldText(AddChild)는 이 함수가 순회 밖에서 수행해
+    ///          @c Actor::Update 라이브 iterator 무효화를 회피한다. 컨텍스트 미등록이면 잔여 폐기 후 no-op.
+    void FlushSpawns();
 }
 
 #endif // __TOPDOWNSHOOTER_SPAWNS_WORLD_TEXT_INSTANCE_H__

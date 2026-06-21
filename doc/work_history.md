@@ -750,7 +750,7 @@ _비코드 40개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#ifndef __SJH_CONSTANTS_H__
 +#define __SJH_CONSTANTS_H__
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +#include <vector>
 +#include "GL/gl3w.h"
 +
@@ -776,17 +776,17 @@ _비코드 40개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		    VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE + VERTEX_NORMAL_SIZE + VERTEX_UV_SIZE;
 +
 +		// === Constants ===
-+		const vmath::vec4 COLOR_BG = vmath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-+		const std::vector<vmath::vec4> COLOR_ALL_WHITE_4(4, vmath::vec4(1.0f));
-+		const std::vector<vmath::vec4> COLOR_ALL_WHITE_6(6, vmath::vec4(1.0f));
++		const glm::vec4 COLOR_BG = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
++		const std::vector<glm::vec4> COLOR_ALL_WHITE_4(4, glm::vec4(1.0f));
++		const std::vector<glm::vec4> COLOR_ALL_WHITE_6(6, glm::vec4(1.0f));
 +
-+		const std::vector<vmath::vec2> TRIANGLE_BASE_MESH_UVS{
++		const std::vector<glm::vec2> TRIANGLE_BASE_MESH_UVS{
 +		    {0.0, 0.0}, {1.0, 0.0}, {0.5, 1.0}};
 +
-+		const std::vector<vmath::vec2> TRIANGLE_BASE_INV_MESH_UVS{
++		const std::vector<glm::vec2> TRIANGLE_BASE_INV_MESH_UVS{
 +		    {0.0, 1.0}, {1.0, 1.0}, {0.5, 0.0}};
 +
-+		const std::vector<vmath::vec2> QUAD_BASE_MESH_UVS{
++		const std::vector<glm::vec2> QUAD_BASE_MESH_UVS{
 +		    {0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
 +
 +		const std::vector<GLuint> TRIANGLE_FACE_INDICES = {0, 1, 2};
@@ -795,13 +795,13 @@ _비코드 40개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		const std::vector<GLuint> QUAD_FACE_INDICES_BACK = {0, 2, 1, 3, 5, 4};
 +		const std::vector<GLuint> QUAD_MESH_UVS_FAN = {0, 1, 2, 0, 2, 3};
 +
-+		const std::vector<vmath::vec4> TRIANGLE_BASE_POSITION = {
++		const std::vector<glm::vec4> TRIANGLE_BASE_POSITION = {
 +		    {0.0, 0.0, 0.0, 1.0},
 +		    {1.0, 0.0, 0.0, 1.0},
 +		    {0.5, 0.866, 0.0, 1.0},
 +		};
 +
-+		const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
++		const std::vector<glm::vec4> TETRA_BASE_POSITION = {
 +		    {0.0, 0.0, 0.0, 1.0},
 +		    {1.0, 0.0, 0.0, 1.0},
 +		    {0.5, 0.0, 0.866, 1.0},
@@ -811,14 +811,14 @@ _비코드 40개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		const std::vector<std::vector<GLuint>> TETRA_FACE_INDICES = {
 +		    {1, 0, 3}, {2, 1, 3}, {0, 2, 3}, {1, 0, 2}};
 +
-+		const std::vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
++		const std::vector<glm::vec4> CONE_SIDE_BASE_POSITION = {
 +		    {0.0, 0.0, 0.0, 1.0},
 +		    {1.0, 0.0, 0.0, 1.0},
 +		    {1.0, 0.0, 1.0, 1.0},
 +		    {0.0, 0.0, 1.0, 1.0},
 +		    {0.5, 1.0, 0.5, 1.0}};
 +
-+		const std::vector<vmath::vec4> CONE_BOTTOM_BASE_POSITION = {
++		const std::vector<glm::vec4> CONE_BOTTOM_BASE_POSITION = {
 +		    CONE_SIDE_BASE_POSITION[0],
 +		    CONE_SIDE_BASE_POSITION[1],
 +		    CONE_SIDE_BASE_POSITION[2],
@@ -846,16 +846,16 @@ _… diff 생략: 코드 파일 48개 더 (커밋 줄 수 캡)_
 +#include "object/vertex.h"
  #include "GL/gl3w.h"
  #include <vector>
--#include <vmath.h>
+-#include <glm/glm.hpp>
  
  namespace SJH
  {
 -    /// @brief 단일 정점 — 위치 + 법선 + UV 좌표.
 -    struct Vertex
 -    {
--        vmath::vec3 position; ///< 정점 위치 (object space)
--        vmath::vec3 normal;   ///< 법선 벡터 (object space, 정규화 가정)
--        vmath::vec2 texCoord; ///< UV 좌표 (0~1 범위 권장)
+-        glm::vec3 position; ///< 정점 위치 (object space)
+-        glm::vec3 normal;   ///< 법선 벡터 (object space, 정규화 가정)
+-        glm::vec2 texCoord; ///< UV 좌표 (0~1 범위 권장)
 -    };
 -
      CLASS_PTR(Mesh);
@@ -869,7 +869,7 @@ _… diff 생략: 코드 파일 48개 더 (커밋 줄 수 캡)_
 +#ifndef __OBJECT_VERTEX_H__
 +#define __OBJECT_VERTEX_H__
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace SJH
 +{
@@ -877,9 +877,9 @@ _… diff 생략: 코드 파일 48개 더 (커밋 줄 수 캡)_
 +    /// @note GL 로더(glad/gl3w) 비의존 — vmath 만 의존하므로 어느 TU 에서도 안전.
 +    struct Vertex
 +    {
-+        vmath::vec3 position; ///< 정점 위치 (object space)
-+        vmath::vec3 normal;   ///< 법선 벡터 (object space, 정규화 가정)
-+        vmath::vec2 texCoord; ///< UV 좌표 (0~1 범위 권장)
++        glm::vec3 position; ///< 정점 위치 (object space)
++        glm::vec3 normal;   ///< 법선 벡터 (object space, 정규화 가정)
++        glm::vec2 texCoord; ///< UV 좌표 (0~1 범위 권장)
 +    };
 +}
 +
@@ -914,7 +914,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "object/geometry.h"
 +#include "engine/constants.h"
 +#include "engine/geometry.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace SJH
 +{
@@ -933,9 +933,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            {
 +                const size_t b = i * STRIDE;
 +                Vertex v;
-+                v.position = vmath::vec3(raw[b + 0], raw[b + 1], raw[b + 2]); // pos.w 폐기
-+                v.normal = vmath::vec3(raw[b + 8], raw[b + 9], raw[b + 10]);
-+                v.texCoord = vmath::vec2(raw[b + 11], raw[b + 12]);
++                v.position = glm::vec3(raw[b + 0], raw[b + 1], raw[b + 2]); // pos.w 폐기
++                v.normal = glm::vec3(raw[b + 8], raw[b + 9], raw[b + 10]);
++                v.texCoord = glm::vec2(raw[b + 11], raw[b + 12]);
 +                data.vertices.push_back(v);
 +            }
 +            data.indices.reserve(idx.size());
@@ -952,7 +952,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            std::vector<GLfloat> raw;
 +            std::vector<GLuint> idx;
 +            Engine::Model::BuildCubeIndexed(
-+                raw, idx, vmath::vec3(-0.5f, -0.5f, -0.5f), back_face);
++                raw, idx, glm::vec3(-0.5f, -0.5f, -0.5f), back_face);
 +            return FromInterleaved(raw, idx);
 +        }
 +
@@ -967,7 +967,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +                raw, idx,
 +                QUAD_BASE_POSITION, COLOR_ALL_WHITE_6, QUAD_BASE_MESH_UVS,
 +                QUAD_MESH_UVS_FAN,
-+                vmath::vec3(-0.5f, -0.5f, 0.0f),
++                glm::vec3(-0.5f, -0.5f, 0.0f),
 +                back_face ? QUAD_FACE_INDICES_BACK : QUAD_FACE_INDICES);
 +            return FromInterleaved(raw, idx);
 +        }
@@ -977,7 +977,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            std::vector<GLfloat> raw;
 +            std::vector<GLuint> idx;
 +            Engine::Model::BuildConeIndexed(
-+                raw, idx, vmath::vec3(-0.5f, -0.5f, -0.5f), back_face);
++                raw, idx, glm::vec3(-0.5f, -0.5f, -0.5f), back_face);
 +            return FromInterleaved(raw, idx);
 +        }
 +
@@ -986,7 +986,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            std::vector<GLfloat> raw;
 +            std::vector<GLuint> idx;
 +            Engine::Model::BuildTetrahedronIndexed(
-+                raw, idx, vmath::vec3(-0.5f, -0.5f, -0.5f), back_face);
++                raw, idx, glm::vec3(-0.5f, -0.5f, -0.5f), back_face);
 +            return FromInterleaved(raw, idx);
 +        }
 +
@@ -1073,35 +1073,35 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
      {
 -        // clang-format off
 -        std::vector<Vertex> vertices = {
--            Vertex{vmath::vec3(-0.5f, -0.5f, -0.5f), vmath::vec3(0.0f, 0.0f, -1.0f), vmath::vec2(0.0f, 0.0f)},
--            Vertex{vmath::vec3(0.5f, -0.5f, -0.5f), vmath::vec3(0.0f, 0.0f, -1.0f), vmath::vec2(1.0f, 0.0f)},
--            Vertex{vmath::vec3(0.5f, 0.5f, -0.5f), vmath::vec3(0.0f, 0.0f, -1.0f), vmath::vec2(1.0f, 1.0f)},
--            Vertex{vmath::vec3(-0.5f, 0.5f, -0.5f), vmath::vec3(0.0f, 0.0f, -1.0f), vmath::vec2(0.0f, 1.0f)},
+-            Vertex{glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(0.0f, 0.0f)},
+-            Vertex{glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(1.0f, 0.0f)},
+-            Vertex{glm::vec3(0.5f, 0.5f, -0.5f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(1.0f, 1.0f)},
+-            Vertex{glm::vec3(-0.5f, 0.5f, -0.5f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(0.0f, 1.0f)},
 -
--            Vertex{vmath::vec3(-0.5f, -0.5f, 0.5f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(0.0f, 0.0f)},
--            Vertex{vmath::vec3(0.5f, -0.5f, 0.5f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(1.0f, 0.0f)},
--            Vertex{vmath::vec3(0.5f, 0.5f, 0.5f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(1.0f, 1.0f)},
--            Vertex{vmath::vec3(-0.5f, 0.5f, 0.5f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(0.0f, 1.0f)},
+-            Vertex{glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
+-            Vertex{glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
+-            Vertex{glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
+-            Vertex{glm::vec3(-0.5f, 0.5f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
 -
--            Vertex{vmath::vec3(-0.5f, 0.5f, 0.5f), vmath::vec3(-1.0f, 0.0f, 0.0f), vmath::vec2(1.0f, 0.0f)},
--            Vertex{vmath::vec3(-0.5f, 0.5f, -0.5f), vmath::vec3(-1.0f, 0.0f, 0.0f), vmath::vec2(1.0f, 1.0f)},
--            Vertex{vmath::vec3(-0.5f, -0.5f, -0.5f), vmath::vec3(-1.0f, 0.0f, 0.0f), vmath::vec2(0.0f, 1.0f)},
--            Vertex{vmath::vec3(-0.5f, -0.5f, 0.5f), vmath::vec3(-1.0f, 0.0f, 0.0f), vmath::vec2(0.0f, 0.0f)},
+-            Vertex{glm::vec3(-0.5f, 0.5f, 0.5f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f)},
+-            Vertex{glm::vec3(-0.5f, 0.5f, -0.5f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 1.0f)},
+-            Vertex{glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(0.0f, 1.0f)},
+-            Vertex{glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(0.0f, 0.0f)},
 -
--            Vertex{vmath::vec3(0.5f, 0.5f, 0.5f), vmath::vec3(1.0f, 0.0f, 0.0f), vmath::vec2(1.0f, 0.0f)},
--            Vertex{vmath::vec3(0.5f, 0.5f, -0.5f), vmath::vec3(1.0f, 0.0f, 0.0f), vmath::vec2(1.0f, 1.0f)},
--            Vertex{vmath::vec3(0.5f, -0.5f, -0.5f), vmath::vec3(1.0f, 0.0f, 0.0f), vmath::vec2(0.0f, 1.0f)},
--            Vertex{vmath::vec3(0.5f, -0.5f, 0.5f), vmath::vec3(1.0f, 0.0f, 0.0f), vmath::vec2(0.0f, 0.0f)},
+-            Vertex{glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f)},
+-            Vertex{glm::vec3(0.5f, 0.5f, -0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 1.0f)},
+-            Vertex{glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(0.0f, 1.0f)},
+-            Vertex{glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(0.0f, 0.0f)},
 -
--            Vertex{vmath::vec3(-0.5f, -0.5f, -0.5f), vmath::vec3(0.0f, -1.0f, 0.0f), vmath::vec2(0.0f, 1.0f)},
--            Vertex{vmath::vec3(0.5f, -0.5f, -0.5f), vmath::vec3(0.0f, -1.0f, 0.0f), vmath::vec2(1.0f, 1.0f)},
--            Vertex{vmath::vec3(0.5f, -0.5f, 0.5f), vmath::vec3(0.0f, -1.0f, 0.0f), vmath::vec2(1.0f, 0.0f)},
--            Vertex{vmath::vec3(-0.5f, -0.5f, 0.5f), vmath::vec3(0.0f, -1.0f, 0.0f), vmath::vec2(0.0f, 0.0f)},
+-            Vertex{glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(0.0f, 1.0f)},
+-            Vertex{glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(1.0f, 1.0f)},
+-            Vertex{glm::vec3(0.5f, -0.5f, 0.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(1.0f, 0.0f)},
+-            Vertex{glm::vec3(-0.5f, -0.5f, 0.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(0.0f, 0.0f)},
 -
--            Vertex{vmath::vec3(-0.5f, 0.5f, -0.5f), vmath::vec3(0.0f, 1.0f, 0.0f), vmath::vec2(0.0f, 1.0f)},
--            Vertex{vmath::vec3(0.5f, 0.5f, -0.5f), vmath::vec3(0.0f, 1.0f, 0.0f), vmath::vec2(1.0f, 1.0f)},
--            Vertex{vmath::vec3(0.5f, 0.5f, 0.5f), vmath::vec3(0.0f, 1.0f, 0.0f), vmath::vec2(1.0f, 0.0f)},
--            Vertex{vmath::vec3(-0.5f, 0.5f, 0.5f), vmath::vec3(0.0f, 1.0f, 0.0f), vmath::vec2(0.0f, 0.0f)},
+-            Vertex{glm::vec3(-0.5f, 0.5f, -0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f)},
+-            Vertex{glm::vec3(0.5f, 0.5f, -0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f)},
+-            Vertex{glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f)},
+-            Vertex{glm::vec3(-0.5f, 0.5f, 0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f)},
 -        };
 -
 -        // 6면 × 12 인덱스 = 36. 각 면이 자기 4개 정점만 참조 (i4~i6 가 오작성되어 있던 것을 정정).
@@ -1125,10 +1125,10 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
      {
 -        // clang-format off
 -        std::vector<Vertex> vertices = {
--            Vertex{vmath::vec3(-0.5f, -0.5f, 0.0f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(0.0f, 0.0f)},
--            Vertex{vmath::vec3(0.5f, -0.5f, 0.0f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(1.0f, 0.0f)},
--            Vertex{vmath::vec3(0.5f, 0.5f, 0.0f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(1.0f, 1.0f)},
--            Vertex{vmath::vec3(-0.5f, 0.5f, 0.0f), vmath::vec3(0.0f, 0.0f, 1.0f), vmath::vec2(0.0f, 1.0f)},
+-            Vertex{glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f)},
+-            Vertex{glm::vec3(0.5f, -0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f)},
+-            Vertex{glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f)},
+-            Vertex{glm::vec3(-0.5f, 0.5f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)},
 -        };
 -
 -        std::vector<uint32_t> indices = {
@@ -1357,9 +1357,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -	}
 -
 -	void ShaderProgram::Render(const ModelMap &models,
--	                           const vmath::mat4 &view,
--	                           const vmath::mat4 &proj,
--	                           const vmath::vec3 &viewPos)
+-	                           const glm::mat4 &view,
+-	                           const glm::mat4 &proj,
+-	                           const glm::vec3 &viewPos)
 -	{
 -		Apply(view, proj, viewPos);
 -		for (auto &entry : models)
@@ -1372,9 +1372,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -		}
 -	}
 -
--	void DefaultShaderProgram::Apply(const vmath::mat4 &view,
--	                                 const vmath::mat4 &proj,
--	                                 const vmath::vec3 &viewPos)
+-	void DefaultShaderProgram::Apply(const glm::mat4 &view,
+-	                                 const glm::mat4 &proj,
+-	                                 const glm::vec3 &viewPos)
 -	{
 -		(void)viewPos;
 -		glUseProgram(ProgAddr);
@@ -1426,16 +1426,16 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -
 -		// glUseProgram + 셰이더별 per-frame uniform (view, proj, light, ...) 셋업.
 -		// Apply 호출 후에 Material::Apply / Model::Draw 가 동일 program 위에 uniform 을 얹는다.
--		virtual void Apply(const vmath::mat4 &view,
--		                   const vmath::mat4 &proj,
--		                   const vmath::vec3 &viewPos) = 0;
+-		virtual void Apply(const glm::mat4 &view,
+-		                   const glm::mat4 &proj,
+-		                   const glm::vec3 &viewPos) = 0;
 -
 -		// 편의 메소드: Apply(...) + models 순회 + 각 model->Draw().
 -		// material->program == this 가 아닌 모델은 skip (multi-program 씬 안전).
 -		void Render(const ModelMap &models,
--		            const vmath::mat4 &view,
--		            const vmath::mat4 &proj,
--		            const vmath::vec3 &viewPos);
+-		            const glm::mat4 &view,
+-		            const glm::mat4 &proj,
+-		            const glm::vec3 &viewPos);
 -	};
 -
 -	// 단순 셰이더: view / proj 만 셋업, 텍스처/라이팅 없음.
@@ -1444,9 +1444,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -	  public:
 -		using ShaderProgram::ShaderProgram;
 -
--		void Apply(const vmath::mat4 &view,
--		           const vmath::mat4 &proj,
--		           const vmath::vec3 &viewPos) override;
+-		void Apply(const glm::mat4 &view,
+-		           const glm::mat4 &proj,
+-		           const glm::vec3 &viewPos) override;
 -	};
 -
 -	// 텍스처 + 옵션 라이팅 셰이더. AttachedLight 가 nullptr 이면 ApplyDisabled() 로 라이팅 OFF.
@@ -1459,9 +1459,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -		// 셰이더-의존 멤버 (PhongMaterial 가 shininess 를 멤버로 갖는 것과 동일 패턴)
 -		Engine::Lighting::Light *AttachedLight = nullptr;
 -
--		void Apply(const vmath::mat4 &view,
--		           const vmath::mat4 &proj,
--		           const vmath::vec3 &viewPos) override;
+-		void Apply(const glm::mat4 &view,
+-		           const glm::mat4 &proj,
+-		           const glm::vec3 &viewPos) override;
 -	};
 … (+3줄 생략)
 ```
@@ -1901,14 +1901,14 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 `src/common/constants.h`
 ```diff
 @@ -49,14 +49,14 @@ namespace SJH::Const
- 		const std::vector<vmath::vec4> TRIANGLE_BASE_POSITION = {
+ 		const std::vector<glm::vec4> TRIANGLE_BASE_POSITION = {
  		    {0.0, 0.0, 0.0, 1.0},
  		    {1.0, 0.0, 0.0, 1.0},
 -		    {0.5, 0.866, 0.0, 1.0},
 +		    {0.5, 0.866f, 0.0, 1.0},
  		};
  
- 		const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
+ 		const std::vector<glm::vec4> TETRA_BASE_POSITION = {
  		    {0.0, 0.0, 0.0, 1.0},
  		    {1.0, 0.0, 0.0, 1.0},
 -		    {0.5, 0.0, 0.866, 1.0},
@@ -1963,17 +1963,17 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		    VERTEX_POSITION_SIZE + VERTEX_COLOR_SIZE + VERTEX_NORMAL_SIZE + VERTEX_UV_SIZE;
 -
 -		// === Constants ===
--		const vmath::vec4 COLOR_BG = vmath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
--		const std::vector<vmath::vec4> COLOR_ALL_WHITE_4(4, vmath::vec4(1.0f));
--		const std::vector<vmath::vec4> COLOR_ALL_WHITE_6(6, vmath::vec4(1.0f));
+-		const glm::vec4 COLOR_BG = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+-		const std::vector<glm::vec4> COLOR_ALL_WHITE_4(4, glm::vec4(1.0f));
+-		const std::vector<glm::vec4> COLOR_ALL_WHITE_6(6, glm::vec4(1.0f));
 -
--		const std::vector<vmath::vec2> TRIANGLE_BASE_MESH_UVS{
+-		const std::vector<glm::vec2> TRIANGLE_BASE_MESH_UVS{
 -		    {0.0, 0.0}, {1.0, 0.0}, {0.5, 1.0}};
 -
--		const std::vector<vmath::vec2> TRIANGLE_BASE_INV_MESH_UVS{
+-		const std::vector<glm::vec2> TRIANGLE_BASE_INV_MESH_UVS{
 -		    {0.0, 1.0}, {1.0, 1.0}, {0.5, 0.0}};
 -
--		const std::vector<vmath::vec2> QUAD_BASE_MESH_UVS{
+-		const std::vector<glm::vec2> QUAD_BASE_MESH_UVS{
 -		    {0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
 -
 -		const std::vector<GLuint> TRIANGLE_FACE_INDICES = {0, 1, 2};
@@ -1982,13 +1982,13 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		const std::vector<GLuint> QUAD_FACE_INDICES_BACK = {0, 2, 1, 3, 5, 4};
 -		const std::vector<GLuint> QUAD_MESH_UVS_FAN = {0, 1, 2, 0, 2, 3};
 -
--		const std::vector<vmath::vec4> TRIANGLE_BASE_POSITION = {
+-		const std::vector<glm::vec4> TRIANGLE_BASE_POSITION = {
 -		    {0.0, 0.0, 0.0, 1.0},
 -		    {1.0, 0.0, 0.0, 1.0},
 -		    {0.5, 0.866, 0.0, 1.0},
 -		};
 -
--		const std::vector<vmath::vec4> TETRA_BASE_POSITION = {
+-		const std::vector<glm::vec4> TETRA_BASE_POSITION = {
 -		    {0.0, 0.0, 0.0, 1.0},
 -		    {1.0, 0.0, 0.0, 1.0},
 -		    {0.5, 0.0, 0.866, 1.0},
@@ -1998,14 +1998,14 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		const std::vector<std::vector<GLuint>> TETRA_FACE_INDICES = {
 -		    {1, 0, 3}, {2, 1, 3}, {0, 2, 3}, {1, 0, 2}};
 -
--		const std::vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
+-		const std::vector<glm::vec4> CONE_SIDE_BASE_POSITION = {
 -		    {0.0, 0.0, 0.0, 1.0},
 -		    {1.0, 0.0, 0.0, 1.0},
 -		    {1.0, 0.0, 1.0, 1.0},
 -		    {0.0, 0.0, 1.0, 1.0},
 -		    {0.5, 1.0, 0.5, 1.0}};
 -
--		const std::vector<vmath::vec4> CONE_BOTTOM_BASE_POSITION = {
+-		const std::vector<glm::vec4> CONE_BOTTOM_BASE_POSITION = {
 -		    CONE_SIDE_BASE_POSITION[0],
 -		    CONE_SIDE_BASE_POSITION[1],
 -		    CONE_SIDE_BASE_POSITION[2],
@@ -2014,14 +2014,14 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		const std::vector<std::vector<GLuint>> CONE_SIDE_FACE_INDICES = {
 -		    {1, 0, 4}, {2, 1, 4}, {3, 2, 4}, {0, 3, 4}};
 -
--		const std::vector<vmath::vec4> QUAD_BASE_POSITION = {
+-		const std::vector<glm::vec4> QUAD_BASE_POSITION = {
 -		    {0.0, 0.0, 0.0, 1.0},
 -		    {1.0, 0.0, 0.0, 1.0},
 -		    {1.0, 1.0, 0.0, 1.0},
 -		    {0.0, 1.0, 0.0, 1.0},
 -		};
 -
--		const std::vector<vmath::vec4> QUAD_BASE_FACED_POSITION = {
+-		const std::vector<glm::vec4> QUAD_BASE_FACED_POSITION = {
 … (+66줄 생략)
 ```
 
@@ -2035,21 +2035,21 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -	using namespace Constants::GEOMETRY;
 -
 -	// === Utility functions ===
--	vmath::vec3 ComputeFaceNormal(const vmath::vec4 &p0,
--	                              const vmath::vec4 &p1,
--	                              const vmath::vec4 &p2)
+-	glm::vec3 ComputeFaceNormal(const glm::vec4 &p0,
+-	                              const glm::vec4 &p1,
+-	                              const glm::vec4 &p2)
 -	{
--		vmath::vec3 e1 = vmath::vec3(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
--		vmath::vec3 e2 = vmath::vec3(p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]);
+-		glm::vec3 e1 = glm::vec3(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
+-		glm::vec3 e2 = glm::vec3(p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]);
 -		return vmath::normalize(vmath::cross(e1, e2));
 -	}
 -
 -	void PushVertex(std::vector<GLfloat> &vertices,
--	                const vmath::vec4 pos,
--	                const vmath::vec4 color,
--	                const vmath::vec3 normal,
--	                const vmath::vec2 uv,
--	                const vmath::vec3 &offset)
+-	                const glm::vec4 pos,
+-	                const glm::vec4 color,
+-	                const glm::vec3 normal,
+-	                const glm::vec2 uv,
+-	                const glm::vec3 &offset)
 -	{
 -		vertices.push_back(pos[0] + offset[0]);
 -		vertices.push_back(pos[1] + offset[1]);
@@ -2072,19 +2072,19 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -	   flat-shading : 같은 면의 3정점 모두 동일한 normal 공유. */
 -	void BuildTriangle(
 -	    std::vector<GLfloat> &buffer_data,
--	    const std::vector<vmath::vec4> &positions,
--	    const std::vector<vmath::vec4> &colors,
--	    const std::vector<vmath::vec2> &uvs,
+-	    const std::vector<glm::vec4> &positions,
+-	    const std::vector<glm::vec4> &colors,
+-	    const std::vector<glm::vec2> &uvs,
 -	    const std::vector<GLuint> &position_idxs,
--	    const vmath::vec3 &offset,
+-	    const glm::vec3 &offset,
 -	    const std::vector<GLuint> &face_idxs)
 -	{
 -		// face_idxs winding 순서대로 3정점 -> CCW edge 외적으로 face normal 계산.
 -		// flat-shading : 같은 면의 3정점 모두 동일한 normal 공유.
--		const vmath::vec4 &fp0 = positions[position_idxs[face_idxs[0]]];
--		const vmath::vec4 &fp1 = positions[position_idxs[face_idxs[1]]];
--		const vmath::vec4 &fp2 = positions[position_idxs[face_idxs[2]]];
--		const vmath::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
+-		const glm::vec4 &fp0 = positions[position_idxs[face_idxs[0]]];
+-		const glm::vec4 &fp1 = positions[position_idxs[face_idxs[1]]];
+-		const glm::vec4 &fp2 = positions[position_idxs[face_idxs[2]]];
+-		const glm::vec3 faceNormal = ComputeFaceNormal(fp0, fp1, fp2);
 -
 -		for (int i = 0; i < 3; i++)
 -		{
@@ -2101,11 +2101,11 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -	/* BuildQuad: 평면 quad 가정 — 첫 3정점만으로 면 법선 계산해서 6정점에 동일 적용 (flat shading). */
 -	void BuildQuad(
 -	    std::vector<GLfloat> &buffer_data,
--	    const std::vector<vmath::vec4> &positions,
--	    const std::vector<vmath::vec4> &colors,
--	    const std::vector<vmath::vec2> &uvs,
+-	    const std::vector<glm::vec4> &positions,
+-	    const std::vector<glm::vec4> &colors,
+-	    const std::vector<glm::vec2> &uvs,
 -	    const std::vector<GLuint> &position_idxs,
--	    const vmath::vec3 &offset,
+-	    const glm::vec3 &offset,
 -	    const std::vector<GLuint> &face_idxs)
 … (+633줄 생략)
 ```
@@ -2122,60 +2122,60 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -namespace Engine::Model
 -{
 -	// CCW 정렬된 3정점에서 face normal 계산 (외적 + 정규화)
--	vmath::vec3 ComputeFaceNormal(const vmath::vec4 &p0,
--	                              const vmath::vec4 &p1,
--	                              const vmath::vec4 &p2);
+-	glm::vec3 ComputeFaceNormal(const glm::vec4 &p0,
+-	                              const glm::vec4 &p1,
+-	                              const glm::vec4 &p2);
 -
 -	void PushVertex(std::vector<GLfloat> &vertices,
--	                const vmath::vec4 pos,
--	                const vmath::vec4 color,
--	                const vmath::vec3 normal,
--	                const vmath::vec2 uv,
--	                const vmath::vec3 &offset);
+-	                const glm::vec4 pos,
+-	                const glm::vec4 color,
+-	                const glm::vec3 normal,
+-	                const glm::vec2 uv,
+-	                const glm::vec3 &offset);
 -
 -	void BuildTriangle(
 -	    std::vector<GLfloat> &buffer_data,
--	    const std::vector<vmath::vec4> &positions,
--	    const std::vector<vmath::vec4> &colors,
--	    const std::vector<vmath::vec2> &uvs,
+-	    const std::vector<glm::vec4> &positions,
+-	    const std::vector<glm::vec4> &colors,
+-	    const std::vector<glm::vec2> &uvs,
 -	    const std::vector<GLuint> &position_idxs,
--	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+-	    const glm::vec3 &offset = glm::vec3(-0.5f, -0.5f, -0.5f),
 -	    const std::vector<GLuint> &face_idxs = Constants::GEOMETRY::TRIANGLE_FACE_INDICES);
 -
 -	void BuildQuad(
 -	    std::vector<GLfloat> &buffer_data,
--	    const std::vector<vmath::vec4> &positions,
--	    const std::vector<vmath::vec4> &colors,
--	    const std::vector<vmath::vec2> &uvs,
+-	    const std::vector<glm::vec4> &positions,
+-	    const std::vector<glm::vec4> &colors,
+-	    const std::vector<glm::vec2> &uvs,
 -	    const std::vector<GLuint> &position_idxs,
--	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+-	    const glm::vec3 &offset = glm::vec3(-0.5f, -0.5f, -0.5f),
 -	    const std::vector<GLuint> &face_idxs = Constants::GEOMETRY::QUAD_FACE_INDICES);
 -
 -	void BuildCube(
 -	    std::vector<GLfloat> &buffer_data,
--	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+-	    const glm::vec3 &offset = glm::vec3(-0.5f, -0.5f, -0.5f),
 -	    bool back_face = false);
 -
 -	void BuildCone(
 -	    std::vector<GLfloat> &buffer_data,
--	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+-	    const glm::vec3 &offset = glm::vec3(-0.5f, -0.5f, -0.5f),
 -	    bool back_face = false);
 -
 -	void BuildTetrahedron(
 -	    std::vector<GLfloat> &buffer_data,
--	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+-	    const glm::vec3 &offset = glm::vec3(-0.5f, -0.5f, -0.5f),
 -	    bool back_face = false);
 -
 -	void BuildOctahedron(
 -	    std::vector<GLfloat> &buffer_data,
--	    const vmath::vec3 &offset = vmath::vec3(-0.5f, -0.5f, -0.5f),
+-	    const glm::vec3 &offset = glm::vec3(-0.5f, -0.5f, -0.5f),
 -	    bool back_face = false);
 -
 -	void BuildDisk(std::vector<GLfloat> &buffer_data,
 -	               double us, double ue, int uRes,
 -	               double vs, double ve, int vRes,
 -	               float radius = 1.0f,
--	               const vmath::vec3 &offset = vmath::vec3(0.0f, 0.0f, 0.0f),
+-	               const glm::vec3 &offset = glm::vec3(0.0f, 0.0f, 0.0f),
 -	               bool back_face = false);
 -
 -	void BuildCylinder(std::vector<GLfloat> &buffer_data,
@@ -2183,14 +2183,14 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -	                   double vs, double ve, int vRes,
 -	                   float radius = 1.0f,
 -	                   float height = 1.0f,
--	                   const vmath::vec3 &offset = vmath::vec3(0.0f, 0.0f, 0.0f),
+-	                   const glm::vec3 &offset = glm::vec3(0.0f, 0.0f, 0.0f),
 -	                   bool back_face = false);
 -
 -	void BuildHemiSphere(std::vector<GLfloat> &buffer_data,
 -	                     double us, double ue, int uRes,
 -	                     double vs, double ve, int vRes,
 -	                     float radius = 1.0f,
--	                     const vmath::vec3 &offset = vmath::vec3(0.0f, 0.0f, 0.0f),
+-	                     const glm::vec3 &offset = glm::vec3(0.0f, 0.0f, 0.0f),
 -	                     bool back_face = false);
 … (+76줄 생략)
 ```
@@ -2202,7 +2202,7 @@ _비코드 37개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -#include "engine/constants.h"
 -#include "engine/geometry.h"
 +#include "common/constants.h"
- #include <vmath.h>
+ #include <glm/glm.hpp>
 +#include <assimp/mesh.h>
 +#include <cmath>
  
@@ -2405,8 +2405,8 @@ _… diff 생략: 코드 파일 40개 더 (커밋 줄 수 캡)_
 > - 부모 Transform 갱신 후 자식이 Read 하는 케이스 명확
 >
 > Spec patch:
-> - GetWorldMatrix ternary 패턴이 vmath::mat4 base type 반환으로 컴파일 실패
-> - spec 원문도 if-block 분기 + vmath::mat4(...) wrap 으로 정정
+> - GetWorldMatrix ternary 패턴이 glm::mat4 base type 반환으로 컴파일 실패
+> - spec 원문도 if-block 분기 + glm::mat4(...) wrap 으로 정정
 > - implementer 의 합리적 deviation 을 spec 에 흡수
 >
 > [feat] : Scene::Director 싱글톤 + MeshRenderer 통합 컴포넌트 (SP3 T2)
@@ -2510,8 +2510,8 @@ _… diff 생략: 코드 파일 40개 더 (커밋 줄 수 캡)_
 >   → render_queue.cpp 의 include 경로 "material/material_applier.h" → "render/material_applier.h".
 >   → material_applier.cpp 의 self-include 경로도 동기화.
 >
-> I-3: DrawCommand::modelMatrix 미초기화 — vmath::mat4 기본 ctor 가 Uninitialized.
->   → vmath::mat4::identity() 로 default member init (디버그 가능 default).
+> I-3: DrawCommand::modelMatrix 미초기화 — glm::mat4 기본 ctor 가 Uninitialized.
+>   → glm::mat4::identity() 로 default member init (디버그 가능 default).
 >
 > spec 측 (SP3 plan) 코드 블록 + paths + CMakeLists 도 동기화.
 >
@@ -2527,10 +2527,10 @@ _… diff 생략: 코드 파일 40개 더 (커밋 줄 수 캡)_
 >
 > SP3.5 의 CameraComponent 도입 시 view/proj 인자 없는 overload 추가 예정 (G1 seam).
 >
-> [fix] : render_system.cpp 의 중복 <vmath.h> include 제거 (SP3 T6 follow-up)
+> [fix] : render_system.cpp 의 중복 <glm/glm.hpp> include 제거 (SP3 T6 follow-up)
 >
 > T6 code reviewer Nice-to-have 지적:
-> render_system.h → render_queue.h → <vmath.h> 로 transitive 제공.
+> render_system.h → render_queue.h → <glm/glm.hpp> 로 transitive 제공.
 > cpp 의 직접 include 는 헤더 가드로 무해하나 UnusedIncludes=Strict 정책상 제거.
 >
 > [feat] : ModelSpawner — Model 의 N RU → N 자식 Actor (SP3 T7)
@@ -2722,7 +2722,7 @@ _비코드 16개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +        // 2) Scene 에 Box Actor 추가
 +        auto& director = SJH::Scene::Director::Get();
 +        auto box = std::make_unique<SJH::Scene::Actor>("Box");
-+        box->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
++        box->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
 +        box->AddComponent<SJH::Scene::MeshRenderer>(mBoxMesh.get(), mBoxMat.get());
 +        director.Root().AddChild(std::move(box));
 +
@@ -2756,7 +2756,7 @@ _비코드 16개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		    {1, 0, 3}, {2, 1, 3}, {0, 2, 3}, {1, 0, 2}};
 +		    {1, 0, 3}, {2, 1, 3}, {0, 2, 3}, {0, 1, 2}};
  
- 		const std::vector<vmath::vec4> CONE_SIDE_BASE_POSITION = {
+ 		const std::vector<glm::vec4> CONE_SIDE_BASE_POSITION = {
  		    {0.0, 0.0, 0.0, 1.0},
 ```
 
@@ -2776,20 +2776,20 @@ _비코드 16개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -	  public:
 -		Transform::Transform Transform;
 -
--		vmath::vec3 Target = vmath::vec3(0.0f, 0.0f, 0.0f);
--		vmath::vec3 WorldUp = vmath::vec3(0.0f, 1.0f, 0.0f);
+-		glm::vec3 Target = glm::vec3(0.0f, 0.0f, 0.0f);
+-		glm::vec3 WorldUp = glm::vec3(0.0f, 1.0f, 0.0f);
 -
 -		float Fov = 60.0f;
 -		float Aspect = 1.0f;
 -		float NearPlane = 0.1f;
 -		float FarPlane = 1000.0f;
 -
--		vmath::mat4 GetViewMatrix() const
+-		glm::mat4 GetViewMatrix() const
 -		{
 -			return vmath::lookat(Transform.Translate, Target, WorldUp);
 -		}
 -
--		vmath::mat4 GetProjMatrix() const
+-		glm::mat4 GetProjMatrix() const
 -		{
 -			return vmath::perspective(Fov, Aspect, NearPlane, FarPlane);
 -		}
@@ -3025,7 +3025,7 @@ _비코드 16개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		//
 -		// 월드 매트릭스 캐시 — 매 프레임 매트릭스 재계산 비용 절감
 -		// void InvalidateWorldMatrix(Transform::Transform *node);        // 자기 + 서브트리 dirty 표시
--		// const vmath::mat4 &GetWorldMatrix(const Transform::Transform *node); // dirty 일 때만 재계산
+-		// const glm::mat4 &GetWorldMatrix(const Transform::Transform *node); // dirty 일 때만 재계산
 -		//
 -		// 활성 / 가시 상태 (계층 전파)
 -		// void SetActive(Transform::Transform *node, bool active);
@@ -3066,16 +3066,16 @@ _비코드 16개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -	  public:
 -		std::string Name;
 -
--		vmath::vec3 Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
--		vmath::vec3 EulerRot = vmath::vec3(0.0f, 0.0f, 0.0f);
--		vmath::vec3 Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
+-		glm::vec3 Translate = glm::vec3(0.0f, 0.0f, 0.0f);
+-		glm::vec3 EulerRot = glm::vec3(0.0f, 0.0f, 0.0f);
+-		glm::vec3 Scale = glm::vec3(1.0f, 1.0f, 1.0f);
 -
 -		Transform *Parent = nullptr;
 -		std::unordered_map<std::string, Transform *> Children;
 -
--		vmath::mat4 GetModelMatrix() const
+-		glm::mat4 GetModelMatrix() const
 -		{
--			vmath::mat4 local =
+-			glm::mat4 local =
 -			    vmath::translate<float>(Translate) *
 -			    vmath::rotate<float>(EulerRot[2], 0.0f, 0.0f, 1.0f) *
 -			    vmath::rotate<float>(EulerRot[1], 0.0f, 1.0f, 0.0f) *
@@ -3724,7 +3724,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        // 2) Scene 에 Box Actor 추가 — 자원은 비소유 핸들만 보유.
          auto& director = SJH::Scene::Director::Get();
          auto box = std::make_unique<SJH::Scene::Actor>("Box");
-         box->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
+         box->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
 -        box->AddComponent<SJH::Scene::MeshRenderer>(mBoxMesh.get(), mBoxMat.get());
 +        box->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
          director.Root().AddChild(std::move(box));
@@ -3733,7 +3733,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        // 3) MainCamera Actor — Camera 컴포넌트가 mOwner 따라가 InverseAffine 으로 view 계산.
 +        //    Translate(0,0,5) → 카메라가 +Z 5 단위에 위치, 원점을 바라봄.
 +        auto cam = std::make_unique<SJH::Scene::Actor>("MainCamera");
-+        cam->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 5.0f);
++        cam->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 5.0f);
 +        const float aspect = static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight);
 +        auto* camComp = cam->AddComponent<SJH::Scene::Camera>(45.0f, aspect, 0.1f, 100.0f);
 +        director.SetActiveCamera(camComp);
@@ -3748,7 +3748,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          rc.BeginFrame(rc.GetDefaultTarget());
  
 -        const float aspect = static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight);
--        const auto view = vmath::lookat(vmath::vec3(0,0,5), vmath::vec3(0), vmath::vec3(0,1,0));
+-        const auto view = vmath::lookat(glm::vec3(0,0,5), glm::vec3(0), glm::vec3(0,1,0));
 -        const auto proj = vmath::perspective(45.0f, aspect, 0.1f, 100.0f);
 +        // 윈도우 리사이즈 대응 — 활성 Camera 의 aspect 매 프레임 갱신.
 +        if (auto* cam = SJH::Scene::Director::Get().GetActiveCamera())
@@ -3804,7 +3804,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        Render(cam->GetViewMatrix(), cam->GetProjectionMatrix());
 +    }
 +
-     void RenderSystem::Render(const vmath::mat4& viewMat, const vmath::mat4& projMat)
+     void RenderSystem::Render(const glm::mat4& viewMat, const glm::mat4& projMat)
      {
          auto& rc = RenderContext::Get();
 ```
@@ -3829,7 +3829,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +        /// @brief 명시 view/proj — 단위 테스트 + 디버그용 (CameraComponent 우회).
 +        /// @details 기존 인터페이스 보존 — CameraComponent 없이 임의 view/proj 직접 주입 가능.
-         void Render(const vmath::mat4& viewMat, const vmath::mat4& projMat);
+         void Render(const glm::mat4& viewMat, const glm::mat4& projMat);
  
      private:
 ```
@@ -3841,7 +3841,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +namespace SJH::Scene
 +{
-+    vmath::mat4 Camera::GetViewMatrix() const
++    glm::mat4 Camera::GetViewMatrix() const
 +    {
 +        // 하이브리드 — Actor 부착 시 그 Transform 따라감, 아니면 standalone lookat.
 +        if (auto* owner = GetOwner())
@@ -3849,16 +3849,16 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        return vmath::lookat(mEye, mTarget, mUp);
 +    }
 +
-+    vmath::mat4 Camera::GetProjectionMatrix() const
++    glm::mat4 Camera::GetProjectionMatrix() const
 +    {
 +        return vmath::perspective(mFovYDeg, mAspect, mNearZ, mFarZ);
 +    }
 +
-+    vmath::mat4 Camera::InverseAffine(const vmath::mat4& m)
++    glm::mat4 Camera::InverseAffine(const glm::mat4& m)
 +    {
 +        // vmath 는 column-major — m[col][row]. m[0..2] 가 3x3 회전, m[3] 이 translate.
 +        // affine inverse: 회전부 transpose + translate 부 = -R^T * t.
-+        vmath::mat4 r = vmath::mat4::identity();
++        glm::mat4 r = glm::mat4::identity();
 +
 +        // 회전 transpose: r[i][j] = m[j][i] (i,j ∈ {0,1,2})
 +        for (int i = 0; i < 3; ++i)
@@ -3866,7 +3866,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +                r[i][j] = m[j][i];
 +
 +        // -R^T * t — t = m[3] 의 xyz, R^T 는 r 의 좌상단 3x3 (방금 transpose 한 값).
-+        const vmath::vec3 t(m[3][0], m[3][1], m[3][2]);
++        const glm::vec3 t(m[3][0], m[3][1], m[3][2]);
 +        r[3][0] = -(r[0][0] * t[0] + r[1][0] * t[1] + r[2][0] * t[2]);
 +        r[3][1] = -(r[0][1] * t[0] + r[1][1] * t[1] + r[2][1] * t[2]);
 +        r[3][2] = -(r[0][2] * t[0] + r[1][2] * t[1] + r[2][2] * t[2]);
@@ -3884,7 +3884,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define __SJH_SCENE_CAMERA_H__
 +
 +#include "scene/actor.h" // Component + Actor::GetWorldMatrix
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace SJH::Scene
 +{
@@ -3911,15 +3911,15 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        }
 +
 +        /// @brief view 행렬 — mOwner 가 있으면 InverseAffine, 없으면 lookat (standalone).
-+        vmath::mat4 GetViewMatrix() const;
++        glm::mat4 GetViewMatrix() const;
 +
 +        /// @brief perspective(fovY, aspect, near, far).
-+        vmath::mat4 GetProjectionMatrix() const;
++        glm::mat4 GetProjectionMatrix() const;
 +
 +        // Standalone fallback 용 setter — mOwner 가 nullptr 일 때만 의미.
-+        void SetEye(const vmath::vec3& v) { mEye = v; }
-+        void SetTarget(const vmath::vec3& v) { mTarget = v; }
-+        void SetUp(const vmath::vec3& v) { mUp = v; }
++        void SetEye(const glm::vec3& v) { mEye = v; }
++        void SetTarget(const glm::vec3& v) { mTarget = v; }
++        void SetUp(const glm::vec3& v) { mUp = v; }
 +
 +        // Projection setter — POD-like, 불변식 없음.
 +        void SetFovY(float v) { mFovYDeg = v; }
@@ -3930,7 +3930,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    private:
 +        /// @brief affine 4x4 (R|t) 행렬의 역행렬 — 회전 transpose + translate negate.
 +        /// @details 일반 inverse 아님. scale 1 가정. sb7 vmath 가 inverse 미제공이라 자작.
-+        static vmath::mat4 InverseAffine(const vmath::mat4& m);
++        static glm::mat4 InverseAffine(const glm::mat4& m);
 +
 +        // Projection 파라미터.
 +        float mFovYDeg = 45.0f;
@@ -3939,9 +3939,9 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        float mFarZ    = 100.0f;
 +
 +        // Standalone fallback (mOwner 가 nullptr 일 때 사용).
-+        vmath::vec3 mEye    = vmath::vec3(0, 0, 5);
-+        vmath::vec3 mTarget = vmath::vec3(0, 0, 0);
-+        vmath::vec3 mUp     = vmath::vec3(0, 1, 0);
++        glm::vec3 mEye    = glm::vec3(0, 0, 5);
++        glm::vec3 mTarget = glm::vec3(0, 0, 0);
++        glm::vec3 mUp     = glm::vec3(0, 1, 0);
 +    };
 +} // namespace SJH::Scene
 +
@@ -4602,47 +4602,47 @@ _비코드 20개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +
 +namespace SJH
 +{
-+    vmath::vec3 DirLight::GetWorldDirection() const
++    glm::vec3 DirLight::GetWorldDirection() const
 +    {
 +        // worldMatrix[2] = forward column (+Z). Camera::InverseAffine 의 짝.
 +        if (auto* owner = GetOwner())
 +        {
 +            const auto m = owner->GetWorldMatrix();
-+            vmath::vec3 forward(m[2][0], m[2][1], m[2][2]);
++            glm::vec3 forward(m[2][0], m[2][1], m[2][2]);
 +            return vmath::normalize(forward);
 +        }
-+        return vmath::vec3(0.0f, 0.0f, -1.0f);
++        return glm::vec3(0.0f, 0.0f, -1.0f);
 +    }
 +
-+    vmath::vec3 PointLight::GetWorldPosition() const
++    glm::vec3 PointLight::GetWorldPosition() const
 +    {
 +        if (auto* owner = GetOwner())
 +        {
 +            const auto m = owner->GetWorldMatrix();
-+            return vmath::vec3(m[3][0], m[3][1], m[3][2]);
++            return glm::vec3(m[3][0], m[3][1], m[3][2]);
 +        }
-+        return vmath::vec3(0.0f, 0.0f, 0.0f);
++        return glm::vec3(0.0f, 0.0f, 0.0f);
 +    }
 +
-+    vmath::vec3 SpotLight::GetWorldPosition() const
++    glm::vec3 SpotLight::GetWorldPosition() const
 +    {
 +        if (auto* owner = GetOwner())
 +        {
 +            const auto m = owner->GetWorldMatrix();
-+            return vmath::vec3(m[3][0], m[3][1], m[3][2]);
++            return glm::vec3(m[3][0], m[3][1], m[3][2]);
 +        }
-+        return vmath::vec3(0.0f, 0.0f, 0.0f);
++        return glm::vec3(0.0f, 0.0f, 0.0f);
 +    }
 +
-+    vmath::vec3 SpotLight::GetWorldDirection() const
++    glm::vec3 SpotLight::GetWorldDirection() const
 +    {
 +        if (auto* owner = GetOwner())
 +        {
 +            const auto m = owner->GetWorldMatrix();
-+            vmath::vec3 forward(m[2][0], m[2][1], m[2][2]);
++            glm::vec3 forward(m[2][0], m[2][1], m[2][2]);
 +            return vmath::normalize(forward);
 +        }
-+        return vmath::vec3(0.0f, 0.0f, -1.0f);
++        return glm::vec3(0.0f, 0.0f, -1.0f);
 +    }
 +}
 ```
@@ -4665,7 +4665,7 @@ _비코드 20개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #ifndef __SJH_LIGHT_H__
  #define __SJH_LIGHT_H__
 +#include "scene/actor.h"   // SP5: Component base + Actor::GetWorldMatrix (모두 inline → link 의존 0)
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH
 @@ -56,22 +53,24 @@ namespace SJH
@@ -4683,18 +4683,18 @@ _비코드 20개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
          /// @brief Ambient 항 색상 (RGB, 0~1). 셰이더 uniform `light.ambient`.
 -        /// @details 광원과 무관한 기본 밝기. 일반적으로 매우 작은 값 (예: @c (0.1, 0.1, 0.1)) 으로 그림자 영역에도 약간의 색.
 -        /// @note 방향은 `SceneNodeId::DirLight` 노드의 Transform(EulerRot) 이 소유 — WorldForward() 가 산출.
-         vmath::vec3 Ambient{vmath::vec3(0.1f, 0.1f, 0.1f)};
+         glm::vec3 Ambient{glm::vec3(0.1f, 0.1f, 0.1f)};
  
          /// @brief Diffuse 항 색상 (RGB, 0~1). 셰이더 uniform `light.diffuse`.
 -        /// @details Lambertian 항의 광원 색. 광원의 *주된 색상* — 일반적으로 흰색 근처.
-         vmath::vec3 Diffuse{vmath::vec3(0.5f, 0.5f, 0.5f)};
+         glm::vec3 Diffuse{glm::vec3(0.5f, 0.5f, 0.5f)};
  
          /// @brief Specular 항 색상 (RGB, 0~1). 셰이더 uniform `light.specular`.
 -        /// @details 하이라이트 색. 일반적으로 흰색 — 금속이 아닌 표면은 광원 색을 그대로 반사.
-         vmath::vec3 Specular{vmath::vec3(1.0f, 1.0f, 1.0f)};
+         glm::vec3 Specular{glm::vec3(1.0f, 1.0f, 1.0f)};
 +
 +        /// @brief Owner Actor 의 worldMatrix forward(+Z) 컬럼 정규화. Owner 없을 때 (-Z) fallback.
-+        vmath::vec3 GetWorldDirection() const;
++        glm::vec3 GetWorldDirection() const;
      };
  
      /**
@@ -4722,12 +4722,12 @@ _비코드 20개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -        /// @brief Ambient 항 색상 (RGB, 0~1). 셰이더 uniform `light.ambient`.
 -        /// @details 광원과 무관한 기본 밝기. 일반적으로 매우 작은 값 (예: @c (0.1, 0.1, 0.1)) 으로 그림자 영역에도 약간의 색.
 +        /// @brief Ambient 항 색상 (RGB, 0~1).
-         vmath::vec3 Ambient{vmath::vec3(0.1f, 0.1f, 0.1f)};
+         glm::vec3 Ambient{glm::vec3(0.1f, 0.1f, 0.1f)};
  
 -        /// @brief Diffuse 항 색상 (RGB, 0~1). 셰이더 uniform `light.diffuse`.
 -        /// @details Lambertian 항의 광원 색. 광원의 *주된 색상* — 일반적으로 흰색 근처.
 +        /// @brief Diffuse 항 색상 (RGB, 0~1).
-         vmath::vec3 Diffuse{vmath::vec3(0.5f, 0.5f, 0.5f)};
+         glm::vec3 Diffuse{glm::vec3(0.5f, 0.5f, 0.5f)};
  
 … (+62줄 생략)
 ```
@@ -5042,14 +5042,14 @@ _비코드 47개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -        // 2) Scene 에 Box Actor 추가 — 자원은 비소유 핸들만 보유.
 -        auto& director = SJH::Scene::Director::Get();
 -        auto box = std::make_unique<SJH::Scene::Actor>("Box");
--        box->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
+-        box->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
 -        box->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
 -        director.Root().AddChild(std::move(box));
 -
 -        // 3) MainCamera Actor — Camera 컴포넌트가 mOwner 따라가 InverseAffine 으로 view 계산.
 -        //    Translate(0,0,5) → 카메라가 +Z 5 단위에 위치, 원점을 바라봄.
 -        auto cam = std::make_unique<SJH::Scene::Actor>("MainCamera");
--        cam->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 5.0f);
+-        cam->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 5.0f);
 -        const float aspect = static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight);
 -        auto* camComp = cam->AddComponent<SJH::Scene::Camera>(45.0f, aspect, 0.1f, 100.0f);
 -        director.SetActiveCamera(camComp);
@@ -5101,7 +5101,7 @@ _비코드 47개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include <memory>
 +#include <spdlog/spdlog.h>
 +#include <utility>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +#ifdef __APPLE__
 +#include <libgen.h>
@@ -5154,7 +5154,7 @@ _비코드 47개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include "scene/camera.h"
 +#include <GLFW/glfw3.h>
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace MigrateDemo::Controller
 +{
@@ -5238,7 +5238,7 @@ _비코드 47개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include "scene/actor.h"
 +#include "scene/camera.h"
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace MigrateDemo::Controller
 +{
@@ -5292,7 +5292,7 @@ _비코드 47개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +
 +		float mYawDeg = 0.0f;
 +		float mPitchDeg = 0.0f;
-+		vmath::vec3 mMoveDelta = vmath::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset -> held handler 누적
++		glm::vec3 mMoveDelta = glm::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset -> held handler 누적
 +
 +		float mLookSensitivity = 0.1f;
 +		float mMoveSpeed = 0.05f;
@@ -5333,8 +5333,8 @@ _비코드 47개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			    reg.RegisterMesh(ACTOR_KEY, SJH::Mesh::CreateBox()),
 +			    &reg.CreateMaterial(ACTOR_KEY)
 +			         ->SetProgram(prog));
-+			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.diffuse", vmath::vec3(0.8f, 0.3f, 0.3f));
-+			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.specular", vmath::vec3(0.5f, 0.5f, 0.5f));
++			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.diffuse", glm::vec3(0.8f, 0.3f, 0.3f));
++			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.specular", glm::vec3(0.5f, 0.5f, 0.5f));
 +			SJH::Uniforms::SetFloat(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.shininess", 32.0f);
 +
 +			dir.Root().AddChild(std::move(box));
@@ -5347,8 +5347,8 @@ _비코드 47개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			    reg.RegisterMesh(ACTOR_KEY, SJH::Mesh::CreateBox()),
 +			    &reg.CreateMaterial(ACTOR_KEY)
 +			         ->SetProgram(prog));
-+			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.diffuse", vmath::vec3(0.8f, 0.3f, 0.3f));
-+			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.specular", vmath::vec3(0.5f, 0.5f, 0.5f));
++			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.diffuse", glm::vec3(0.8f, 0.3f, 0.3f));
++			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.specular", glm::vec3(0.5f, 0.5f, 0.5f));
 +			SJH::Uniforms::SetFloat(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.shininess", 32.0f);
 +
 +			dir.Root().AddChild(std::move(box));
@@ -5358,14 +5358,14 @@ _비코드 47개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			const char *ACTOR_KEY = "Box2";
 +			auto box = std::make_unique<SJH::Scene::Actor>(ACTOR_KEY);
 +			{
-+				box->GetTransform().Translate = vmath::vec3(2.0f, 0.5f, 0.0f);
++				box->GetTransform().Translate = glm::vec3(2.0f, 0.5f, 0.0f);
 +			}
 +			box->AddComponent<SJH::Scene::MeshRenderer>(
 +			    reg.RegisterMesh(ACTOR_KEY, SJH::Mesh::CreateBox()),
 +			    &reg.CreateMaterial(ACTOR_KEY)
 +			         ->SetProgram(prog));
-+			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.diffuse", vmath::vec3(0.3f, 0.5f, 0.8f));
-+			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.specular", vmath::vec3(0.5f, 0.5f, 0.5f));
++			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.diffuse", glm::vec3(0.3f, 0.5f, 0.8f));
++			SJH::Uniforms::SetVec3(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.specular", glm::vec3(0.5f, 0.5f, 0.5f));
 +			SJH::Uniforms::SetFloat(*box->GetComponent<SJH::Scene::MeshRenderer>()->Material, "material.shininess", 32.0f);
 +
 … (+35줄 생략)
@@ -5529,7 +5529,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <spdlog/spdlog.h>
 +#include <string>
 +#include <utility>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace MigrateDemo::Scene
  {
@@ -5556,9 +5556,9 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	{
 +		// === 절차적 이미지 — Phong specular 채널용 회색 ===
 +		auto imgDarkGray = SJH::Image::Create("img_dark_gray", 4, 4, 4);
-+		imgDarkGray->SetSingleColorImage(vmath::vec4(0.2f, 0.2f, 0.2f, 1.0f));
++		imgDarkGray->SetSingleColorImage(glm::vec4(0.2f, 0.2f, 0.2f, 1.0f));
 +		auto imgGray = SJH::Image::Create("img_gray", 4, 4, 4);
-+		imgGray->SetSingleColorImage(vmath::vec4(0.4f, 0.4f, 0.4f, 1.0f));
++		imgGray->SetSingleColorImage(glm::vec4(0.4f, 0.4f, 0.4f, 1.0f));
  
 +		// === 파일 이미지 (resources/texture/*) — POST_BUILD 로 실행파일 옆에 복사됨 ===
 +		auto imgMarble        = SJH::Image::Load("img_marble",       "resources/texture/marble.jpg");
@@ -5719,7 +5719,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			auto box = std::make_unique<SJH::Scene::Actor>("Box2");
  			box->SetLayer(LAYER_SCENE);
 @@ -187,16 +200,38 @@ namespace MigrateDemo::Scene
- 			box->GetTransform().Scale     = vmath::vec3(1.5f, 1.5f, 1.5f);
+ 			box->GetTransform().Scale     = glm::vec3(1.5f, 1.5f, 1.5f);
  			auto *matBox2 = detail::MakePhongMat(reg, "mat_box2", progs.phong,
  			                                       texContainer2, texContainer2Spec, 64.0f);
 -			box->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matBox2, QUEUE_OPAQUE);
@@ -5741,9 +5741,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			// Outline 셸 — Box2 의 자식. scale 1.05. queueLayer 2005 > 2000 이라 Box2 다음.
  			auto outline = std::make_unique<SJH::Scene::Actor>("Outline");
  			outline->SetLayer(LAYER_SCENE);
- 			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f);
+ 			outline->GetTransform().Scale = glm::vec3(1.05f, 1.05f, 1.05f);
  			auto *matOutline = detail::MakeSimpleMat(reg, "mat_outline", progs.simple,
- 			                                         vmath::vec4(1.0f, 1.0f, 0.5f, 1.0f));
+ 			                                         glm::vec4(1.0f, 1.0f, 0.5f, 1.0f));
 -			outline->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matOutline, QUEUE_OUTLINE);
 +			auto *mrOutline = outline->AddComponent<SJH::Scene::MeshRenderer>(
 +			    meshBox, matOutline, QUEUE_OUTLINE);
@@ -5876,7 +5876,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #define __SJH_RENDER_QUEUE_H__
  
 +#include "scene/components.h"   // StencilState
- #include <vmath.h>
+ #include <glm/glm.hpp>
  #include <cstddef>
  #include <vector>
 @@ -13,7 +14,8 @@ namespace SJH
@@ -6053,7 +6053,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <string>
  #include <utility>
 +#include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  #ifdef __APPLE__
 @@ -65,6 +74,35 @@
@@ -6291,7 +6291,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "GL/gl3w.h"
  #include <string>
 @@ -105,6 +106,26 @@ namespace SJH
-         std::unordered_map<std::string, vmath::mat4>     Mat4s;
+         std::unordered_map<std::string, glm::mat4>     Mat4s;
          std::unordered_map<std::string, TextureBinding>  Textures;
  
 +        // === Pass — 렌더링 의도 선언 (Filament/Unreal/Cocos 정통, 진실의 원천 단일화) ====
@@ -6814,7 +6814,7 @@ _비코드 35개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include "scene/scene.h"
  #include <cstdint>
 @@ -202,7 +202,7 @@ namespace MigrateDemo::Scene
- 			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f);
+ 			outline->GetTransform().Scale = glm::vec3(1.05f, 1.05f, 1.05f);
  			// Outline 은 Box2 (Opaque, queue 2000) *직후* 그려야 stencil 마스킹 의도.
  			// matOutline 의 PassKind=Opaque (기본) 라 base queue 가 2000.
 -			// → MeshRenderer.QueueOffset = +5 → 최종 queue 2005 — Unity Renderer.sortingOrder 정통.
@@ -7096,9 +7096,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  			auto box = std::make_unique<SJH::Scene::Actor>("Box2");
  			box->SetLayer(LAYER_SCENE);
- 			box->GetTransform().Translate = vmath::vec3(0.0f, 0.75f, 2.0f);
- 			box->GetTransform().EulerRot  = vmath::vec3(0.0f, 20.0f, 0.0f);
- 			box->GetTransform().Scale     = vmath::vec3(1.5f, 1.5f, 1.5f);
+ 			box->GetTransform().Translate = glm::vec3(0.0f, 0.75f, 2.0f);
+ 			box->GetTransform().EulerRot  = glm::vec3(0.0f, 20.0f, 0.0f);
+ 			box->GetTransform().Scale     = glm::vec3(1.5f, 1.5f, 1.5f);
 -			auto *mrBox2 = box->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matBox2);
 -			// stencil=1 도장 — 어느 픽셀이 Box2 내부인지 mark.
 -			mrBox2->Stencil.Enabled   = true;
@@ -7117,7 +7117,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			// Outline 셸 — Box2 자식. Material SSoT 로 queue/depth/stencil 한 줄.
 +			auto *matOutline = reg.CreateSharedMaterial("mat_outline");
  			matOutline->SetProgram(progs.simple);
- 			SJH::Uniforms::SetVec4(*matOutline, "baseColor", vmath::vec4(1.0f, 1.0f, 0.5f, 1.0f));
+ 			SJH::Uniforms::SetVec4(*matOutline, "baseColor", glm::vec4(1.0f, 1.0f, 0.5f, 1.0f));
 +			matOutline->SetPass(SJH::Pass::Kind::OutlineVisible); // ★ queue 4000 + DepthWrite=false + stencil read-only.
  
  			auto outline = std::make_unique<SJH::Scene::Actor>("Outline");
@@ -7375,7 +7375,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #define __SJH_MESH_PASS_PROCESSOR_H__
  
 -#include "render/mesh_renderer.h"   // StencilState — Pass 리팩토링 후 위치 (구 scene/components.h)
- #include <vmath.h>
+ #include <glm/glm.hpp>
  #include <cstddef>
  #include <vector>
 @@ -15,7 +14,8 @@ namespace SJH
@@ -7918,8 +7918,8 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		                                                   45.0f, aspect, 0.1f, 100.0f);
 -		sceneCamActor->SetLayer(MigrateDemo::Scene::LAYER_SCENE);
 +		sceneCamActor->SetLayer(SJH::LAYER_SCENE);
- 		sceneCamActor->GetTransform().Translate = vmath::vec3(0.0f, 2.5f, 8.0f);
- 		sceneCamActor->GetTransform().EulerRot = vmath::vec3(-20.0f, 0.0f, 0.0f);
+ 		sceneCamActor->GetTransform().Translate = glm::vec3(0.0f, 2.5f, 8.0f);
+ 		sceneCamActor->GetTransform().EulerRot = glm::vec3(-20.0f, 0.0f, 0.0f);
  
  		auto *sceneCam = sceneCamActor->GetComponent<SJH::Scene::Camera>();
  		sceneCam->Depth = 0;
@@ -7972,24 +7972,24 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			auto box = std::make_unique<SJH::Scene::Actor>("Box2");
  			box->SetLayer(LAYER_SCENE);
 @@ -191,17 +184,16 @@ namespace MigrateDemo::Scene
- 			box->GetTransform().Scale     = vmath::vec3(1.5f, 1.5f, 1.5f);
+ 			box->GetTransform().Scale     = glm::vec3(1.5f, 1.5f, 1.5f);
  			box->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matBox2);
  
 -			// Outline 셸 — Box2 자식. Material SSoT 로 queue/depth/stencil 한 줄.
 +			// Outline 셸 — Box2 자식. queue/depth/stencil 한 줄.
  			auto *matOutline = reg.CreateSharedMaterial("mat_outline");
  			matOutline->SetProgram(progs.simple);
--			SJH::Uniforms::SetVec4(*matOutline, "baseColor", vmath::vec4(1.0f, 1.0f, 0.5f, 1.0f));
+-			SJH::Uniforms::SetVec4(*matOutline, "baseColor", glm::vec4(1.0f, 1.0f, 0.5f, 1.0f));
 -			matOutline->SetPass(SJH::Pass::Kind::OutlineVisible); // ★ queue 4000 + DepthWrite=false + stencil read-only.
-+			SJH::Uniforms::SetVec4(*matOutline, "baseColor", vmath::vec4(0.0f, 0.0f, 1.0f, 1.0f));
++			SJH::Uniforms::SetVec4(*matOutline, "baseColor", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
 +			matOutline->SetPass(SJH::Pass::Kind::OutlineVisible); // *Pass 2 — stencil!=1 rim 만 그림.
  
  			auto outline = std::make_unique<SJH::Scene::Actor>("Outline");
  			outline->SetLayer(LAYER_SCENE);
--			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f); // shell-scale rim 트릭.
+-			outline->GetTransform().Scale = glm::vec3(1.05f, 1.05f, 1.05f); // shell-scale rim 트릭.
 -			// OutlineVisible Kind 의 queue 4000 이 자동으로 Opaque 2000 뒤. QueueOffset 불필요.
 -			outline->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matOutline);
-+			outline->GetTransform().Scale = vmath::vec3(1.05f, 1.05f, 1.05f); // 림 두께 — scale 차이(0.05)가 stencil!=1 rim.
++			outline->GetTransform().Scale = glm::vec3(1.05f, 1.05f, 1.05f); // 림 두께 — scale 차이(0.05)가 stencil!=1 rim.
 +			auto mrBox2 = outline->AddComponent<SJH::Scene::MeshRenderer>(meshBox, matOutline);
  			box->AddChild(std::move(outline));
  
@@ -8001,8 +8001,8 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -			matWindow->SetPass(SJH::Pass::Kind::Transparent);   // ★ 한 줄로 모든 state 자동
 +			matWindow->SetPass(SJH::Pass::Kind::Transparent);   // *한 줄로 모든 state 자동
  
- 			const vmath::vec3 positions[3] = {
- 			    vmath::vec3(0.0f, 0.5f, 4.0f),
+ 			const glm::vec3 positions[3] = {
+ 			    glm::vec3(0.0f, 0.5f, 4.0f),
 ```
 
 `src/common/layer.h`
@@ -8194,7 +8194,7 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include "scene/camera.h"
 +#include "scene/compound_actor.h"
 +#include "scene/scene.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +#include <cstdint>
 +#include <cstring>
@@ -8209,7 +8209,7 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#endif
 +
 +// 수정: index swap 제거 (직접 memcpy 의미)
-+static Effekseer::Matrix44 ToEfkMat(const vmath::mat4 &m)
++static Effekseer::Matrix44 ToEfkMat(const glm::mat4 &m)
 +{
 +	Effekseer::Matrix44 r;
 +	for (int row = 0; row < 4; ++row)
@@ -8250,8 +8250,8 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		auto camActor = SJH::Scene::CreateCameraActor("EfkCamera",
 +		                                              45.0f, aspect, 0.1f, 500.0f);
 +		camActor->SetLayer(SJH::LAYER_SCENE);
-+		camActor->GetTransform().Translate = vmath::vec3(0.0f, 2.5f, 8.0f);
-+		camActor->GetTransform().EulerRot = vmath::vec3(-20.0f, 0.0f, 0.0f);
++		camActor->GetTransform().Translate = glm::vec3(0.0f, 2.5f, 8.0f);
++		camActor->GetTransform().EulerRot = glm::vec3(-20.0f, 0.0f, 0.0f);
 +
 +		mSceneCam = camActor->GetComponent<SJH::Scene::Camera>();
 +		mSceneCameraActor = camActor.get();
@@ -8274,7 +8274,7 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include "scene/camera.h"
 +#include <GLFW/glfw3.h>
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace Controller
 +{
@@ -8358,7 +8358,7 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include "scene/actor.h"
 +#include "scene/camera.h"
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace Controller
 +{
@@ -8412,7 +8412,7 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +
 +		float mYawDeg = 0.0f;
 +		float mPitchDeg = 0.0f;
-+		vmath::vec3 mMoveDelta = vmath::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset -> held handler 누적
++		glm::vec3 mMoveDelta = glm::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset -> held handler 누적
 +
 +		float mLookSensitivity = 0.1f;
 +		float mMoveSpeed = 0.05f;
@@ -8512,7 +8512,7 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include <string>
 +#include <utility>
 +#include <vector>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +#ifdef __APPLE__
 +#include <libgen.h>
@@ -8604,7 +8604,7 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  namespace SJH::Scene
  {
 +	// CLAUDE_ASSIST
- 	vmath::mat4 Camera::GetViewMatrix() const
+ 	glm::mat4 Camera::GetViewMatrix() const
  	{
  		auto *owner = GetOwner();
 @@ -13,7 +14,6 @@ namespace SJH::Scene
@@ -8616,7 +8616,7 @@ _비코드 85개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  		{
  			const auto targetW = mLockTarget->GetWorldMatrix();
 @@ -22,7 +22,6 @@ namespace SJH::Scene
- 			return vmath::lookat(eye, target, vmath::vec3(0.0f, 1.0f, 0.0f));
+ 			return vmath::lookat(eye, target, glm::vec3(0.0f, 1.0f, 0.0f));
  		}
  
 … (+21줄 생략)
@@ -8718,7 +8718,7 @@ _비코드 12개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -#include <string>
 -#include <utility>
 -#include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 -#ifdef __APPLE__
 -#include <libgen.h>
@@ -8934,7 +8934,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <tweeny/tweeny.h>
 +#include <utility>
 +#include <vector>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
 +#include "Constants.h"
 +#include "Controller.PingPongTween.h"
@@ -8951,7 +8951,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/actor.h"
 +#include "scene/scene.h"
  
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -#include <tweeny/tweeny.h>
 -
@@ -8967,7 +8967,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -    {
 -        const char*          name;
 -        tweeny::tween<float> tween;
--        vmath::vec4          color;
+-        glm::vec4          color;
 -        float                y;
 -        bool                 forward = true;
 -    };
@@ -8978,7 +8978,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -    constexpr int   kTweenDurationMs = 1000;
 +	struct EasingRow
 +	{
-+		vmath::vec4 color;
++		glm::vec4 color;
 +		SJH::Material *material = nullptr;
 +		SJH::Scene::Actor *actor = nullptr;
 +	};
@@ -9174,10 +9174,10 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          // 타입별 분리 map — type erasure 비용 회피.
          std::unordered_map<std::string, float> Floats;
          std::unordered_map<std::string, int> Ints;
-+        std::unordered_map<std::string, vmath::vec2> Vec2s;
-         std::unordered_map<std::string, vmath::vec3> Vec3s;
-         std::unordered_map<std::string, vmath::vec4> Vec4s;
-         std::unordered_map<std::string, vmath::mat4> Mat4s;
++        std::unordered_map<std::string, glm::vec2> Vec2s;
+         std::unordered_map<std::string, glm::vec3> Vec3s;
+         std::unordered_map<std::string, glm::vec4> Vec4s;
+         std::unordered_map<std::string, glm::mat4> Mat4s;
 ```
 
 _… diff 생략: 코드 파일 5개 더 (파일 수 캡)_
@@ -9271,7 +9271,7 @@ _… diff 생략: 코드 파일 5개 더 (파일 수 캡)_
 ### `4922a00` feat(sprite): SJH::sprite module skeleton with ComputeUVRect
 
 > - Add src/sprite/ — uniform_atlas.{h,cpp} stub (UniformAtlas::LoadFromPNG 미구현)
-> - Add ComputeUVRect free function — frameIdx → vmath::vec4 UV rect (GL-free math)
+> - Add ComputeUVRect free function — frameIdx → glm::vec4 UV rect (GL-free math)
 > - Add STB_IMAGE_IMPLEMENTATION definition (spec §B.5 — single owner)
 > - Register test_uniform_atlas (Catch2, math-only, no GL fixture)
 >
@@ -9296,11 +9296,11 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +namespace SJH::Sprite
 +{
-+    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
++    glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
 +                               int atlasWidth, int atlasHeight)
 +    {
 +        if (cols <= 0 || atlasWidth <= 0 || atlasHeight <= 0) {
-+            return vmath::vec4(0.0f, 0.0f, 0.0f, 0.0f);
++            return glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 +        }
 +        int col = frameIdx % cols;
 +        int row = frameIdx / cols;
@@ -9308,7 +9308,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        float v  = static_cast<float>(row * tileSize) / static_cast<float>(atlasHeight);
 +        float du = static_cast<float>(tileSize)        / static_cast<float>(atlasWidth);
 +        float dv = static_cast<float>(tileSize)        / static_cast<float>(atlasHeight);
-+        return vmath::vec4(u, v, du, dv);
++        return glm::vec4(u, v, du, dv);
 +    }
 +
 +    UniformAtlas::~UniformAtlas()
@@ -9330,7 +9330,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        }
 +    }
 +
-+    vmath::vec4 UniformAtlas::GetUVRect(int frameIdx) const
++    glm::vec4 UniformAtlas::GetUVRect(int frameIdx) const
 +    {
 +        return ComputeUVRect(frameIdx, mCols, mTileSize, mAtlasWidth, mAtlasHeight);
 +    }
@@ -9344,7 +9344,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define __SJH_SPRITE_UNIFORM_ATLAS_H__
 +
 +#include "GL/gl3w.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace SJH::Sprite
 +{
@@ -9354,9 +9354,9 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    /// @param tileSize    정사각 tile 한 변 픽셀 수
 +    /// @param atlasWidth  atlas 전체 가로 픽셀 (= cols × tileSize)
 +    /// @param atlasHeight atlas 전체 세로 픽셀 (= rows × tileSize)
-+    /// @return vmath::vec4 UV rect. cols<=0 또는 atlasWidth/Height<=0 이면 zero rect.
++    /// @return glm::vec4 UV rect. cols<=0 또는 atlasWidth/Height<=0 이면 zero rect.
 +    /// @note GL 호출 없음 — 순수 math. 단위 테스트가 GL fixture 없이 검증.
-+    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
++    glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
 +                               int atlasWidth, int atlasHeight);
 +
 +    /// @brief 등간격 N×M 정사각 그리드 atlas — sprite frame 시퀀스의 1차원 인덱스 → 2D UV rect 변환.
@@ -9383,7 +9383,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        void Release();
 +
 +        /// @brief frameIdx → atlas UV rect 0..1 정규화. ComputeUVRect 위임.
-+        vmath::vec4 GetUVRect(int frameIdx) const;
++        glm::vec4 GetUVRect(int frameIdx) const;
 +
 +        /// @brief 등록된 atlas 의 전체 frame 수 (cols × rows).
 +        int FrameCount() const { return mCols * mRows; }
@@ -9564,7 +9564,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define __SJH_SPRITE_SPRITE_COMPONENT_H__
 +
 +#include "scene/actor.h"   // SJH::Scene::Component
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace SJH::Sprite
 +{
@@ -9587,8 +9587,8 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        // === 게임 무관 데이터 (public 멤버 직접 접근 — POD-ish) ===
 +        UniformAtlas* atlas    = nullptr;
 +        int           frameIdx = 0;
-+        vmath::vec2   size     = vmath::vec2(1.0f, 1.0f);   // 월드 단위
-+        vmath::vec4   tint     = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
++        glm::vec2   size     = glm::vec2(1.0f, 1.0f);   // 월드 단위
++        glm::vec4   tint     = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 +        bool          flipX    = false;
 +    };
 +}
@@ -9716,7 +9716,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  namespace SJH::Sprite
 @@ -21,11 +21,6 @@ namespace SJH::Sprite
-         return vmath::vec4(u, v, du, dv);
+         return glm::vec4(u, v, du, dv);
      }
  
 -    UniformAtlas::~UniformAtlas()
@@ -9795,7 +9795,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 +#include "resource_registry/texture.h"   // SJH::Texture / SJH::TextureUPtr (CLASS_PTR)
  #include "GL/gl3w.h"
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 @@ -21,23 +22,24 @@ namespace SJH::Sprite
      /// @details
@@ -10351,7 +10351,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#define STB_RECT_PACK_IMPLEMENTATION
 -#include <stb_rect_pack.h>
 +#include <sb7.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
 -#include <Effekseer/Effekseer.h>
 -#include <Effekseer/EffekseerRendererGL.h>
@@ -10487,13 +10487,13 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -            const float aspect = (info.windowHeight > 0)
 -                                     ? static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight)
 -                                     : 1.0f;
--            const vmath::mat4 proj = vmath::perspective(60.0f, aspect, 0.1f, 100.0f);
-+            const vmath::mat4 proj = vmath::perspective(45.0f, static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight), 0.1f, 100.0f);
-             const vmath::mat4 view = vmath::lookat(
--                vmath::vec3(0.0f, 1.0f, 4.0f),     // eye
-+                vmath::vec3(0.0f, 5.0f, 5.0f),     // eye
-                 vmath::vec3(0.0f, 0.0f, 0.0f),     // center
-                 vmath::vec3(0.0f, 1.0f, 0.0f));    // up
+-            const glm::mat4 proj = vmath::perspective(60.0f, aspect, 0.1f, 100.0f);
++            const glm::mat4 proj = vmath::perspective(45.0f, static_cast<float>(info.windowWidth) / static_cast<float>(info.windowHeight), 0.1f, 100.0f);
+             const glm::mat4 view = vmath::lookat(
+-                glm::vec3(0.0f, 1.0f, 4.0f),     // eye
++                glm::vec3(0.0f, 5.0f, 5.0f),     // eye
+                 glm::vec3(0.0f, 0.0f, 0.0f),     // center
+                 glm::vec3(0.0f, 1.0f, 0.0f));    // up
  
 @@ -127,15 +128,16 @@ namespace TopdownShooter
              glActiveTexture(GL_TEXTURE0);
@@ -10625,7 +10625,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  #include <sb7.h>
 +#include <GL/gl3w.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
 -
 -#include "sprite/uniform_atlas.h"
 -#include "shader/shader.h"
@@ -10720,21 +10720,21 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 -        SJH::Uniforms::SetMat4(*mProgram, "u_view", view);
 -        SJH::Uniforms::SetMat4(*mProgram, "u_proj", proj);
--        SJH::Uniforms::SetVec3(*mProgram, "u_billboardCenter", vmath::vec3(0.0f, 0.0f, 0.0f));
--        SJH::Uniforms::SetVec2(*mProgram, "u_billboardSize",   vmath::vec2(1.0f, 1.0f));
+-        SJH::Uniforms::SetVec3(*mProgram, "u_billboardCenter", glm::vec3(0.0f, 0.0f, 0.0f));
+-        SJH::Uniforms::SetVec2(*mProgram, "u_billboardSize",   glm::vec2(1.0f, 1.0f));
 -        SJH::Uniforms::SetFloat(*mProgram, "u_flipX", 1.0f);
 +        // D1 — uModel 이 빌보드 center (Translate) + size (Scale) 흡수.
 +        // Actor 부착 전 M1.5 단계라 임시 identity 송신: center=(0,0,0), scale=(1,1) 동치.
-+        SJH::Uniforms::SetMat4(*mProgram, "uModel", vmath::mat4::identity());
++        SJH::Uniforms::SetMat4(*mProgram, "uModel", glm::mat4::identity());
 +        SJH::Uniforms::SetMat4(*mProgram, "uView", view);
 +        SJH::Uniforms::SetMat4(*mProgram, "uProj", proj);
 +        SJH::Uniforms::SetFloat(*mProgram, "uFlipX", 1.0f);
  
-         const vmath::vec4 uvRect = mAtlas.GetUVRect(/*frameIdx=*/0);
+         const glm::vec4 uvRect = mAtlas.GetUVRect(/*frameIdx=*/0);
 -        SJH::Uniforms::SetVec4(*mProgram, "u_uvRect", uvRect);
--        SJH::Uniforms::SetVec4(*mProgram, "u_tint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+-        SJH::Uniforms::SetVec4(*mProgram, "u_tint", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 +        SJH::Uniforms::SetVec4(*mProgram, "uUvRect", uvRect);
-+        SJH::Uniforms::SetVec4(*mProgram, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
++        SJH::Uniforms::SetVec4(*mProgram, "uTint", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
  
          // === atlas 텍스처 ===
          glActiveTexture(GL_TEXTURE0);
@@ -10782,7 +10782,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <sb7.h>
 -#include <GL/gl3w.h>
 +#include <GLFW/glfw3.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  #include <spdlog/spdlog.h>
  
 @@ -18,18 +19,22 @@
@@ -11313,7 +11313,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/main.cpp`
 ```diff
 @@ -10,16 +10,7 @@
- #include <vmath.h>
+ #include <glm/glm.hpp>
  #include <spdlog/spdlog.h>
  
 -// macOS GLFW chdir workaround (migrate_demo 정통)
@@ -11464,7 +11464,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#endif
 -
  // 수정: index swap 제거 (직접 memcpy 의미)
- static Effekseer::Matrix44 ToEfkMat(const vmath::mat4 &m)
+ static Effekseer::Matrix44 ToEfkMat(const glm::mat4 &m)
  {
 @@ -47,16 +38,8 @@ class EfkDemo1 : public sb7::application
  		info.majorVersion = 4;
@@ -11491,7 +11491,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -62,15 +62,6 @@
  #include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 -#ifdef __APPLE__
 -#include <libgen.h>
@@ -11617,10 +11617,10 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include <sb7.h>
 +#include <GL/gl3w.h>
  #include <GLFW/glfw3.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 +#include <sb7.h>
  #include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
 -#include "common/common.h"                       // SJH::DeltaTime / SJH::ChdirToExecutableDir
 +#include "InputHandler/CameraController.h"
@@ -11785,7 +11785,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <GLFW/glfw3.h>
 +#include <cassert>
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Controller
 +{
@@ -11868,7 +11868,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/actor.h"
 +#include "scene/camera.h"
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Controller
 +{
@@ -11922,7 +11922,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +		float mYawDeg = 0.0f;
 +		float mPitchDeg = 0.0f;
-+		vmath::vec3 mMoveDelta = vmath::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset -> held handler 누적
++		glm::vec3 mMoveDelta = glm::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset -> held handler 누적
 +
 +		float mLookSensitivity = 0.1f;
 +		float mMoveSpeed = 0.05f;
@@ -12256,7 +12256,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -11,7 +11,8 @@
  #include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 -#include "InputHandler/CameraController.h"
 +#include "InputHandler/PlayerController.h"
@@ -12280,7 +12280,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
  			SJH::Uniforms::SetVec4(*mat, "uUvRect", mAtlas.GetUVRect(/*frameIdx=*/0));
  			SJH::Uniforms::SetFloat(*mat, "uFlipX", 1.0f);
- 			SJH::Uniforms::SetVec4(*mat, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+ 			SJH::Uniforms::SetVec4(*mat, "uTint", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
  
 -			// === Camera Actor (compound factory) ===
  			int fbW = 0, fbH = 0;
@@ -12292,13 +12292,13 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 -			auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
 +			auto camActor                      = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
- 			camActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
--			camActor->GetTransform().EulerRot = vmath::vec3(-45.0f, 0.0f, 0.0f); // pitch (위에서 내려다봄)
+ 			camActor->GetTransform().Translate = glm::vec3(0.0f, 5.0f, 5.0f);
+-			camActor->GetTransform().EulerRot = glm::vec3(-45.0f, 0.0f, 0.0f); // pitch (위에서 내려다봄)
 -			auto *cam = camActor->GetComponent<SJH::Scene::Camera>();
 -			camActor->AddComponent<Controller::CameraController>()
 -			    ->SetKeyboardInput(&mKeyboard)
 -			    .SetMouseInput(&mMouse)
-+			camActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
++			camActor->GetTransform().EulerRot  = glm::vec3(-45.0f, 0.0f, 0.0f);
 +			auto *cam                          = camActor->GetComponent<SJH::Scene::Camera>();
 +			// Camera Actor 의 follow 컨트롤러는 sprite 셋업 *후* SetFollowTarget 호출이 필요 — 변수 보관.
 +			auto *camCtrl = camActor->AddComponent<Controller::TargetFollowableCameraController>();
@@ -12316,9 +12316,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -			// Actor 의 Transform.Translate = 빌보드 center, Scale = 빌보드 size (셰이더 uModel 흡수)
 -			auto spriteActor = std::make_unique<SJH::Scene::Actor>("PlayerSprite");
 +			auto spriteActor                      = std::make_unique<SJH::Scene::Actor>("PlayerSprite");
- 			spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
--			spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
-+			spriteActor->GetTransform().Scale     = vmath::vec3(1.0f, 1.0f, 1.0f);
+ 			spriteActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
+-			spriteActor->GetTransform().Scale = glm::vec3(1.0f, 1.0f, 1.0f);
++			spriteActor->GetTransform().Scale     = glm::vec3(1.0f, 1.0f, 1.0f);
  			spriteActor->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), mat);
 +			spriteActor->AddComponent<Controller::PlayerController>()
 +			    ->SetKeyboardInput(&mKeyboard)
@@ -12329,7 +12329,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -			// === 7. Director lifecycle (Camera + Sprite OnEnter 캐스케이드) ===
 +			// Camera follow target — sprite Actor 가 root 의 child 로 등록된 후.
 +			camCtrl->SetFollowTarget(mSpriteActor)
-+			    .SetFollowOffset(vmath::vec3(0.0f, 5.0f, 5.0f));
++			    .SetFollowOffset(glm::vec3(0.0f, 5.0f, 5.0f));
 +
  			dir.Enter();
  		}
@@ -12348,7 +12348,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <GLFW/glfw3.h>
 +#include <cassert>
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Controller
 +{
@@ -12430,7 +12430,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +#include "input/keyboard_input.h"
 +#include "scene/actor.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Controller
 +{
@@ -12471,7 +12471,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	  private:
 +		bool mIsInitialized                          = false;
 +		SJH::KeyboardInput<Action> *mKeyboardInput   = nullptr;
-+		vmath::vec3 mMoveDelta                       = vmath::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset
++		glm::vec3 mMoveDelta                       = glm::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset
 +		float mMoveSpeed                             = 0.05f;
 +
 +		void RegisterBindings();
@@ -12493,7 +12493,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/camera.h"
 +#include <cassert>
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Controller
 +{
@@ -12552,7 +12552,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		return *this;
 +	}
 +
-+	TargetFollowableCameraController &TargetFollowableCameraController::SetFollowOffset(vmath::vec3 offset)
++	TargetFollowableCameraController &TargetFollowableCameraController::SetFollowOffset(glm::vec3 offset)
 +	{
 +		mFollowOffset = offset;
 +		return *this;
@@ -12576,7 +12576,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "input/mouse_input.h"
 +#include "scene/actor.h"
 +#include "scene/camera.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Controller
 +{
@@ -12610,7 +12610,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		TargetFollowableCameraController &SetFollowTarget(SJH::Scene::Actor *t);
 +
 +		/// @brief Follow 시 target → camera offset (default = vec3(0, 5, 5)).
-+		TargetFollowableCameraController &SetFollowOffset(vmath::vec3 offset);
++		TargetFollowableCameraController &SetFollowOffset(glm::vec3 offset);
 +
 +		/// @brief 마우스 감도 (default 0.1).
 +		TargetFollowableCameraController &SetLookSensitivity(float v);
@@ -12624,7 +12624,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		SJH::MouseInput *mMouseInput     = nullptr;
 +		SJH::Scene::Camera *mCamera      = nullptr;
 +		SJH::Scene::Actor *mFollowTarget = nullptr;
-+		vmath::vec3 mFollowOffset        = vmath::vec3(0.0f, 5.0f, 5.0f);
++		glm::vec3 mFollowOffset        = glm::vec3(0.0f, 5.0f, 5.0f);
 +
 +		float mYawDeg          = 0.0f;
 +		float mPitchDeg        = -45.0f; // 탑다운 기본 시점 — 아래를 향함
@@ -13531,7 +13531,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #ifndef _TOPDOWNSHOOTER_ENTITY_COMPONENTS_INTERFACES__
  #define _TOPDOWNSHOOTER_ENTITY_COMPONENTS_INTERFACES__
  
-+#include <vmath.h>
++#include <glm/glm.hpp>
  namespace TopdownShooter::Entity
  {
  	class ILivable
@@ -13558,7 +13558,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		IMovable(IMovable &&) = delete;
 +		IMovable operator=(IMovable &) = delete;
 +
-+		virtual void DoForward(vmath::vec2 dir) = 0;
++		virtual void DoForward(glm::vec2 dir) = 0;
 +	};
  } // namespace TopdownShooter::Entity
  
@@ -13663,7 +13663,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		virtual void Update(float dt) override {};
 +		virtual void OnExit() override {};
 +
-+		virtual void DoForward(vmath::vec2 dir) override 
++		virtual void DoForward(glm::vec2 dir) override 
 +		{
 +			
 +		}
@@ -13874,7 +13874,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		SJH::MouseInput mMouse;
 +
 +	  public:
-+		virtual void DoForward(vmath::vec2 dir) = 0;
++		virtual void DoForward(glm::vec2 dir) = 0;
 +		virtual void DoAttack(IAttackable &target) = 0;
 +		virtual int GetNormalAtk() const = 0;
 +	};
@@ -13892,7 +13892,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "Algebraic/Stat.h"
 +#include "Entity/Components/MovementComponents.h"
 +#include "scene/actor.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Entity::Components
 +{
@@ -13916,7 +13916,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		};
 +		virtual void OnExit() override {};
 +
-+		virtual void DoForward(vmath::vec2 dir) override
++		virtual void DoForward(glm::vec2 dir) override
 +		{
 +			auto *owner = GetOwner();
 +			if (!owner)
@@ -13980,8 +13980,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -
 +		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]});
  		// 누적값 리셋.
--		mMoveDelta = vmath::vec3(0.0f);
-+		mInputValue = vmath::vec3(0.0f);
+-		mMoveDelta = glm::vec3(0.0f);
++		mInputValue = glm::vec3(0.0f);
  	}
  } // namespace TopdownShooter::Controller
 ```
@@ -13995,7 +13995,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "Entity/Components/Components.Interfaces.h"
  #include "input/keyboard_input.h"
  #include "scene/actor.h"
- #include <vmath.h>
+ #include <glm/glm.hpp>
 +#include "Entity/Components/MovementComponents.h"
  
  namespace TopdownShooter::Controller
@@ -14014,11 +14014,11 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	  private:
  		bool mIsInitialized                          = false;
  		SJH::KeyboardInput<Action> *mKeyboardInput   = nullptr;
--		vmath::vec3 mMoveDelta                       = vmath::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset
+-		glm::vec3 mMoveDelta                       = glm::vec3(0.0f, 0.0f, 0.0f); // 매 Update reset
 -		float mMoveSpeed                             = 0.05f;
 +		Entity::IMovable* mMovementPtr = nullptr;
 +
-+		vmath::vec3 mInputValue {0.0f};
++		glm::vec3 mInputValue {0.0f};
  
  		void RegisterBindings();
  		void UnregisterBindings();
@@ -14242,7 +14242,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `src/sprite/uniform_atlas.cpp`
 ```diff
 @@ -21,52 +21,77 @@ namespace SJH::Sprite
-         return vmath::vec4(u, v, du, dv);
+         return glm::vec4(u, v, du, dv);
      }
  
 -    bool UniformAtlas::LoadFromPNG(const char* path, int tilePx)
@@ -14385,7 +14385,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -226,14 +226,14 @@ namespace SJH
  
  	void SceneRenderer::CollectFromActor(const Scene::Actor &actor,
- 	                                     const vmath::mat4 &viewMat,
+ 	                                     const glm::mat4 &viewMat,
 -	                                     uint32_t cullingMask)
 +	                                     uint64_t cullingMask)
  	{
@@ -14407,8 +14407,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          /// @brief Actor 트리 DFS — MeshRenderer 수집 + Queue 에 Submit.
          /// @param cullingMask Camera::GetCullingMask() — actor.GetLayer() 와 AND 검사로 필터 (SP4 D-15).
          ///        자식 트리는 visibleToCamera 와 무관하게 계속 traverse (자식이 다른 layer 일 수 있음).
--        void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint32_t cullingMask);
-+        void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
+-        void CollectFromActor(const Scene::Actor& actor, const glm::mat4& viewMat, uint32_t cullingMask);
++        void CollectFromActor(const Scene::Actor& actor, const glm::mat4& viewMat, uint64_t cullingMask);
  
          /// @brief Actor 트리 DFS — IsActive + IsEnabled Camera 컴포넌트를 out 에 수집.
          void CollectCameras(const Scene::Actor& actor, std::vector<Scene::Camera*>& out);
@@ -14425,7 +14425,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/actor.h"  // Component + Actor::GetWorldMatrix
 +#include "scene/layer.h"  // Layer, ToBits (SP5 Task 3)
 +#include <cstdint>        // uint64_t for cullingMask (SP5 Task 3)
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH
 @@ -37,8 +38,13 @@ namespace SJH::Scene
@@ -14486,7 +14486,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -11,6 +11,7 @@
  #include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 +#include "Entity/Player/PlayerActor.h"
  #include "InputHandler/PlayerController.h"
@@ -14526,10 +14526,10 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 -			auto camActor                      = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
 +			auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
- 			camActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
--			camActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
+ 			camActor->GetTransform().Translate = glm::vec3(0.0f, 5.0f, 5.0f);
+-			camActor->GetTransform().EulerRot  = glm::vec3(-45.0f, 0.0f, 0.0f);
 -			auto *cam                          = camActor->GetComponent<SJH::Scene::Camera>();
-+			camActor->GetTransform().EulerRot = vmath::vec3(-45.0f, 0.0f, 0.0f);
++			camActor->GetTransform().EulerRot = glm::vec3(-45.0f, 0.0f, 0.0f);
 +			auto *cam = camActor->GetComponent<SJH::Scene::Camera>();
  			// Camera Actor 의 follow 컨트롤러는 sprite 셋업 *후* SetFollowTarget 호출이 필요 — 변수 보관.
  			auto *camCtrl = camActor->AddComponent<Controller::TargetFollowableCameraController>();
@@ -14550,9 +14550,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +			auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
 +
- 			spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
--			spriteActor->GetTransform().Scale     = vmath::vec3(1.0f, 1.0f, 1.0f);
-+			spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
+ 			spriteActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
+-			spriteActor->GetTransform().Scale     = glm::vec3(1.0f, 1.0f, 1.0f);
++			spriteActor->GetTransform().Scale = glm::vec3(1.0f, 1.0f, 1.0f);
  			spriteActor->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), mat);
 -			spriteActor->AddComponent<Controller::PlayerController>()
 -			    ->SetKeyboardInput(&mKeyboard)
@@ -14582,9 +14582,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		IMovable(IMovable &&) = delete;
  		IMovable operator=(IMovable &) = delete;
  
--		virtual void DoForward(vmath::vec2 dir) = 0;
+-		virtual void DoForward(glm::vec2 dir) = 0;
 +		/// @brief 단위 방향 dir 로 dt 초만큼 이동. 구현체가 *units/sec* 단위 속도 보유 가정.
-+		virtual void DoForward(vmath::vec2 dir, float dt) = 0;
++		virtual void DoForward(glm::vec2 dir, float dt) = 0;
  	};
  } // namespace TopdownShooter::Entity
  
@@ -14614,8 +14614,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		virtual void Update(float dt) override {};
  		virtual void OnExit() override {};
  
--		virtual void DoForward(vmath::vec2 dir) override 
-+		virtual void DoForward(vmath::vec2 dir, float dt) override
+-		virtual void DoForward(glm::vec2 dir) override 
++		virtual void DoForward(glm::vec2 dir, float dt) override
  		{
 -			
 +			auto *owner = GetOwner();
@@ -14742,10 +14742,10 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		SJH::MouseInput mMouse;
  
  	  public:
--		virtual void DoForward(vmath::vec2 dir) = 0;
+-		virtual void DoForward(glm::vec2 dir) = 0;
 -		virtual void DoAttack(IAttackable &target) = 0;
 -		virtual int GetNormalAtk() const = 0;
-+		virtual void DoForward(vmath::vec2 dir, float dt) {mMovementComponentPtr->DoForward(dir, dt);}
++		virtual void DoForward(glm::vec2 dir, float dt) {mMovementComponentPtr->DoForward(dir, dt);}
 +		virtual void DoAttack(IDamageable &target) {target.DoDamaged(GetNormalAtk());}
 +		virtual int GetNormalAtk() const { return (int)mWaeponComponentPtr->Damage.GetValue();}
  	};
@@ -14768,10 +14768,10 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		// W = 앞 = -Z (OpenGL forward 컨벤션).
 +		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
 +		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
-+		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveBack,    [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveLeft,    [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveRight,   [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += glm::vec3(0.0f, 0.0f, -1.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveBack,    [this] { mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveLeft,    [this] { mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveRight,   [this] { mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); });
  	}
  
  	void PlayerController::UnregisterBindings()
@@ -14800,7 +14800,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		// dt 는 Movement::DoForward 가 units/sec → 프레임 변위로 변환 (fps-independent).
 +		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
  		// 누적값 리셋.
- 		mInputValue = vmath::vec3(0.0f);
+ 		mInputValue = glm::vec3(0.0f);
  	}
 ```
 
@@ -14809,7 +14809,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -5,7 +5,7 @@
  #include "input/keyboard_input.h"
  #include "scene/actor.h"
- #include <vmath.h>
+ #include <glm/glm.hpp>
 -#include "Entity/Components/MovementComponents.h"
 +#include "Entity/Components/Components.Interfaces.h"
  
@@ -14951,7 +14951,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "render/mesh_pass_processor.h"
 +#include "render/render_stage.h"
  #include <cstdint>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  #include <vector>
 @@ -22,7 +23,7 @@ namespace SJH
      ///
@@ -15004,7 +15004,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  #include "client.h"
 @@ -138,6 +142,23 @@ class tweeny_demo_app : public sb7::application
- 			xform.Scale = vmath::vec3(0.05f, 0.035f, 1.0f);
+ 			xform.Scale = glm::vec3(0.05f, 0.035f, 1.0f);
  		}
  
 +		// === SP5 — SceneCamera Actor 도입 (옛 Render(RT, I, I) 우회 청산) ===
@@ -15015,7 +15015,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +			auto camActor = SJH::Scene::CreateCameraActor("SceneCamera",
 +			    /*fov*/45.0f, aspect, /*near*/0.1f, /*far*/100.0f);
-+			camActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 5.0f);
++			camActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 5.0f);
 +			auto* cam = camActor->GetComponent<SJH::Scene::Camera>();
 +			cam->SetCullingMask(SJH::Scene::Layer::Default);   // 명시 — UI 비트 제외
 +			cam->SetTargetFramebuffer(nullptr);                // backbuffer
@@ -15031,7 +15031,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			dtMs = 0;
  
  		SJH::Scene::Director::Get().Update((float)dt);
--		const vmath::mat4 I = vmath::mat4::identity();
+-		const glm::mat4 I = glm::mat4::identity();
 -		mRenderSys.Render(*mDefaultTarget, I, I);
 +		for (auto* s : mStages) s->Render(*mDefaultTarget);
  	}
@@ -15158,17 +15158,17 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			const float arena = 10.0f;
 +			const float wallH = 0.5f;
 +			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
-+			    "WallTop",    mPhysics.World(), vmath::vec2(0.0f, +arena), vmath::vec2(arena, wallH)));
++			    "WallTop",    mPhysics.World(), glm::vec2(0.0f, +arena), glm::vec2(arena, wallH)));
 +			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
-+			    "WallBottom", mPhysics.World(), vmath::vec2(0.0f, -arena), vmath::vec2(arena, wallH)));
++			    "WallBottom", mPhysics.World(), glm::vec2(0.0f, -arena), glm::vec2(arena, wallH)));
 +			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
-+			    "WallLeft",   mPhysics.World(), vmath::vec2(-arena, 0.0f), vmath::vec2(wallH, arena)));
++			    "WallLeft",   mPhysics.World(), glm::vec2(-arena, 0.0f), glm::vec2(wallH, arena)));
 +			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
-+			    "WallRight",  mPhysics.World(), vmath::vec2(+arena, 0.0f), vmath::vec2(wallH, arena)));
++			    "WallRight",  mPhysics.World(), glm::vec2(+arena, 0.0f), glm::vec2(wallH, arena)));
 +
 +			// Pickup Sensor — (0, +3) 위치. Player 가 W 키로 진입 시 OnTriggerEnter 로그 검증.
 +			dir.Root().AddChild(TopdownShooter::Physics::CreatePickupActor(
-+			    "PickupTest", mPhysics.World(), vmath::vec2(0.0f, 3.0f), vmath::vec2(0.8f, 0.8f)));
++			    "PickupTest", mPhysics.World(), glm::vec2(0.0f, 3.0f), glm::vec2(0.8f, 0.8f)));
 +
  			pac.name = "PlayerSprite";
  			pac.life.hp = 100;
@@ -15176,8 +15176,8 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			pac.movement.speed = 3.0f;
  			pac.controller.keyboard = &mKeyboard;
 +			pac.physics.world         = &mPhysics.World();
-+			pac.physics.size          = vmath::vec2(1.0f, 1.0f);
-+			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
++			pac.physics.size          = glm::vec2(1.0f, 1.0f);
++			pac.physics.startPosition = glm::vec2(0.0f, 0.0f);
 +			pac.physics.density       = 1.0f;
 +			pac.physics.linearDamping = 5.0f;
 +			pac.physics.categoryBits  = TopdownShooter::Physics::Filter::PLAYER;
@@ -15228,7 +15228,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <box2d/b2_body.h>
 +#include <cstddef>
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Carrier
 +{
@@ -15311,7 +15311,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <cstdint>
  #include <memory>
  #include <string>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity::Player
  {
@@ -15322,8 +15322,8 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		struct PhysicsCfg
 +		{
 +			b2World*    world         = nullptr;
-+			vmath::vec2 size          = vmath::vec2(1.0f, 1.0f);
-+			vmath::vec2 startPosition = vmath::vec2(0.0f, 0.0f);
++			glm::vec2 size          = glm::vec2(1.0f, 1.0f);
++			glm::vec2 startPosition = glm::vec2(0.0f, 0.0f);
 +			float       density       = 1.0f;
 +			float       friction      = 0.3f;
 +			float       linearDamping = 5.0f;
@@ -15390,7 +15390,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define _TOPDOWNSHOOTER_PHYSICS_COMPONENTS_INTERFACES__
 +
 +#include "scene/actor.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Physics
 +{
@@ -15432,7 +15432,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <box2d/b2_body.h>
 +#include <cstddef>
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Physics::Components
 +{
@@ -15514,7 +15514,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/camera.h"
 +#include <box2d/b2_body.h>
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Physics::Components
 +{
@@ -15826,7 +15826,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #define _TOPDOWNSHOOTER_PHYSICS_COMPONENTS_INTERFACES__
  
 -#include "scene/actor.h"
--#include <vmath.h>
+-#include <glm/glm.hpp>
 +namespace SJH::Scene { class Actor; }
  
  namespace TopdownShooter::Physics
@@ -16034,7 +16034,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/main.cpp`
 ```diff
 @@ -144,8 +144,8 @@ namespace TopdownShooter
- 			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
+ 			pac.physics.startPosition = glm::vec2(0.0f, 0.0f);
  			pac.physics.density       = 1.0f;
  			pac.physics.linearDamping = 5.0f;
 -			pac.physics.categoryBits  = TopdownShooter::Physics::Filter::PLAYER;
@@ -16231,7 +16231,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include <box2d/b2_body.h>
 -#include <cstddef>
 -#include <spdlog/spdlog.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
  
  namespace TopdownShooter::Physics::Components
  {
@@ -16314,7 +16314,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "scene/camera.h"
 -#include <box2d/b2_body.h>
 -#include <spdlog/spdlog.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 +#include <box2d/box2d.h>
 +#include <cstdint>
  
@@ -16324,7 +16324,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	/// @details
 +	///   ### 좌표계 (spec §4.4)
 +	///   - 물리: b2Vec2(x, y) 2D XY 평면
-+	///   - 렌더: Transform.Translate = vmath::vec3(x, heightOffset, -y) 3D XZ 평면 (top-down)
++	///   - 렌더: Transform.Translate = glm::vec3(x, heightOffset, -y) 3D XZ 평면 (top-down)
 +	///
 +	///   ### Sensor (Unity Collider.isTrigger 매핑)
 +	///   - mIsSensor=true  → b2Fixture::SetSensor(true). 물리 충돌 없음, 이벤트만.
@@ -16408,7 +16408,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -
 -#include "scene/actor.h"
 -#include <box2d/box2d.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -namespace TopdownShooter::Physics
 -{
@@ -16416,7 +16416,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -    /// @details
 -    ///   ### 좌표계 (spec §4.4)
 -    ///   - 물리: b2Vec2(x, y) 2D XY 평면
--    ///   - 렌더: Transform.Translate = vmath::vec3(x, heightOffset, -y) 3D XZ 평면 (top-down)
+-    ///   - 렌더: Transform.Translate = glm::vec3(x, heightOffset, -y) 3D XZ 평면 (top-down)
 -    ///
 -    ///   ### Sensor (Unity Collider.isTrigger 매핑)
 -    ///   - mIsSensor=true  → b2Fixture::SetSensor(true). 물리 충돌 없음, 이벤트만.
@@ -16640,42 +16640,42 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			auto *wallMat = reg.CreateSharedMaterial("solid_wall");
 +			wallMat->SetProgram(solidProg);
 +			wallMat->SetPass(SJH::Pass::Kind::Opaque);
-+			SJH::Uniforms::SetVec4(*wallMat, "baseColor", vmath::vec4(0.55f, 0.55f, 0.60f, 1.0f));
++			SJH::Uniforms::SetVec4(*wallMat, "baseColor", glm::vec4(0.55f, 0.55f, 0.60f, 1.0f));
 +
 +			auto *pickupMat = reg.CreateSharedMaterial("solid_pickup");
 +			pickupMat->SetProgram(solidProg);
 +			pickupMat->SetPass(SJH::Pass::Kind::Opaque);
-+			SJH::Uniforms::SetVec4(*pickupMat, "baseColor", vmath::vec4(1.0f, 0.85f, 0.2f, 1.0f));
++			SJH::Uniforms::SetVec4(*pickupMat, "baseColor", glm::vec4(1.0f, 0.85f, 0.2f, 1.0f));
 +
 +			// 벽 4개 — 약 10×10 단위 arena. Mesh::CreatePlane 은 XZ 평면 1×1 → Scale 로 half×2 매칭.
  			const float arena = 10.0f;
  			const float wallH = 0.5f;
 -			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
--			    "WallTop",    mPhysics.World(), vmath::vec2(0.0f, +arena), vmath::vec2(arena, wallH)));
+-			    "WallTop",    mPhysics.World(), glm::vec2(0.0f, +arena), glm::vec2(arena, wallH)));
 -			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
--			    "WallBottom", mPhysics.World(), vmath::vec2(0.0f, -arena), vmath::vec2(arena, wallH)));
+-			    "WallBottom", mPhysics.World(), glm::vec2(0.0f, -arena), glm::vec2(arena, wallH)));
 -			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
--			    "WallLeft",   mPhysics.World(), vmath::vec2(-arena, 0.0f), vmath::vec2(wallH, arena)));
+-			    "WallLeft",   mPhysics.World(), glm::vec2(-arena, 0.0f), glm::vec2(wallH, arena)));
 -			dir.Root().AddChild(TopdownShooter::Physics::CreateWallActor(
--			    "WallRight",  mPhysics.World(), vmath::vec2(+arena, 0.0f), vmath::vec2(wallH, arena)));
-+			auto spawnWall = [&](const char *name, vmath::vec2 center, vmath::vec2 half) {
+-			    "WallRight",  mPhysics.World(), glm::vec2(+arena, 0.0f), glm::vec2(wallH, arena)));
++			auto spawnWall = [&](const char *name, glm::vec2 center, glm::vec2 half) {
 +				auto a = TopdownShooter::Physics::CreateWallActor(name, mPhysics.World(), center, half);
-+				a->GetTransform().Scale = vmath::vec3(half[0] * 2.0f, 1.0f, half[1] * 2.0f);
++				a->GetTransform().Scale = glm::vec3(half[0] * 2.0f, 1.0f, half[1] * 2.0f);
 +				a->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), wallMat);
 +				dir.Root().AddChild(std::move(a));
 +			};
-+			spawnWall("WallTop",    vmath::vec2(0.0f,   +arena), vmath::vec2(arena, wallH));
-+			spawnWall("WallBottom", vmath::vec2(0.0f,   -arena), vmath::vec2(arena, wallH));
-+			spawnWall("WallLeft",   vmath::vec2(-arena, 0.0f),   vmath::vec2(wallH, arena));
-+			spawnWall("WallRight",  vmath::vec2(+arena, 0.0f),   vmath::vec2(wallH, arena));
++			spawnWall("WallTop",    glm::vec2(0.0f,   +arena), glm::vec2(arena, wallH));
++			spawnWall("WallBottom", glm::vec2(0.0f,   -arena), glm::vec2(arena, wallH));
++			spawnWall("WallLeft",   glm::vec2(-arena, 0.0f),   glm::vec2(wallH, arena));
++			spawnWall("WallRight",  glm::vec2(+arena, 0.0f),   glm::vec2(wallH, arena));
  
  			// Pickup Sensor — (0, +3) 위치. Player 가 W 키로 진입 시 OnTriggerEnter 로그 검증.
 -			dir.Root().AddChild(TopdownShooter::Physics::CreatePickupActor(
--			    "PickupTest", mPhysics.World(), vmath::vec2(0.0f, 3.0f), vmath::vec2(0.8f, 0.8f)));
+-			    "PickupTest", mPhysics.World(), glm::vec2(0.0f, 3.0f), glm::vec2(0.8f, 0.8f)));
 +			{
 +				auto p = TopdownShooter::Physics::CreatePickupActor(
-+				    "PickupTest", mPhysics.World(), vmath::vec2(0.0f, 3.0f), vmath::vec2(0.8f, 0.8f));
-+				p->GetTransform().Scale = vmath::vec3(1.6f, 1.0f, 1.6f);
++				    "PickupTest", mPhysics.World(), glm::vec2(0.0f, 3.0f), glm::vec2(0.8f, 0.8f));
++				p->GetTransform().Scale = glm::vec3(1.6f, 1.0f, 1.6f);
 +				p->AddComponent<SJH::Scene::MeshRenderer>(mPlane.get(), pickupMat);
 +				dir.Root().AddChild(std::move(p));
 +			}
@@ -16780,7 +16780,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/tweeny_demo/main.cpp`
 ```diff
 @@ -153,7 +153,7 @@ class tweeny_demo_app : public sb7::application
- 			camActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 5.0f);
+ 			camActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 5.0f);
  			auto* cam = camActor->GetComponent<SJH::Scene::Camera>();
  			cam->SetCullingMask(SJH::Scene::Layer::Default);   // 명시 — UI 비트 제외
 -			cam->SetTargetFramebuffer(nullptr);                // backbuffer
@@ -16869,7 +16869,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		virtual void OnEnter() override
 @@ -109,8 +110,8 @@ namespace SJH::Scene
  		/// @details 일반 inverse 아님. scale 1 가정. sb7 vmath 가 inverse 미제공이라 자작.
- 		static vmath::mat4 InverseAffine(const vmath::mat4 &m);
+ 		static glm::mat4 InverseAffine(const glm::mat4 &m);
  
 -		// SP4 multi-pass — 렌더 대상.
 -		Framebuffer *mTargetFB = nullptr; // 비소유 — owner 는 App/Chapter (Option C).
@@ -17019,12 +17019,12 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -        const Program*       program     = nullptr;
 -        const Mesh*          mesh        = nullptr;
 -        const Material*      material    = nullptr;
--        vmath::mat4          modelMatrix = vmath::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
+-        glm::mat4          modelMatrix = glm::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
 -        int                  queueLayer  = 2000;
 -        const Scene::Actor*  actor       = nullptr;   ///< 디버그 추적
 -        float                depth       = 0.0f;      ///< view-space z (back-to-front)
 +        const Scene::MeshRenderer* meshRenderer = nullptr;             ///< SSoT — program/mesh/material/actor 모두 경유 접근.
-+        vmath::mat4                modelMatrix  = vmath::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
++        glm::mat4                modelMatrix  = glm::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
 +        int                        queueLayer   = 2000;
 +        float                      depth        = 0.0f;                ///< view-space z (back-to-front)
      };
@@ -17443,7 +17443,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <cstdio>
  #include <string>
  #include <unordered_map>
- #include <vmath.h>
+ #include <glm/glm.hpp>
 @@ -58,22 +72,22 @@ namespace SJH
  		{
  		}
@@ -18262,7 +18262,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 -#include "scene/actor.h"   // SJH::Scene::Component
 +#include "render/mesh_renderer.h"   // base class — Unity SpriteRenderer is_a MeshRenderer 정통
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH::Sprite
  {
@@ -18289,7 +18289,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    ///   ### 사용
 +    ///   @code
 +    ///   auto* spr = actor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
-+    ///   spr->tint = vmath::vec4(1.0f, 0.5f, 0.5f, 1.0f);
++    ///   spr->tint = glm::vec4(1.0f, 0.5f, 0.5f, 1.0f);
 +    ///   // 옵션: SpriteAnimator 부착 시 frameIdx 자동 진행
 +    ///   actor->AddComponent<SJH::Sprite::SpriteAnimator>()->SetAtlas(atlas);
 +    ///   @endcode
@@ -18315,9 +18315,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        // === 게임 무관 sprite 데이터 (public 멤버 직접 접근 — POD-ish) ===
          UniformAtlas* atlas    = nullptr;
          int           frameIdx = 0;
--        vmath::vec2   size     = vmath::vec2(1.0f, 1.0f);   // 월드 단위
-+        vmath::vec2   size     = vmath::vec2(1.0f, 1.0f);   // 월드 단위 (현재 미사용 — Transform.Scale 우선)
-         vmath::vec4   tint     = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+-        glm::vec2   size     = glm::vec2(1.0f, 1.0f);   // 월드 단위
++        glm::vec2   size     = glm::vec2(1.0f, 1.0f);   // 월드 단위 (현재 미사용 — Transform.Scale 우선)
+         glm::vec4   tint     = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
          bool          flipX    = false;
      };
 -}
@@ -18336,7 +18336,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "GL/gl3w.h"
 +#include "common/common.h"
 +#include "resource_registry/texture.h" // SJH::Texture / SJH::TextureUPtr (CLASS_PTR)
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH::Sprite
  {
@@ -18346,9 +18346,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -    /// @param tileSize    정사각 tile 한 변 픽셀 수
 -    /// @param atlasWidth  atlas 전체 가로 픽셀 (= cols × tileSize)
 -    /// @param atlasHeight atlas 전체 세로 픽셀 (= rows × tileSize)
--    /// @return vmath::vec4 UV rect. cols<=0 또는 atlasWidth/Height<=0 이면 zero rect.
+-    /// @return glm::vec4 UV rect. cols<=0 또는 atlasWidth/Height<=0 이면 zero rect.
 -    /// @note GL 호출 없음 — 순수 math. 단위 테스트가 GL fixture 없이 검증.
--    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
+-    glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
 -                               int atlasWidth, int atlasHeight);
 +	CLASS_PTR(UniformAtlas)
 +	/// @brief frameIdx → atlas UV rect (uMin, vMin, uSize, vSize) 0..1 정규화.
@@ -18357,9 +18357,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	/// @param tileSize    정사각 tile 한 변 픽셀 수
 +	/// @param atlasWidth  atlas 전체 가로 픽셀 (= cols × tileSize)
 +	/// @param atlasHeight atlas 전체 세로 픽셀 (= rows × tileSize)
-+	/// @return vmath::vec4 UV rect. cols<=0 또는 atlasWidth/Height<=0 이면 zero rect.
++	/// @return glm::vec4 UV rect. cols<=0 또는 atlasWidth/Height<=0 이면 zero rect.
 +	/// @note GL 호출 없음 — 순수 math. 단위 테스트가 GL fixture 없이 검증.
-+	vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
++	glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
 +	                          int atlasWidth, int atlasHeight);
  
 -    /// @brief 등간격 N×M 정사각 그리드 atlas — sprite frame 시퀀스의 1차원 인덱스 → 2D UV rect 변환.
@@ -18554,7 +18554,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	                                      const std::vector<PointLight *> &points,
 -	                                      SpotLight *spot,
 +	                                      const std::vector<SpotLight *> &spots,
- 	                                      const vmath::vec3 &viewPos)
+ 	                                      const glm::vec3 &viewPos)
  	{
 -		// lighting.fs 의 셰이더 컨벤션 매핑 (Const::NUM_POINT_LIGHTS 와 일치).
 +		// lighting.fs 의 셰이더 컨벤션 매핑 (Const::MAX_POINT_LIGHTS / MAX_SPOT_LIGHTS 와 일치).
@@ -18570,7 +18570,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -38,6 +38,9 @@ namespace SJH
          void Render(RenderTarget& defaultTarget,
-                     const vmath::mat4& viewMat, const vmath::mat4& projMat);
+                     const glm::mat4& viewMat, const glm::mat4& projMat);
  
 +	// 상시 Camera를 찾는것은 이상하다 RenderTarget Plane을 가지고 있음.
 +	// Light 는 어떤 관점으로 바라봐야 하지?
@@ -18606,7 +18606,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
                                 const std::vector<PointLight*>& points,
 -                               SpotLight* spot,
 +                               const std::vector<SpotLight*>& spots,
-                                const vmath::vec3& viewPos);
+                                const glm::vec3& viewPos);
  
          MeshPassProcessor mProcessor;
 ```
@@ -18892,7 +18892,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
      ///   ### 사용
      ///   @code
      ///   auto* spr = actor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas);
-     ///   spr->tint = vmath::vec4(1.0f, 0.5f, 0.5f, 1.0f);
+     ///   spr->tint = glm::vec4(1.0f, 0.5f, 0.5f, 1.0f);
 -    ///   // 옵션: SpriteAnimator 부착 시 frameIdx 자동 진행
 -    ///   actor->AddComponent<SJH::Sprite::SpriteAnimator>()->SetAtlas(atlas);
 +    ///   // 옵션: SpriteSequencePlayable 부착 시 frameIdx 자동 진행
@@ -19135,7 +19135,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -
 -			SJH::Uniforms::SetVec4(*mat, "uUvRect", mAtlas.GetUVRect(/*frameIdx=*/0));
 -			SJH::Uniforms::SetFloat(*mat, "uFlipX", 1.0f);
--			SJH::Uniforms::SetVec4(*mat, "uTint", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+-			SJH::Uniforms::SetVec4(*mat, "uTint", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 -
  			int fbW = 0, fbH = 0;
  			glfwGetFramebufferSize(window, &fbW, &fbH);
@@ -19154,7 +19154,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/migrate_demo/main.cpp`
 ```diff
 @@ -142,7 +142,6 @@ class migrate_demo_app : public sb7::application
- 		sceneCamActor->GetTransform().EulerRot = vmath::vec3(-20.0f, 0.0f, 0.0f);
+ 		sceneCamActor->GetTransform().EulerRot = glm::vec3(-20.0f, 0.0f, 0.0f);
  
  		auto *sceneCam = sceneCamActor->GetComponent<SJH::Scene::Camera>();
 -		sceneCam->Depth = 0;
@@ -19193,7 +19193,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  {
 @@ -54,4 +55,37 @@ namespace SJH
          }
-         return vmath::vec3(0.0f, 0.0f, -1.0f);
+         return glm::vec3(0.0f, 0.0f, -1.0f);
      }
 +
 +    // ── SP-SceneContext+ProgramRegistry (2026-05-26) — Component lifecycle hook ──────
@@ -19235,7 +19235,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -72,15 +72,13 @@ namespace SJH
  		/// @brief Owner Actor 의 worldMatrix forward(+Z) 컬럼 정규화. Owner 없을 때 (-Z) fallback.
- 		vmath::vec3 GetWorldDirection() const;
+ 		glm::vec3 GetWorldDirection() const;
  
 -		virtual void OnEnter() override {
 -			
@@ -19258,7 +19258,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	/**
 @@ -113,15 +111,12 @@ namespace SJH
  		/// @brief Owner Actor 의 worldMatrix translate column. Owner 없을 때 원점.
- 		vmath::vec3 GetWorldPosition() const;
+ 		glm::vec3 GetWorldPosition() const;
  
 -		virtual void OnEnter() override {
 -			
@@ -19279,8 +19279,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  	/// @brief 스포트라이트 — 위치 + 콘 축 방향 + inner/outer 컷오프 + 거리 감쇠 + Phong 3항.
 @@ -150,15 +145,12 @@ namespace SJH
- 		vmath::vec3 GetWorldPosition() const;
- 		vmath::vec3 GetWorldDirection() const;
+ 		glm::vec3 GetWorldPosition() const;
+ 		glm::vec3 GetWorldDirection() const;
  
 -		virtual void OnEnter() override {
 -			
@@ -19370,7 +19370,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	{
  		auto &rc = DeviceContext::Get();
 @@ -74,13 +58,27 @@ namespace SJH
- 			viewPos = vmath::vec3(camWorld[3][0], camWorld[3][1], camWorld[3][2]);
+ 			viewPos = glm::vec3(camWorld[3][0], camWorld[3][1], camWorld[3][2]);
  		}
  
 -		DirLight *dir = nullptr;
@@ -19422,14 +19422,14 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -        /// @brief 명시 view/proj — 단위 테스트 + 디버그용 (CameraComponent 우회).
 -        /// @details 기존 인터페이스 보존 — CameraComponent 없이 임의 view/proj 직접 주입 가능.
 -        void Render(RenderTarget& defaultTarget,
--                    const vmath::mat4& viewMat, const vmath::mat4& projMat);
+-                    const glm::mat4& viewMat, const glm::mat4& projMat);
 -
  	// 상시 Camera를 찾는것은 이상하다 RenderTarget Plane을 가지고 있음.
  	// Light 는 어떤 관점으로 바라봐야 하지?
  
 @@ -47,29 +41,14 @@ namespace SJH
          ///        자식 트리는 visibleToCamera 와 무관하게 계속 traverse (자식이 다른 layer 일 수 있음).
-         void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
+         void CollectFromActor(const Scene::Actor& actor, const glm::mat4& viewMat, uint64_t cullingMask);
  
 -        /// @brief Actor 트리 DFS — IsActive + IsEnabled Camera 컴포넌트를 out 에 수집.
 -        void CollectCameras(const Scene::Actor& actor, std::vector<Scene::Camera*>& out);
@@ -19539,7 +19539,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include <memory>
 -#include <spdlog/spdlog.h>
 -#include <string>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -namespace TopdownShooter::Physics
 -{
@@ -19569,7 +19569,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -    /// @param center 박스 중심 (XY 평면)
 -    /// @param half   half-extents
 -    inline std::unique_ptr<SJH::Scene::Actor> CreatePickupActor(
--        std::string name, b2World& world, vmath::vec2 center, vmath::vec2 half)
+-        std::string name, b2World& world, glm::vec2 center, glm::vec2 half)
 -    {
 -        auto actor = std::make_unique<SJH::Scene::Actor>(std::move(name));
 -
@@ -19613,7 +19613,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "Physics/PhysicsComponent.h"
 @@ -12,7 +12,7 @@
  #include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 -namespace TopdownShooter::Carrier
 +namespace TopdownShooter::Spawn::Carrier
@@ -19743,7 +19743,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <box2d/box2d.h>
 +#include <memory>
 +#include <string>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Stage::Factories
 +{
@@ -19754,7 +19754,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    /// @param center 박스 중심 (XY 평면)
 +    /// @param half   half-extents
 +    inline std::unique_ptr<SJH::Scene::Actor> CreatePickupActor(
-+        std::string name, b2World& world, vmath::vec2 center, vmath::vec2 half)
++        std::string name, b2World& world, glm::vec2 center, glm::vec2 half)
 +    {
 +        auto actor = std::make_unique<SJH::Scene::Actor>(std::move(name));
 +
@@ -19798,7 +19798,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "Physics/filter.h"
 @@ -9,9 +9,11 @@
  #include <string>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 -namespace TopdownShooter::Physics
 +namespace TopdownShooter::Stage::Factories
@@ -19906,7 +19906,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        }
 +
 +        SJH::Material* EnsureMaterial(SJH::ResourceRegistry& reg, const std::string& key,
-+                                       SJH::Program* prog, vmath::vec4 baseColor)
++                                       SJH::Program* prog, glm::vec4 baseColor)
 +        {
 +            if (auto* existing = reg.FindSharedMaterial(key))
 +                return existing;
@@ -19929,9 +19929,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        SJH::Mesh*     plane     = EnsurePlane(reg);
 +        SJH::Program*  solidProg = EnsureProgram(reg);
 +        SJH::Material* wallMat   = EnsureMaterial(reg, kWallMatKey, solidProg,
-+                                                   vmath::vec4(0.55f, 0.55f, 0.60f, 1.0f));
++                                                   glm::vec4(0.55f, 0.55f, 0.60f, 1.0f));
 +        SJH::Material* pickupMat = EnsureMaterial(reg, kPickupMatKey, solidProg,
-+                                                   vmath::vec4(1.0f, 0.85f, 0.2f, 1.0f));
++                                                   glm::vec4(1.0f, 0.85f, 0.2f, 1.0f));
 +
 +        // 2) Stage Actor + StageState Component
 +        auto stage = std::make_unique<SJH::Scene::Actor>("MainStage");
@@ -20095,8 +20095,8 @@ _비코드 21개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  			pac.controller.keyboard = &mKeyboard;
 -			pac.physics.world = &mPhysics.World();
 +			pac.physics.world = &phys.World();
- 			pac.physics.size = vmath::vec2(1.0f, 1.0f);
- 			pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
+ 			pac.physics.size = glm::vec2(1.0f, 1.0f);
+ 			pac.physics.startPosition = glm::vec2(0.0f, 0.0f);
  			pac.physics.density = 1.0f;
 @@ -155,13 +185,22 @@ namespace TopdownShooter
  			}
@@ -20510,7 +20510,7 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/main.cpp`
 ```diff
 @@ -12,22 +12,27 @@
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  #include "Entity/Player/PlayerActor.h"
 +#include "Entity/Player/PlayerBehavior.h"
@@ -20727,15 +20727,15 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/actor.h"
 +#include <box2d/box2d.h>
 +#include <memory>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Entity::Bullet
 +{
 +    struct BulletConfig
 +    {
 +        b2World*    world;
-+        vmath::vec2 pos;
-+        vmath::vec2 dir;        // normalized
++        glm::vec2 pos;
++        glm::vec2 dir;        // normalized
 +        float       speed    = 15.0f;
 +        int         damage   = 10;
 +        float       lifetime = 3.0f;
@@ -20876,7 +20876,7 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define __TOPDOWNSHOOTER_ENTITY_ENEMY_SIMPLE_PURSUE_AI_H__
 +
 +#include "scene/actor.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +class b2Body;
 +
@@ -20917,14 +20917,14 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/actor.h"
 +#include <box2d/box2d.h>
 +#include <memory>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Entity::Enemy
 +{
 +    struct EnemyConfig
 +    {
 +        b2World*           world;
-+        vmath::vec2        pos;
++        glm::vec2        pos;
 +        SJH::Scene::Actor* playerTarget;
 +        int   hp     = 30;
 +        float speed  = 2.0f;
@@ -20968,7 +20968,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/main.cpp`
 ```diff
 @@ -12,27 +12,22 @@
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  #include "Entity/Player/PlayerActor.h"
 -#include "Entity/Player/PlayerBehavior.h"
@@ -21201,7 +21201,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	// Light 는 어떤 관점으로 바라봐야 하지?
 @@ -40,9 +41,8 @@ namespace SJH
          ///        자식 트리는 visibleToCamera 와 무관하게 계속 traverse (자식이 다른 layer 일 수 있음).
-         void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
+         void CollectFromActor(const Scene::Actor& actor, const glm::mat4& viewMat, uint64_t cullingMask);
  
 -        /// @brief 단일 Camera 1패스 — cam.GetTargetRenderTarget() 바인딩 + Actor 수집 + Light uniform 송신 + Queue flush.
 -        /// @note cam.GetTargetRenderTarget() 이 nullptr 이면 assert (Phase B: Camera 강제 non-null).
@@ -21372,7 +21372,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "scene/layer.h" // Layer, ToBits (SP5 Task 3)
 -#include <cassert>
  #include <cstdint>       // uint64_t for cullingMask (SP5 Task 3)
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 @@ -92,12 +91,10 @@ namespace SJH::Scene
  
@@ -21530,7 +21530,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	                                      DirLight *dir,
 +	                                      const std::vector<PointLight *> &points,
 +	                                      const std::vector<SpotLight *> &spots,
-+	                                      const vmath::vec3 &viewPos)
++	                                      const glm::vec3 &viewPos)
 +	{
 +		if (static_cast<int>(points.size()) > Const::MAX_POINT_LIGHTS)
 +			spdlog::warn("LightUniformDispatcher — PointLight {} 개 발견. 셰이더 MAX_POINT_LIGHTS={} 초과분 무시.",
@@ -21617,7 +21617,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 + */
 +
 +#include <vector>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace SJH
 +{
@@ -21643,7 +21643,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		              DirLight *dir,
 +		              const std::vector<PointLight *> &points,
 +		              const std::vector<SpotLight *> &spots,
-+		              const vmath::vec3 &viewPos);
++		              const glm::vec3 &viewPos);
 +	};
 +
 +} // namespace SJH
@@ -21726,7 +21726,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -	                                      DirLight *dir,
 -	                                      const std::vector<PointLight *> &points,
 -	                                      const std::vector<SpotLight *> &spots,
--	                                      const vmath::vec3 &viewPos)
+-	                                      const glm::vec3 &viewPos)
 -	{
 -
 -		if (static_cast<int>(points.size()) > Const::MAX_POINT_LIGHTS)
@@ -21746,7 +21746,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "render/mesh_pass_processor.h"
  #include "render/render_stage.h"
  #include <cstdint>
- #include <vmath.h>
+ #include <glm/glm.hpp>
 -#include <vector>
  
  namespace SJH::Scene { class Actor; class Camera; }
@@ -21784,7 +21784,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          /// @brief Actor 트리 DFS — MeshRenderer 수집 + Queue 에 Submit.
 -        /// @param cullingMask Camera::GetCullingMask() — actor.GetLayer() 와 AND 검사로 필터 (SP4 D-15).
 -        ///        자식 트리는 visibleToCamera 와 무관하게 계속 traverse (자식이 다른 layer 일 수 있음).
-         void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
+         void CollectFromActor(const Scene::Actor& actor, const glm::mat4& viewMat, uint64_t cullingMask);
  
 -        /// @brief 단일 Camera 1패스 — target FB 바인딩 + Actor 수집 + Light uniform 송신 + Queue flush.
 -        void RenderWithCamera(Scene::Camera& cam, RenderTarget& defaultTarget);
@@ -21797,7 +21797,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -                               DirLight* dir,
 -                               const std::vector<PointLight*>& points,
 -                               const std::vector<SpotLight*>& spots,
--                               const vmath::vec3& viewPos);
+-                               const glm::vec3& viewPos);
 +        /// @brief 단일 Camera 1패스 — cam.GetTargetRenderTarget() 강제. nullptr 이면 warn+skip.
 +        void RenderWithCamera(Scene::Camera& cam);
  
@@ -21875,7 +21875,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -11,6 +11,10 @@
  #include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 +// ImGui v1.53 — client-side (Core Module 아님). memory: imgui_v1_53_glfw_compat
 +#include <imgui.h>
@@ -22345,7 +22345,7 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "render/render_stage.h"
  #include <cstdint>
 +#include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH::Scene { class Actor; class Camera; }
 -namespace SJH { class RenderTarget; }
@@ -22388,7 +22388,7 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
      private:
 -        /// @brief Actor 트리 DFS — MeshRenderer 수집 + Queue 에 Submit.
-         void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
+         void CollectFromActor(const Scene::Actor& actor, const glm::mat4& viewMat, uint64_t cullingMask);
 -
 -        /// @brief 단일 Camera 1패스 — cam.GetTargetRenderTarget() 강제. nullptr 이면 warn+skip.
          void RenderWithCamera(Scene::Camera& cam);
@@ -22493,8 +22493,8 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
  
 -			auto camActor = SJH::Scene::CreateCameraActor("MainCamera", 45.0f, aspect, 0.1f, 100.0f);
--			camActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
--			camActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
+-			camActor->GetTransform().Translate = glm::vec3(0.0f, 5.0f, 5.0f);
+-			camActor->GetTransform().EulerRot  = glm::vec3(-45.0f, 0.0f, 0.0f);
 -			auto *cam = camActor->GetComponent<SJH::Scene::Camera>();
 -			auto *camCtrl = camActor->AddComponent<Controller::TargetFollowableCameraController>();
 -			camCtrl->SetMouseInput(&mMouse)
@@ -22503,8 +22503,8 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -			cam->SetTargetRenderTarget(mSceneFB.get());
 +			// ── World Camera (Perspective) — 3D 월드 → sceneFB ─────────────────────────
 +			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, aspect, 0.1f, 100.0f);
-+			worldCamActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
-+			worldCamActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
++			worldCamActor->GetTransform().Translate = glm::vec3(0.0f, 5.0f, 5.0f);
++			worldCamActor->GetTransform().EulerRot  = glm::vec3(-45.0f, 0.0f, 0.0f);
 +			auto *worldCam = worldCamActor->GetComponent<SJH::Scene::Camera>();
 +			auto *camCtrl  = worldCamActor->AddComponent<Controller::TargetFollowableCameraController>();
 +			camCtrl->SetMouseInput(&mMouse).SetCamera(worldCam).SetUp();
@@ -22666,7 +22666,7 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
   *  Process 본문 = *순서 + 조건 결정* 만 (Orchestrator 정통 — Unreal `FMeshPassProcessor`).
   */
  #include "render/mesh_pass_processor.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
  #include "render/device_context.h"
  #include "render/mesh_renderer.h"     // DrawCommand 의 meshRenderer 경유 접근 (SSoT).
  #include "render/property_block_setter.h"
@@ -22743,7 +22743,7 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
      struct DrawCommand
      {
 -        const Scene::MeshRenderer* meshRenderer = nullptr;             ///< SSoT — program/mesh/material/actor 모두 경유 접근.
--        vmath::mat4                modelMatrix  = vmath::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
+-        glm::mat4                modelMatrix  = glm::mat4::identity(); ///< 미지정 시 항등 — 디버그 가능 default.
 -        int                        queueLayer   = 2000;
 -        float                      depth        = 0.0f;                ///< view-space z (back-to-front)
 +        enum class Kind { WorldMesh, ScreenQuad };
@@ -22755,7 +22755,7 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +        // WorldMesh 전용
 +        const Scene::MeshRenderer *meshRenderer = nullptr;  ///< SSoT — program/mesh/material/actor 경유
-+        vmath::mat4                modelMatrix  = vmath::mat4::identity();
++        glm::mat4                modelMatrix  = glm::mat4::identity();
 +
 +        // ScreenQuad 전용 (PassComponent)
 +        Framebuffer *inputFB      = nullptr;  ///< 읽기 소스 — uScene 바인딩
@@ -22847,7 +22847,7 @@ _비코드 9개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "buffer/framebuffer.h"
 +#include "render/mesh_pass_processor.h"
 +#include "render/pass_component.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +#include <cstdint>
 +#include <vector>
  #include "material/material.h"
@@ -22926,8 +22926,8 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -			// ── World Camera (Perspective) — 3D 월드 → sceneFB ─────────────────────────
 +			// ── World Camera (Perspective) — 3D 월드 ->sceneFB ─────────────────────────
  			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, aspect, 0.1f, 100.0f);
- 			worldCamActor->GetTransform().Translate = vmath::vec3(0.0f, 5.0f, 5.0f);
- 			worldCamActor->GetTransform().EulerRot  = vmath::vec3(-45.0f, 0.0f, 0.0f);
+ 			worldCamActor->GetTransform().Translate = glm::vec3(0.0f, 5.0f, 5.0f);
+ 			worldCamActor->GetTransform().EulerRot  = glm::vec3(-45.0f, 0.0f, 0.0f);
 @@ -148,11 +148,17 @@ namespace TopdownShooter
  			auto *screenCam     = screenCamActor->GetComponent<SJH::Scene::Camera>();
  			screenCam->IsOrthographic = true;
@@ -22963,9 +22963,9 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
              if (owner)
              {
                  const auto& t = owner->GetTransform().Translate;
--                vmath::vec2 pos(t[0], t[2]);   // XZ 평면 → Box2D XY
-+                vmath::vec2 pos(t[0], t[2]);   // XZ 평면 ->Box2D XY
-                 vmath::vec2 dir = mBehavior->GetAttackDirection();
+-                glm::vec2 pos(t[0], t[2]);   // XZ 평면 → Box2D XY
++                glm::vec2 pos(t[0], t[2]);   // XZ 평면 ->Box2D XY
+                 glm::vec2 dir = mBehavior->GetAttackDirection();
                  mSceneRoot->AddChild(mFactory(pos, dir));
              }
 ```
@@ -23199,7 +23199,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `src/render/scene_renderer.h`
 ```diff
 @@ -8,7 +8,7 @@
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH::Scene { class Actor; class Camera; class PassComponent; }
 -namespace SJH { class RenderTarget; class Framebuffer; class Mesh; }
@@ -23497,7 +23497,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        void RenderWithCamera(Scene::Camera& cam);
 +
      private:
-         void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
+         void CollectFromActor(const Scene::Actor& actor, const glm::mat4& viewMat, uint64_t cullingMask);
 -        void RenderWithCamera(Scene::Camera& cam);
  
          MeshPassProcessor      mProcessor;
@@ -23607,22 +23607,22 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `src/object/transform.h`
 ```diff
 @@ -32,6 +32,7 @@ namespace SJH
-         vmath::vec3 EulerRot  = vmath::vec3(0.0f, 0.0f, 0.0f); ///< 오일러 회전각 (degree, XYZ 순서).
-         vmath::vec3 Scale     = vmath::vec3(1.0f, 1.0f, 1.0f); ///< 스케일 팩터.
+         glm::vec3 EulerRot  = glm::vec3(0.0f, 0.0f, 0.0f); ///< 오일러 회전각 (degree, XYZ 순서).
+         glm::vec3 Scale     = glm::vec3(1.0f, 1.0f, 1.0f); ///< 스케일 팩터.
  
 +
          /**
           * @brief 로컬 모델 행렬 산출 — T,Rz,Ry,Rx,S 순서.
           * @return 부모를 고려하지 않은 로컬 변환 행렬.
 @@ -87,6 +88,18 @@ namespace SJH
-         vmath::vec3 GetLeft() const { return -GetRight(); }
-         vmath::vec3 GetDown() const { return -GetUp(); }
-         vmath::vec3 GetBack() const { return -GetForward(); }
+         glm::vec3 GetLeft() const { return -GetRight(); }
+         glm::vec3 GetDown() const { return -GetUp(); }
+         glm::vec3 GetBack() const { return -GetForward(); }
 +
 +	Transform& SetTransformWithVectors(
-+		vmath::vec3 translate = vmath::vec3(0.0f, 0.0f, 0.0f),
-+		vmath::vec3 rotate = vmath::vec3(0.0f, 0.0f, 0.0f),
-+		vmath::vec3 scal = vmath::vec3(1.0f, 1.0f, 1.0f)
++		glm::vec3 translate = glm::vec3(0.0f, 0.0f, 0.0f),
++		glm::vec3 rotate = glm::vec3(0.0f, 0.0f, 0.0f),
++		glm::vec3 scal = glm::vec3(1.0f, 1.0f, 1.0f)
 +	)
 +	{
 +		Translate = translate;
@@ -23726,8 +23726,8 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).
 @@ -344,7 +344,7 @@ namespace TopdownShooter
  			{
- 				vmath::mat4 view = mCamera->GetViewMatrix();
- 				vmath::mat4 proj = mCamera->GetProjectionMatrix();
+ 				glm::mat4 view = mCamera->GetViewMatrix();
+ 				glm::mat4 proj = mCamera->GetProjectionMatrix();
 -				TopdownShooter::Director::Get().VFX().Draw(&view[0][0], &proj[0][0]);
 +				TopdownShooter::Manager::Get().VFX().Draw(&view[0][0], &proj[0][0]);
  			}
@@ -23863,7 +23863,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
   */
 @@ -11,16 +11,16 @@
  #include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 -// ImGui v1.53 — client-side (Core Module 아님). memory: imgui_v1_53_glfw_compat
  #include <imgui.h>
@@ -24012,10 +24012,10 @@ _비코드 175개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  			mSpriteSeq->Play();
  
  			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
--			mCamera->GetOwner()->GetComponent<Controller::TargetFollowableCameraController>()->SetFollowTarget(mSpriteActor).SetFollowOffset(vmath::vec3(0.0f, 5.0f, 5.0f));
+-			mCamera->GetOwner()->GetComponent<Controller::TargetFollowableCameraController>()->SetFollowTarget(mSpriteActor).SetFollowOffset(glm::vec3(0.0f, 5.0f, 5.0f));
 +			mCamera->GetOwner()->GetComponent<Controller::TargetFollowableCameraController>()
 +				->SetFollowTarget(mSpriteActor)
-+				.SetFollowOffset(vmath::vec3(0.0f, 10.0f, 10.0f));
++				.SetFollowOffset(glm::vec3(0.0f, 10.0f, 10.0f));
 +		}
 +
 +		void WarmupSkybox(SJH::ResourceRegistry &reg, SJH::Scene::Director &dir)
@@ -24037,7 +24037,7 @@ _비코드 175개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			auto *skyboxMesh = reg.RegisterMesh("mesh_skybox", SJH::Mesh::CreateBox());
 +			auto skyboxActor = std::make_unique<SJH::Scene::Actor>("MatrixSkybox");
 +			// 스카이박스 모델이 카메라 클리핑 범위를 벗어나지 않고 렌더링되게 넉넉한 크기로 스케일 조정
-+			skyboxActor->GetTransform().Scale = vmath::vec3(50.0f, 50.0f, 50.0f);
++			skyboxActor->GetTransform().Scale = glm::vec3(50.0f, 50.0f, 50.0f);
 +			skyboxActor->AddComponent<SJH::Scene::MeshRenderer>(skyboxMesh, mSkyboxMat);
 … (+4줄 생략)
 ```
@@ -24054,7 +24054,7 @@ _비코드 175개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include <box2d/box2d.h>
  #include <cassert>
  #include <string>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::Stage
  {
@@ -24089,13 +24089,13 @@ _비코드 175개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +        // SJH::Mesh*     plane     = EnsurePlane(reg);
          SJH::Program*  solidProg = EnsureProgram(reg);
 -        SJH::Material* wallMat   = EnsureMaterial(reg, kWallMatKey, solidProg,
--                                                   vmath::vec4(0.55f, 0.55f, 0.60f, 1.0f));
+-                                                   glm::vec4(0.55f, 0.55f, 0.60f, 1.0f));
 -        SJH::Material* pickupMat = EnsureMaterial(reg, kPickupMatKey, solidProg,
--                                                   vmath::vec4(1.0f, 0.85f, 0.2f, 1.0f));
+-                                                   glm::vec4(1.0f, 0.85f, 0.2f, 1.0f));
 +        // SJH::Material* wallMat   = EnsureMaterial(reg, kWallMatKey, solidProg,
-+        //                                            vmath::vec4(0.55f, 0.55f, 0.60f, 1.0f));
++        //                                            glm::vec4(0.55f, 0.55f, 0.60f, 1.0f));
 +        // SJH::Material* pickupMat = EnsureMaterial(reg, kPickupMatKey, solidProg,
-+        //                                            vmath::vec4(1.0f, 0.85f, 0.2f, 1.0f));
++        //                                            glm::vec4(1.0f, 0.85f, 0.2f, 1.0f));
 +
 +        // PCB 모델 자원 등록 및 캐싱
 +        SJH::Model* pcbModel = EnsurePcbModel(reg);
@@ -24113,17 +24113,17 @@ _비코드 175개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
          // 2) Stage Actor + StageState Component
          auto stage = std::make_unique<SJH::Scene::Actor>("MainStage");
 @@ -81,7 +105,6 @@ namespace TopdownShooter::Stage
-         auto spawnWall = [&](const char* name, vmath::vec2 center, vmath::vec2 half) {
+         auto spawnWall = [&](const char* name, glm::vec2 center, glm::vec2 half) {
              auto a = Factories::CreateWallActor(name, *cfg.world, center, half);
-             a->GetTransform().Scale = vmath::vec3(half[0] * 2.0f, 1.0f, half[1] * 2.0f);
+             a->GetTransform().Scale = glm::vec3(half[0] * 2.0f, 1.0f, half[1] * 2.0f);
 -            a->AddComponent<SJH::Scene::MeshRenderer>(plane, wallMat);
              stage->AddChild(std::move(a));
          };
-         spawnWall("WallTop",    vmath::vec2(0.0f, +arena), vmath::vec2(arena, wallH));
+         spawnWall("WallTop",    glm::vec2(0.0f, +arena), glm::vec2(arena, wallH));
 @@ -96,10 +119,22 @@ namespace TopdownShooter::Stage
              auto name = std::string("PickupTest") + std::to_string(i);
-             auto p = Factories::CreatePickupActor(std::move(name), *cfg.world, pos, vmath::vec2(0.8f, 0.8f));
-             p->GetTransform().Scale = vmath::vec3(1.6f, 1.0f, 1.6f);
+             auto p = Factories::CreatePickupActor(std::move(name), *cfg.world, pos, glm::vec2(0.8f, 0.8f));
+             p->GetTransform().Scale = glm::vec3(1.6f, 1.0f, 1.6f);
 … (+20줄 생략)
 ```
 
@@ -24395,7 +24395,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/camera.h"
 +
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::VFX
 +{
@@ -24424,8 +24424,8 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		SJH::DeviceContext::Get().BindTarget(*rt);
 +
 +		// Effekseer 자체 GL state setup + Draw (D-2 — state 명시 set 하지 않음).
-+		const vmath::mat4 view = mWorldCam->GetViewMatrix();
-+		const vmath::mat4 proj = mWorldCam->GetProjectionMatrix();
++		const glm::mat4 view = mWorldCam->GetViewMatrix();
++		const glm::mat4 proj = mWorldCam->GetProjectionMatrix();
 +		mVFX->Draw(&view[0][0], &proj[0][0]);
 +	}
 +}
@@ -24525,12 +24525,12 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			// ── World Camera (Perspective) — 3D 월드 ────────────────────────────
  			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, aspect, 0.1f, 100.0f);
 -			worldCamActor->GetTransform().SetTransformWithVectors(
--			    vmath::vec3(0.0f, 5.0f, 5.0f),
--			    vmath::vec3(-45.0f, 0.0f, 0.0f));
+-			    glm::vec3(0.0f, 5.0f, 5.0f),
+-			    glm::vec3(-45.0f, 0.0f, 0.0f));
 +			auto &worldCamTransform = worldCamActor->GetTransform();
 +			worldCamTransform.SetTransformWithVectors(
-+			                     vmath::vec3(0.0f, 4.0f, 8.0f),
-+			                     vmath::vec3(-30.0f, 0.0f, 0.0))
++			                     glm::vec3(0.0f, 4.0f, 8.0f),
++			                     glm::vec3(-30.0f, 0.0f, 0.0))
 +			    .PrintTransform();
  
  			auto *camera = worldCamActor->GetComponent<SJH::Scene::Camera>();
@@ -24562,7 +24562,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			mSpriteActor = dir.Root().AddChild(std::move(spriteActor));
 -			mCamera->GetOwner()->GetComponent<Controller::TargetFollowableCameraController>()
 -				->SetFollowTarget(mSpriteActor)
--				.SetFollowOffset(vmath::vec3(0.0f, 10.0f, 10.0f));
+-				.SetFollowOffset(glm::vec3(0.0f, 10.0f, 10.0f));
 +			mCamera
 +				->GetOwner()
 … (+46줄 생략)
@@ -24635,13 +24635,13 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		return *this;
  	}
  
--	TargetFollowableCameraController &TargetFollowableCameraController::SetFollowOffset(vmath::vec3 offset)
-+	ActorFolower &ActorFolower::SetFollowOffset(vmath::vec3 offset)
+-	TargetFollowableCameraController &TargetFollowableCameraController::SetFollowOffset(glm::vec3 offset)
++	ActorFolower &ActorFolower::SetFollowOffset(glm::vec3 offset)
  	{
  		mFollowOffset = offset;
  		return *this;
  	}
-+	ActorFolower &ActorFolower::SetFollowRotate(vmath::vec2 rot)
++	ActorFolower &ActorFolower::SetFollowRotate(glm::vec2 rot)
 +	{
 +		mYawDeg = rot[0];
 +		mPitchDeg = rot[1];
@@ -24687,9 +24687,9 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		ActorFolower &SetFollowTarget(SJH::Scene::Actor *t);
  
  		/// @brief Follow 시 target  camera offset (default = vec3(0, 5, 5)).
--		TargetFollowableCameraController &SetFollowOffset(vmath::vec3 offset);
-+		ActorFolower &SetFollowOffset(vmath::vec3 offset);
-+		ActorFolower &SetFollowRotate(vmath::vec2 rot);
+-		TargetFollowableCameraController &SetFollowOffset(glm::vec3 offset);
++		ActorFolower &SetFollowOffset(glm::vec3 offset);
++		ActorFolower &SetFollowRotate(glm::vec2 rot);
  
  		/// @brief 마우스 감도 (default 0.1).
 -		TargetFollowableCameraController &SetLookSensitivity(float v);
@@ -24701,8 +24701,8 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		SJH::MouseInput *mMouseInput     = nullptr;
  		SJH::Scene::Camera *mCamera      = nullptr;
  		SJH::Scene::Actor *mFollowTarget = nullptr;
--		vmath::vec3 mFollowOffset        = vmath::vec3(0.0f, 5.0f, 5.0f);
-+		vmath::vec3 mFollowOffset        = vmath::vec3(0.0f, 0.0f, 0.0f);
+-		glm::vec3 mFollowOffset        = glm::vec3(0.0f, 5.0f, 5.0f);
++		glm::vec3 mFollowOffset        = glm::vec3(0.0f, 0.0f, 0.0f);
  
  		float mYawDeg          = 0.0f;
 -		float mPitchDeg        = -45.0f; // 탑다운 기본 시점 — 아래를 향함
@@ -24719,7 +24719,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #define __SJH_TRANSFORM_H__
  
 +#include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH
 @@ -100,6 +101,12 @@ namespace SJH
@@ -24814,9 +24814,9 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		mComponents.clear();
 +	}
  
--    vmath::mat4 Actor::GetWorldMatrix() const
+-    glm::mat4 Actor::GetWorldMatrix() const
 -    {
--        const vmath::mat4 local = mTransform.GetLocalMatrix();
+-        const glm::mat4 local = mTransform.GetLocalMatrix();
 -        if (mParent)
 -        {
 … (+76줄 생략)
@@ -25135,7 +25135,7 @@ _비코드 7개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "material/material.h"
 +#include <assimp/material.h>
  #include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace SJH
  {
@@ -25151,7 +25151,7 @@ _비코드 7개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            aiColor4D aiDiffColor(0.8f, 0.8f, 0.8f, 1.0f);
 +            aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, aiDiffColor);
 +            glMaterial->Properties.Vec3s["material.albedo"] =
-+                vmath::vec3(aiDiffColor.r, aiDiffColor.g, aiDiffColor.b);
++                glm::vec3(aiDiffColor.r, aiDiffColor.g, aiDiffColor.b);
  
              mMaterials.push_back(std::move(glMaterial)); //  m_materials -> mMaterials
          }
@@ -25369,7 +25369,7 @@ _비코드 7개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    {
 +        auto skyboxActor = std::make_unique<Actor>(std::move(name));
 +        // 스카이박스 모델이 카메라 클리핑 범위를 벗어나지 않게 넉넉한 크기로 스케일.
-+        skyboxActor->GetTransform().Scale = vmath::vec3(scale, scale, scale);
++        skyboxActor->GetTransform().Scale = glm::vec3(scale, scale, scale);
 +        skyboxActor->AddComponent<MeshRenderer>(skyboxMesh, skyboxMat);
 +        return skyboxActor;
 +    }
@@ -25380,7 +25380,7 @@ _비코드 7개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -6,6 +6,13 @@
  #include <string>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 +namespace SJH
 +{
@@ -25454,7 +25454,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				if (POSTFX_PROGRAM_CONFIGS[i].Name == "fog")
 +				{
 +					auto &props = mPassComponents[i]->mMaterial->Properties;
-+					props.Vec3s["uFogColor"] = vmath::vec3(0.5f, 0.6f, 0.7f);
++					props.Vec3s["uFogColor"] = glm::vec3(0.5f, 0.6f, 0.7f);
 +					props.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
 +				}
 +			}
@@ -25470,7 +25470,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <imgui.h>
  #include <utility>
  #include <vector>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::UI
  {
@@ -25775,7 +25775,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include <fmod/fmod_studio.hpp>
  #include <spdlog/spdlog.h>
 +#include <string>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::Audio
  {
@@ -25784,7 +25784,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  		return desc;
  	}
 +
-+	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
++	void AudioSystem::SetListener(const glm::vec3 &pos, const glm::vec3 &forward, const glm::vec3 &up)
 +	{
 +		FMOD_3D_ATTRIBUTES attr = {};
 +		attr.position = {pos[0], pos[1], pos[2]};
@@ -25811,7 +25811,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include <string>
  #include <unordered_map>
  #include <vector>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  // fwd — FMOD 헤더는 .cpp 안에서만
  namespace FMOD
@@ -25820,9 +25820,9 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  		::FMOD::Studio::System *GetStudioSystem() { return mStudioSystem; }
  
 +		/// @brief listener 위치/방향 갱신 — render 마다 카메라 Transform 으로 호출 (velocity=0 → doppler 없음).
-+		void SetListener(const vmath::vec3 &pos,
-+		                 const vmath::vec3 &forward = vmath::vec3(0.0f, 0.0f, -1.0f),
-+		                 const vmath::vec3 &up      = vmath::vec3(0.0f, 1.0f, 0.0f));
++		void SetListener(const glm::vec3 &pos,
++		                 const glm::vec3 &forward = glm::vec3(0.0f, 0.0f, -1.0f),
++		                 const glm::vec3 &up      = glm::vec3(0.0f, 1.0f, 0.0f));
 +
  		/// @brief @p path (예: "resources/banks/Master.bank") 의 bank 를 *로드*.
  		void LoadBank(const std::string &path);
@@ -25838,14 +25838,14 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include <fmod/fmod_studio.hpp>
  #include <spdlog/spdlog.h>
 +#include <optional>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::Audio
  {
 -	FmodStudioPlayable::FmodStudioPlayable(::FMOD::Studio::EventDescription *desc)
 -	    : mDesc(desc)
 +	FmodStudioPlayable::FmodStudioPlayable(::FMOD::Studio::EventDescription *desc,
-+	                                       std::optional<vmath::vec3> worldPos)
++	                                       std::optional<glm::vec3> worldPos)
 +	    : mDesc(desc), mWorldPos(worldPos)
  	{
  		if (!mDesc) spdlog::warn("[FmodStudioPlayable] ctor: desc=nullptr (event 미존재?)");
@@ -25879,7 +25879,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  
  #include "playable/playable_base.h"
 +#include <optional>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace FMOD::Studio { class EventDescription; class EventInstance; }
  
@@ -25889,7 +25889,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  	  public:
 -		explicit FmodStudioPlayable(::FMOD::Studio::EventDescription *desc);
 +		explicit FmodStudioPlayable(::FMOD::Studio::EventDescription *desc,
-+		                            std::optional<vmath::vec3> worldPos = std::nullopt);
++		                            std::optional<glm::vec3> worldPos = std::nullopt);
  		~FmodStudioPlayable() override;
  
  		void Pause() override;
@@ -25897,7 +25897,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  	  private:
  		::FMOD::Studio::EventDescription *mDesc     = nullptr;
  		::FMOD::Studio::EventInstance    *mInstance = nullptr;
-+		std::optional<vmath::vec3>        mWorldPos;
++		std::optional<glm::vec3>        mWorldPos;
  	};
  }
  
@@ -25906,7 +25906,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 `apps/_MyApp_/src/Entity/Player/PlayerEntity.h`
 ```diff
 @@ -25,6 +25,8 @@ namespace TopdownShooter::Entity
- 		virtual void DoForward(vmath::vec2 dir, float dt) {mMovementComponentPtr->DoForward(dir, dt);}
+ 		virtual void DoForward(glm::vec2 dir, float dt) {mMovementComponentPtr->DoForward(dir, dt);}
  		virtual void DoAttack(IDamageable &target) {target.DoDamaged(GetNormalAtk());}
  		virtual int GetNormalAtk() const { return (int)mWaeponComponentPtr->Damage.GetValue();}
 +		Components::Movement& GetMovemenet() const {return *mMovementComponentPtr;}
@@ -25921,7 +25921,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 ```diff
 @@ -0,0 +1,69 @@
 +#include "vector"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Playable
 +{
@@ -26004,7 +26004,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +{
 +    void SpawnAudioInstance(SJH::Scene::Actor& fxParent,
 +                            ::FMOD::Studio::EventDescription* desc,
-+                            std::optional<vmath::vec3> pos)
++                            std::optional<glm::vec3> pos)
 +    {
 +        if (!desc) return; // 이벤트 미존재 — no-op (LoadEvent 가 nullptr 반환한 경우)
 +
@@ -26025,7 +26025,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#define __TOPDOWNSHOOTER_SPAWNS_AUDIO_INSTANCE_H__
 +
 +#include <optional>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +// fwd
 +namespace SJH::Scene { class Actor; }
@@ -26045,7 +26045,7 @@ _비코드 27개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +    /// @param desc  AudioSystem::LoadEvent 로 얻은 EventDescription. nullptr 이면 no-op (이벤트 미존재 안전).
 +    void SpawnAudioInstance(SJH::Scene::Actor& fxParent,
 +                            ::FMOD::Studio::EventDescription* desc,
-+                            std::optional<vmath::vec3> pos = std::nullopt);
++                            std::optional<glm::vec3> pos = std::nullopt);
 +}
 +
 +#endif // __TOPDOWNSHOOTER_SPAWNS_AUDIO_INSTANCE_H__
@@ -26165,7 +26165,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +namespace TopdownShooter::Spawns
 +{
-+    void SpawnHitSpark(const SequenceContext& ctx, const vmath::vec3& worldPos)
++    void SpawnHitSpark(const SequenceContext& ctx, const glm::vec3& worldPos)
 +    {
 +        if (!ctx.fxRoot) return;
 +        // VFX one-shot (spark) + 오디오 one-shot (event:/Hit) — 각자 독립 자동 despawn.
@@ -26175,7 +26175,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            SpawnAudioInstance(*ctx.fxRoot, ctx.audio->LoadEvent("event:/Hit"), worldPos);
 +    }
 +
-+    void SpawnEnemyDeathFX(const SequenceContext& ctx, const vmath::vec3& worldPos)
++    void SpawnEnemyDeathFX(const SequenceContext& ctx, const glm::vec3& worldPos)
 +    {
 +        if (!ctx.fxRoot) return;
 +        if (ctx.vfx && ctx.reg)
@@ -26184,7 +26184,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            SpawnAudioInstance(*ctx.fxRoot, ctx.audio->LoadEvent("event:/EnemyDeath"), worldPos);
 +    }
 +
-+    void SpawnPickupChime(const SequenceContext& ctx, const vmath::vec3& worldPos)
++    void SpawnPickupChime(const SequenceContext& ctx, const glm::vec3& worldPos)
 +    {
 +        if (!ctx.fxRoot || !ctx.audio) return;
 +        SpawnAudioInstance(*ctx.fxRoot, ctx.audio->LoadEvent("event:/Pickup"), worldPos);
@@ -26199,18 +26199,18 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define __TOPDOWNSHOOTER_SPAWNS_COMBAT_SEQUENCES_H__
 +
 +#include "Spawns/SequenceContext.h"
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Spawns
 +{
 +    /// @brief 적 피격 임팩트 — VfxInstance(spark) + AudioInstance(event:/Hit) @pos. 둘 다 단발 자동 despawn.
-+    void SpawnHitSpark(const SequenceContext& ctx, const vmath::vec3& worldPos);
++    void SpawnHitSpark(const SequenceContext& ctx, const glm::vec3& worldPos);
 +
 +    /// @brief 적 사망 — VfxInstance(explosion) + AudioInstance(event:/EnemyDeath) @pos.
-+    void SpawnEnemyDeathFX(const SequenceContext& ctx, const vmath::vec3& worldPos);
++    void SpawnEnemyDeathFX(const SequenceContext& ctx, const glm::vec3& worldPos);
 +
 +    /// @brief 픽업 — AudioInstance(event:/Pickup) @pos (오디오 전용).
-+    void SpawnPickupChime(const SequenceContext& ctx, const vmath::vec3& worldPos);
++    void SpawnPickupChime(const SequenceContext& ctx, const glm::vec3& worldPos);
 +}
 +
 +#endif // __TOPDOWNSHOOTER_SPAWNS_COMBAT_SEQUENCES_H__
@@ -26229,7 +26229,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +namespace TopdownShooter::Spawns
 +{
 +    void SpawnVfxInstance(SJH::Scene::Actor& fxParent, VFX::VFXSystem* vfx,
-+                          SJH::Effect* effect, const vmath::vec3& pos)
++                          SJH::Effect* effect, const glm::vec3& pos)
 +    {
 +        if (!vfx || !effect) return; // 이펙트/시스템 미존재 — no-op
 +
@@ -26248,7 +26248,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#ifndef __TOPDOWNSHOOTER_SPAWNS_VFX_INSTANCE_H__
 +#define __TOPDOWNSHOOTER_SPAWNS_VFX_INSTANCE_H__
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +// fwd
 +namespace SJH { class Effect; }
@@ -26264,7 +26264,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    ///   - 조립(composition) — 상속 아님. Actor 비상속 + 기존 부품(EffekseerPlayable + AutoDespawnOnFinish) 재사용.
 +    /// @param effect ResourceRegistry::FindEffect 결과. nullptr 이면 no-op (이펙트 미존재 안전).
 +    void SpawnVfxInstance(SJH::Scene::Actor& fxParent, VFX::VFXSystem* vfx,
-+                          SJH::Effect* effect, const vmath::vec3& pos);
++                          SJH::Effect* effect, const glm::vec3& pos);
 +}
 +
 +#endif // __TOPDOWNSHOOTER_SPAWNS_VFX_INSTANCE_H__
@@ -26432,7 +26432,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -					auto *seq = cActor->AddComponent<SJH::Playable::SequencePlayable>();
 -
 -					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
--					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
+-					    vfx.GetManager(), muzzle, glm::vec3(0.0f),
 -					    TopdownShooter::VFX::TrackPolicy::Static));
 -
 -					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
@@ -26462,7 +26462,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <functional>
  #include <memory>
  #include <string>
- #include <vmath.h>
+ #include <glm/glm.hpp>
 @@ -47,6 +49,9 @@ namespace TopdownShooter::Entity::Player
  		struct ControllerCfg
  		{
@@ -26504,13 +26504,13 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <cassert>
  #include <spdlog/spdlog.h>
 +#include <utility>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Controller
 @@ -25,6 +26,14 @@ namespace TopdownShooter::Controller
- 		mKeyboardInput->BindHeldHandler(Action::MoveBack,    [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
- 		mKeyboardInput->BindHeldHandler(Action::MoveLeft,    [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
- 		mKeyboardInput->BindHeldHandler(Action::MoveRight,   [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
+ 		mKeyboardInput->BindHeldHandler(Action::MoveBack,    [this] { mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); });
+ 		mKeyboardInput->BindHeldHandler(Action::MoveLeft,    [this] { mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); });
+ 		mKeyboardInput->BindHeldHandler(Action::MoveRight,   [this] { mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); });
 +
 +		// G키 (이산 press) — Damage Composite 트리거. 콜백은 호출 시점 null-check.
 +		mKeyboardInput->BindKey(Action::Damage, GLFW_KEY_G);
@@ -26571,7 +26571,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "input/mouse_input.h"
  #include "scene/actor.h"
 +#include <functional>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  #include "Entity/Components/Components.Interfaces.h"
  
 @@ -24,6 +26,7 @@ namespace TopdownShooter::Controller
@@ -26608,7 +26608,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		std::function<void()> mFireCallback;   // 좌클릭
 +		std::function<void()> mDamageCallback; // G키
 +
- 		vmath::vec3 mInputValue {0.0f};
+ 		glm::vec3 mInputValue {0.0f};
  
  		void RegisterBindings();
 ```
@@ -26719,7 +26719,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -        }
 -
 -        SJH::Material* EnsureMaterial(SJH::ResourceRegistry& reg, const std::string& key,
--                                       SJH::Program* prog, vmath::vec4 baseColor)
+-                                       SJH::Program* prog, glm::vec4 baseColor)
 -        {
 -            if (auto* existing = reg.FindSharedMaterial(key))
 -                return existing;
@@ -27163,7 +27163,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		// sb7 vmath 는 일반 역행렬 미제공(camera.h 명시) + Camera::InverseAffine 은 affine 전용.
 +		// perspective projection(비-affine, w≠1) 역행렬 → cofactor 기반 4x4 일반 inverse (MESA gluInvertMatrix 정통).
 +		// vmath 는 column-major(m[col][row]) — flat 배열도 column-major(m[c*4+r])로 변환.
-+		vmath::mat4 Mat4Inverse(const vmath::mat4 &src)
++		glm::mat4 Mat4Inverse(const glm::mat4 &src)
 +		{
 +			float m[16];
 +			for (int c = 0; c < 4; ++c)
@@ -27190,10 +27190,10 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +			float det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
 +			if (det == 0.0f)
-+				return vmath::mat4::identity(); // 특이행렬 가드.
++				return glm::mat4::identity(); // 특이행렬 가드.
 +			float invDet = 1.0f / det;
 +
-+			vmath::mat4 out;
++			glm::mat4 out;
 +			for (int c = 0; c < 4; ++c)
 +				for (int r = 0; r < 4; ++r)
 +					out[c][r] = inv[c * 4 + r] * invDet;
@@ -27235,7 +27235,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -				if (POSTFX_PROGRAM_CONFIGS[i].Name == "fog")
 -				{
 -					auto &props = mPassComponents[i]->mMaterial->Properties;
--					props.Vec3s["uFogColor"] = vmath::vec3(0.5f, 0.6f, 0.7f);
+-					props.Vec3s["uFogColor"] = glm::vec3(0.5f, 0.6f, 0.7f);
 … (+64줄 생략)
 ```
 
@@ -27264,7 +27264,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "scene/actor.h"
 +#include <functional>
 +#include <utility>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity::Bullet
  {
@@ -27273,7 +27273,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          void OnTriggerEnter  (SJH::Scene::Actor* other) override;
  
 +        /// @brief 명중 시 임팩트 FX delegate (충돌 위치 전달). Entity→Spawns 의존 회피 (BulletFactory 정통).
-+        using HitFx = std::function<void(const vmath::vec3&)>;
++        using HitFx = std::function<void(const glm::vec3&)>;
 +        void SetOnHitFx(HitFx fx) { mOnHitFx = std::move(fx); }
 +
        private:
@@ -27318,7 +27318,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		{
 +		}
  		void ShowInfo() const;
-+		void UseWeapon(vmath::vec2 forwardVector) const {
++		void UseWeapon(glm::vec2 forwardVector) const {
 +			// Spawn Projectile
 +			//	SetProjectileDamage
 +			//	SetProjectileForwardAngle
@@ -27362,7 +27362,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/actor.h"
 +#include <functional>
 +#include <utility>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Entity::Enemy
 +{
@@ -27374,7 +27374,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    class EnemyDeathHandler : public SJH::Scene::Component
 +    {
 +      public:
-+        using DeathFx = std::function<void(const vmath::vec3&)>;
++        using DeathFx = std::function<void(const glm::vec3&)>;
 +        explicit EnemyDeathHandler(DeathFx fx) : mOnDeathFx(std::move(fx)) {}
 +
 +        void OnEnter() override {}
@@ -27492,19 +27492,19 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <cmath>
  #include <spdlog/spdlog.h>
  #include <utility>
- #include <vmath.h>
+ #include <glm/glm.hpp>
 @@ -22,18 +38,28 @@ namespace TopdownShooter::Controller
  		// W = 앞 = -Z (OpenGL forward 컨벤션).
  		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
  		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
--		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); });
--		mKeyboardInput->BindHeldHandler(Action::MoveBack,    [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
--		mKeyboardInput->BindHeldHandler(Action::MoveLeft,    [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
--		mKeyboardInput->BindHeldHandler(Action::MoveRight,   [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); spdlog::info("[input] W (MoveForward)"); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); spdlog::info("[input] S (MoveBack)"); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); spdlog::info("[input] A (MoveLeft)"); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); spdlog::info("[input] D (MoveRight)"); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += glm::vec3(0.0f, 0.0f, -1.0f); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveBack,    [this] { mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveLeft,    [this] { mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveRight,   [this] { mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += glm::vec3(0.0f, 0.0f, -1.0f); spdlog::info("[input] W (MoveForward)"); });
++		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); spdlog::info("[input] S (MoveBack)"); });
++		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); spdlog::info("[input] A (MoveLeft)"); });
++		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); spdlog::info("[input] D (MoveRight)"); });
  
  		// G키 (이산 press) — Damage Composite 트리거. 콜백은 호출 시점 null-check.
  		mKeyboardInput->BindKey(Action::Damage, GLFW_KEY_G);
@@ -27552,7 +27552,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/src/InputHandler/PlayerController.h`
 ```diff
 @@ -9,6 +9,11 @@
- #include <vmath.h>
+ #include <glm/glm.hpp>
  #include "Entity/Components/Components.Interfaces.h"
  
 +namespace SJH::Scene
@@ -27589,7 +27589,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		// [TEST] 마우스 클릭 화면좌표 → 카메라 ray → y=0 평면 교차 → Ground 월드 좌표.
 +		//        결과를 로그 + 그 위치에 노란 박스 MeshRenderer Actor 스폰 (raycast 시각 검증).
 +		void TestPickGroundAndSpawnMarker();
-+		void SpawnGroundMarker(const vmath::vec3 &worldPos);
++		void SpawnGroundMarker(const glm::vec3 &worldPos);
  	};
  } // namespace TopdownShooter::Controller
  
@@ -27668,7 +27668,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 +			// grayscale_vignetting 의 vec3 초기값 (InitFloats 밖) — 비네팅 색 명시 set.
 +			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
-+				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(0.0f, 0.0f, 0.0f); // 기본 검정 비네팅.
++				gvMat->Properties.Vec3s["uVignetteColor"] = glm::vec3(0.0f, 0.0f, 0.0f); // 기본 검정 비네팅.
 +
  			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
  			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
@@ -27726,7 +27726,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <cmath>
 +#include <memory>
 +#include <utility>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Bootstrap
 +{
@@ -27762,7 +27762,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				auto *seq = cActor->AddComponent<SJH::Playable::SequencePlayable>();
 +
 +				seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
-+				    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
++				    vfx.GetManager(), muzzle, glm::vec3(0.0f),
 +				    TopdownShooter::VFX::TrackPolicy::Static));
 +
 +				auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
@@ -27862,7 +27862,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/compound_actor.h"
 +#include "scene/scene.h"
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Bootstrap
 +{
@@ -27876,8 +27876,8 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, deps.aspect, 0.1f, 100.0f);
 +			auto &worldCamTransform = worldCamActor->GetTransform();
 +			worldCamTransform.SetTransformWithVectors(
-+			                     vmath::vec3(0.0f, 4.0f, 8.0f),
-+			                     vmath::vec3(-30.0f, 0.0f, 0.0))
++			                     glm::vec3(0.0f, 4.0f, 8.0f),
++			                     glm::vec3(-30.0f, 0.0f, 0.0))
 +			    .PrintTransform();
 +
 +			auto *camera = worldCamActor->GetComponent<SJH::Scene::Camera>();
@@ -27905,11 +27905,11 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			auto &dir = SJH::Scene::Director::Get();
 +
 +			auto lightActor = SJH::Scene::CreateDirLightActor("MainDirLight",
-+			    vmath::vec3(-0.4f, -1.0f, -0.5f));
++			    glm::vec3(-0.4f, -1.0f, -0.5f));
 +			auto *light = lightActor->GetComponent<SJH::DirLight>();
-+			light->Ambient  = vmath::vec3(0.3f, 0.3f, 0.3f);
-+			light->Diffuse  = vmath::vec3(0.9f, 0.9f, 0.85f);
-+			light->Specular = vmath::vec3(0.5f, 0.5f, 0.5f);
++			light->Ambient  = glm::vec3(0.3f, 0.3f, 0.3f);
++			light->Diffuse  = glm::vec3(0.9f, 0.9f, 0.85f);
++			light->Specular = glm::vec3(0.5f, 0.5f, 0.5f);
 +			dir.Root().AddChild(std::move(lightActor));
 +		}
 +
@@ -27985,7 +27985,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "scene/actor.h"
 +#include "sprite/sprite_component.h"
 +#include <cmath>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Entity
 +{
@@ -27999,7 +27999,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +	  public:
 +		PlayerSingleHand();
-+		float GetRadius(vmath::vec2 forwardVector)
++		float GetRadius(glm::vec2 forwardVector)
 +		{
 +			auto fLen = vmath::length(forwardVector);
 +			if (fLen > maxRadius)
@@ -28008,11 +28008,11 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				return minRadius;
 +			return fLen;
 +		};
-+		void OrbitWithYAngle(vmath::vec2 forwardVector)
++		void OrbitWithYAngle(glm::vec2 forwardVector)
 +		{
 +			auto &transform = this->GetOwner()->GetTransform();
 +			float forwardAngle = 0; // acos(forwardVector)???;
-+			transform.Translate = vmath::vec3(
++			transform.Translate = glm::vec3(
 +			    cos(forwardAngle) * GetRadius(forwardVector),
 +			    yOffset,
 +			    sin(forwardAngle) * GetRadius(forwardVector));
@@ -28452,7 +28452,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <memory>
  #include <string>
 +#include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity::Player
 @@ -68,10 +71,26 @@ namespace TopdownShooter::Entity::Player
@@ -28588,7 +28588,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			}
 +			if (mSpriteActor)
 +				if (auto *pc = mSpriteActor->GetComponent<Controller::PlayerController>())
-+					pc->SetGroundClickCallback([this](const vmath::vec3 &p) {
++					pc->SetGroundClickCallback([this](const glm::vec3 &p) {
 +						// PlayerController 의 마우스→Ground raycast 결과(p)에 선택 이펙트를 단발 스폰.
 +						if (mVfxLayer && mFxRoot)
 +							if (auto *fx = mVfxLayer->GetSelectedEffect())
@@ -28628,7 +28628,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		pac.weapon.world  = deps.physicsWorld;
  
  		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
- 		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
+ 		spriteActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
 @@ -125,6 +129,11 @@ namespace TopdownShooter::Bootstrap
  		result.SpriteSeq->Play();
  
@@ -28653,7 +28653,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include "scene/scene.h"                   // Director::Get().Root()
 +
 +#include <spdlog/spdlog.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Entity::Components
 +{
@@ -28662,7 +28662,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		spdlog::info("[weapon] name={} damage={:.0f}", WeaponName, Damage.GetValue());
 +	}
 +
-+	void Weapon::UseWeapon(vmath::vec2 box2dForward) const
++	void Weapon::UseWeapon(glm::vec2 box2dForward) const
 +	{
 +		if (mWorld == nullptr)
 +		{
@@ -28674,8 +28674,8 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			return;
 +
 +		// owner world pos → box2d. PhysicsSystem: box2d→world = (x, h, -y) → box2d = (world.x, -world.z).
-+		const vmath::vec3 wp = owner->GetTransform().Translate;
-+		const vmath::vec2 b2pos(wp[0], -wp[2]);
++		const glm::vec3 wp = owner->GetTransform().Translate;
++		const glm::vec2 b2pos(wp[0], -wp[2]);
 +
 +		Bullet::BulletConfig bc;
 +		bc.world    = mWorld;
@@ -28697,7 +28697,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include "Components.Interfaces.h"
  #include "scene/actor.h"
  #include <string>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +// fwd — UseWeapon 이 bullet body 를 생성할 물리 월드 (포인터 멤버 — 전방 선언으로 충분).
 +class b2World;
@@ -28725,7 +28725,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  		{
  		}
 -		void ShowInfo() const;
--		void UseWeapon(vmath::vec2 forwardVector) const {
+-		void UseWeapon(glm::vec2 forwardVector) const {
 -			// Spawn Projectile
 -			//	SetProjectileDamage
 -			//	SetProjectileForwardAngle
@@ -28744,7 +28744,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +
 +		/// @brief box2dForward 방향(정규화 가정)으로 단발 bullet 스폰.
 +		/// @param box2dForward box2d 좌표계 발사 방향 = (aimDir.x, -aimDir.z). mWorld 미주입 시 no-op.
-+		void UseWeapon(vmath::vec2 box2dForward) const;
++		void UseWeapon(glm::vec2 box2dForward) const;
 +
 +		// === Component lifecycle — 데이터 전용 컴포넌트라 no-op (추상 베이스 충족) ===
 +		void OnEnter() override {}
@@ -28764,7 +28764,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#include <cmath>
 +#include <memory>
 +#include <utility>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Entity
 +{
@@ -28784,7 +28784,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		if (owner == nullptr)
 +			return;
 +		// forward = -Z. local = (sin(spread)*r, yOffset, -cos(spread)*r).
-+		owner->GetTransform().Translate = vmath::vec3(
++		owner->GetTransform().Translate = glm::vec3(
 +		    std::sin(mSpreadRad) * mRadius,
 +		    mYOffset,
 +		    -std::cos(mSpreadRad) * mRadius);
@@ -28827,7 +28827,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include "scene/actor.h"
 -#include "sprite/sprite_component.h"
 -#include <cmath>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity
  {
@@ -28850,7 +28850,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  
  	  public:
 -		PlayerSingleHand();
--		float GetRadius(vmath::vec2 forwardVector)
+-		float GetRadius(glm::vec2 forwardVector)
 -		{
 -			auto fLen = vmath::length(forwardVector);
 -			if (fLen > maxRadius)
@@ -28859,11 +28859,11 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -				return minRadius;
 -			return fLen;
 -		};
--		void OrbitWithYAngle(vmath::vec2 forwardVector)
+-		void OrbitWithYAngle(glm::vec2 forwardVector)
 -		{
 -			auto &transform = this->GetOwner()->GetTransform();
 -			float forwardAngle = 0; // acos(forwardVector)???;
--			transform.Translate = vmath::vec3(
+-			transform.Translate = glm::vec3(
 -			    cos(forwardAngle) * GetRadius(forwardVector),
 -			    yOffset,
 -			    sin(forwardAngle) * GetRadius(forwardVector));
@@ -28921,15 +28921,15 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  		// W = 앞 = -Z (OpenGL forward 컨벤션).
  		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
  		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
--		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); spdlog::info("[input] W (MoveForward)"); });
--		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); spdlog::info("[input] S (MoveBack)"); });
--		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); spdlog::info("[input] A (MoveLeft)"); });
--		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); spdlog::info("[input] D (MoveRight)"); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += glm::vec3(0.0f, 0.0f, -1.0f); spdlog::info("[input] W (MoveForward)"); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); spdlog::info("[input] S (MoveBack)"); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); spdlog::info("[input] A (MoveLeft)"); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); spdlog::info("[input] D (MoveRight)"); });
 +		// (held 핸들러는 매 프레임 호출 → 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec §2.)
-+		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
-+		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += glm::vec3(0.0f, 0.0f, -1.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); });
++		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); });
  
  		// G키 (이산 press) — Damage Composite 트리거. 콜백은 호출 시점 null-check.
  		mKeyboardInput->BindKey(Action::Damage, GLFW_KEY_G);
@@ -28955,7 +28955,7 @@ _비코드 137개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  		return *this;
  	}
  
-+	PlayerController &PlayerController::SetGroundClickCallback(std::function<void(const vmath::vec3 &)> cb)
++	PlayerController &PlayerController::SetGroundClickCallback(std::function<void(const glm::vec3 &)> cb)
 +	{
 +		mGroundClickCallback = std::move(cb);
 +		return *this;
@@ -29040,8 +29040,8 @@ _… diff 생략: 코드 파일 2개 더 (커밋 줄 수 캡)_
 +		pac.sprite.fps       = 6.0f;
 +
  		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
- 		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
- 		spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
+ 		spriteActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
+ 		spriteActor->GetTransform().Scale = glm::vec3(1.0f, 1.0f, 1.0f);
  
 -		// Atlas — registry 가 LoadFromPNG + SetGrid 일괄.
 -		auto *atlas = reg.CreateUniformAtlas(
@@ -29145,7 +29145,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		// pac.sprite.fps 미설정 — SpriteCfg 기본값(PlayerActor.h SpriteCfg::fps) 이 단일 소스.
  
  		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
- 		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
+ 		spriteActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
 ```
 
 `apps/_MyApp_/src/Entity/Player/PlayerActor.h`
@@ -29192,7 +29192,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <memory>
 -#include <utility>
 +#include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity
 @@ -36,17 +42,31 @@ namespace TopdownShooter::Entity
@@ -29284,7 +29284,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define _TOPDOWNSHOOTER_PLAYABLE_CONSTANTS__
 +
  #include "vector"
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 @@ -11,60 +14,65 @@ namespace TopdownShooter::Playable
  		const int ColCount = -1;
@@ -29420,14 +29420,14 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -2,6 +2,7 @@
  #define _TOPDOWNSHOOTER_ENTITY_COMPONENTS_INTERFACES__
  
- #include <vmath.h>
+ #include <glm/glm.hpp>
 +#include <cmath>   // Quantize4 의 std::abs
  namespace TopdownShooter::Entity
  {
  	class ILivable
 @@ -80,6 +81,58 @@ namespace TopdownShooter::Entity
  		/// @brief 단위 방향 dir 로 dt 초만큼 이동. 구현체가 *units/sec* 단위 속도 보유 가정.
- 		virtual void DoForward(vmath::vec2 dir, float dt) = 0;
+ 		virtual void DoForward(glm::vec2 dir, float dt) = 0;
  	};
 +
 +	enum class EFacing : int { Front = 0, Back, Left, Right };
@@ -29435,7 +29435,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +	/// @brief XZ 방향 벡터(aim/velocity)를 4방향으로 양자화. |x|>|z| 이면 좌우, 아니면 전후.
 +	///        부호 규약: x>0=Right, z>0=Front (탑다운 W=-Z 기준 — Task6 실행 검증).
-+	inline EFacing Quantize4(vmath::vec2 v)
++	inline EFacing Quantize4(glm::vec2 v)
 +	{
 +		if (std::abs(v[0]) > std::abs(v[1]))
 +			return v[0] > 0.0f ? EFacing::Right : EFacing::Left;
@@ -29458,9 +29458,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		IActorPresentation &operator=(IActorPresentation &&) = delete;
 +
 +		virtual void ReactDamaged(int /*dmg*/) {}
-+		virtual void ReactDied(vmath::vec3 /*pos*/) {}
-+		virtual void ReactAttack(vmath::vec2 /*aimDir*/) {}
-+		virtual void FaceAim(vmath::vec2 /*aimDir*/) {}
++		virtual void ReactDied(glm::vec3 /*pos*/) {}
++		virtual void ReactAttack(glm::vec2 /*aimDir*/) {}
++		virtual void FaceAim(glm::vec2 /*aimDir*/) {}
 +		virtual void SetFacing(EFacing /*facing*/) {}
 +		virtual void SetPose(EPose /*pose*/) {}
 +	};
@@ -29479,7 +29479,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		IImpulsable(IImpulsable &&) = delete;
 +		IImpulsable &operator=(IImpulsable &&) = delete;
 +
-+		virtual void DoImpulse(vmath::vec2 dir) = 0;
++		virtual void DoImpulse(glm::vec2 dir) = 0;
 +	};
  } // namespace TopdownShooter::Entity
  
@@ -29515,7 +29515,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		float mIFrameSeconds   = 0.0f;   // PB mHitInvincibility 미러 (기본 0 = 무적 없음)
 +		float mInvincibleTimer = 0.0f;
 +		bool  mDeathFxFired    = false;  // one-shot death guard (mDead 대체)
-+		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // spawn-at-point seam
++		std::function<void(const glm::vec3 &)> mOnDeathFx;   // spawn-at-point seam
 +		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
  
  	  public:
@@ -29534,7 +29534,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		}
 +
 +		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
-+		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
++		Life &SetOnDeathFx(std::function<void(const glm::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
 +		bool  IsInvincible() const { return mInvincibleTimer > 0.0f; }
  
 -		virtual bool IsAlive() const override
@@ -29649,7 +29649,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/src/Entity/Components/LifeComponents.h`
 ```diff
 @@ -22,6 +22,10 @@ namespace TopdownShooter::Entity::Components
- 		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // spawn-at-point seam
+ 		std::function<void(const glm::vec3 &)> mOnDeathFx;   // spawn-at-point seam
  		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
  
 +		float mDeathDelaySeconds = 0.0f;   // 0 = 즉시(현행). >0 = 사망 연출(디졸브) 동안 SetActive 지연
@@ -29662,7 +29662,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -42,6 +46,7 @@ namespace TopdownShooter::Entity::Components
  
  		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
- 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
+ 		Life &SetOnDeathFx(std::function<void(const glm::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
 +		Life &SetDeathDelaySeconds(float s) { mDeathDelaySeconds = s; return *this; }
  		bool  IsInvincible() const { return mInvincibleTimer > 0.0f; }
  
@@ -29681,7 +29681,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			if (!mDeathFxFired && !IsAlive()) DoDie();
  		}
 @@ -83,7 +94,15 @@ namespace TopdownShooter::Entity::Components
- 			const vmath::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f);
+ 			const glm::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : glm::vec3(0.0f);
  			if (mSink) mSink->ReactDied(pos);
  			if (mOnDeathFx) mOnDeathFx(pos);         // spawn-at-point seam
 -			if (GetOwner()) GetOwner()->SetActive(false);
@@ -29967,7 +29967,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -4,6 +4,11 @@
  #include "render/mesh_renderer.h"   // base class — Unity SpriteRenderer is_a MeshRenderer 정통
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 +namespace SJH
 +{
@@ -29978,8 +29978,8 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  {
      class UniformAtlas;   // forward — 핸들 참조
 @@ -53,6 +58,20 @@ namespace SJH::Sprite
-         vmath::vec2   size     = vmath::vec2(1.0f, 1.0f);   // 월드 단위 (현재 미사용 — Transform.Scale 우선)
-         vmath::vec4   tint     = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+         glm::vec2   size     = glm::vec2(1.0f, 1.0f);   // 월드 단위 (현재 미사용 — Transform.Scale 우선)
+         glm::vec4   tint     = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
          bool          flipX    = false;
 +
 +        // === 피격 깜빡임 (billboard_atlas.fs uEnableHit/uTime) ===
@@ -29990,7 +29990,7 @@ _비코드 4개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        bool                enableDissolve           = false;
 +        float               dissolveThreshold        = 0.0f;   // 0→1 (사라지는 정도)
 +        float               dissolveOutlineThickness = 0.05f;
-+        vmath::vec3         dissolveOutlineColor     = vmath::vec3(1.0f, 0.5f, 0.0f);
++        glm::vec3         dissolveOutlineColor     = glm::vec3(1.0f, 0.5f, 0.0f);
 +        const SJH::Texture* dissolveTex              = nullptr; // resources/texture/dissolve.png (sink 주입)
 +
 +    private:
@@ -30546,7 +30546,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define __TOPDOWNSHOOTER_BOOTSTRAP_ENEMY_BUILDER_H__
 +
 +#include <functional>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +class b2World;
 +namespace SJH::Scene { class Actor; }
@@ -30559,13 +30559,13 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        b2World*           world        = nullptr;
 +        SJH::Scene::Actor* spawnParent  = nullptr;   ///< 적 child 부착 부모 (WaveController.mSpawnParent)
 +        SJH::Scene::Actor* playerTarget = nullptr;   ///< SimplePursueAI 추적 대상
-+        vmath::vec2        pos          = vmath::vec2(0.0f);
++        glm::vec2        pos          = glm::vec2(0.0f);
 +        int                hp           = 30;
 +        float              speed        = 2.0f;
 +        int                damage       = 10;
 +        int                variant      = 0;          ///< 0~2 → ENEMY_FRONT[variant % 3]
 +        float              spriteFps    = 6.0f;        ///< 2프레임 walk 애니 속도
-+        std::function<void(const vmath::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
++        std::function<void(const glm::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
 +    };
 +
 +    /// @brief 적 1체 조립 — CreateEnemyActor + ENEMY_FRONT 스프라이트/애니 + spawnParent 부착.
@@ -30827,7 +30827,7 @@ _비코드 21개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		float mInvincibleTimer = 0.0f;
 -		bool  mDeathFxFired    = false;  // one-shot death guard (mDead 대체)
 +		bool  mDeathFxFired = false;  // one-shot death guard (mDead 대체)
- 		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // spawn-at-point seam
+ 		std::function<void(const glm::vec3 &)> mOnDeathFx;   // spawn-at-point seam
  		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
  
 -		float mDeathDelaySeconds = 0.0f;   // 0 = 즉시(현행). >0 = 사망 연출(디졸브) 동안 SetActive 지연
@@ -30866,7 +30866,7 @@ _비코드 21개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  
 -		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
 +		Life &SetIFrameSeconds(float s) { ArmInactive(mInvincibleTimer, s); return *this; }
- 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
+ 		Life &SetOnDeathFx(std::function<void(const glm::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
 -		Life &SetDeathDelaySeconds(float s) { mDeathDelaySeconds = s; return *this; }
 -		bool  IsInvincible() const { return mInvincibleTimer > 0.0f; }
 +		Life &SetDeathDelaySeconds(float s) { ArmInactive(mDieTimer, s); return *this; }   // Task 6 가 0.5 주입 예정
@@ -30908,7 +30908,7 @@ _비코드 21개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  			mGroundClickCallback(mAimPoint);
  	}
  
--	void PlayerController::SpawnGroundMarker(const vmath::vec3 &worldPos)
+-	void PlayerController::SpawnGroundMarker(const glm::vec3 &worldPos)
 -	{
 -		auto &reg = SJH::ResourceRegistry::Get();
 -
@@ -30927,16 +30927,16 @@ _비코드 21개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -			mat = reg.CreateSharedMaterial("test_marker_yellow");
 -			mat->SetProgram(prog);
 -			mat->SetPass(SJH::Pass::Kind::Opaque);
--			SJH::Uniforms::SetVec4(*mat, "baseColor", vmath::vec4(1.0f, 0.95f, 0.1f, 1.0f));
+-			SJH::Uniforms::SetVec4(*mat, "baseColor", glm::vec4(1.0f, 0.95f, 0.1f, 1.0f));
 -		}
 -
 -		auto marker = std::make_unique<SJH::Scene::Actor>("GroundMarker");
 -		marker->GetTransform().Translate = worldPos;
--		marker->GetTransform().Scale = vmath::vec3(0.4f, 0.4f, 0.4f);
+-		marker->GetTransform().Scale = glm::vec3(0.4f, 0.4f, 0.4f);
 -		marker->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
 -		SJH::Scene::Director::Get().Root().AddChild(std::move(marker));
 -	}
-+	// void PlayerController::SpawnGroundMarker(const vmath::vec3 &worldPos)
++	// void PlayerController::SpawnGroundMarker(const glm::vec3 &worldPos)
 +	// {
 +	// 	auto &reg = SJH::ResourceRegistry::Get();
 +
@@ -30955,12 +30955,12 @@ _비코드 21개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +	// 		mat = reg.CreateSharedMaterial("test_marker_yellow");
 +	// 		mat->SetProgram(prog);
 +	// 		mat->SetPass(SJH::Pass::Kind::Opaque);
-+	// 		SJH::Uniforms::SetVec4(*mat, "baseColor", vmath::vec4(1.0f, 0.95f, 0.1f, 1.0f));
++	// 		SJH::Uniforms::SetVec4(*mat, "baseColor", glm::vec4(1.0f, 0.95f, 0.1f, 1.0f));
 +	// 	}
 +
 +	// 	auto marker = std::make_unique<SJH::Scene::Actor>("GroundMarker");
 +	// 	marker->GetTransform().Translate = worldPos;
-+	// 	marker->GetTransform().Scale = vmath::vec3(0.4f, 0.4f, 0.4f);
++	// 	marker->GetTransform().Scale = glm::vec3(0.4f, 0.4f, 0.4f);
 +	// 	marker->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
 +	// 	SJH::Scene::Director::Get().Root().AddChild(std::move(marker));
 +	// }
@@ -30996,16 +30996,16 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			// fog 의 non-float 초기값 + uDepth 바인딩 (PostFXStageConfig.InitFloats 는 Floats 만 지원).
  			if (auto *fogMat = FindFogMaterial())
  			{
--				fogMat->Properties.Vec3s["uFogColor"] = vmath::vec3(0.5f, 0.6f, 0.7f);
-+				fogMat->Properties.Vec3s["uFogColor"] = vmath::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
+-				fogMat->Properties.Vec3s["uFogColor"] = glm::vec3(0.5f, 0.6f, 0.7f);
++				fogMat->Properties.Vec3s["uFogColor"] = glm::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
  				fogMat->Properties.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
  			}
  			RebindFogUniforms(); // uDepth = sceneFB depth 텍스처 (unit 1).
  
  			// grayscale_vignetting 의 vec3 초기값 (InitFloats 밖) — 비네팅 색 명시 set.
  			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
--				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(0.0f, 0.0f, 0.0f); // 기본 검정 비네팅.
-+				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
+-				gvMat->Properties.Vec3s["uVignetteColor"] = glm::vec3(0.0f, 0.0f, 0.0f); // 기본 검정 비네팅.
++				gvMat->Properties.Vec3s["uVignetteColor"] = glm::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
  
  			// ── stages 컬렉션 — World → Particle → Screen → ScreenQuad 순 ─────────
  			// ScreenQuadStage 는 Step 3 에서 이미 mStages 에 push 된 상태.
@@ -31163,13 +31163,13 @@ _비코드 16개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			if (mCooldownTimer > 0.0f) mCooldownTimer -= dt;
 +		}
 +
-+		void DoImpulse(vmath::vec2 dir) override
++		void DoImpulse(glm::vec2 dir) override
 +		{
 +			if (mCooldownTimer > 0.0f || IsActive()) return;
 +			if (!mBody || !mBody->GetBody()) return;
 +			const float len = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
 +			if (len <= 0.001f) return;
-+			vmath::vec2 n(dir[0] / len, dir[1] / len);
++			glm::vec2 n(dir[0] / len, dir[1] / len);
 +			const float force = mImpulseForce.GetValue();
 +			// XZ → Box2D XY (Z → -Y, spec §4.4) — PhysicsMovement/PB::Dash 미러
 +			mBody->GetBody()->SetLinearVelocity(b2Vec2(n[0] * force, -n[1] * force));
@@ -31177,7 +31177,7 @@ _비코드 16개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			mCooldownTimer = mCooldown.GetValue();
 +		}
 +
-+		void ApplyKnockback(vmath::vec2 fromXZ) { DoImpulse(fromXZ); } // convenience (Monster Knockback)
++		void ApplyKnockback(glm::vec2 fromXZ) { DoImpulse(fromXZ); } // convenience (Monster Knockback)
 +		bool IsActive() const { return mActiveTimer > 0.0f; }
 +
 +	private:
@@ -31294,7 +31294,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "scene/actor.h"
 -#include "object/transform.h"
 -#include <utility>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -namespace TopdownShooter::Entity::Player
 -{
@@ -31314,8 +31314,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -            if (owner)
 -            {
 -                const auto& t = owner->GetTransform().Translate;
--                vmath::vec2 pos(t[0], t[2]);   // XZ 평면 ->Box2D XY
--                vmath::vec2 dir = mBehavior->GetAttackDirection();
+-                glm::vec2 pos(t[0], t[2]);   // XZ 평면 ->Box2D XY
+-                glm::vec2 dir = mBehavior->GetAttackDirection();
 -                mSceneRoot->AddChild(mFactory(pos, dir));
 -            }
 -        }
@@ -31335,7 +31335,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "scene/actor.h"
 -#include <functional>
 -#include <memory>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -namespace TopdownShooter::Entity::Player
 -{
@@ -31345,7 +31345,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -    {
 -      public:
 -        using BulletFactory =
--            std::function<std::unique_ptr<SJH::Scene::Actor>(vmath::vec2 pos, vmath::vec2 dir)>;
+-            std::function<std::unique_ptr<SJH::Scene::Actor>(glm::vec2 pos, glm::vec2 dir)>;
 -
 -        BulletSpawnPlayable(PlayerBehavior* behavior,
 -                             SJH::Scene::Actor* sceneRoot,
@@ -31502,7 +31502,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		}
 +	}
 +
-+	void PlayableDirector::ReactDied(vmath::vec3 /*pos*/)
++	void PlayableDirector::ReactDied(glm::vec3 /*pos*/)
 +	{
 +		// 역할별 분리(P2): director 는 순수 [C]. 화면/엔티티 death 연출은 등록된 "death" Playable.
 +		// 월드점 death FX[B](폭발 등)는 도메인 seam(Life::mOnDeathFx / 적 seam)이 Spawns/ 로 직접 트리거.
@@ -31524,7 +31524,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <map>
 +#include <memory>
 +#include <string>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Playable
 +{
@@ -31557,8 +31557,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +		// === IActorPresentation — verb→Play(key) (미등록 키는 silent no-op) ===
 +		void ReactDamaged(int /*dmg*/) override { Play("hit"); }
-+		void ReactDied(vmath::vec3 pos) override; // Play("death") 만 (월드점 death FX[B]는 도메인 seam 이 트리거 — 역할별 분리 P2)
-+		void ReactAttack(vmath::vec2 /*aimDir*/) override { Play("attack"); }
++		void ReactDied(glm::vec3 pos) override; // Play("death") 만 (월드점 death FX[B]는 도메인 seam 이 트리거 — 역할별 분리 P2)
++		void ReactAttack(glm::vec2 /*aimDir*/) override { Play("attack"); }
 +		// SetFacing/SetPose 는 분해 Task6 가 directional sprite Playable 로 채울 빈 훅 (현재 no-op).
 +		void SetFacing(Entity::EFacing /*facing*/) override {}
 +		void SetPose(Entity::EPose /*pose*/) override {}
@@ -31889,7 +31889,7 @@ _비코드 18개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include "UI/VfxSpawnLayer.h"
 @@ -209,6 +210,10 @@ namespace TopdownShooter
  			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
- 				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
+ 				gvMat->Properties.Vec3s["uVignetteColor"] = glm::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
  
 +			// 연출 foundation — PostFX pass Material 을 레지스트리에 등록 (hit-FX 트랙의 PostFXTweenPlayable 이
 +			// PostFXRegistry::Get().Material("grayscale_vignetting")->Properties 로 도달). pass material 유효 지점.
@@ -31920,7 +31920,7 @@ _비코드 18개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include "sprite/sprite_sequence_playable.h"
  
 +#include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
-+#include <vmath.h>                         // vmath::vec3 (Transform.Scale)
++#include <glm/glm.hpp>                         // glm::vec3 (Transform.Scale)
 +
 +#include <memory>  // std::make_unique (Join 자식 생성)
  #include <spdlog/spdlog.h>
@@ -31940,7 +31940,7 @@ _비코드 18개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +        //       그래서 child 를 self-loop(PingPong 자가 왕복) 로 두고, par 는 묶음+동시 Play 만 담당.
 +        {
 +            SJH::Scene::Actor* self      = enemy.get();             // 이동 후에도 동일 heap Actor — 댕글링 없음
-+            const vmath::vec3  baseScale = enemy->GetTransform().Scale; // 베이스 스케일 보존 (factory 설정 존중)
++            const glm::vec3  baseScale = enemy->GetTransform().Scale; // 베이스 스케일 보존 (factory 설정 존중)
 +
 +            // child A — Y 스케일 펄스 (0.4초 편도, 왕복 0.8초)
 +            auto scaleTween = tweeny::from(0.85f).to(1.15f)
@@ -31949,7 +31949,7 @@ _비코드 18개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +            auto scaleTw = std::make_unique<Tween::TweenPlayable<float>>(
 +                std::move(scaleTween),
 +                [self, baseScale](float s) {
-+                    self->GetTransform().Scale = vmath::vec3(baseScale[0], baseScale[1] * s, baseScale[2]);
++                    self->GetTransform().Scale = glm::vec3(baseScale[0], baseScale[1] * s, baseScale[2]);
 +                },
 +                Tween::TweenPlayable<float>::LoopMode::PingPong);
 +            scaleTw->SetIsLoop(true);   // child 자가 루프 (par 가 아니라 child 가 무한 반복)
@@ -32015,7 +32015,7 @@ _비코드 18개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -#include <cmath>
  #include <memory>
  #include <utility>
- #include <vmath.h>
+ #include <glm/glm.hpp>
 @@ -42,23 +45,55 @@ namespace TopdownShooter::Bootstrap
  		pac.controller.keyboard = deps.keyboard;
  		pac.controller.mouse    = deps.mouse;
@@ -32033,8 +32033,8 @@ _비코드 18개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		// director.Register("fire"/"hit"/"death", ...) + 입력 콜백이 director.Play(key)/ReactDamaged (아래 블록).
 +		// (config 단계엔 director 가 아직 없으므로 콜백은 액터 빌드 뒤 SetFire/DamageCallback 로 주입.)
 +		pac.physics.world = deps.physicsWorld;
-+		pac.physics.size = vmath::vec2(1.0f, 1.0f);
-+		pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
++		pac.physics.size = glm::vec2(1.0f, 1.0f);
++		pac.physics.startPosition = glm::vec2(0.0f, 0.0f);
 +		pac.physics.density = 1.0f;
 +		pac.physics.linearDamping = 5.0f;
 +		pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
@@ -32047,8 +32047,8 @@ _비코드 18개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		// pac.sprite.fps 미설정 — SpriteCfg 기본값(PlayerActor.h SpriteCfg::fps) 이 단일 소스.
 +
 +		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
-+		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-+		spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
++		spriteActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
++		spriteActor->GetTransform().Scale = glm::vec3(1.0f, 1.0f, 1.0f);
 +
 +		// ─── PlayableDirector 연출 foundation ───────────────────────────────────
 +		// 게임 로직(HP/물리/입력)은 그대로 — 모든 연출/사운드는 director 의 named Playable 로.
@@ -32122,14 +32122,14 @@ _비코드 18개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  			return;
 +		auto &tr = owner->GetTransform();
  		// forward = -Z. local = (sin(spread)*r, yOffset, -cos(spread)*r).
--		owner->GetTransform().Translate = vmath::vec3(
-+		tr.Translate = vmath::vec3(
+-		owner->GetTransform().Translate = glm::vec3(
++		tr.Translate = glm::vec3(
  		    std::sin(mSpreadRad) * mRadius,
  		    mYOffset,
  		    -std::cos(mSpreadRad) * mRadius);
 +		// 시각 크기 — Translate(궤도 오프셋)와 직교. SetTransformWithVectors 로 한꺼번에 세팅하면
 +		// Translate 가 (0,0,0) 으로 덮여 궤도가 깨지므로, Scale 만 별도로 둔다 (단일 소유).
-+		tr.Scale = vmath::vec3(mScale, mScale, mScale);
++		tr.Scale = glm::vec3(mScale, mScale, mScale);
  	}
  
  	void PlayerHands::OnEnter()
@@ -32379,7 +32379,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        Rebuild();
 +    }
 +
-+    void TextRenderer::SetColor(const vmath::vec4& rgba)
++    void TextRenderer::SetColor(const glm::vec4& rgba)
 +    {
 +        mColor = rgba;
 +        for (auto* g : mGlyphs)
@@ -32422,8 +32422,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            {
 +                auto* glyph = owner->AddChild(std::make_unique<SJH::Scene::Actor>("glyph"));
 +                auto& t = glyph->GetTransform();
-+                t.Translate = vmath::vec3(penX + glyphW * 0.5f, mCharHeight * 0.5f, 0.0f); // 하단중앙
-+                t.Scale     = vmath::vec3(glyphW, mCharHeight, 1.0f);                       // 빌보드 sx/sy
++                t.Translate = glm::vec3(penX + glyphW * 0.5f, mCharHeight * 0.5f, 0.0f); // 하단중앙
++                t.Scale     = glm::vec3(glyphW, mCharHeight, 1.0f);                       // 빌보드 sx/sy
 +                auto* sr = glyph->AddComponent<SJH::Sprite::SpriteRenderer>(mFont->GetAtlas());
 +                sr->frameIdx = frame;
 +                sr->tint     = mColor;
@@ -32442,7 +32442,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#define __SJH_TEXT_TEXT_RENDERER_H__
 +
 +#include "scene/actor.h"   // Component 베이스 + Actor
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +#include <string>
 +#include <vector>
 +
@@ -32463,7 +32463,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        void Update(float) override {}                  // 정적 — 틱 없음
 +
 +        void SetText(const std::string& s);             // 글리프 child 재구성(Rebuild)
-+        void SetColor(const vmath::vec4& rgba);          // 모든 글리프 tint
++        void SetColor(const glm::vec4& rgba);          // 모든 글리프 tint
 +        void SetAlpha(float a);                          // fade — 모든 글리프 tint.a
 +        void SetCharHeight(float worldH) { mCharHeight = worldH; }  // SetText 전 설정
 +
@@ -32473,7 +32473,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        const BitmapFont* mFont = nullptr;
 +        std::string       mText;
 +        float             mCharHeight = 0.5f;
-+        vmath::vec4       mColor = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
++        glm::vec4       mColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 +        std::vector<SJH::Scene::Actor*> mGlyphs;         // 비소유 (owner children 소유)
 +    };
 +}
@@ -32679,7 +32679,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +namespace TopdownShooter::Spawns
 +{
 +    void SpawnWorldText(SJH::Scene::Actor& fxParent, SJH::Text::BitmapFont* font,
-+                        const vmath::vec3& worldPos, const std::string& text,
++                        const glm::vec3& worldPos, const std::string& text,
 +                        const WorldTextStyle& style)
 +    {
 +        if (!font) return;   // 폰트 미존재 — no-op (VfxInstance 동일)
@@ -32720,7 +32720,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#ifndef __TOPDOWNSHOOTER_SPAWNS_WORLD_TEXT_INSTANCE_H__
 +#define __TOPDOWNSHOOTER_SPAWNS_WORLD_TEXT_INSTANCE_H__
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +#include <string>
 +
 +namespace SJH
@@ -32734,7 +32734,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    /// @brief 월드 텍스트 외형/모션 파라미터 (spec §4.2).
 +    struct WorldTextStyle
 +    {
-+        vmath::vec4 color       = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
++        glm::vec4 color       = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 +        float       charHeight  = 0.5f;    // 월드 단위 (글리프 높이)
 +        float       riseHeight  = 0.7f;    // 월드 +Y 상승량
 +        float       durationSec = 0.9f;    // 수명
@@ -32745,7 +32745,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    ///        Actor + TextRenderer + TweenPlayable(상승·페이드) + AutoDespawnOnFinish + Play.
 +    ///        despawn 은 기존 SweepFinishedChildren(fxParent) 가 수행.
 +    void SpawnWorldText(SJH::Scene::Actor& fxParent, SJH::Text::BitmapFont* font,
-+                        const vmath::vec3& worldPos, const std::string& text,
++                        const glm::vec3& worldPos, const std::string& text,
 +                        const WorldTextStyle& style);
 +}
 +
@@ -32863,18 +32863,18 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <cassert>
 @@ -27,6 +27,29 @@
  #include <utility>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 +namespace
 +{
 +	// [start,end](degree)에 deg 포함? start>end 면 0° wrap.
-+	bool InRange(float deg, const vmath::vec2 &r)
++	bool InRange(float deg, const glm::vec2 &r)
 +	{
 +		return (r[0] <= r[1]) ? (deg >= r[0] && deg < r[1]) : (deg >= r[0] || deg < r[1]);
 +	}
 +	// dir=(x,z) → θ=normalize360(deg(atan2(-z,x))) → 4범위 중 포함 필드. no-match=fallback.
 +	TopdownShooter::Entity::EFacing QuantizeByThreshold(
-+	    vmath::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
++	    glm::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
 +	    TopdownShooter::Entity::EFacing fallback)
 +	{
 +		namespace E = TopdownShooter::Entity;
@@ -32896,7 +32896,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		// dt 는 Movement::DoForward 가 units/sec  프레임 변위로 변환 (fps-independent).
  		mMovementPtr->DoForward({mInputValue[0], mInputValue[2]}, dt);
 -		// 누적값 리셋.
--		mInputValue = vmath::vec3(0.0f);
+-		mInputValue = glm::vec3(0.0f);
  
  		// === 연속 조준 (spec D1) — 매 프레임 마우스→Ground raycast 로 조준 멤버 갱신. ===
  		UpdateAim();
@@ -32922,9 +32922,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			namespace E = TopdownShooter::Entity;
 +			if (mAttackTimer > 0.0f) mAttackTimer -= dt;
 +			const bool        attacking = (mAttackTimer > 0.0f);
-+			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]); // ★ 리셋 전
++			const glm::vec2 velXZ(mInputValue[0], mInputValue[2]); // ★ 리셋 전
 +			const bool        moving = (velXZ[0] * velXZ[0] + velXZ[1] * velXZ[1]) > 0.001f;
-+			const vmath::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
++			const glm::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
 … (+24줄 생략)
 ```
 
@@ -32970,10 +32970,10 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	// 매핑: Back=화면 위(Up, ~90°), Front=화면 아래(Down, ~270°). 순서 = Up,Down,Left,Right.
 +	struct FacingThresholdConfig
 +	{
-+		vmath::vec2 Back;  // Up   (~90°)
-+		vmath::vec2 Front; // Down (~270°)
-+		vmath::vec2 Left;  // (~180°)
-+		vmath::vec2 Right; // (~0°, wrap)
++		glm::vec2 Back;  // Up   (~90°)
++		glm::vec2 Front; // Down (~270°)
++		glm::vec2 Left;  // (~180°)
++		glm::vec2 Right; // (~0°, wrap)
 +	};
 +	const FacingThresholdConfig PLAYER_FACING_THRESHOLD = {
 +	    {45.0f, 135.0f},   // Back  (Up)
@@ -33073,7 +33073,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			}
 +	}
 +
- 	void PlayableDirector::ReactDied(vmath::vec3 /*pos*/)
+ 	void PlayableDirector::ReactDied(glm::vec3 /*pos*/)
  	{
  		// 역할별 분리(P2): director 는 순수 [C]. 화면/엔티티 death 연출은 등록된 "death" Playable.
 ```
@@ -33088,7 +33088,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <map>
  #include <memory>
  #include <string>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 +namespace SJH::Sprite { class SpriteRenderer; } // DirGroup 핸들 (실타입 .cpp)
 +
@@ -33111,8 +33111,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		void OnExit() override {}
 @@ -43,9 +53,9 @@ namespace TopdownShooter::Playable
  		void ReactDamaged(int /*dmg*/) override { Play("hit"); }
- 		void ReactDied(vmath::vec3 pos) override; // Play("death") 만 (월드점 death FX[B]는 도메인 seam 이 트리거 — 역할별 분리 P2)
- 		void ReactAttack(vmath::vec2 /*aimDir*/) override { Play("attack"); }
+ 		void ReactDied(glm::vec3 pos) override; // Play("death") 만 (월드점 death FX[B]는 도메인 seam 이 트리거 — 역할별 분리 P2)
+ 		void ReactAttack(glm::vec2 /*aimDir*/) override { Play("attack"); }
 -		// SetFacing/SetPose 는 분해 Task6 가 directional sprite Playable 로 채울 빈 훅 (현재 no-op).
 -		void SetFacing(Entity::EFacing /*facing*/) override {}
 -		void SetPose(Entity::EPose /*pose*/) override {}
@@ -33259,8 +33259,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  namespace SJH::Sprite
  {
--    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
-+    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
+-    glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
++    glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
                                 int atlasWidth, int atlasHeight)
      {
          if (cols <= 0 || atlasWidth <= 0 || atlasHeight <= 0) {
@@ -33276,10 +33276,10 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        float v  = static_cast<float>(row * tileH) / static_cast<float>(atlasHeight);
 +        float du = static_cast<float>(tileW)       / static_cast<float>(atlasWidth);
 +        float dv = static_cast<float>(tileH)       / static_cast<float>(atlasHeight);
-         return vmath::vec4(u, v, du, dv);
+         return glm::vec4(u, v, du, dv);
      }
  
-+    vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
++    glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
 +                               int atlasWidth, int atlasHeight)
 +    {
 +        // 정사각 편의 오버로드 — tileW=tileH=tileSize 위임 (기존 시그니처/단위 테스트 호환).
@@ -33322,7 +33322,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
      }
 @@ -101,6 +109,6 @@ namespace SJH::Sprite
  
-     vmath::vec4 UniformAtlas::GetUVRect(int frameIdx) const
+     glm::vec4 UniformAtlas::GetUVRect(int frameIdx) const
      {
 -        return ComputeUVRect(frameIdx, mCols, mTileSize, mAtlasWidth, mAtlasHeight);
 +        return ComputeUVRect(frameIdx, mCols, mTileSize, mTileHeight, mAtlasWidth, mAtlasHeight);
@@ -33333,13 +33333,13 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `src/sprite/uniform_atlas.h`
 ```diff
 @@ -20,7 +20,12 @@ namespace SJH::Sprite
- 	vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
+ 	glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileSize,
  	                          int atlasWidth, int atlasHeight);
  
 -	/// @brief 등간격 N×M 정사각 그리드 atlas — sprite frame 시퀀스의 1차원 인덱스  2D UV rect 변환.
 +	/// @brief 비정사각 tile 오버로드 — tileW ≠ tileH (비트맵 폰트 6×10 등). 정사각은 tileW=tileH.
 +	/// @param tileW  tile 가로 픽셀 (U), @param tileH  tile 세로 픽셀 (V)
-+	vmath::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
++	glm::vec4 ComputeUVRect(int frameIdx, int cols, int tileW, int tileH,
 +	                          int atlasWidth, int atlasHeight);
 +
 +	/// @brief 등간격 N×M 그리드 atlas — sprite frame 시퀀스의 1차원 인덱스  2D UV rect 변환.
@@ -33462,7 +33462,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "scene/actor.h"
 -#include <functional>
 -#include <utility>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -namespace TopdownShooter::Entity::Bullet
 -{
@@ -33484,7 +33484,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -        void OnTriggerEnter  (SJH::Scene::Actor* other) override;
 -
 -        /// @brief 명중 시 임팩트 FX delegate (충돌 위치 전달). Entity→Spawns 의존 회피 (BulletFactory 정통).
--        using HitFx = std::function<void(const vmath::vec3&)>;
+-        using HitFx = std::function<void(const glm::vec3&)>;
 -        void SetOnHitFx(HitFx fx) { mOnHitFx = std::move(fx); }
 -
 -      private:
@@ -33626,7 +33626,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "Entity/Components/LifeComponents.h"
 -#include "sprite/sprite_sequence_playable.h"
 -#include <box2d/box2d.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -#include <cmath>
 -
 -namespace TopdownShooter::Entity::Player
@@ -33670,7 +33670,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -        PlayClipInternal(static_cast<int>(EPlayerClip::Idle));
 -    }
 -
--    void PlayerBehavior::Move(vmath::vec2 vel)
+-    void PlayerBehavior::Move(glm::vec2 vel)
 -    {
 -        if (IsDashing()) return;
 -        PlayClipInternal(static_cast<int>(EPlayerClip::Move));
@@ -33679,17 +33679,17 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -            const float len = std::sqrt(vel[0]*vel[0] + vel[1]*vel[1]);
 -            if (len > 0.001f)
 -            {
--                vmath::vec2 n(vel[0]/len, vel[1]/len);
+-                glm::vec2 n(vel[0]/len, vel[1]/len);
 -                // XZ→Box2D XY (Z→-Y, spec §4.4)
 -                mBody->SetLinearVelocity(b2Vec2(n[0]*mNormalSpeed, -n[1]*mNormalSpeed));
 -            }
 -        }
 -    }
 -
--    void PlayerBehavior::Attack(vmath::vec2 dir)
+-    void PlayerBehavior::Attack(glm::vec2 dir)
 -    {
 -        const float len = std::sqrt(dir[0]*dir[0] + dir[1]*dir[1]);
--        if (len > 0.001f) mAttackDir = vmath::vec2(dir[0]/len, dir[1]/len);
+-        if (len > 0.001f) mAttackDir = glm::vec2(dir[0]/len, dir[1]/len);
 -
 -        PlayClipInternal(static_cast<int>(EPlayerClip::Attack));
 -        if (mAttackPlayable) { mAttackPlayable->Stop(); mAttackPlayable->Play(); }
@@ -33712,7 +33712,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -
 -#include "playable/iplayable.h"
 -#include "scene/actor.h"
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -// forward declarations
 -namespace SJH::SpriteSequence { class SpriteSequencePlayable; }
@@ -33751,13 +33751,13 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -
 -        // === Flat 행동 API ===
 -        void Idle();
--        void Move(vmath::vec2 vel);
--        void Attack(vmath::vec2 dir);
+-        void Move(glm::vec2 vel);
+-        void Attack(glm::vec2 dir);
 -        void Hit(int damage);
--        void Dash(vmath::vec2 dir);
+-        void Dash(glm::vec2 dir);
 -        void Die();
 -
--        vmath::vec2 GetAttackDirection() const { return mAttackDir; }
+-        glm::vec2 GetAttackDirection() const { return mAttackDir; }
 -        bool        IsAlive()            const;
 -        bool        IsDashing()          const { return mDashTimer > 0.0f; }
 -
@@ -33779,7 +33779,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -        SJH::Playable::IPlayable* mDiePlayable    = nullptr;
 -        SJH::Playable::IPlayable* mMoveEffect     = nullptr;
 -
--        vmath::vec2 mAttackDir           = vmath::vec2(0.0f, -1.0f);
+-        glm::vec2 mAttackDir           = glm::vec2(0.0f, -1.0f);
 -        float       mNormalSpeed         = 3.0f;
 -        float       mDashSpeed           = 7.5f;
 -        float       mDashDuration        = 0.3f;
@@ -33798,7 +33798,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "Algebraic/Stat.h"
 -#include "Entity/Components/MovementComponents.h"
 -#include "scene/actor.h"
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -namespace TopdownShooter::Entity::Components
 -{
@@ -33822,7 +33822,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -		};
 -		virtual void OnExit() override {};
 -
--		virtual void DoForward(vmath::vec2 dir) override
+-		virtual void DoForward(glm::vec2 dir) override
 -		{
 -			auto *owner = GetOwner();
 -			if (!owner)
@@ -33881,7 +33881,7 @@ _… diff 생략: 코드 파일 1개 더 (커밋 줄 수 캡)_
  
          auto* a = fxParent.AddChild(std::make_unique<SJH::Scene::Actor>("WorldText"));
          a->GetTransform().Translate = worldPos;        // 앵커 = 하단중앙
-+        a->GetTransform().Scale     = vmath::vec3(style.scale, style.scale, 1.0f); // 전체 배율 — 자식 글리프 WorldMatrix 합성(빌보드 sx/sy + 배치 균일). Z 무관
++        a->GetTransform().Scale     = glm::vec3(style.scale, style.scale, 1.0f); // 전체 배율 — 자식 글리프 WorldMatrix 합성(빌보드 sx/sy + 배치 균일). Z 무관
  
          auto* tr = a->AddComponent<SJH::Text::TextRenderer>(font);
          tr->SetCharHeight(style.charHeight);           // SetText 전 설정(크기 bake)
@@ -33892,7 +33892,7 @@ _… diff 생략: 코드 파일 1개 더 (커밋 줄 수 캡)_
 @@ -16,8 +16,9 @@ namespace TopdownShooter::Spawns
      struct WorldTextStyle
      {
-         vmath::vec4 color       = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+         glm::vec4 color       = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 -        float       charHeight  = 0.5f;    // 월드 단위 (글리프 높이)
 -        float       riseHeight  = 0.7f;    // 월드 +Y 상승량
 +        float       charHeight  = 0.5f;    // 월드 단위 (글리프 높이 — 기본 크기)
@@ -34051,7 +34051,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		// 4) 자식 Actor — local Translate=0 (빌보드가 부모 center 에서 cameraUp 으로 띄움),
 +		//    Scale 이 바 가로×세로. 부모 world transform 이 center 를 결정.
 +		auto bar = std::make_unique<SJH::Scene::Actor>("HealthBar");
-+		bar->GetTransform().Scale = vmath::vec3(cfg.size[0], cfg.size[1], 1.0f);
++		bar->GetTransform().Scale = glm::vec3(cfg.size[0], cfg.size[1], 1.0f);
 +		auto *barPtr = target.AddChild(std::move(bar));
 +
 +		// 5) MeshRenderer(QuadMesh, Material, +10) + Driver(Life→uFill).
@@ -34068,7 +34068,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#ifndef __TOPDOWNSHOOTER_HUD_HEALTHBAR_FACTORY_H__
 +#define __TOPDOWNSHOOTER_HUD_HEALTHBAR_FACTORY_H__
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace SJH::Scene
 +{
@@ -34080,12 +34080,12 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	/// @brief 머리 위 분절형 체력바 외형/배치 설정 (전부 기본값 보유).
 +	struct HealthBarConfig
 +	{
-+		vmath::vec4 fillColor      = vmath::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 채워진 조각 (레퍼런스 녹색)
-+		vmath::vec4 bgColor        = vmath::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
++		glm::vec4 fillColor      = glm::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 채워진 조각 (레퍼런스 녹색)
++		glm::vec4 bgColor        = glm::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
 +		float       segmentCount   = 5.0f;
 +		float       segmentSpacing = 0.08f;
 +		float       headOffset     = 1.2f;                     // cameraUp 방향 머리 위 거리
-+		vmath::vec2 size           = vmath::vec2(1.2f, 0.18f); // 바 가로×세로
++		glm::vec2 size           = glm::vec2(1.2f, 0.18f); // 바 가로×세로
 +	};
 +
 +	/// @brief target 의 Life(ILivable) 에 묶인 체력바 자식 Actor 를 생성·부착.
@@ -34123,7 +34123,7 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <memory>
  #include <string>
 +#include <utility>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::HUD
  {
@@ -34166,12 +34166,12 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/src/HUD/HealthBarFactory.h`
 ```diff
 @@ -17,7 +17,7 @@ namespace TopdownShooter::HUD
- 		vmath::vec4 bgColor        = vmath::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
+ 		glm::vec4 bgColor        = glm::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
  		float       segmentCount   = 5.0f;
  		float       segmentSpacing = 0.08f;
 -		float       headOffset     = 1.2f;                     // cameraUp 방향 머리 위 거리
 +		float       headOffset     = 0.2f;                     // cameraUp 방향 머리 위 거리 (1.2→0.2, 1.0 하향)
- 		vmath::vec2 size           = vmath::vec2(1.2f, 0.18f); // 바 가로×세로
+ 		glm::vec2 size           = glm::vec2(1.2f, 0.18f); // 바 가로×세로
  	};
  
 ```
@@ -34216,8 +34216,8 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          int                damage       = 10;
          int                variant      = 0;          ///< 0~2 → ENEMY_FRONT[variant % 3]
          float              spriteFps    = 6.0f;        ///< 2프레임 walk 애니 속도
-+        vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
-         std::function<void(const vmath::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
++        glm::vec4        healthBarColor = glm::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
+         std::function<void(const glm::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
      };
  
 ```
@@ -34231,12 +34231,12 @@ _비코드 3개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/src/HUD/HealthBarFactory.h`
 ```diff
 @@ -17,7 +17,7 @@ namespace TopdownShooter::HUD
- 		vmath::vec4 bgColor        = vmath::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
+ 		glm::vec4 bgColor        = glm::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
  		float       segmentCount   = 5.0f;
  		float       segmentSpacing = 0.08f;
 -		float       headOffset     = 0.2f;                     // cameraUp 방향 머리 위 거리 (1.2→0.2, 1.0 하향)
 +		float       headOffset     = 0.5f;                     // cameraUp 방향 머리 위 거리 (1.2→0.2, 1.0 하향)
- 		vmath::vec2 size           = vmath::vec2(1.2f, 0.18f); // 바 가로×세로
+ 		glm::vec2 size           = glm::vec2(1.2f, 0.18f); // 바 가로×세로
  	};
  
 ```
@@ -34274,7 +34274,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <GL/glcorearb.h> // GL_TRIANGLES
  #include <box2d/box2d.h>
  #include <memory>
- #include <vmath.h>
+ #include <glm/glm.hpp>
 @@ -26,32 +35,65 @@ namespace TopdownShooter::Entity::Bullet
      {
          auto actor = std::make_unique<SJH::Scene::Actor>("Bullet");
@@ -34303,7 +34303,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        bc.world          = cfg.world;
 +        bc.bodyType       = b2_kinematicBody;      // 총알 — 등속 비행(velocity), 충돌에 무반응
 +        bc.startPosition  = cfg.pos;
-+        bc.linearVelocity = vmath::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
++        bc.linearVelocity = glm::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
 +        bc.density        = 1.0f;
 +        bc.isSensor       = false;
 +        bc.categoryBits   = Physics::ToBits(Physics::PhysicsLayer::BulletPlayer);
@@ -34473,7 +34473,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	{
  	  public:
 -		void OnEnter() override {}
-+		BoxBody(const BodyConfig& cfg, vmath::vec2 size)
++		BoxBody(const BodyConfig& cfg, glm::vec2 size)
 +		{
 +			b2Body* body = MakeBody(cfg);
 +			if (body != nullptr)
@@ -34502,7 +34502,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "scene/actor.h"
  #include <box2d/box2d.h>
  #include <cstdint>
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::Physics::Components
  {
@@ -34512,8 +34512,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	{
 +		b2World*    world          = nullptr;
 +		b2BodyType  bodyType       = b2_dynamicBody;             // Wall/Pickup=static, Bullet=kinematic
-+		vmath::vec2 startPosition  = vmath::vec2(0.0f, 0.0f);
-+		vmath::vec2 linearVelocity = vmath::vec2(0.0f, 0.0f);    // Bullet 초기 속도 (그 외 0)
++		glm::vec2 startPosition  = glm::vec2(0.0f, 0.0f);
++		glm::vec2 linearVelocity = glm::vec2(0.0f, 0.0f);    // Bullet 초기 속도 (그 외 0)
 +		float       linearDamping  = 0.0f;
 +		float       density        = 1.0f;
 +		float       friction       = 0.2f;                       // b2FixtureDef 기본값 — friction 미설정 site(벽/픽업/총알) 보존
@@ -34599,7 +34599,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        bc.isSensor      = true;   // Unity isTrigger ON
 +        bc.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Pickup);
 +        bc.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
-+        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, vmath::vec2(half[0] * 2.0f, half[1] * 2.0f));
++        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, glm::vec2(half[0] * 2.0f, half[1] * 2.0f));
  
          actor->AddComponent<Components::PickupTriggerLogger>();
  
@@ -34637,7 +34637,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        bc.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Wall);
 +        bc.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::WallMask);
 +        // half = half-extents → BoxBody 는 size(full)*0.5 로 SetAsBox 하므로 half*2 전달(절반크기 보존).
-+        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, vmath::vec2(half[0] * 2.0f, half[1] * 2.0f));
++        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, glm::vec2(half[0] * 2.0f, half[1] * 2.0f));
  
          return actor;
      }
@@ -34653,7 +34653,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +                                double us, double ue, int uRes,
 +                                double vs, double ve, int vRes,
 +                                float radius,
-+                                const vmath::vec3 &offset, bool back_face)
++                                const glm::vec3 &offset, bool back_face)
 +        {
 +            // 완전구, 중심 원점. 법선 = 중심->정점 (구면). HemiSphere 와 동일 구조이되
 +            // 위도(latitude) 범위만 [0,PI/2] -> [-PI/2,+PI/2] 로 확장 (v=0 남극, v=1 북극).
@@ -34665,7 +34665,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +            double deltaV = (ve - vs) / (float)vRes;
 +            double deltaAngle = (ue - us) / (float)uRes;
 +
-+            const vmath::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
++            const glm::vec4 white(1.0f, 1.0f, 1.0f, 1.0f);
 +
 +            for (int row = 0; row < numRows; row++)
 +            {
@@ -34682,10 +34682,10 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +                    float py = (float)y;
 +                    float pz = (float)(-r * sin(currentAngle));
 +
-+                    vmath::vec4 pos(px, py, pz, 1.0f);
-+                    vmath::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
-+                    vmath::vec3 outN = vmath::normalize(vmath::vec3(px, py, pz));
-+                    vmath::vec3 normal = back_face ? -outN : outN;
++                    glm::vec4 pos(px, py, pz, 1.0f);
++                    glm::vec2 uv((float)col / (float)uRes, (float)row / (float)vRes);
++                    glm::vec3 outN = vmath::normalize(glm::vec3(px, py, pz));
++                    glm::vec3 normal = back_face ? -outN : outN;
 +                    PushVertex(vertices, pos, white, normal, uv, offset);
 +                }
 … (+54줄 생략)
@@ -34708,7 +34708,7 @@ _… diff 생략: 코드 파일 1개 더 (커밋 줄 수 캡)_
 -        bc.bodyType       = b2_kinematicBody;      // 총알 — 등속 비행(velocity), 충돌에 무반응
 +        bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 → 안 떨어짐) — static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
          bc.startPosition  = cfg.pos;
-         bc.linearVelocity = vmath::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
+         bc.linearVelocity = glm::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
          bc.density        = 1.0f;
 -        bc.isSensor       = false;
 +        bc.isSensor       = true;        // 트리거 — 벽/적 OnTriggerEnter 로 despawn (물리 밀어내기/바운스 없음)
@@ -34730,7 +34730,7 @@ _… diff 생략: 코드 파일 1개 더 (커밋 줄 수 캡)_
 +#define _TOPDOWNSHOOTER_PHYSICS_RAYCAST__
 +#include "Physics/PhysicsLayer.h"
 +#include <box2d/box2d.h>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace SJH::Scene { class Actor; }
 +
@@ -34742,8 +34742,8 @@ _… diff 생략: 코드 파일 1개 더 (커밋 줄 수 캡)_
 +	{
 +		b2Body*            body     = nullptr;                  // 맞은 body (miss 면 nullptr)
 +		SJH::Scene::Actor* actor    = nullptr;                  // body userdata 에서 복원 (없으면 nullptr)
-+		vmath::vec2        point    = vmath::vec2(0.0f, 0.0f);  // 월드 충돌 좌표 (물리 2D)
-+		vmath::vec2        normal   = vmath::vec2(0.0f, 0.0f);  // 표면 법선
++		glm::vec2        point    = glm::vec2(0.0f, 0.0f);  // 월드 충돌 좌표 (물리 2D)
++		glm::vec2        normal   = glm::vec2(0.0f, 0.0f);  // 표면 법선
 +		float              distance = 0.0f;                     // start 로부터 실제 거리
 +		float              fraction = 0.0f;                     // maxDistance 대비 비율
 +		bool               hit      = false;                    // 명시적 성공 플래그
@@ -34754,14 +34754,14 @@ _… diff 생략: 코드 파일 1개 더 (커밋 줄 수 캡)_
 +	///        body 의 모든 fixture 를 순회해 가장 가까운 교점을 반환.
 +	/// @param dir 방향(임의 길이 허용 — 내부 정규화). maxDistance 가 실제 거리 한계.
 +	RaycastHit Raycast(b2Body* body,
-+	                   vmath::vec2 start, vmath::vec2 dir, float maxDistance);
++	                   glm::vec2 start, glm::vec2 dir, float maxDistance);
 +
 +	/// @brief 월드 최근접 질의 — Unity Physics.Raycast / Unreal LineTraceSingleByChannel 정통.
 +	/// @param mask       맞출 레이어 (categoryBits & ToBits(mask) != 0 만 후보)
 +	/// @param ignore     제외할 Actor (쏘는 주체 자해 방지). nullptr 면 무시 안 함.
 +	/// @param hitSensors false(기본) 면 isSensor fixture 통과 (Unity QueryTriggerInteraction.Ignore)
 +	RaycastHit RaycastClosest(b2World& world,
-+	                          vmath::vec2 start, vmath::vec2 dir, float maxDistance,
++	                          glm::vec2 start, glm::vec2 dir, float maxDistance,
 +	                          PhysicsLayer mask,
 +	                          SJH::Scene::Actor* ignore = nullptr,
 +	                          bool hitSensors = false);
@@ -34789,11 +34789,11 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	namespace
 +	{
 +		// dir 정규화 + 길이 0 판정. ok=false 면 호출측이 miss 반환.
-+		bool NormalizeDir(vmath::vec2 dir, vmath::vec2& out)
++		bool NormalizeDir(glm::vec2 dir, glm::vec2& out)
 +		{
 +			float len = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
 +			if (len <= 1e-8f) return false;
-+			out = vmath::vec2(dir[0] / len, dir[1] / len);
++			out = glm::vec2(dir[0] / len, dir[1] / len);
 +			return true;
 +		}
 +
@@ -34827,8 +34827,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				// 후보 기록 후 fraction 반환 → Box2D 가 더 먼 fixture 를 자동 클립 = 최근접 보장.
 +				result.body     = fx->GetBody();
 +				result.actor    = a;
-+				result.point    = vmath::vec2(point.x, point.y);
-+				result.normal   = vmath::vec2(normal.x, normal.y);
++				result.point    = glm::vec2(point.x, point.y);
++				result.normal   = glm::vec2(normal.x, normal.y);
 +				result.fraction = fraction;
 +				result.hit      = true;
 +				return fraction;
@@ -34836,10 +34836,10 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		};
 +	} // anonymous namespace
 +
-+	RaycastHit Raycast(b2Body* body, vmath::vec2 start, vmath::vec2 dir, float maxDistance)
++	RaycastHit Raycast(b2Body* body, glm::vec2 start, glm::vec2 dir, float maxDistance)
 +	{
 +		RaycastHit  result;
-+		vmath::vec2 d;
++		glm::vec2 d;
 +		if (body == nullptr || maxDistance <= 0.0f || !NormalizeDir(dir, d))
 +			return result;
 +
@@ -34915,7 +34915,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	void BaseEntity::DoDamaged(int damage) { if (mLife) mLife->DoDamaged(damage); }
 +	void BaseEntity::DoDie()               { if (mLife) mLife->DoDie(); }
 +
-+	void BaseEntity::DoImpulse(vmath::vec2 dir) { if (mImpulse) mImpulse->DoImpulse(dir); }
++	void BaseEntity::DoImpulse(glm::vec2 dir) { if (mImpulse) mImpulse->DoImpulse(dir); }
 +	bool BaseEntity::IsImpulseActive() const   { return mImpulse && mImpulse->IsActive(); }
 +
 +	void BaseEntity::Play(const std::string& key) { if (mDirector) mDirector->Play(key); }
@@ -34983,7 +34983,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		void DoDamaged(int damage) override;   // i-frame 은 Life 내부
 +		void DoDie()               override;
 +		// ── Impulse 위임 (IImpulsable) — 넉백/대시 ──
-+		void DoImpulse(vmath::vec2 dir) override;
++		void DoImpulse(glm::vec2 dir) override;
 +		bool IsImpulseActive() const;          // 버스트 활성 창 = 이동 suppress 게이트
 +		// ── accessor ──
 +		Physics::Components::Physics* GetPhysics()  const { return mPhysics; }
@@ -35172,7 +35172,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "input/mouse_input.h"
 +#include "Components/Components.Interfaces.h"   // IMovable
 +#include "Components/WeaponComponents.h"        // Components::Weapon (UseWeapon 호출 — 완전형)
-+#include <vmath.h>
++#include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity
  {
@@ -35193,7 +35193,7 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		Components::Weapon* mWeapon   = nullptr;
  
  	  public:
--		virtual void DoForward(vmath::vec2 dir, float dt) {mMovementComponentPtr->DoForward(dir, dt);}
+-		virtual void DoForward(glm::vec2 dir, float dt) {mMovementComponentPtr->DoForward(dir, dt);}
 -		virtual void DoAttack(IDamageable &target) {target.DoDamaged(GetNormalAtk());}
 -		virtual int GetNormalAtk() const { return (int)mWaeponComponentPtr->Damage.GetValue();}
 -		Components::Movement& GetMovemenet() const {return *mMovementComponentPtr;}
@@ -35205,9 +35205,9 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		Components::Weapon* GetWeapon()   const { return mWeapon; }
 +
 +		// verb
-+		void DoForward(vmath::vec2 dir, float dt) override { if (mMovement) mMovement->DoForward(dir, dt); } // IMovable
-+		void Dash(vmath::vec2 dir)   { DoImpulse(dir); }                       // BaseEntity 기반(대시)
-+		void Attack(vmath::vec2 aim) { if (mWeapon) mWeapon->UseWeapon(aim); } // ranged bullet
++		void DoForward(glm::vec2 dir, float dt) override { if (mMovement) mMovement->DoForward(dir, dt); } // IMovable
++		void Dash(glm::vec2 dir)   { DoImpulse(dir); }                       // BaseEntity 기반(대시)
++		void Attack(glm::vec2 aim) { if (mWeapon) mWeapon->UseWeapon(aim); } // ranged bullet
  	};
 -}; // namespace TopdownShooter::Entity
 -#endif //_TOPDOWNSHOOTER_ENTITY_PLAYER__
@@ -35316,14 +35316,14 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +			mCooldownTimer.Tick(dt);
  		}
  
- 		void DoImpulse(vmath::vec2 dir) override
+ 		void DoImpulse(glm::vec2 dir) override
  		{
 -			if (mCooldownTimer > 0.0f || IsActive()) return;
 +			if (!mCooldownTimer.IsTimesUp() || IsActive()) return;   // 쿨다운 중 or 이미 active → 게이트
  			if (!mBody || !mBody->GetBody()) return;
  			const float len = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
  			if (len <= 0.001f) return;
- 			vmath::vec2 n(dir[0] / len, dir[1] / len);
+ 			glm::vec2 n(dir[0] / len, dir[1] / len);
  			const float force = mImpulseForce.GetValue();
 -			// XZ → Box2D XY (Z → -Y, spec §4.4) — PhysicsMovement/PB::Dash 미러
 +			// XZ → Box2D XY (Z → -Y, spec §4.4)
@@ -35380,7 +35380,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 +		/// @brief 비행 방향 주입 (box2d XY, 정규화 가정) — 넉백 방향 소스.
 +		///        위치차분(enemy-bullet)은 접촉 시 관통 깊이에 따라 불안정/역전되므로 비행방향을 쓴다.
-+		void SetLaunchDir(vmath::vec2 box2dDir) { mLaunchDir = box2dDir; }
++		void SetLaunchDir(glm::vec2 box2dDir) { mLaunchDir = box2dDir; }
 +
  		void OnEnter() override {}
  		void OnExit() override {}
@@ -35391,18 +35391,18 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			mAlive = false;
 -			// 넉백 방향 = 발사 진행 방향(소유자→타겟). 간단히 타겟-소유자 XZ 평면 차분.
 -			// (GetTransform 은 Actor 메서드 — Component 는 GetOwner() 경유.)
--			const vmath::vec3 d = other->GetTransform().Translate - GetOwner()->GetTransform().Translate;
--			Deliver(other, vmath::vec2(d[0], -d[2]));
+-			const glm::vec3 d = other->GetTransform().Translate - GetOwner()->GetTransform().Translate;
+-			Deliver(other, glm::vec2(d[0], -d[2]));
 +			// 넉백 방향 = 총알 비행 방향(=플레이어→타겟 진행 방향, 안정).
 +			// box2d XY(mLaunchDir) → world XZ(x, -y): IImpulsable::DoImpulse 계약이 world XZ in → box2d 변환.
 +			// (위치차분(enemy-bullet)은 관통 깊이로 부호가 뒤집혀 "플레이어 쪽 돌진" 버그를 유발 → 폐기.)
-+			Deliver(other, vmath::vec2(mLaunchDir[0], -mLaunchDir[1]));
++			Deliver(other, glm::vec2(mLaunchDir[0], -mLaunchDir[1]));
  			DoDie();
  		}
  
 -		bool mAlive         = true;
 -		bool mPendingDisable = false;
-+		vmath::vec2 mLaunchDir{0.0f, 0.0f}; // box2d XY 비행방향 (SetLaunchDir 주입)
++		glm::vec2 mLaunchDir{0.0f, 0.0f}; // box2d XY 비행방향 (SetLaunchDir 주입)
 +		bool        mAlive          = true;
 +		bool        mPendingDisable = false;
  	};
@@ -35484,7 +35484,7 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		// perspective projection(비-affine, w≠1) 역행렬 → cofactor 기반 4x4 일반 inverse (MESA gluInvertMatrix 정통).
 +		// perspective projection(비-affine, w≠1) 역행렬 -> cofactor 기반 4x4 일반 inverse (MESA gluInvertMatrix 정통).
  		// vmath 는 column-major(m[col][row]) — flat 배열도 column-major(m[c*4+r])로 변환.
- 		vmath::mat4 Mat4Inverse(const vmath::mat4 &src)
+ 		glm::mat4 Mat4Inverse(const glm::mat4 &src)
  		{
 @@ -118,7 +118,7 @@ namespace TopdownShooter
  		// 실제 디렉토리 = resources/shaders/postprocess/ (shaders 복수).
@@ -35536,7 +35536,7 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 @@ -310,7 +310,7 @@ namespace TopdownShooter
  			if (mSpriteActor)
  				if (auto *pc = mSpriteActor->GetComponent<Controller::PlayerController>())
- 					pc->SetGroundClickCallback([this](const vmath::vec3 &p) {
+ 					pc->SetGroundClickCallback([this](const glm::vec3 &p) {
 -						// PlayerController 의 마우스→Ground raycast 결과(p)에 선택 이펙트를 단발 스폰.
 +						// PlayerController 의 마우스->Ground raycast 결과(p)에 선택 이펙트를 단발 스폰.
  						if (mVfxLayer && mFxRoot)
@@ -35568,9 +35568,9 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  
 -		/// @brief listener 위치/방향 갱신 — render 마다 카메라 Transform 으로 호출 (velocity=0 → doppler 없음).
 +		/// @brief listener 위치/방향 갱신 — render 마다 카메라 Transform 으로 호출 (velocity=0 -> doppler 없음).
- 		void SetListener(const vmath::vec3 &pos,
- 		                 const vmath::vec3 &forward = vmath::vec3(0.0f, 0.0f, -1.0f),
- 		                 const vmath::vec3 &up      = vmath::vec3(0.0f, 1.0f, 0.0f));
+ 		void SetListener(const glm::vec3 &pos,
+ 		                 const glm::vec3 &forward = glm::vec3(0.0f, 0.0f, -1.0f),
+ 		                 const glm::vec3 &up      = glm::vec3(0.0f, 1.0f, 0.0f));
 ```
 
 `apps/_MyApp_/src/Bootstrap/AudioWarmup.cpp`
@@ -35660,8 +35660,8 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -        int                variant      = 0;          ///< 0~2 → ENEMY_FRONT[variant % 3]
 +        int                variant      = 0;          ///< 0~2 -> ENEMY_FRONT[variant % 3]
          float              spriteFps    = 6.0f;        ///< 2프레임 walk 애니 속도
-         vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
-         std::function<void(const vmath::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
+         glm::vec4        healthBarColor = glm::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
+         std::function<void(const glm::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
 ```
 
 `apps/_MyApp_/src/Bootstrap/PlayerBuilder.cpp`
@@ -35808,7 +35808,7 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -        bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 → 안 떨어짐) — static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
 +        bc.bodyType       = b2_dynamicBody;        // dynamic(월드중력 0 -> 안 떨어짐) — static 벽과도 접촉 생성(kinematic-static 은 접촉 0)
          bc.startPosition  = cfg.pos;
-         bc.linearVelocity = vmath::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
+         bc.linearVelocity = glm::vec2(cfg.dir[0] * cfg.speed, cfg.dir[1] * cfg.speed);
          bc.density        = 1.0f;
 ```
 
@@ -36013,7 +36013,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "sprite/sprite_sequence_playable.h"
  
  #include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
- #include <vmath.h>                         // vmath::vec3 (Transform.Scale)
+ #include <glm/glm.hpp>                         // glm::vec3 (Transform.Scale)
  
  #include <memory>  // std::make_unique (Join 자식 생성)
 -#include <spdlog/spdlog.h>
@@ -36122,7 +36122,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#ifndef __TOPDOWNSHOOTER_BOOTSTRAP_ENTITY_PRESENTATION_H__
 +#define __TOPDOWNSHOOTER_BOOTSTRAP_ENTITY_PRESENTATION_H__
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +// fwd-decl — 헤더 표면 최소화 (완전형은 .cpp 에서 해소).
 +namespace SJH::Scene
@@ -36142,7 +36142,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	{
 +		float       dissolveSeconds   = 1.5f;                                 // "death" SpriteDissolve 길이
 +		float       deathDelaySeconds = 1.5f;                                 // 사망 후 비활성 지연(=dissolve 가시화 창)
-+		vmath::vec4 healthBarColor    = vmath::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 체력바 채움색(기본 녹색 = HealthBarConfig 기본과 동일)
++		glm::vec4 healthBarColor    = glm::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 체력바 채움색(기본 녹색 = HealthBarConfig 기본과 동일)
 +	};
 +
 +	/// @brief Player/Enemy 공통 연출 클러스터 부착 — *pre-entry*(AddChild 전) 호출.
@@ -36447,7 +36447,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			const float len = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
 -			if (len <= 0.001f) return;
 +			if (len <= IMPULSE_LENGTH_EPS) return;
- 			vmath::vec2 n(dir[0] / len, dir[1] / len);
+ 			glm::vec2 n(dir[0] / len, dir[1] / len);
  			const float force = mImpulseForce.GetValue();
  			// XZ -> Box2D XY (Z -> -Y, spec §4.4)
 @@ -54,7 +55,6 @@ namespace TopdownShooter::Physics
@@ -36473,17 +36473,17 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#ifndef _TOPDOWNSHOOTER_HUD_CONSTANTS__
 +#define _TOPDOWNSHOOTER_HUD_CONSTANTS__
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::HUD
 +{
 +	// 머리 위 분절형 체력바 외형/배치. (Bootstrap EntityPresentation 의 healthBarColor 기본도 FILL 참조 — C3.)
-+	const     vmath::vec4 HEALTHBAR_FILL_COLOR      = vmath::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 채움(레퍼런스 녹색)
-+	const     vmath::vec4 HEALTHBAR_BG_COLOR        = vmath::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 트랙
++	const     glm::vec4 HEALTHBAR_FILL_COLOR      = glm::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 채움(레퍼런스 녹색)
++	const     glm::vec4 HEALTHBAR_BG_COLOR        = glm::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 트랙
 +	constexpr float       HEALTHBAR_SEGMENT_COUNT   = 5.0f;
 +	constexpr float       HEALTHBAR_SEGMENT_SPACING = 0.08f;
 +	constexpr float       HEALTHBAR_HEAD_OFFSET     = 0.5f;                     // cameraUp 머리 위 거리
-+	const     vmath::vec2 HEALTHBAR_SIZE            = vmath::vec2(1.2f, 0.18f); // 가로×세로
++	const     glm::vec2 HEALTHBAR_SIZE            = glm::vec2(1.2f, 0.18f); // 가로×세로
 +} // namespace TopdownShooter::HUD
 +
 +#endif //_TOPDOWNSHOOTER_HUD_CONSTANTS__
@@ -36494,7 +36494,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -2,6 +2,7 @@
  #define __TOPDOWNSHOOTER_HUD_HEALTHBAR_FACTORY_H__
  
- #include <vmath.h>
+ #include <glm/glm.hpp>
 +#include "HUD/Constants.h"
  
  namespace SJH::Scene
@@ -36503,18 +36503,18 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	/// @brief 머리 위 분절형 체력바 외형/배치 설정 (전부 기본값 보유).
  	struct HealthBarConfig
  	{
--		vmath::vec4 fillColor      = vmath::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 채워진 조각 (레퍼런스 녹색)
--		vmath::vec4 bgColor        = vmath::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
+-		glm::vec4 fillColor      = glm::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 채워진 조각 (레퍼런스 녹색)
+-		glm::vec4 bgColor        = glm::vec4(0.0f, 0.0f, 0.0f, 0.55f); // 빈 조각 트랙
 -		float       segmentCount   = 5.0f;
 -		float       segmentSpacing = 0.08f;
 -		float       headOffset     = 0.5f;                     // cameraUp 방향 머리 위 거리 (1.2->0.2, 1.0 하향)
--		vmath::vec2 size           = vmath::vec2(1.2f, 0.18f); // 바 가로×세로
-+		vmath::vec4 fillColor      = HEALTHBAR_FILL_COLOR;      // 채워진 조각 (레퍼런스 녹색)
-+		vmath::vec4 bgColor        = HEALTHBAR_BG_COLOR;        // 빈 조각 트랙
+-		glm::vec2 size           = glm::vec2(1.2f, 0.18f); // 바 가로×세로
++		glm::vec4 fillColor      = HEALTHBAR_FILL_COLOR;      // 채워진 조각 (레퍼런스 녹색)
++		glm::vec4 bgColor        = HEALTHBAR_BG_COLOR;        // 빈 조각 트랙
 +		float       segmentCount   = HEALTHBAR_SEGMENT_COUNT;
 +		float       segmentSpacing = HEALTHBAR_SEGMENT_SPACING;
 +		float       headOffset     = HEALTHBAR_HEAD_OFFSET;     // cameraUp 방향 머리 위 거리
-+		vmath::vec2 size           = HEALTHBAR_SIZE;            // 바 가로×세로
++		glm::vec2 size           = HEALTHBAR_SIZE;            // 바 가로×세로
  	};
  
  	/// @brief target 의 Life(ILivable) 에 묶인 체력바 자식 Actor 를 생성·부착.
@@ -36697,7 +36697,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "Bootstrap/Constants.h"           // ENEMY_DISSOLVE/DELAY/트윈MS
  
  #include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
- #include <vmath.h>                         // vmath::vec3 (Transform.Scale)
+ #include <glm/glm.hpp>                         // glm::vec3 (Transform.Scale)
 @@ -51,7 +52,7 @@ namespace TopdownShooter::Bootstrap
  
              // child A — Y 스케일 펄스 (0.4초 편도, 왕복 0.8초)
@@ -36734,7 +36734,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -2,6 +2,8 @@
  #define __TOPDOWNSHOOTER_BOOTSTRAP_ENTITY_PRESENTATION_H__
  
- #include <vmath.h>
+ #include <glm/glm.hpp>
 +#include "Bootstrap/Constants.h"
 +#include "HUD/Constants.h"
  
@@ -36746,10 +36746,10 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	{
 -		float       dissolveSeconds   = 1.5f;                                 // "death" SpriteDissolve 길이
 -		float       deathDelaySeconds = 1.5f;                                 // 사망 후 비활성 지연(=dissolve 가시화 창)
--		vmath::vec4 healthBarColor    = vmath::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 체력바 채움색(기본 녹색 = HealthBarConfig 기본과 동일)
+-		glm::vec4 healthBarColor    = glm::vec4(0.13f, 1.0f, 0.0f, 1.0f); // 체력바 채움색(기본 녹색 = HealthBarConfig 기본과 동일)
 +		float       dissolveSeconds   = PLAYER_DISSOLVE_SECONDS;  // "death" SpriteDissolve 길이
 +		float       deathDelaySeconds = PLAYER_DEATH_DELAY;       // 사망 후 비활성 지연(=dissolve 가시화 창)
-+		vmath::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 — HUD 단일 소스, C3)
++		glm::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 — HUD 단일 소스, C3)
  	};
  
  	/// @brief Player/Enemy 공통 연출 클러스터 부착 — *pre-entry*(AddChild 전) 호출.
@@ -36830,7 +36830,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		struct ControllerCfg
  		{
 @@ -65,7 +66,7 @@ namespace TopdownShooter::Entity::Player
- 			vmath::vec2 startPosition = vmath::vec2(0.0f, 0.0f);
+ 			glm::vec2 startPosition = glm::vec2(0.0f, 0.0f);
  			float       density       = 1.0f;
  			float       friction      = 0.3f;
 -			float       linearDamping = 5.0f;
@@ -36897,7 +36897,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  #include "scene/actor.h"
 +#include "Entity/Constants.h"
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity
 @@ -25,7 +26,7 @@ namespace TopdownShooter::Entity
@@ -36949,12 +36949,12 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 +#include "Entity/Constants.h"
  #include <functional>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 @@ -16,11 +17,11 @@ namespace TopdownShooter::Bootstrap
          SJH::Scene::Actor* spawnParent  = nullptr;   ///< 적 child 부착 부모 (WaveController.mSpawnParent)
          SJH::Scene::Actor* playerTarget = nullptr;   ///< SimplePursueAI 추적 대상
-         vmath::vec2        pos          = vmath::vec2(0.0f);
+         glm::vec2        pos          = glm::vec2(0.0f);
 -        int                hp           = 30;
 -        float              speed        = 2.0f;
 -        int                damage       = 10;
@@ -36964,8 +36964,8 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          int                variant      = 0;          ///< 0~2 -> ENEMY_FRONT[variant % 3]
 -        float              spriteFps    = 6.0f;        ///< 2프레임 walk 애니 속도
 +        float              spriteFps    = Entity::ENEMY_SPRITE_FPS;        ///< 2프레임 walk 애니 속도
-         vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
-         std::function<void(const vmath::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
+         glm::vec4        healthBarColor = glm::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
+         std::function<void(const glm::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
      };
 ```
 
@@ -36981,7 +36981,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <memory>
 @@ -21,9 +22,9 @@ namespace TopdownShooter::Entity::Enemy
          b2World*           world;
-         vmath::vec2        pos;
+         glm::vec2        pos;
          SJH::Scene::Actor* playerTarget;
 -        int   hp     = 30;
 -        float speed  = 2.0f;
@@ -37029,8 +37029,8 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "object/geometry.h"
 @@ -26,9 +27,9 @@ namespace TopdownShooter::Entity::Bullet
          b2World*    world;
-         vmath::vec2 pos;
-         vmath::vec2 dir;        // normalized
+         glm::vec2 pos;
+         glm::vec2 dir;        // normalized
 -        float       speed    = 15.0f;
 -        int         damage   = 10;
 -        float       lifetime = 3.0f;
@@ -37084,7 +37084,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -10,6 +10,11 @@
  #include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 +namespace
 +{
@@ -37138,8 +37138,8 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		pac.controller.mouse    = deps.mouse;
  		pac.controller.camera   = deps.worldCamera; // 좌클릭 마우스->Ground raycast 용 (World 카메라)
 @@ -142,11 +140,9 @@ namespace TopdownShooter::Bootstrap
- 		pac.physics.size = vmath::vec2(1.0f, 1.0f);
- 		pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
+ 		pac.physics.size = glm::vec2(1.0f, 1.0f);
+ 		pac.physics.startPosition = glm::vec2(0.0f, 0.0f);
  		pac.physics.density = 1.0f;
 -		pac.physics.linearDamping = 5.0f;
  		pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
@@ -37168,7 +37168,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -		// sb7 vmath 는 일반 역행렬 미제공(camera.h 명시) + Camera::InverseAffine 은 affine 전용.
 -		// perspective projection(비-affine, w≠1) 역행렬 -> cofactor 기반 4x4 일반 inverse (MESA gluInvertMatrix 정통).
 -		// vmath 는 column-major(m[col][row]) — flat 배열도 column-major(m[c*4+r])로 변환.
--		vmath::mat4 Mat4Inverse(const vmath::mat4 &src)
+-		glm::mat4 Mat4Inverse(const glm::mat4 &src)
 -		{
 -			float m[16];
 -			for (int c = 0; c < 4; ++c)
@@ -37195,10 +37195,10 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -
 -			float det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
 -			if (det == 0.0f)
--				return vmath::mat4::identity(); // 특이행렬 가드.
+-				return glm::mat4::identity(); // 특이행렬 가드.
 -			float invDet = 1.0f / det;
 -
--			vmath::mat4 out;
+-			glm::mat4 out;
 -			for (int c = 0; c < 4; ++c)
 -				for (int r = 0; r < 4; ++r)
 -					out[c][r] = inv[c * 4 + r] * invDet;
@@ -37229,7 +37229,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "scene/scene.h" // SP-SceneContext+ProgramRegistry — Director::Get().GetContext() 접근.
  #include <cassert>
 +#include <cmath> // std::tan (GetInverseProjectionMatrix)
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH::Scene
 @@ -49,6 +50,36 @@ namespace SJH::Scene
@@ -37237,11 +37237,11 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	}
  
 +	// CLAUDE_ASSIST
-+	vmath::mat4 Camera::GetInverseProjectionMatrix() const
++	glm::mat4 Camera::GetInverseProjectionMatrix() const
 +	{
 +		// GetProjectionMatrix() 의 역행렬을 닫힌 해로 구성 (cofactor 일반 inverse 불필요).
 +		// vmath 는 column-major — r[col][row]. 0 으로 초기화 후 비-zero 성분만 채움.
-+		vmath::mat4 r(0.0f);
++		glm::mat4 r(0.0f);
 +
 +		if (IsOrthographic)
 +		{
@@ -37275,13 +37275,13 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -73,6 +73,12 @@ namespace SJH::Scene
  		/// @brief perspective(fovY, aspect, near, far).
- 		vmath::mat4 GetProjectionMatrix() const;
+ 		glm::mat4 GetProjectionMatrix() const;
  
 +		/// @brief GetProjectionMatrix() 의 역행렬 — 닫힌 해(closed-form).
 +		/// @details perspective/ortho 둘 다 sparse 구조라 cofactor 일반 inverse 불필요.
 +		///   NDC->view 복원(fog 등 deferred 효과)용. GetProjectionMatrix() 와 동일하게
 +		///   IsOrthographic 분기. 범용 행렬엔 부적합 — 투영 전용.
-+		vmath::mat4 GetInverseProjectionMatrix() const;
++		glm::mat4 GetInverseProjectionMatrix() const;
 +
  		// ── TargetLock — Unity Cinemachine Composer 정통 ─────────────────────
  		/// @brief 특정 Actor 를 바라보도록 카메라 lock. owner EulerRot 시각 효과 일시 무효.
@@ -37781,7 +37781,7 @@ _… diff 생략: 코드 파일 2개 더 (파일 수 캡)_
  #include "Stage/Stage.h"
 +#include "Stage/Constants.h"
  #include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 @@ -22,8 +23,8 @@ namespace TopdownShooter::Stage
      {
@@ -37791,7 +37791,7 @@ _… diff 생략: 코드 파일 2개 더 (파일 수 캡)_
 -        float                  wallThickness   = 0.5f;
 +        float                  arenaHalfExtent = ARENA_HALF_EXTENT; // 벽 안쪽 절반 크기
 +        float                  wallThickness   = WALL_THICKNESS;
-         std::vector<vmath::vec2> pickupPositions = { vmath::vec2(0.0f, 3.0f) };
+         std::vector<glm::vec2> pickupPositions = { glm::vec2(0.0f, 3.0f) };
          EStageStatus           startStatus     = EStageStatus::Title;
      };
 ```
@@ -37893,7 +37893,7 @@ _… diff 생략: 코드 파일 2개 더 (파일 수 캡)_
  
 +		void Update(float /*dt*/) override {}   // tick은 BaseEntity::Update 가 일괄 구동
 +
- 		void DoImpulse(vmath::vec2 dir) override
+ 		void DoImpulse(glm::vec2 dir) override
  		{
 -			if (!mCooldownTimer.IsTimesUp() || IsActive()) return;   // 쿨다운 중 or 이미 active -> 게이트
 +			if (!mCooldownTimer || !mCooldownTimer->IsTimesUp() || IsActive()) return;   // 미등록/쿨다운 중/active -> 게이트
@@ -37910,7 +37910,7 @@ _… diff 생략: 코드 파일 2개 더 (파일 수 캡)_
 +			mCooldownTimer->Reset();   // 쿨다운 발동 (0.8s)
  		}
  
- 		void ApplyKnockback(vmath::vec2 fromXZ) { DoImpulse(fromXZ); } // convenience (Monster Knockback)
+ 		void ApplyKnockback(glm::vec2 fromXZ) { DoImpulse(fromXZ); } // convenience (Monster Knockback)
 -		bool IsActive() const { return !mActiveTimer.IsTimesUp(); }    // 버스트 창 진행 중
 +		bool IsActive() const { return mActiveTimer && !mActiveTimer->IsTimesUp(); }   // 버스트 창 진행 중
  
@@ -37954,7 +37954,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  namespace TopdownShooter::Entity::Components
  {
 @@ -22,24 +22,13 @@ namespace TopdownShooter::Entity::Components
- 		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // spawn-at-point seam
+ 		std::function<void(const glm::vec3 &)> mOnDeathFx;   // spawn-at-point seam
  		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
  
 -		// === SJH::Timer 자가 보유 (패턴 A) — "없음(미설정)"은 nullopt 로 표현 (VO 정통) ===
@@ -37995,7 +37995,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 -		Life &SetIFrameSeconds(float s) { ArmInactive(mInvincibleTimer, s); return *this; }
 +		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
- 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
+ 		Life &SetOnDeathFx(std::function<void(const glm::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
 -		Life &SetDeathDelaySeconds(float s) { ArmInactive(mDieTimer, s); return *this; }   // Task 6 가 0.5 주입 예정
 +		Life &SetDeathDelaySeconds(float s) { mDieDelaySeconds = s; return *this; }
  		bool  IsInvincible() const { return mInvincibleTimer && !mInvincibleTimer->IsTimesUp(); }
@@ -38066,9 +38066,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -			if (mAttackTimer > 0.0f) mAttackTimer -= dt;
 -			const bool        attacking = (mAttackTimer > 0.0f);
 +			const bool        attacking = (mAttackTimer != nullptr && !mAttackTimer->IsTimesUp()); // tick은 BaseEntity가
- 			const vmath::vec2 velXZ(mInputValue[0], mInputValue[2]); // ★ 리셋 전
+ 			const glm::vec2 velXZ(mInputValue[0], mInputValue[2]); // ★ 리셋 전
  			const bool        moving = (velXZ[0] * velXZ[0] + velXZ[1] * velXZ[1]) > 0.001f;
- 			const vmath::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
+ 			const glm::vec2 aimXZ(mAimDirection[0], mAimDirection[2]);
 @@ -306,7 +318,7 @@ namespace TopdownShooter::Controller
  		// 클릭 직전 조준 갱신 — 입력 디스패치가 Update 보다 앞설 수 있어 커서 최신값으로 재산출.
  		UpdateAim();
@@ -38160,7 +38160,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "scene/actor.h"
 +#include "timer/timer.h"   // SJH::Timer::Timer (spawn 간격 — Timer 객체화)
  #include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 @@ -37,7 +38,7 @@ namespace TopdownShooter::Stage
  
@@ -38235,7 +38235,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			// fog 의 non-float 초기값 + uDepth 바인딩 (PostFXStageConfig.InitFloats 는 Floats 만 지원).
  			if (auto *fogMat = FindFogMaterial())
  			{
--				fogMat->Properties.Vec3s["uFogColor"] = vmath::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
+-				fogMat->Properties.Vec3s["uFogColor"] = glm::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
 -				fogMat->Properties.Ints["uFogMode"]   = 2; // 0=Linear, 1=Exp, 2=Exp2
 +				fogMat->Properties.Vec3s["uFogColor"] = Playable::FOG_COLOR; // {20,36,10}
 +				fogMat->Properties.Ints["uFogMode"]   = Playable::FOG_MODE; // 0=Linear, 1=Exp, 2=Exp2
@@ -38244,7 +38244,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  			// grayscale_vignetting 의 vec3 초기값 (InitFloats 밖) — 비네팅 색 명시 set.
  			if (auto *gvMat = FindPassMaterial("grayscale_vignetting"))
--				gvMat->Properties.Vec3s["uVignetteColor"] = vmath::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
+-				gvMat->Properties.Vec3s["uVignetteColor"] = glm::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅.
 +				gvMat->Properties.Vec3s["uVignetteColor"] = Playable::VIGNETTE_COLOR; // {255,0,0} 빨강 비네팅.
  
  			// 연출 foundation — PostFX pass Material 을 레지스트리에 등록 (hit-FX 트랙의 PostFXTweenPlayable 이
@@ -38259,7 +38259,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +#include "render/render_pipeline.h" // SJH::Render::PostFXStageConfig
 +#include <vector>
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +namespace TopdownShooter::Playable
 +{
@@ -38293,9 +38293,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	};
 +
 +	// fog/vignette 비-float 초기값 (PostFXStageConfig.InitFloats 밖 — startup 에서 Material 에 직접 set).
-+	const     vmath::vec3 FOG_COLOR      = vmath::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
++	const     glm::vec3 FOG_COLOR      = glm::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
 +	constexpr int         FOG_MODE       = 2;                                                           // 0=Linear, 1=Exp, 2=Exp2
-+	const     vmath::vec3 VIGNETTE_COLOR = vmath::vec3(1.0f, 0.0f, 0.0f);                                // {255,0,0} 빨강 비네팅
++	const     glm::vec3 VIGNETTE_COLOR = glm::vec3(1.0f, 0.0f, 0.0f);                                // {255,0,0} 빨강 비네팅
 +} // namespace TopdownShooter::Playable
 +
 +#endif //_TOPDOWNSHOOTER_PLAYABLE_POSTFX_CONSTANTS__
@@ -38349,7 +38349,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 +        // hit FX seam — 적 Life 피격 시 hit.efk (Player 와 공통, 빌더가 VFX::Spawn 주입).
 +        if (auto* life = enemy->GetComponent<Entity::Components::Life>())
-+            life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); });
++            life->SetOnHitFx([](const glm::vec3& p) { VFX::Spawn("hit", p); });
 +
          // 5) 씬 트리 부착 (entry -> 컴포넌트 OnEnter 캐스케이드)
          if (!deps.spawnParent) return nullptr;
@@ -38384,11 +38384,11 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +		// VFX seam 주입 — 컴포넌트는 VFX 를 모르고, 빌더가 VFX::Spawn 람다를 주입 (director->Play 패턴).
 +		if (auto *life = spriteActor->GetComponent<Entity::Components::Life>())
-+			life->SetOnHitFx([](const vmath::vec3 &p) { VFX::Spawn("hit", p); });
++			life->SetOnHitFx([](const glm::vec3 &p) { VFX::Spawn("hit", p); });
 +		if (auto *player = spriteActor->GetComponent<Entity::PlayerEntity>())
-+			player->SetOnMoveFx([](const vmath::vec3 &p) { VFX::Spawn("dust", p); });
++			player->SetOnMoveFx([](const glm::vec3 &p) { VFX::Spawn("dust", p); });
 +		if (auto *weapon = spriteActor->GetComponent<Entity::Components::Weapon>())
-+			weapon->SetOnFireFx([](const vmath::vec3 &p, float yaw) { VFX::Spawn("gunshoot", p, yaw); });
++			weapon->SetOnFireFx([](const glm::vec3 &p, float yaw) { VFX::Spawn("gunshoot", p, yaw); });
  		// ─────────────────────────────────────────────────────────────────────────
  
  		result.SpriteActor = dir.Root().AddChild(std::move(spriteActor));
@@ -38400,17 +38400,17 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		Algebraic::Numeric::Stat mMaxHp;
  		int   mCurHp;
  		bool  mDeathFxFired = false;  // one-shot death guard (mDead 대체)
--		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // spawn-at-point seam
-+		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // 사망 spawn-at-point seam
-+		std::function<void(const vmath::vec3 &)> mOnHitFx;     // 피격 spawn-at-point seam (hit FX — 적/플레이어 공통)
+-		std::function<void(const glm::vec3 &)> mOnDeathFx;   // spawn-at-point seam
++		std::function<void(const glm::vec3 &)> mOnDeathFx;   // 사망 spawn-at-point seam
++		std::function<void(const glm::vec3 &)> mOnHitFx;     // 피격 spawn-at-point seam (hit FX — 적/플레이어 공통)
  		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
  
  		// === Timer 중앙화 — BaseEntity 의 MultipleTimer 에 위탁, 핸들만 보유 (비소유) ===
 @@ -51,6 +52,7 @@ namespace TopdownShooter::Entity::Components
  
  		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
- 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
-+		Life &SetOnHitFx(std::function<void(const vmath::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
+ 		Life &SetOnDeathFx(std::function<void(const glm::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
++		Life &SetOnHitFx(std::function<void(const glm::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
  		Life &SetDeathDelaySeconds(float s) { mDieDelaySeconds = s; return *this; }
  		bool  IsInvincible() const { return mInvincibleTimer && !mInvincibleTimer->IsTimesUp(); }
  
@@ -38419,7 +38419,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  			mCurHp -= damage;
  			if (mSink) mSink->ReactDamaged(damage);  // Template-Method forward
 +			if (mOnHitFx)                            // 피격 위치에 hit FX (mOnDeathFx 대칭 seam — 빌더가 VFX::Spawn 주입)
-+				mOnHitFx(GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f));
++				mOnHitFx(GetOwner() ? GetOwner()->GetTransform().Translate : glm::vec3(0.0f));
  			if (mInvincibleTimer) mInvincibleTimer->Reset();   // passed=0 -> 무적 발동 (없으면 no-op = 무적 없음)
  			if (!IsAlive())
  			{
@@ -38433,7 +38433,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
 +#include <cmath>
  #include <spdlog/spdlog.h>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 @@ -37,5 +38,15 @@ namespace TopdownShooter::Entity::Components
  
@@ -38444,9 +38444,9 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		// box2dForward(=aimDir.x, -aimDir.z) -> world 방향 (x, 0, -y). yaw 컨벤션은 PlayerController facing 각과 동일.
 +		if (mOnFireFx)
 +		{
-+			const vmath::vec3 worldDir(box2dForward[0], 0.0f, -box2dForward[1]);
++			const glm::vec3 worldDir(box2dForward[0], 0.0f, -box2dForward[1]);
 +			const float       yaw       = std::atan2(-worldDir[0], -worldDir[2]); // 라디안 — EffekseerPlayable SetRotation
-+			const vmath::vec3 muzzlePos = wp + worldDir * 0.5f;                    // 총구 끝 = 플레이어 중심 + forward*0.5
++			const glm::vec3 muzzlePos = wp + worldDir * 0.5f;                    // 총구 끝 = 플레이어 중심 + forward*0.5
 +			mOnFireFx(muzzlePos, yaw);
 +		}
  	}
@@ -38462,7 +38462,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include <functional>
  #include <string>
 +#include <utility>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  // fwd — UseWeapon 이 bullet body 를 생성할 물리 월드 (포인터 멤버 — 전방 선언으로 충분).
 @@ -26,6 +28,8 @@ namespace TopdownShooter::Entity::Components
@@ -38470,7 +38470,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		const std::string WeaponName;
  		b2World *mWorld = nullptr; // 비소유 — bullet body 생성용 (SetWorld 주입)
 +		// 발사 방향 gunshoot FX — pos(총구) + yaw(라디안). 빌더가 VFX::Spawn 주입 (없으면 no-op).
-+		std::function<void(const vmath::vec3 &pos, float yaw)> mOnFireFx;
++		std::function<void(const glm::vec3 &pos, float yaw)> mOnFireFx;
  
  	  public:
  		Weapon(int damage, const char *literal_str)
@@ -38479,7 +38479,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		}
  
 +		/// @brief 발사 시 총구 위치+방향(yaw 라디안)으로 발동할 FX seam 주입 (빌더 전용 fluent).
-+		Weapon &SetOnFireFx(std::function<void(const vmath::vec3 &, float)> fx)
++		Weapon &SetOnFireFx(std::function<void(const glm::vec3 &, float)> fx)
 +		{
 +			mOnFireFx = std::move(fx);
 +			return *this;
@@ -38589,7 +38589,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#include "timer/timer.h"                               // SJH::Timer::Timer (dust interval poll — 완전형)
 +#include <functional>
 +#include <utility>                                     // std::move
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity
 @@ -15,15 +18,36 @@ namespace TopdownShooter::Entity
@@ -38597,7 +38597,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		Components::Weapon* mWeapon   = nullptr;
  
 +		// 이동 자리 dust FX — interval 마다 1회. timer 는 BaseEntity 중앙 컨테이너 위탁(핸들만 보유).
-+		std::function<void(const vmath::vec3 &)> mOnMoveFx;            // spawn-at-point seam (빌더가 VFX::Spawn 주입)
++		std::function<void(const glm::vec3 &)> mOnMoveFx;            // spawn-at-point seam (빌더가 VFX::Spawn 주입)
 +		SJH::Timer::Timer*                       mDustTimer    = nullptr; // BaseEntity::Timers() 핸들 (비소유)
 +		float                                    mDustInterval = 0.2f;    // 이동 중 dust 스폰 간격(초)
 +
@@ -38611,11 +38611,11 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		Components::Weapon* GetWeapon()   const { return mWeapon; }
  
 +		// dust FX seam 주입 (빌더 전용 fluent)
-+		PlayerEntity &SetOnMoveFx(std::function<void(const vmath::vec3 &)> fx) { mOnMoveFx = std::move(fx); return *this; }
++		PlayerEntity &SetOnMoveFx(std::function<void(const glm::vec3 &)> fx) { mOnMoveFx = std::move(fx); return *this; }
 +
  		// verb
--		void DoForward(vmath::vec2 dir, float dt) override { if (mMovement) mMovement->DoForward(dir, dt); } // IMovable
-+		void DoForward(vmath::vec2 dir, float dt) override
+-		void DoForward(glm::vec2 dir, float dt) override { if (mMovement) mMovement->DoForward(dir, dt); } // IMovable
++		void DoForward(glm::vec2 dir, float dt) override
 +		{
 +			if (mMovement) mMovement->DoForward(dir, dt); // IMovable
 +			// 이동 자리 dust — interval 경과 시 1회. PlayerController 가 매 프레임 DoForward(정지 시 dir≈0)를
@@ -38628,8 +38628,8 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				mDustTimer->Reset();
 +			}
 +		}
- 		void Dash(vmath::vec2 dir)   { DoImpulse(dir); }                       // BaseEntity 기반(대시)
- 		void Attack(vmath::vec2 aim) { if (mWeapon) mWeapon->UseWeapon(aim); } // ranged bullet
+ 		void Dash(glm::vec2 dir)   { DoImpulse(dir); }                       // BaseEntity 기반(대시)
+ 		void Attack(glm::vec2 aim) { if (mWeapon) mWeapon->UseWeapon(aim); } // ranged bullet
  	};
 ```
 
@@ -38649,7 +38649,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "Entity/Constants.h"                     // HAND_* (배치 튜닝 단일 소스)
  #include "object/transform.h"
 @@ -41,6 +46,12 @@ namespace TopdownShooter::Entity
- 		tr.Scale = vmath::vec3(mScale, mScale, mScale);
+ 		tr.Scale = glm::vec3(mScale, mScale, mScale);
  	}
  
 +	void PlayerSingleHand::SetSpreadDeg(float spreadDeg)
@@ -38714,7 +38714,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -5,6 +5,11 @@
  #include "Entity/Constants.h"
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 +namespace TopdownShooter::Controller
 +{
@@ -38758,7 +38758,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 `apps/_MyApp_/src/InputHandler/PlayerController.cpp`
 ```diff
 @@ -279,6 +279,25 @@ namespace TopdownShooter::Controller
- 		const vmath::vec3 dir =
+ 		const glm::vec3 dir =
  		    normalize(right * (ndcX * aspect * tanHalf) + up * (ndcY * tanHalf) + forward);
  
 +		// === 화면(NDC) 정규화 조준 강도 mAimScreenT — 플레이어를 NDC 에 투영해 커서 NDC 와의 거리. ===
@@ -38767,7 +38767,7 @@ _비코드 8개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		//   depth = dot(rel, forward), ndc = dot(rel, right|up) / (depth * (aspect)tanHalf).
 +		if (SJH::Scene::Actor *pl = GetOwner())
 +		{
-+			const vmath::vec3 rel   = pl->GetTransform().Translate - camPos;
++			const glm::vec3 rel   = pl->GetTransform().Translate - camPos;
 +			const float       depth = vmath::dot(rel, forward); // view forward 깊이 (>0 = 카메라 앞)
 +			if (depth > 1e-4f)
 +			{
@@ -38855,14 +38855,14 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  #include "Entity/Constants.h"
 -#include <functional>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  class b2World;
 @@ -23,7 +22,6 @@ namespace TopdownShooter::Bootstrap
          int                variant      = 0;          ///< 0~2 -> ENEMY_FRONT[variant % 3]
          float              spriteFps    = Entity::ENEMY_SPRITE_FPS;        ///< 2프레임 walk 애니 속도
-         vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
--        std::function<void(const vmath::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
+         glm::vec4        healthBarColor = glm::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
+-        std::function<void(const glm::vec3&)> onDeathFx; ///< 선택 (미바인딩 가능)
      };
  
      /// @brief 적 1체 조립 — CreateEnemyActor + ENEMY_FRONT 스프라이트/애니 + spawnParent 부착.
@@ -38899,7 +38899,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -#include "scene/actor.h"
 -#include <functional>
 -#include <utility>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -namespace TopdownShooter::Entity::Enemy
 -{
@@ -38911,7 +38911,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 -    class EnemyDeathHandler : public SJH::Scene::Component
 -    {
 -      public:
--        using DeathFx = std::function<void(const vmath::vec3&)>;
+-        using DeathFx = std::function<void(const glm::vec3&)>;
 -        explicit EnemyDeathHandler(DeathFx fx) : mOnDeathFx(std::move(fx)) {}
 -
 -        void OnEnter() override {}
@@ -39032,16 +39032,16 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 ```diff
 @@ -21,6 +21,7 @@ namespace TopdownShooter::Entity::Components
  		bool  mDeathFxFired = false;  // one-shot death guard (mDead 대체)
- 		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // 사망 spawn-at-point seam
- 		std::function<void(const vmath::vec3 &)> mOnHitFx;     // 피격 spawn-at-point seam (hit FX — 적/플레이어 공통)
+ 		std::function<void(const glm::vec3 &)> mOnDeathFx;   // 사망 spawn-at-point seam
+ 		std::function<void(const glm::vec3 &)> mOnHitFx;     // 피격 spawn-at-point seam (hit FX — 적/플레이어 공통)
 +		std::function<void(SJH::Scene::Actor *)> mOnDeath;     // 사망(HP0) 통지 — 생성/파괴 owner(WaveController) observer seam (onDeathFx[vec3]와 별개)
  		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
  
  		// === Timer 중앙화 — BaseEntity 의 MultipleTimer 에 위탁, 핸들만 보유 (비소유) ===
 @@ -53,8 +54,11 @@ namespace TopdownShooter::Entity::Components
  		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
- 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
- 		Life &SetOnHitFx(std::function<void(const vmath::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
+ 		Life &SetOnDeathFx(std::function<void(const glm::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
+ 		Life &SetOnHitFx(std::function<void(const glm::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
 +		Life &SetOnDeath(std::function<void(SJH::Scene::Actor *)> fn) { mOnDeath = std::move(fn); return *this; }
  		Life &SetDeathDelaySeconds(float s) { mDieDelaySeconds = s; return *this; }
  		bool  IsInvincible() const { return mInvincibleTimer && !mInvincibleTimer->IsTimesUp(); }
@@ -39051,7 +39051,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		void OnEnter() override
  		{
 @@ -126,6 +130,7 @@ namespace TopdownShooter::Entity::Components
- 			const vmath::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f);
+ 			const glm::vec3 pos = GetOwner() ? GetOwner()->GetTransform().Translate : glm::vec3(0.0f);
  			if (mSink) mSink->ReactDied(pos);        // 디졸브 시작 (sink 가 구동 — 분해 Task 6)
  			if (mOnDeathFx) mOnDeathFx(pos);         // spawn-at-point seam
 +			if (mOnDeath) mOnDeath(GetOwner());      // 사망 통지(observer) — count↓ + 제거 큐 등록은 owner(WaveController)
@@ -39132,7 +39132,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +        return static_cast<int>(mEnemies.size()); // mEnemies = 생존만 (사망 즉시 dying 이동) — 폴링 없음
      }
  
-     vmath::vec2 WaveController::RandomEdgePos() const
+     glm::vec2 WaveController::RandomEdgePos() const
 @@ -53,27 +92,39 @@ namespace TopdownShooter::Stage
          d.variant      = mSpawnCount % 3; // 3종 순환
  
@@ -39196,7 +39196,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
        private:
          void        SpawnEnemy();
 +        void        OnEnemyDeath(SJH::Scene::Actor* e); // 사망 observer 콜백 — live->dying + 즉시 body 비활성
-         vmath::vec2 RandomEdgePos() const;
+         glm::vec2 RandomEdgePos() const;
          int         LiveCount() const;
  
 @@ -36,10 +51,15 @@ namespace TopdownShooter::Stage
@@ -39350,7 +39350,7 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  			}
 -			if (mSpriteActor)
 -				if (auto *pc = mSpriteActor->GetComponent<Controller::PlayerController>())
--					pc->SetGroundClickCallback([this](const vmath::vec3 &p) {
+-					pc->SetGroundClickCallback([this](const glm::vec3 &p) {
 -						// PlayerController 의 마우스->Ground raycast 결과(p)에 선택 이펙트를 단발 스폰.
 -						if (mVfxLayer && mFxRoot)
 -							if (auto *fx = mVfxLayer->GetSelectedEffect())
@@ -39396,9 +39396,9 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, deps.aspect, 0.1f, 1000.0f);
  			auto &worldCamTransform = worldCamActor->GetTransform();
  			worldCamTransform.SetTransformWithVectors(
--			                     vmath::vec3(0.0f, 4.0f, 8.0f),
-+			                     vmath::vec3(0.0f, 3.0f, 6.0f),
- 			                     vmath::vec3(-30.0f, 0.0f, 0.0))
+-			                     glm::vec3(0.0f, 4.0f, 8.0f),
++			                     glm::vec3(0.0f, 3.0f, 6.0f),
+ 			                     glm::vec3(-30.0f, 0.0f, 0.0))
  			    .PrintTransform();
  
 ```
@@ -39471,7 +39471,7 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include "Entity/Constants.h"
 +#include "Tween/TweenPlayable.h" // 발사 핀치 복귀 (Tweeny Playable)
 +#include <memory>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Controller
  {
@@ -39519,16 +39519,16 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include <spdlog/spdlog.h>
 +#include <tweeny/easing.h>
 +#include <utility>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Controller
  {
 +	namespace
 +	{
 +		// 생성함수 커브로 vec3 를 축별 보간 (t: [0,1] 진행도).
-+		vmath::vec3 EaseVec3(const ActorFolower::EaseFn &fn, float t, const vmath::vec3 &from, const vmath::vec3 &to)
++		glm::vec3 EaseVec3(const ActorFolower::EaseFn &fn, float t, const glm::vec3 &from, const glm::vec3 &to)
 +		{
-+			return vmath::vec3(fn(t, from[0], to[0]),
++			return glm::vec3(fn(t, from[0], to[0]),
 +			                   fn(t, from[1], to[1]),
 +			                   fn(t, from[2], to[2]));
 +		}
@@ -39600,7 +39600,7 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include "scene/actor.h"
  #include "scene/camera.h"
 +#include <functional>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Controller
 @@ -20,6 +21,11 @@ namespace TopdownShooter::Controller
@@ -39640,8 +39640,8 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  
 +		// ── 이동 보간 상태 (카메라 떨림 방지) ─────────────────────────────────
 +		EaseFn      mEaseFn;                                  // 생성함수 커브 (SetUp 에서 default 주입)
-+		vmath::vec3 mEaseStart      = vmath::vec3(0.0f, 0.0f, 0.0f); // 현재 ease 구간 시작 위치
-+		vmath::vec3 mEaseGoal       = vmath::vec3(0.0f, 0.0f, 0.0f); // 현재 ease 구간 목표 위치
++		glm::vec3 mEaseStart      = glm::vec3(0.0f, 0.0f, 0.0f); // 현재 ease 구간 시작 위치
++		glm::vec3 mEaseGoal       = glm::vec3(0.0f, 0.0f, 0.0f); // 현재 ease 구간 목표 위치
 +		float       mEaseProgress   = 1.0f;                   // [0,1] ease 진행도
 +		float       mFollowDuration = 0.18f;                  // ease 구간 길이(초) — catch-up 속도
 +		float       mArriveEps      = 0.01f;                  // EPS — retarget/도착 스레숄드
@@ -39664,14 +39664,14 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include "material/material_uniforms.h"
 @@ -28,14 +29,15 @@
  #include <utility>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 -namespace
 +namespace TopdownShooter::Controller
  {
 -	// [start,end](degree)에 deg 포함? start>end 면 0° wrap.
 +	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
- 	bool InRange(float deg, const vmath::vec2 &r)
+ 	bool InRange(float deg, const glm::vec2 &r)
  	{
  		return (r[0] <= r[1]) ? (deg >= r[0] && deg < r[1]) : (deg >= r[0] || deg < r[1]);
  	}
@@ -39679,7 +39679,7 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +	// !  이 부분은 PlayerSprite Playable로 리팩토링 해야함.
 +	// !dir=(x,z) -> θ=normalize360(deg(atan2(-z,x))) -> 4범위 중 포함 필드. no-match=fallback.
  	TopdownShooter::Entity::EFacing QuantizeByThreshold(
- 	    vmath::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
+ 	    glm::vec2 dir, const TopdownShooter::Playable::FacingThresholdConfig &cfg,
  	    TopdownShooter::Entity::EFacing fallback)
 @@ -49,10 +51,7 @@ namespace
  		if (InRange(deg, cfg.Right)) return E::EFacing::Right;
@@ -39693,8 +39693,8 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  	{
  		// CameraController.cpp 의 BindKey + BindHeldHandler 2단 패턴을 그대로 모방.
 @@ -70,17 +69,15 @@ namespace TopdownShooter::Controller
- 		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
- 		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
+ 		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); });
+ 		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); });
  
 -		// G키 (이산 press) — Damage Composite 트리거. 콜백은 호출 시점 null-check.
 -		mKeyboardInput->BindKey(Action::Damage, GLFW_KEY_G);
@@ -39729,7 +39729,7 @@ _비코드 10개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  		return *this;
  	}
  
--	PlayerController &PlayerController::SetGroundClickCallback(std::function<void(const vmath::vec3 &)> cb)
+-	PlayerController &PlayerController::SetGroundClickCallback(std::function<void(const glm::vec3 &)> cb)
 -	{
 -		mGroundClickCallback = std::move(cb);
 -		return *this;
@@ -39810,7 +39810,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				shadowMat->SetProgram(prog);
 +				shadowMat->SetPass(SJH::Pass::Kind::Transparent);
 +				shadowMat->Properties.Textures["uTex"]   = {shadowTex, 0};
-+				shadowMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 1.0f, 1.0f, 0.5f);
++				shadowMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f);
 +			}
 +			SJH::Material *hitMat = reg.FindSharedMaterial("hitrange_decal_mat");
 +			if (!hitMat)
@@ -39819,7 +39819,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				hitMat->SetProgram(prog);
 +				hitMat->SetPass(SJH::Pass::Kind::Transparent);
 +				hitMat->Properties.Textures["uTex"]   = {circleTex, 0};
-+				hitMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 0.0f, 0.0f, 0.45f);
++				hitMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 0.0f, 0.0f, 0.45f);
 +			}
 +
 +			// ── 충돌 반경 (첫 fixture) ──
@@ -39915,9 +39915,9 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          //       그래서 child 를 self-loop(PingPong 자가 왕복) 로 두고, par 는 묶음+동시 Play 만 담당.
          {
 -            SJH::Scene::Actor* self      = enemy.get();             // 이동 후에도 동일 heap Actor — 댕글링 없음
--            const vmath::vec3  baseScale = enemy->GetTransform().Scale; // 베이스 스케일 보존 (factory 설정 존중)
+-            const glm::vec3  baseScale = enemy->GetTransform().Scale; // 베이스 스케일 보존 (factory 설정 존중)
 +            SJH::Scene::Actor* self      = renderActor;            // root 자식 — 주소 안정(enemy children 보유)
-+            const vmath::vec3  baseScale = renderActor->GetTransform().Scale; // 신규 Actor 기본 (1,1,1)
++            const glm::vec3  baseScale = renderActor->GetTransform().Scale; // 신규 Actor 기본 (1,1,1)
  
              // child A — Y 스케일 펄스 (0.4초 편도, 왕복 0.8초)
              auto scaleTween = tweeny::from(0.85f).to(1.15f)
@@ -39954,7 +39954,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <tweeny/tweeny.h>                 // tweeny::from / easing (tween 정의)
 +#include <box2d/box2d.h>               // b2Shape / b2PolygonShape / b2Fixture
 +#include <spdlog/spdlog.h>             // spdlog::error (자원 로드 실패 가드)
- #include <vmath.h>                         // vmath::vec3 (Transform.Scale)
+ #include <glm/glm.hpp>                         // glm::vec3 (Transform.Scale)
  
 +#include <algorithm>                   // std::max
  #include <memory>  // std::make_unique (Join 자식 생성)
@@ -40015,7 +40015,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				shadowMat->SetProgram(prog);
 +				shadowMat->SetPass(SJH::Pass::Kind::Transparent);
 +				shadowMat->Properties.Textures["uTex"]   = {shadowTex, 0};
-+				shadowMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 1.0f, 1.0f, 0.5f);
++				shadowMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f);
 +			}
 +			SJH::Material *hitMat = reg.FindSharedMaterial("hitrange_decal_mat");
 +			if (!hitMat)
@@ -40133,7 +40133,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		if (mStudioSystem) mStudioSystem->setParameterByName(name.c_str(), value);
 +	}
 +
- 	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
+ 	void AudioSystem::SetListener(const glm::vec3 &pos, const glm::vec3 &forward, const glm::vec3 &up)
  	{
  		FMOD_3D_ATTRIBUTES attr = {};
 ```
@@ -40159,7 +40159,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include <spdlog/spdlog.h>
  #include <optional>
 +#include <string>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Audio
 @@ -31,9 +32,26 @@ namespace TopdownShooter::Audio
@@ -40198,7 +40198,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "playable/playable_base.h"
  #include <optional>
 +#include <string>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace FMOD::Studio { class EventDescription; class EventInstance; }
 @@ -22,6 +23,13 @@ namespace TopdownShooter::Audio
@@ -40552,13 +40552,13 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  				mDustTimer->Reset();
  			}
  		}
--		void Dash(vmath::vec2 dir)   { DoImpulse(dir); }                       // BaseEntity 기반(대시)
-+		void Dash(vmath::vec2 dir)   { 
+-		void Dash(glm::vec2 dir)   { DoImpulse(dir); }                       // BaseEntity 기반(대시)
++		void Dash(glm::vec2 dir)   { 
 +			auto* plife = dynamic_cast<Components::PlayerLifeComponent*>(mLife);
 +			plife->DoInvincible();
 +			DoImpulse(dir); 
 +		}                       // BaseEntity 기반(대시)
- 		void Attack(vmath::vec2 aim) { if (mWeapon) mWeapon->UseWeapon(aim); } // ranged bullet
+ 		void Attack(glm::vec2 aim) { if (mWeapon) mWeapon->UseWeapon(aim); } // ranged bullet
  	};
  } // namespace TopdownShooter::Entity
 ```
@@ -40625,26 +40625,26 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		// `+=` 누적 — 동시 키 (W+D 대각 등) 지원. Update 끝의 mInputValue=0 reset 이 매 프레임 보장.
  		// 대각 √2 가속은 Movement::DoForward 의 normalize(dir) 가 자동 정규화.
  		// (held 핸들러는 매 프레임 호출 -> 로그 스팸 방지 위해 discrete(G/클릭)만 로깅. spec §2.)
--		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); });
--		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); });
--		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); });
--		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { mInputValue += glm::vec3(0.0f, 0.0f, -1.0f); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); });
+-		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); });
 +		mKeyboardInput->BindHeldHandler(Action::MoveForward, [this] { 
-+			mInputValue += vmath::vec3(0.0f, 0.0f, -1.0f); 
++			mInputValue += glm::vec3(0.0f, 0.0f, -1.0f); 
 +		});
 +		mKeyboardInput->BindHeldHandler(Action::MoveBack, [this] { 
-+			mInputValue += vmath::vec3(0.0f, 0.0f, 1.0f); 
++			mInputValue += glm::vec3(0.0f, 0.0f, 1.0f); 
 +		});
 +		mKeyboardInput->BindHeldHandler(Action::MoveLeft, [this] { 
-+			mInputValue += vmath::vec3(-1.0f, 0.0f, 0.0f); 
++			mInputValue += glm::vec3(-1.0f, 0.0f, 0.0f); 
 +		});
 +		mKeyboardInput->BindHeldHandler(Action::MoveRight, [this] { 
-+			mInputValue += vmath::vec3(1.0f, 0.0f, 0.0f); 
++			mInputValue += glm::vec3(1.0f, 0.0f, 0.0f); 
 +		});
 +		mKeyboardInput->BindHeldHandler(Action::DashImpulse, [this] {
 +			if (auto *owner = GetOwner())
 +			{
-+				const vmath::vec2 aimXZ(mPrevInputValue[0], mPrevInputValue[2]);
++				const glm::vec2 aimXZ(mPrevInputValue[0], mPrevInputValue[2]);
 +				if(auto* pe = owner->GetComponent<Entity::PlayerEntity>()) {
 +					pe->Dash(aimXZ); 
 +					return;
@@ -40673,11 +40673,11 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -90,6 +91,7 @@ namespace TopdownShooter::Controller
  		std::function<void()> mFireCallback;   // 좌클릭
  
- 		vmath::vec3 mInputValue {0.0f};
-+		vmath::vec3 mPrevInputValue {0.0f};
+ 		glm::vec3 mInputValue {0.0f};
++		glm::vec3 mPrevInputValue {0.0f};
  
  		// 매 프레임 마우스->Ground raycast 로 갱신되는 조준 정보 — PlayerActor(owner) 위치 + 커서 Ground 좌표.
- 		vmath::vec3 mAimPoint {0.0f};                  // 커서 Ground 월드 좌표 (y≈0)
+ 		glm::vec3 mAimPoint {0.0f};                  // 커서 Ground 월드 좌표 (y≈0)
 ```
 
 `apps/_MyApp_/src/Physics/Constants.h`
@@ -40871,21 +40871,21 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -143,13 +143,13 @@ namespace TopdownShooter::Bootstrap
  			shadow->AddComponent<SJH::Scene::MeshRenderer>(plane, shadowMat, /*queueOffset*/ 0);
  			shadow->GetTransform().EulerRot[0] = -90.0f;                        // XY → XZ 눕힘
- 			shadow->GetTransform().Scale       = vmath::vec3(shadowD, 1.0f, shadowD);
--			shadow->GetTransform().Translate   = vmath::vec3(0.0f, 0.02f, 0.0f); // z-fight 회피
-+			shadow->GetTransform().Translate   = vmath::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
+ 			shadow->GetTransform().Scale       = glm::vec3(shadowD, 1.0f, shadowD);
+-			shadow->GetTransform().Translate   = glm::vec3(0.0f, 0.02f, 0.0f); // z-fight 회피
++			shadow->GetTransform().Translate   = glm::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
  
  			auto *circle = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_hitrange"));
  			circle->AddComponent<SJH::Scene::MeshRenderer>(plane, hitMat, /*queueOffset*/ 1);
  			circle->GetTransform().EulerRot[0] = -90.0f;
- 			circle->GetTransform().Scale       = vmath::vec3(hitD, 1.0f, hitD);
--			circle->GetTransform().Translate   = vmath::vec3(0.0f, 0.03f, 0.0f);
-+			circle->GetTransform().Translate   = vmath::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
+ 			circle->GetTransform().Scale       = glm::vec3(hitD, 1.0f, hitD);
+-			circle->GetTransform().Translate   = glm::vec3(0.0f, 0.03f, 0.0f);
++			circle->GetTransform().Translate   = glm::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
  		}
  	} // namespace
  
 @@ -231,7 +231,7 @@ namespace TopdownShooter::Bootstrap
-             life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); });
+             life->SetOnHitFx([](const glm::vec3& p) { VFX::Spawn("hit", p); });
  
          // 발밑 그림자 + 피격범위 원 (groundActor 자식, renderActor 와 형제). AddChild 전 = pre-entry.
 -        AttachGroundDecals(*enemy);
@@ -40917,16 +40917,16 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -242,13 +243,13 @@ namespace TopdownShooter::Bootstrap
  			shadow->AddComponent<SJH::Scene::MeshRenderer>(plane, shadowMat, /*queueOffset*/ 0);
  			shadow->GetTransform().EulerRot[0] = -90.0f;                        // XY → XZ 눕힘
- 			shadow->GetTransform().Scale       = vmath::vec3(shadowD, 1.0f, shadowD);
--			shadow->GetTransform().Translate   = vmath::vec3(0.0f, 0.02f, 0.0f); // z-fight 회피
-+			shadow->GetTransform().Translate   = vmath::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
+ 			shadow->GetTransform().Scale       = glm::vec3(shadowD, 1.0f, shadowD);
+-			shadow->GetTransform().Translate   = glm::vec3(0.0f, 0.02f, 0.0f); // z-fight 회피
++			shadow->GetTransform().Translate   = glm::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
  
  			auto *circle = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_hitrange"));
  			circle->AddComponent<SJH::Scene::MeshRenderer>(plane, hitMat, /*queueOffset*/ 1);
  			circle->GetTransform().EulerRot[0] = -90.0f;
- 			circle->GetTransform().Scale       = vmath::vec3(hitD, 1.0f, hitD);
--			circle->GetTransform().Translate   = vmath::vec3(0.0f, 0.03f, 0.0f);
-+			circle->GetTransform().Translate   = vmath::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
+ 			circle->GetTransform().Scale       = glm::vec3(hitD, 1.0f, hitD);
+-			circle->GetTransform().Translate   = glm::vec3(0.0f, 0.03f, 0.0f);
++			circle->GetTransform().Translate   = glm::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
  		}
  	} // namespace
  
@@ -40985,10 +40985,10 @@ _비코드 2개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  		{
 -			auto *weapon = owner->GetComponent<Entity::Components::Weapon>();
 -			if (weapon != nullptr)
--				weapon->UseWeapon(vmath::vec2(mAimDirection[0], -mAimDirection[2]));
+-				weapon->UseWeapon(glm::vec2(mAimDirection[0], -mAimDirection[2]));
 +			auto *pe = owner->GetComponent<Entity::PlayerEntity>();
 +			if (pe != nullptr)
-+				pe->UseWeapon(vmath::vec2(mAimDirection[0], -mAimDirection[2]));
++				pe->UseWeapon(glm::vec2(mAimDirection[0], -mAimDirection[2]));
  		}
  
  		// 오디오/VFX Composite (onFire) — 주입됐으면.
@@ -41071,7 +41071,7 @@ _비코드 11개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		return vol;
 +	}
 +
- 	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
+ 	void AudioSystem::SetListener(const glm::vec3 &pos, const glm::vec3 &forward, const glm::vec3 &up)
  	{
  		FMOD_3D_ATTRIBUTES attr = {};
 ```
@@ -41236,7 +41236,7 @@ _비코드 11개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -				{
 -					auto seq = std::make_unique<SJH::Playable::SequencePlayable>();
 -					seq->Append(std::make_unique<TopdownShooter::VFX::EffekseerPlayable>(
--					    vfx.GetManager(), muzzle, vmath::vec3(0.0f),
+-					    vfx.GetManager(), muzzle, glm::vec3(0.0f),
 -					    TopdownShooter::VFX::TrackPolicy::Static));
 -
 -					auto par = std::make_unique<SJH::Playable::ParallelPlayable>();
@@ -41372,7 +41372,7 @@ _비코드 11개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  #include <functional>
 -#include <utility>                                     // std::move
 +#include <utility> // std::move
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Entity
 @@ -16,29 +16,40 @@ namespace TopdownShooter::Entity
@@ -41385,10 +41385,10 @@ _비코드 11개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		Components::Weapon *mWeapon = nullptr;
  
  		// 이동 자리 dust FX — interval 마다 1회. timer 는 BaseEntity 중앙 컨테이너 위탁(핸들만 보유).
--		std::function<void(const vmath::vec3 &)> mOnMoveFx;            // spawn-at-point seam (빌더가 VFX::Spawn 주입)
+-		std::function<void(const glm::vec3 &)> mOnMoveFx;            // spawn-at-point seam (빌더가 VFX::Spawn 주입)
 -		SJH::Timer::Timer*                       mDustTimer    = nullptr; // BaseEntity::Timers() 핸들 (비소유)
 -		float                                    mDustInterval = 0.2f;    // 이동 중 dust 스폰 간격(초)
-+		std::function<void(const vmath::vec3 &)> mOnMoveFx; // spawn-at-point seam (빌더가 VFX::Spawn 주입)
++		std::function<void(const glm::vec3 &)> mOnMoveFx; // spawn-at-point seam (빌더가 VFX::Spawn 주입)
 +		SJH::Timer::Timer *mDustTimer = nullptr;            // BaseEntity::Timers() 핸들 (비소유)
 +		float mDustInterval = 0.2f;                         // 이동 중 dust 스폰 간격(초)
  
@@ -41411,15 +41411,15 @@ _비코드 11개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		}
  
  		// dust FX seam 주입 (빌더 전용 fluent)
--		PlayerEntity &SetOnMoveFx(std::function<void(const vmath::vec3 &)> fx) { mOnMoveFx = std::move(fx); return *this; }
-+		PlayerEntity &SetOnMoveFx(std::function<void(const vmath::vec3 &)> fx)
+-		PlayerEntity &SetOnMoveFx(std::function<void(const glm::vec3 &)> fx) { mOnMoveFx = std::move(fx); return *this; }
++		PlayerEntity &SetOnMoveFx(std::function<void(const glm::vec3 &)> fx)
 +		{
 +			mOnMoveFx = std::move(fx);
 +			return *this;
 +		}
  
  		// verb
- 		void DoForward(vmath::vec2 dir, float dt) override
+ 		void DoForward(glm::vec2 dir, float dt) override
  		{
 -			if (mMovement) mMovement->DoForward(dir, dt); // IMovable
 +			if (mMovement)
@@ -41431,9 +41431,9 @@ _비코드 11개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
  				mDustTimer->Reset();
  			}
  		}
--		void Dash(vmath::vec2 dir)   { 
+-		void Dash(glm::vec2 dir)   { 
 -			auto* plife = dynamic_cast<Components::PlayerLifeComponent*>(mLife);
-+		void Dash(vmath::vec2 dir)
++		void Dash(glm::vec2 dir)
 +		{
 +			const bool wasActive = IsImpulseActive(); // rising-edge 판정용 (직전 버스트 활성?)
 … (+22줄 생략)
@@ -41479,9 +41479,9 @@ _… diff 생략: 코드 파일 10개 더 (파일 수 캡)_
  
          // hit FX seam — 적 Life 피격 시 hit.efk (Player 와 공통, 빌더가 VFX::Spawn 주입).
          if (auto* life = enemy->GetComponent<Entity::Components::Life>())
--            life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); });
-+            life->SetOnHitFx([](const vmath::vec3& p) { VFX::Spawn("hit", p); })
-+                .SetOnDamageNumber([](int d, const vmath::vec3& p) { WorldText::SpawnDamage(d, p); });
+-            life->SetOnHitFx([](const glm::vec3& p) { VFX::Spawn("hit", p); });
++            life->SetOnHitFx([](const glm::vec3& p) { VFX::Spawn("hit", p); })
++                .SetOnDamageNumber([](int d, const glm::vec3& p) { WorldText::SpawnDamage(d, p); });
  
          // 발밑 그림자 + 피격범위 원 (groundActor 자식, renderActor 와 형제). AddChild 전 = pre-entry.
  		AttachGroundDecals(*enemy, ENEMY_DECAL_Y);
@@ -41501,11 +41501,11 @@ _… diff 생략: 코드 파일 10개 더 (파일 수 캡)_
  
  		// VFX seam 주입 — 컴포넌트는 VFX 를 모르고, 빌더가 VFX::Spawn 람다를 주입 (director->Play 패턴).
  		if (auto *life = spriteActor->GetComponent<Entity::Components::Life>())
--			life->SetOnHitFx([](const vmath::vec3 &p) { VFX::Spawn("hit", p); });
-+			life->SetOnHitFx([](const vmath::vec3 &p) { VFX::Spawn("hit", p); })
-+				.SetOnDamageNumber([](int d, const vmath::vec3 &p) { WorldText::SpawnDamage(d, p); });
+-			life->SetOnHitFx([](const glm::vec3 &p) { VFX::Spawn("hit", p); });
++			life->SetOnHitFx([](const glm::vec3 &p) { VFX::Spawn("hit", p); })
++				.SetOnDamageNumber([](int d, const glm::vec3 &p) { WorldText::SpawnDamage(d, p); });
  		if (auto *player = spriteActor->GetComponent<Entity::PlayerEntity>())
- 			player->SetOnMoveFx([](const vmath::vec3 &p) { VFX::Spawn("dust", p); });
+ 			player->SetOnMoveFx([](const glm::vec3 &p) { VFX::Spawn("dust", p); });
  		if (auto *weapon = spriteActor->GetComponent<Entity::Components::Weapon>())
 ```
 
@@ -41513,26 +41513,26 @@ _… diff 생략: 코드 파일 10개 더 (파일 수 캡)_
 ```diff
 @@ -21,6 +21,7 @@ namespace TopdownShooter::Entity::Components
  		bool  mDeathFxFired = false;  // one-shot death guard (mDead 대체)
- 		std::function<void(const vmath::vec3 &)> mOnDeathFx;   // 사망 spawn-at-point seam
- 		std::function<void(const vmath::vec3 &)> mOnHitFx;     // 피격 spawn-at-point seam (hit FX — 적/플레이어 공통)
-+		std::function<void(int, const vmath::vec3 &)> mOnDamageNumber; // 데미지 숫자 seam (damage+pos — 빌더가 WorldText::SpawnDamage 주입)
+ 		std::function<void(const glm::vec3 &)> mOnDeathFx;   // 사망 spawn-at-point seam
+ 		std::function<void(const glm::vec3 &)> mOnHitFx;     // 피격 spawn-at-point seam (hit FX — 적/플레이어 공통)
++		std::function<void(int, const glm::vec3 &)> mOnDamageNumber; // 데미지 숫자 seam (damage+pos — 빌더가 WorldText::SpawnDamage 주입)
  		std::function<void(SJH::Scene::Actor *)> mOnDeath;     // 사망(HP0) 통지 — 생성/파괴 owner(WaveController) observer seam (onDeathFx[vec3]와 별개)
  		IActorPresentation *mSink = nullptr;                   // OnEnter 1회 캐시
  
 @@ -54,6 +55,7 @@ namespace TopdownShooter::Entity::Components
  		Life &SetIFrameSeconds(float s) { mIFrameSeconds = s; return *this; }
- 		Life &SetOnDeathFx(std::function<void(const vmath::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
- 		Life &SetOnHitFx(std::function<void(const vmath::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
-+		Life &SetOnDamageNumber(std::function<void(int, const vmath::vec3 &)> fn) { mOnDamageNumber = std::move(fn); return *this; }
+ 		Life &SetOnDeathFx(std::function<void(const glm::vec3 &)> fx) { mOnDeathFx = std::move(fx); return *this; }
+ 		Life &SetOnHitFx(std::function<void(const glm::vec3 &)> fx) { mOnHitFx = std::move(fx); return *this; }
++		Life &SetOnDamageNumber(std::function<void(int, const glm::vec3 &)> fn) { mOnDamageNumber = std::move(fn); return *this; }
  		Life &SetOnDeath(std::function<void(SJH::Scene::Actor *)> fn) { mOnDeath = std::move(fn); return *this; }
  		Life &SetDeathDelaySeconds(float s) { mDieDelaySeconds = s; return *this; }
  		bool  IsInvincible() const { return mInvincibleTimer && !mInvincibleTimer->IsTimesUp(); }
 @@ -115,6 +117,8 @@ namespace TopdownShooter::Entity::Components
  			if (mSink) mSink->ReactDamaged(damage);  // Template-Method forward
  			if (mOnHitFx)                            // 피격 위치에 hit FX (mOnDeathFx 대칭 seam — 빌더가 VFX::Spawn 주입)
- 				mOnHitFx(GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f));
+ 				mOnHitFx(GetOwner() ? GetOwner()->GetTransform().Translate : glm::vec3(0.0f));
 +			if (mOnDamageNumber)                     // 피격 위치에 데미지 숫자 (빌더가 WorldText::SpawnDamage 주입)
-+				mOnDamageNumber(damage, GetOwner() ? GetOwner()->GetTransform().Translate : vmath::vec3(0.0f));
++				mOnDamageNumber(damage, GetOwner() ? GetOwner()->GetTransform().Translate : glm::vec3(0.0f));
  			if (mInvincibleTimer) mInvincibleTimer->Reset();   // passed=0 -> 무적 발동 (없으면 no-op = 무적 없음)
  			if (!IsAlive())
  			{
@@ -41569,11 +41569,11 @@ _… diff 생략: 코드 파일 10개 더 (파일 수 캡)_
 +        gFont   = font;
 +    }
 +
-+    void SpawnDamage(int damage, const vmath::vec3& pos)
++    void SpawnDamage(int damage, const glm::vec3& pos)
 +    {
 +        if (gFxRoot == nullptr || gFont == nullptr) return;   // 미등록 — no-op (VFX::Spawn 동일)
 +        Spawns::WorldTextStyle style;
-+        style.color = vmath::vec4(1.0f, 0.2f, 0.2f, 1.0f);    // 빨강 (피해 강조)
++        style.color = glm::vec4(1.0f, 0.2f, 0.2f, 1.0f);    // 빨강 (피해 강조)
 +        style.scale = 0.5f;
 +        Spawns::SpawnWorldText(*gFxRoot, gFont, pos, "-" + std::to_string(damage), style);
 +    }
@@ -41594,7 +41594,7 @@ _… diff 생략: 코드 파일 10개 더 (파일 수 캡)_
 +
 +    /// @brief 데미지 숫자 단발 spawn ("-N" 빨강 0.5배). 컨텍스트 미등록/폰트 없음 → no-op.
 +    ///        VFX::Spawn 대칭 — 빌더가 Life::SetOnDamageNumber seam 에 주입.
-+    void SpawnDamage(int damage, const vmath::vec3& pos);
++    void SpawnDamage(int damage, const glm::vec3& pos);
 +}
 +
  #endif // __TOPDOWNSHOOTER_SPAWNS_WORLD_TEXT_INSTANCE_H__
@@ -41779,8 +41779,8 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +				RaycastHit h;
 +				h.body     = fx->GetBody();
 +				h.actor    = a;
-+				h.point    = vmath::vec2(point.x, point.y);
-+				h.normal   = vmath::vec2(normal.x, normal.y);
++				h.point    = glm::vec2(point.x, point.y);
++				h.normal   = glm::vec2(normal.x, normal.y);
 +				h.fraction = fraction;
 +				h.hit      = true;
 +				results.push_back(h);
@@ -41789,18 +41789,18 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		};
  	} // anonymous namespace
  
- 	RaycastHit Raycast(b2Body* body, vmath::vec2 start, vmath::vec2 dir, float maxDistance)
+ 	RaycastHit Raycast(b2Body* body, glm::vec2 start, glm::vec2 dir, float maxDistance)
 @@ -123,4 +156,41 @@ namespace TopdownShooter::Physics
  		}
  		return cb.result;
  	}
 +
-+	std::vector<RaycastHit> RaycastAll(b2World& world, vmath::vec2 start, vmath::vec2 dir,
++	std::vector<RaycastHit> RaycastAll(b2World& world, glm::vec2 start, glm::vec2 dir,
 +	                                   float maxDistance, PhysicsLayer mask,
 +	                                   SJH::Scene::Actor* ignore, bool hitSensors)
 +	{
 +		std::vector<RaycastHit> out;
-+		vmath::vec2 d;
++		glm::vec2 d;
 +		if (maxDistance <= 0.0f || !NormalizeDir(dir, d))
 +			return out;
 +
@@ -41835,7 +41835,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #include "Physics/PhysicsLayer.h"
  #include <box2d/box2d.h>
 +#include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace SJH::Scene { class Actor; }
 @@ -37,6 +38,16 @@ namespace TopdownShooter::Physics
@@ -41848,7 +41848,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +	///          body 단위 dedup (한 body 가 여러 fixture 여도 1회) + 거리(fraction) 오름차순 정렬.
 +	/// @param mask  맞출 레이어 (예: PhysicsLayer::Enemy — 벽 무시 관통)
 +	std::vector<RaycastHit> RaycastAll(b2World& world,
-+	                                   vmath::vec2 start, vmath::vec2 dir, float maxDistance,
++	                                   glm::vec2 start, glm::vec2 dir, float maxDistance,
 +	                                   PhysicsLayer mask,
 +	                                   SJH::Scene::Actor* ignore = nullptr,
 +	                                   bool hitSensors = false);
@@ -41890,7 +41890,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		class RotatingHitscanLaser : public SJH::Scene::Component
 +		{
 +		  public:
-+			RotatingHitscanLaser(b2World *world, vmath::vec2 startBox2d, float startAngle,
++			RotatingHitscanLaser(b2World *world, glm::vec2 startBox2d, float startAngle,
 +			                     int damage, float range, SJH::Scene::Actor *ignore)
 +			    : mWorld(world), mStart(startBox2d), mStartAngle(startAngle),
 +			      mRange(range), mDamage(damage), mIgnore(ignore),
@@ -41908,7 +41908,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +				const float       elapsed = mTimer.GetPassedTime();
 +				const float       theta   = mStartAngle + Entity::ULTIMATE_ROT_PER_SEC * elapsed;
-+				const vmath::vec2 dir(std::cos(theta), std::sin(theta));
++				const glm::vec2 dir(std::cos(theta), std::sin(theta));
 +
 +				auto hits = Physics::RaycastAll(*mWorld, mStart, dir, mRange,
 +				                                Physics::PhysicsLayer::Enemy, mIgnore);
@@ -41926,7 +41926,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +
 +		  private:
 +			b2World           *mWorld;
-+			vmath::vec2        mStart;      // box2d 시작점(플레이어)
++			glm::vec2        mStart;      // box2d 시작점(플레이어)
 +			float              mStartAngle; // box2d 시작 각도(라디안)
 +			float              mRange;
 +			int                mDamage;
@@ -41936,7 +41936,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +		};
 +	} // namespace
 +
-+	void SpawnUltimateLaser(b2World *world, const vmath::vec3 &centerWorld,
++	void SpawnUltimateLaser(b2World *world, const glm::vec3 &centerWorld,
 +	                        float startAngleBox2d, SJH::Scene::Actor *shooter)
 +	{
 … (+27줄 생략)
@@ -41948,7 +41948,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +#ifndef __TOPDOWNSHOOTER_SPAWNS_ULTIMATE_LASER_H__
 +#define __TOPDOWNSHOOTER_SPAWNS_ULTIMATE_LASER_H__
 +
-+#include <vmath.h>
++#include <glm/glm.hpp>
 +
 +// fwd — 포인터만 노출.
 +class b2World;
@@ -41966,7 +41966,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 +    /// @param centerWorld     발동 중심 (플레이어 world 좌표). 3초간 고정.
 +    /// @param startAngleBox2d 시작 회전각 (box2d 평면 라디안 = atan2(box2dForward.y, box2dForward.x)).
 +    /// @param shooter         발사 주체 (레이캐스트 ignore — 자해 방지). nullptr 허용.
-+    void SpawnUltimateLaser(b2World* world, const vmath::vec3& centerWorld,
++    void SpawnUltimateLaser(b2World* world, const glm::vec3& centerWorld,
 +                            float startAngleBox2d, SJH::Scene::Actor* shooter);
 +}
 +
@@ -41990,7 +41990,7 @@ _비코드 5개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 @@ -29,6 +29,10 @@ namespace TopdownShooter::VFX
      /// @param yaw Y축 회전(라디안) — 발사 방향 등. 기본 0(회전 없음).
      void SetSpawnContext(SJH::Scene::Actor* fxRoot, VFXSystem* vfx);
-     void Spawn(const char* key, const vmath::vec3& pos, float yaw = 0.0f);
+     void Spawn(const char* key, const glm::vec3& pos, float yaw = 0.0f);
 +
 +    /// @brief 등록된 spawn context 조회 — 단발 Spawn 으로 안 되는 합성(회전/지속 VFX, UltimateLaser)용. 미등록 시 nullptr.
 +    SJH::Scene::Actor* GetSpawnFxRoot();
@@ -42090,7 +42090,7 @@ _비코드 135개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +#endif
  #include <spdlog/spdlog.h>
  #include <string>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
  namespace TopdownShooter::Audio
  {
@@ -42330,7 +42330,7 @@ _비코드 135개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 +		// [[maybe_unused]] — FMOD 미빌드 시 사용처가 #ifdef 로 빠져 clang
 +		// -Werror=unused-private-field 에 걸리는 것을 방지 (raw 포인터 멤버 한정).
 +		[[maybe_unused]] ::FMOD::Studio::EventInstance *mInstance = nullptr;
- 		std::optional<vmath::vec3>        mWorldPos;
+ 		std::optional<glm::vec3>        mWorldPos;
  	};
  }
 ```
@@ -42583,18 +42583,18 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -#include <vector>
 -
 -#include <sb7.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -class Model{
 -public:
--	std::vector<vmath::vec3> vPositions;
--	std::vector<vmath::vec2> vTexCoords;
--	std::vector<vmath::vec3> vNormals;
+-	std::vector<glm::vec3> vPositions;
+-	std::vector<glm::vec2> vTexCoords;
+-	std::vector<glm::vec3> vNormals;
 -	std::vector<GLuint> vIndices;
 -
 -	GLuint diffuseMap, specularMap;
 -	float shininess;
--	vmath::vec3 defaultAmbient, defaultDiffuse, defaultSpecular;
+-	glm::vec3 defaultAmbient, defaultDiffuse, defaultSpecular;
 -
 -private:
 -	GLuint VAO;
@@ -42609,9 +42609,9 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		useDiffuseMap = false;
 -		useSpecularMap = false;
 -
--		defaultAmbient = vmath::vec3(1.0f, 1.0f, 1.0f);
--		defaultDiffuse = vmath::vec3(1.0f, 1.0f, 1.0f);
--		defaultSpecular = vmath::vec3(0.0f, 0.0f, 0.0f);
+-		defaultAmbient = glm::vec3(1.0f, 1.0f, 1.0f);
+-		defaultDiffuse = glm::vec3(1.0f, 1.0f, 1.0f);
+-		defaultSpecular = glm::vec3(0.0f, 0.0f, 0.0f);
 -	} 
 -	// �Ҹ���
 -	~Model() {
@@ -42639,7 +42639,7 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -	void setupMesh(int _numVertices, GLfloat *_vPositions, GLfloat *_vTexCoords = NULL, GLfloat* _vNormals = NULL) {
 -		// 1. copy data from arrays
 -		for (int i = 0; i < _numVertices; i++) {
--			vmath::vec3 position;
+-			glm::vec3 position;
 -			position[0] = _vPositions[i * 3 + 0];
 -			position[1] = _vPositions[i * 3 + 1];
 -			position[2] = _vPositions[i * 3 + 2];
@@ -42648,7 +42648,7 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -
 -		if (_vTexCoords) {
 -			for (int i = 0; i < _numVertices; i++) {
--				vmath::vec2 texCoords;
+-				glm::vec2 texCoords;
 -				texCoords[0] = _vTexCoords[i * 2 + 0];
 -				texCoords[1] = _vTexCoords[i * 2 + 1];
 -				this->vTexCoords.push_back(texCoords);
@@ -42661,7 +42661,7 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 @@ -1,337 +0,0 @@
 -// sb6.h ��� ������ ���Խ�Ų��.
 -#include <sb7.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -#include <shader.h>
 -#include <vector>
 -
@@ -42838,18 +42838,18 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -#include <vector>
 -
 -#include <sb7.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -
 -class Model{
 -public:
--	std::vector<vmath::vec3> vPositions;
--	std::vector<vmath::vec2> vTexCoords;
--	std::vector<vmath::vec3> vNormals;
+-	std::vector<glm::vec3> vPositions;
+-	std::vector<glm::vec2> vTexCoords;
+-	std::vector<glm::vec3> vNormals;
 -	std::vector<GLuint> vIndices;
 -
 -	GLuint diffuseMap, specularMap;
 -	float shininess;
--	vmath::vec3 defaultAmbient, defaultDiffuse, defaultSpecular;
+-	glm::vec3 defaultAmbient, defaultDiffuse, defaultSpecular;
 -
 -private:
 -	GLuint VAO;
@@ -42864,9 +42864,9 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -		useDiffuseMap = false;
 -		useSpecularMap = false;
 -
--		defaultAmbient = vmath::vec3(1.0f, 1.0f, 1.0f);
--		defaultDiffuse = vmath::vec3(1.0f, 1.0f, 1.0f);
--		defaultSpecular = vmath::vec3(0.0f, 0.0f, 0.0f);
+-		defaultAmbient = glm::vec3(1.0f, 1.0f, 1.0f);
+-		defaultDiffuse = glm::vec3(1.0f, 1.0f, 1.0f);
+-		defaultSpecular = glm::vec3(0.0f, 0.0f, 0.0f);
 -	} 
 -	// �Ҹ���
 -	~Model() {
@@ -42894,7 +42894,7 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -	void setupMesh(int _numVertices, GLfloat *_vPositions, GLfloat *_vTexCoords = NULL, GLfloat* _vNormals = NULL) {
 -		// 1. copy data from arrays
 -		for (int i = 0; i < _numVertices; i++) {
--			vmath::vec3 position;
+-			glm::vec3 position;
 -			position[0] = _vPositions[i * 3 + 0];
 -			position[1] = _vPositions[i * 3 + 1];
 -			position[2] = _vPositions[i * 3 + 2];
@@ -42903,7 +42903,7 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -
 -		if (_vTexCoords) {
 -			for (int i = 0; i < _numVertices; i++) {
--				vmath::vec2 texCoords;
+-				glm::vec2 texCoords;
 -				texCoords[0] = _vTexCoords[i * 2 + 0];
 -				texCoords[1] = _vTexCoords[i * 2 + 1];
 -				this->vTexCoords.push_back(texCoords);
@@ -42918,7 +42918,7 @@ _비코드 259개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생�
 -
 -// sb7.h ��� ������ ���Խ�Ų��.
 -#include <sb7.h>
--#include <vmath.h>
+-#include <glm/glm.hpp>
 -#include <shader.h>
 -#include <vector>
 -
@@ -43470,7 +43470,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
 + *  - 가변 델타 타임 (@ref SJH::DeltaTime) / 고정 스텝 (@ref SJH::FixedTime).
 + *  - 텍스트 파일 로드 (@ref SJH::LoadTextFile) - 셰이더 소스 등.
 + *  - macOS GLFW CWD 부수효과 보정 (@ref SJH::CrossPlatformDir).
-+ *  - @c SJH::Size 타입 별칭 (@c vmath::vec2 래핑).
++ *  - @c SJH::Size 타입 별칭 (@c glm::vec2 래핑).
 + *
 + *  ### 비-책임
 + *  - [X] GL 로더(@c gl3w) 포함 금지 - GL 비의존 레이어.
@@ -43516,8 +43516,8 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  
  namespace SJH
  {
-+	/// @brief 2D 크기 표현을 위한 @c vmath::vec2 별칭. x=width, y=height.
- 	typedef vmath::vec2 Size;
++	/// @brief 2D 크기 표현을 위한 @c glm::vec2 별칭. x=width, y=height.
+ 	typedef glm::vec2 Size;
  
  	/**
 @@ -53,7 +79,7 @@ namespace SJH
@@ -43570,7 +43570,7 @@ _비코드 6개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  #ifndef __SJH_CONSTANTS_H__
  #define __SJH_CONSTANTS_H__
  
- #include <vmath.h>
+ #include <glm/glm.hpp>
  #include <vector>
  #include "GL/gl3w.h"
 -
@@ -44045,7 +44045,7 @@ _… diff 생략: 코드 파일 113개 더 (커밋 줄 수 캡)_
  		if (r != FMOD_OK || !desc)
  		{
 @@ -141,13 +155,15 @@ namespace TopdownShooter::Audio
- 	void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward, const vmath::vec3 &up)
+ 	void AudioSystem::SetListener(const glm::vec3 &pos, const glm::vec3 &forward, const glm::vec3 &up)
  	{
  #ifdef SJH_HAS_FMOD
 +		// Studio listener - position/velocity/forward/up 4벡터를 FMOD_3D_ATTRIBUTES 한 struct 로 묶어 송신.
@@ -44140,9 +44140,9 @@ _… diff 생략: 코드 파일 113개 더 (커밋 줄 수 캡)_
 +		/// @param pos     listener(카메라) 월드 좌표.
 +		/// @param forward listener 바라보는 방향 (단위 벡터 권장).
 +		/// @param up      listener up 벡터 (forward 와 수직 + 단위 길이 권장).
- 		void SetListener(const vmath::vec3 &pos,
- 		                 const vmath::vec3 &forward = vmath::vec3(0.0f, 0.0f, -1.0f),
- 		                 const vmath::vec3 &up      = vmath::vec3(0.0f, 1.0f, 0.0f));
+ 		void SetListener(const glm::vec3 &pos,
+ 		                 const glm::vec3 &forward = glm::vec3(0.0f, 0.0f, -1.0f),
+ 		                 const glm::vec3 &up      = glm::vec3(0.0f, 1.0f, 0.0f));
  
  		/// @brief @p path (예: "resources/banks/Master.bank") 의 bank 를 *로드*.
 +		/// @details 로드된 bank 는 @c mBanks 에 보관되어 @c Shutdown 시 일괄 언로드. 실패 시 push 안 함.
@@ -44343,7 +44343,7 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
   *  - 카메라 Transform 으로 3D listener 갱신 (@c SetListener) + global parameter / bus 볼륨 제어.
 @@ -30,7 +30,7 @@
  #include <vector>
- #include <vmath.h>
+ #include <glm/glm.hpp>
  
 -// fwd — FMOD 헤더는 .cpp 안에서만
 +// fwd - FMOD 헤더는 .cpp 안에서만
@@ -44640,8 +44640,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
          int                damage       = Entity::ENEMY_DAMAGE;   ///< 접촉 데미지
          int                variant      = 0;          ///< 0~2 -> ENEMY_FRONT[variant % 3]
          float              spriteFps    = Entity::ENEMY_SPRITE_FPS;        ///< 2프레임 walk 애니 속도
--        vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
-+        vmath::vec4        healthBarColor = vmath::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 - 적 베리에이션)
+-        glm::vec4        healthBarColor = glm::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 — 적 베리에이션)
++        glm::vec4        healthBarColor = glm::vec4(1.0f, 0.15f, 0.12f, 1.0f); ///< 머리 위 체력바 채움 색 (기본 빨강 - 적 베리에이션)
      };
  
 -    /// @brief 적 1체 조립 — CreateEnemyActor + ENEMY_FRONT 스프라이트/애니 + spawnParent 부착.
@@ -44707,8 +44707,8 @@ _비코드 1개 파일(리소스/빌드/셰이더/문서) 변경 — diff 생략
  	{
  		float       dissolveSeconds   = PLAYER_DISSOLVE_SECONDS;  // "death" SpriteDissolve 길이
  		float       deathDelaySeconds = PLAYER_DEATH_DELAY;       // 사망 후 비활성 지연(=dissolve 가시화 창)
--		vmath::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 — HUD 단일 소스, C3)
-+		vmath::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 - HUD 단일 소스, C3)
+-		glm::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 — HUD 단일 소스, C3)
++		glm::vec4 healthBarColor    = HUD::HEALTHBAR_FILL_COLOR; // 체력바 채움색(녹색 - HUD 단일 소스, C3)
  	};
  
 -	/// @brief Player/Enemy 공통 연출 클러스터 부착 — *pre-entry*(AddChild 전) 호출.

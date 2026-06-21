@@ -34,7 +34,7 @@
 #include "timer/timer.h"                        // SJH::Timer::Timer (dust interval poll - 완전형)
 #include <functional>
 #include <utility> // std::move
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Entity
 {
@@ -57,7 +57,7 @@ namespace TopdownShooter::Entity
 		Components::Weapon *mWeapon = nullptr; ///< Weapon Component 비소유 캐시 (투사체 발사 위임).
 
 		// 이동 자리 dust FX - interval 마다 1회. timer 는 BaseEntity 중앙 컨테이너 위탁(핸들만 보유).
-		std::function<void(const vmath::vec3 &)> mOnMoveFx; ///< dust 스폰 seam - 빌더가 VFX::Spawn 클로저를 주입.
+		std::function<void(const glm::vec3 &)> mOnMoveFx; ///< dust 스폰 seam - 빌더가 VFX::Spawn 클로저를 주입.
 		SJH::Timer::Timer *mDustTimer = nullptr;            ///< BaseEntity::Timers() 핸들 (비소유 - 컨테이너가 owner).
 		float mDustInterval = 0.2f;                         ///< 이동 중 dust 스폰 간격(초).
 
@@ -92,7 +92,7 @@ namespace TopdownShooter::Entity
 		/// @param fx 이동 자리 dust 스폰 콜백. 인자는 플레이어 world 위치(@c vec3).
 		/// @return *this (fluent builder 연쇄용).
 		// dust FX seam 주입 (빌더 전용 fluent)
-		PlayerEntity &SetOnMoveFx(std::function<void(const vmath::vec3 &)> fx)
+		PlayerEntity &SetOnMoveFx(std::function<void(const glm::vec3 &)> fx)
 		{
 			mOnMoveFx = std::move(fx);
 			return *this;
@@ -105,7 +105,7 @@ namespace TopdownShooter::Entity
 		///          dust timer Tick 은 BaseEntity::Update 일괄 처리 - DoForward 내 tick 없음.
 		/// @param dir 이동 방향 벡터 (XZ, 크기 = 속도 배율 아님 - 단위 방향 권장).
 		/// @param dt  직전 프레임 경과 시간(초).
-		void DoForward(vmath::vec2 dir, float dt) override
+		void DoForward(glm::vec2 dir, float dt) override
 		{
 			if (mMovement)
 				mMovement->DoForward(dir, dt); // IMovable
@@ -125,7 +125,7 @@ namespace TopdownShooter::Entity
 		///          "dash" Play 를 1회만 발화한다 (폭주 방지).
 		///          @c PlayerLifeComponent::DoInvincible -> @c DoImpulse 순서 고정.
 		/// @param dir 대시 방향 벡터 (XZ).
-		void Dash(vmath::vec2 dir) override
+		void Dash(glm::vec2 dir) override
 		{
 			const bool wasActive = IsImpulseActive(); // rising-edge 판정용 (직전 버스트 활성?)
 			auto *plife = dynamic_cast<Components::PlayerLifeComponent *>(mLife);
@@ -140,7 +140,7 @@ namespace TopdownShooter::Entity
 
 		/// @brief 원거리 발사 verb - @c Components::Weapon::UseWeapon 위임.
 		/// @param aim 조준 방향 벡터 (XZ world 평면). 투사체 진행 방향 계산에 사용.
-		void UseWeapon(vmath::vec2 aim) override
+		void UseWeapon(glm::vec2 aim) override
 		{
 			if (mWeapon)
 			{

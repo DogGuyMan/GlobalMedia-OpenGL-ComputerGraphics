@@ -187,7 +187,7 @@ SP2 완료 시점에 활성 챕터는 `imguitest`였고 해당 챕터는 `prog->
 ### 수정 (Fix / Chore)
 
 - `AddComponent` exception safety: `make_unique` throw 시 map이 오염되는 문제를 construct-first 패턴(`find+assert → make_unique → emplace` 순서)으로 수정하였다.
-- `src/scene/actor.h`의 `GetWorldMatrix` ternary 패턴이 `vmath::mat4` base type 반환으로 컴파일 실패하는 spec 오류를 if-block 분기 패턴으로 정정하였다.
+- `src/scene/actor.h`의 `GetWorldMatrix` ternary 패턴이 `glm::mat4` base type 반환으로 컴파일 실패하는 spec 오류를 if-block 분기 패턴으로 정정하였다.
 - `MaterialApplier`의 `GLint → GLuint` sign-conversion 경고를 명시적 `static_cast<GLuint>`로 해소하였다.
 - `RenderQueue`에서 raw pointer 비교(`<`)가 UB(C++ [expr.rel])를 야기하는 버그를 `std::less<const Program*>` 로 교체하였다.
 - `render_queue.h`의 `material/material_applier.h` 의존이 render↔material 순환을 유발함을 발견하고, `MaterialApplier`를 `src/material/`에서 `src/render/`로 이전하여 순환 링크 위험을 해소하였다.
@@ -339,7 +339,7 @@ SP2 완료 시점에 활성 챕터는 `imguitest`였고 해당 챕터는 `prog->
 **`SJH::sprite` 모듈 신설 (M1 Task 1~5).**
 `src/sprite/uniform_atlas.{h,cpp}`와 `src/sprite/sprite_component.h`를 신설하였다.
 
-- `ComputeUVRect` 자유 함수는 `frameIdx`·`cols`·`tileSize`·`atlasWidth`·`atlasHeight`를 받아 UV 직사각형(`vmath::vec4`)을 GL 호출 없이 순수 수학 연산으로 계산한다. GL 비의존 덕분에 `test_uniform_atlas.cpp`(4×4 그리드, 8×4 비정방 그리드, 잘못된 입력 등 5 케이스)를 GL 픽스처 없이 작성할 수 있었다.
+- `ComputeUVRect` 자유 함수는 `frameIdx`·`cols`·`tileSize`·`atlasWidth`·`atlasHeight`를 받아 UV 직사각형(`glm::vec4`)을 GL 호출 없이 순수 수학 연산으로 계산한다. GL 비의존 덕분에 `test_uniform_atlas.cpp`(4×4 그리드, 8×4 비정방 그리드, 잘못된 입력 등 5 케이스)를 GL 픽스처 없이 작성할 수 있었다.
 - `UniformAtlas::LoadFromPNG`는 PNG 디코딩·GL 텍스처 업로드·NEAREST 필터 설정의 세 단계를 수행하며, 아틀라스 크기가 타일 크기의 정수 배수가 아닐 경우 `spdlog::error`를 출력하고 `false`를 반환하도록 방어 처리하였다.
 - `SpriteComponent`는 `SJH::Scene::Component`를 상속하는 POD-ish 구조체로, `atlas*`·`frameIdx`·`size`·`tint`·`flipX`를 공개 멤버로 보유한다. 시간 축 갱신 책임은 없으며 M3.5 이후 `SpriteSequencePlayable`이 담당하도록 설계하였다.
 - `b6a0cfd` 커밋에서 `src/CMakeLists.txt`에 `SJH::sprite`를 등록하고 `SJH::engine` INTERFACE 우산에 합류시켜, 데모가 `target_link_libraries(타겟 PRIVATE SJH::engine)` 한 줄로 스프라이트 기능을 자동으로 포함하도록 하였다.
@@ -374,7 +374,7 @@ SP2 완료 시점에 활성 챕터는 `imguitest`였고 해당 챕터는 `prog->
 `Texture::CreateTexture`의 기본값이 `GL_CLAMP_TO_EDGE`임에 암묵적으로 의존하던 코드를 `mTexture->SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE)` 명시 호출로 교체하였다. 향후 `Texture` 모듈의 기본값 변경에도 atlas tile bleed가 발생하지 않도록 교차 모듈 결합을 해소하였다.
 
 **`MaterialPropertyBlock`에 `Vec2s` 맵 추가.**
-`MaterialPropertyBlock`에 `std::unordered_map<std::string, vmath::vec2> Vec2s` 멤버가 추가되었고, 이에 대응하는 `property_block_setter.cpp` 디스패치 경로가 보완되었다.
+`MaterialPropertyBlock`에 `std::unordered_map<std::string, glm::vec2> Vec2s` 멤버가 추가되었고, 이에 대응하는 `property_block_setter.cpp` 디스패치 경로가 보완되었다.
 
 ### 기술적 결정 및 이슈
 
@@ -608,7 +608,7 @@ spec §3.4에서는 `SJH::sprite_sequence`를 별도 STATIC 라이브러리로 �
 
 ### 개발 (Feature)
 
-**매트릭스 스카이박스 도입.** `main.cpp`에 `WarmupSkybox(SJH::ResourceRegistry&, SJH::Scene::Director&)` 메서드를 신설하였다. 이 메서드는 `reg.CreateProgram("matrix_skybox", …)` 호출로 전용 셰이더 프로그램을 등록하고, `reg.CreateTexture`를 통해 문자(chars) 텍스처와 노이즈(noise_tex) 텍스처를 `SJH::ResourceRegistry`에 캐싱한다. `reg.CreateSharedMaterial("mat_matrix_skybox")`로 생성된 `SJH::Material`에는 두 텍스처와 함께 `u_time` float property가 초기값 `0.0f`로 등록된다. 스카이박스 메시는 `SJH::Mesh::CreateBox()`로 생성한 박스 메시를 사용하며, 스케일을 `vmath::vec3(50.0f, 50.0f, 50.0f)`로 설정하여 카메라 클리핑 범위 안에서 씬 전체를 덮도록 하였다. `SJH::Scene::MeshRenderer` 컴포넌트로 머티리얼을 부착한 뒤 `dir.Root().AddChild`로 씬 루트에 등록하고, 반환된 포인터를 멤버 `mSkyboxActor`와 `mSkyboxMat`에 보관한다.
+**매트릭스 스카이박스 도입.** `main.cpp`에 `WarmupSkybox(SJH::ResourceRegistry&, SJH::Scene::Director&)` 메서드를 신설하였다. 이 메서드는 `reg.CreateProgram("matrix_skybox", …)` 호출로 전용 셰이더 프로그램을 등록하고, `reg.CreateTexture`를 통해 문자(chars) 텍스처와 노이즈(noise_tex) 텍스처를 `SJH::ResourceRegistry`에 캐싱한다. `reg.CreateSharedMaterial("mat_matrix_skybox")`로 생성된 `SJH::Material`에는 두 텍스처와 함께 `u_time` float property가 초기값 `0.0f`로 등록된다. 스카이박스 메시는 `SJH::Mesh::CreateBox()`로 생성한 박스 메시를 사용하며, 스케일을 `glm::vec3(50.0f, 50.0f, 50.0f)`로 설정하여 카메라 클리핑 범위 안에서 씬 전체를 덮도록 하였다. `SJH::Scene::MeshRenderer` 컴포넌트로 머티리얼을 부착한 뒤 `dir.Root().AddChild`로 씬 루트에 등록하고, 반환된 포인터를 멤버 `mSkyboxActor`와 `mSkyboxMat`에 보관한다.
 
 **런타임 동기화 루프 추가.** `render` 루프 안에 두 개의 조건부 갱신 블록을 삽입하였다. `mSkyboxMat->Properties.Floats["u_time"] = static_cast<float>(currentTime)`로 매 프레임 경과 시간을 셰이더에 전달하여 애니메이션 효과를 구동하고, `mSkyboxActor->GetTransform().Translate = mCamera->GetOwner()->GetTransform().Translate`로 스카이박스의 위치를 카메라와 동기화하여 플레이어가 이동하더라도 배경이 항상 카메라를 중심으로 유지되도록 하였다.
 
@@ -660,7 +660,7 @@ spec §3.4에서는 `SJH::sprite_sequence`를 별도 STATIC 라이브러리로 �
 - `CombatSequences` — `SpawnHitSpark`·`SpawnEnemyDeathFX`·`SpawnPickupChime` 조합 팩토리.
 - `AmbientSequences` (`BuildBGM`) — BGM 전용 지속 루프 (fxRoot 미사용, `sceneRoot` 직접 부착).
 
-**FMOD 3D Listener 갱신** (`560fdff`): `AudioSystem::SetListener` 를 추가하여 매 프레임 카메라 Transform 위치로 FMOD Studio + FMOD Core 양쪽의 리스너를 갱신하도록 하였다. `FmodStudioPlayable` 에 `std::optional<vmath::vec3> worldPos` 파라미터를 추가하여 3D 사운드 위치를 주입할 수 있게 하였다.
+**FMOD 3D Listener 갱신** (`560fdff`): `AudioSystem::SetListener` 를 추가하여 매 프레임 카메라 Transform 위치로 FMOD Studio + FMOD Core 양쪽의 리스너를 갱신하도록 하였다. `FmodStudioPlayable` 에 `std::optional<glm::vec3> worldPos` 파라미터를 추가하여 3D 사운드 위치를 주입할 수 있게 하였다.
 
 **fog/bloom PostFX 셰이더 통합** (`1ac0f26`): 기존 `uDepth` 의존을 제거하고 `vUV.y` 기반 스크린 공간 근사로 재작성한 `fog.fs` 와 Rec.709 휘도 기반 bright-pass `bloom.fs` 를 `POSTFX_PROGRAM_CONFIGS` 체인에 추가하였다. `PostFXDebugLayer` 에 fog/bloom 전용 `SliderFloat`·`ColorEdit3` 파라미터 슬라이더를 추가하였다.
 
@@ -678,7 +678,7 @@ spec §3.4에서는 `SJH::sprite_sequence`를 별도 STATIC 라이브러리로 �
 
 **스카이박스 위치 동기화 셰이더 위임** (`e65a715`): 매 프레임 CPU에서 `mSkyboxActor` 위치를 카메라에 맞추던 코드를 제거하고, 셰이더가 view 행렬의 이동 성분을 제거하는 방식으로 전환하였다.
 
-**`TargetFollowableCameraController` → `ActorFolower` 개명** (`e65a715`): 클래스 역할을 보다 범용적으로 나타내도록 이름을 변경하고 `SetFollowRotate(vmath::vec2)` Fluent setter를 추가하였다.
+**`TargetFollowableCameraController` → `ActorFolower` 개명** (`e65a715`): 클래스 역할을 보다 범용적으로 나타내도록 이름을 변경하고 `SetFollowRotate(glm::vec2)` Fluent setter를 추가하였다.
 
 **BGM 인라인 → `Spawns::BuildBGM` 이관** (`ca1f16c`): `main.cpp` 에 인라인이었던 BGM 배선을 `Spawns::BuildBGM` 팩토리로 이관하였다.
 

@@ -23,18 +23,19 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace TopdownShooter::Spawns
 {
     void SpawnWorldText(SJH::Scene::Actor& fxParent, SJH::Text::BitmapFont* font,
-                        const vmath::vec3& worldPos, const std::string& text,
+                        const glm::vec3& worldPos, const std::string& text,
                         const WorldTextStyle& style)
     {
         if (!font) return;   // 폰트 미존재 - no-op (VfxInstance 동일)
 
         auto* a = fxParent.AddChild(std::make_unique<SJH::Scene::Actor>("WorldText"));
         a->GetTransform().Translate = worldPos;        // 앵커 = 하단중앙
-        a->GetTransform().Scale     = vmath::vec3(style.scale, style.scale, 1.0f); // 전체 배율 - 자식 글리프 WorldMatrix 합성(빌보드 sx/sy + 배치 균일). Z 무관
+        a->GetTransform().Scale     = glm::vec3(style.scale, style.scale, 1.0f); // 전체 배율 - 자식 글리프 WorldMatrix 합성(빌보드 sx/sy + 배치 균일). Z 무관
 
         auto* tr = a->AddComponent<SJH::Text::TextRenderer>(font);
         tr->SetCharHeight(style.charHeight);           // SetText 전 설정(크기 bake)
@@ -70,6 +71,14 @@ namespace TopdownShooter::WorldText
     {
         SJH::Scene::Actor*     gFxRoot = nullptr;   // main 등록 - Director.Root() 자식 "FxRoot"
         SJH::Text::BitmapFont* gFont   = nullptr;   // main 등록 - GameSystems.WorldText().GetFont()
+
+        // 지연 데미지 숫자 요청 1건 - SpawnDamage 가 적재, FlushSpawns 가 Director::Update 밖에서 소비.
+        struct PendingDamage
+        {
+            int         damage; // 표시 피해량.
+            glm::vec3 pos;    // 월드 스폰 위치.
+        };
+        std::vector<PendingDamage> gPending; // 이번 프레임 누적 요청. FlushSpawns 가 drain.
     }
 
     void SetSpawnContext(SJH::Scene::Actor* fxRoot, SJH::Text::BitmapFont* font)
@@ -78,12 +87,27 @@ namespace TopdownShooter::WorldText
         gFont   = font;
     }
 
-    void SpawnDamage(int damage, const vmath::vec3& pos)
+    void SpawnDamage(int damage, const glm::vec3& pos)
     {
         if (gFxRoot == nullptr || gFont == nullptr) return;   // 미등록 - no-op (VFX::Spawn 동일)
-        Spawns::WorldTextStyle style;
-        style.color = vmath::vec4(1.0f, 0.2f, 0.2f, 1.0f);    // 빨강 (피해 강조)
-        style.scale = 0.5f;
-        Spawns::SpawnWorldText(*gFxRoot, gFont, pos, "-" + std::to_string(damage), style);
+        // [!] 즉시 AddChild 금지 - SpawnDamage 는 Life::DoDamaged seam 경유로 Director::Update 순회
+        //     *도중* 호출될 수 있다(UltimateLaser). 순회 중 fxRoot->AddChild = iterator 무효화.
+        //     요청만 적재 -> FlushSpawns(순회 밖)가 실제 스폰 (VFX::FlushSpawns 대칭).
+        gPending.push_back(PendingDamage{damage, pos});
+    }
+
+    void FlushSpawns()
+    {
+        if (gPending.empty()) return;
+        std::vector<PendingDamage> batch; // 재진입 안전 (VFX::FlushSpawns 대칭)
+        batch.swap(gPending);
+        if (gFxRoot == nullptr || gFont == nullptr) return;   // 컨텍스트 해제됨 - 잔여 폐기
+        for (const auto& p : batch)
+        {
+            Spawns::WorldTextStyle style;
+            style.color = glm::vec4(1.0f, 0.2f, 0.2f, 1.0f); // 빨강 (피해 강조)
+            style.scale = 0.5f;
+            Spawns::SpawnWorldText(*gFxRoot, gFont, p.pos, "-" + std::to_string(p.damage), style);
+        }
     }
 }

@@ -34,64 +34,64 @@
 #define __SJH_MATERIAL_UNIFORMS_H__
 
 #include "GL/gl3w.h"
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
-    class Material;
-    class Texture;
+	class Material;
+	class Texture;
 
-    namespace Uniforms
-    {
-        // === Material properties bag setter family ============================
-        // 모두 bag 에 store 만 - 셰이더 무관. Apply 시점에 UniformCache 교집합 송신.
+	namespace Uniforms
+	{
+		// === Material properties bag setter family ============================
+		// 모두 bag 에 store 만 - 셰이더 무관. Apply 시점에 UniformCache 교집합 송신.
 
-        /// @brief float uniform 값을 @p mat 의 Properties.Floats 에 store.
-        /// @param mat  대상 Material (비const 참조).
-        /// @param name 셰이더 uniform 이름 (예: @c "uShininess").
-        /// @param v    저장할 값.
-        void SetFloat  (Material& mat, const char* name, float v);
+		/// @brief float uniform 값을 @p mat 의 Properties.Floats 에 store.
+		/// @param mat  대상 Material (비const 참조).
+		/// @param name 셰이더 uniform 이름 (예: @c "uShininess").
+		/// @param v    저장할 값.
+		void SetFloat(Material &mat, const char *name, float v);
 
-        /// @brief int / bool uniform 값을 Properties.Ints 에 store.
-        /// @details GL_BOOL uniform 도 이 함수로 저장 (PropertyBlockSetter 의 GL_BOOL fall-through 컨벤션).
-        /// @param mat  대상 Material.
-        /// @param name 셰이더 uniform 이름.
-        /// @param v    저장할 값.
-        void SetInt    (Material& mat, const char* name, int v);
+		/// @brief int / bool uniform 값을 Properties.Ints 에 store.
+		/// @details GL_BOOL uniform 도 이 함수로 저장 (PropertyBlockSetter 의 GL_BOOL fall-through 컨벤션).
+		/// @param mat  대상 Material.
+		/// @param name 셰이더 uniform 이름.
+		/// @param v    저장할 값.
+		void SetInt(Material &mat, const char *name, int v);
 
-        /// @brief vec2 uniform 값을 Properties.Vec2s 에 store.
-        /// @param mat  대상 Material.
-        /// @param name 셰이더 uniform 이름.
-        /// @param v    저장할 값.
-        void SetVec2   (Material& mat, const char* name, const vmath::vec2& v);
+		/// @brief vec2 uniform 값을 Properties.Vec2s 에 store.
+		/// @param mat  대상 Material.
+		/// @param name 셰이더 uniform 이름.
+		/// @param v    저장할 값.
+		void SetVec2(Material &mat, const char *name, const glm::vec2 &v);
 
-        /// @brief vec3 uniform 값을 Properties.Vec3s 에 store.
-        /// @param mat  대상 Material.
-        /// @param name 셰이더 uniform 이름.
-        /// @param v    저장할 값.
-        void SetVec3   (Material& mat, const char* name, const vmath::vec3& v);
+		/// @brief vec3 uniform 값을 Properties.Vec3s 에 store.
+		/// @param mat  대상 Material.
+		/// @param name 셰이더 uniform 이름.
+		/// @param v    저장할 값.
+		void SetVec3(Material &mat, const char *name, const glm::vec3 &v);
 
-        /// @brief vec4 uniform 값을 Properties.Vec4s 에 store.
-        /// @param mat  대상 Material.
-        /// @param name 셰이더 uniform 이름.
-        /// @param v    저장할 값.
-        void SetVec4   (Material& mat, const char* name, const vmath::vec4& v);
+		/// @brief vec4 uniform 값을 Properties.Vec4s 에 store.
+		/// @param mat  대상 Material.
+		/// @param name 셰이더 uniform 이름.
+		/// @param v    저장할 값.
+		void SetVec4(Material &mat, const char *name, const glm::vec4 &v);
 
-        /// @brief mat4 uniform 값을 Properties.Mat4s 에 store.
-        /// @param mat  대상 Material.
-        /// @param name 셰이더 uniform 이름.
-        /// @param v    저장할 값.
-        void SetMat4   (Material& mat, const char* name, const vmath::mat4& v);
+		/// @brief mat4 uniform 값을 Properties.Mat4s 에 store.
+		/// @param mat  대상 Material.
+		/// @param name 셰이더 uniform 이름.
+		/// @param v    저장할 값.
+		void SetMat4(Material &mat, const char *name, const glm::mat4 &v);
 
-        /// @brief Texture binding - Texture* 비소유 관찰자 + sampler unit 을 Properties.Textures 에 store.
-        /// @details Apply 시점에 (a) `Uniforms::SetInt(prog, name, unit)` 으로 sampler slot 송신 +
-        ///          (b) `DeviceContext::BindTexture(unit, texID)` 로 텍스처 바인딩.
-        /// @param mat  대상 Material.
-        /// @param name 셰이더 sampler uniform 이름 (예: @c "uAlbedo").
-        /// @param tex  비소유 텍스처 포인터 - owner 는 ResourceRegistry.
-        /// @param unit GL 텍스처 unit 번호 (0-based; @c GL_TEXTURE0 + unit).
-        void SetTexture(Material& mat, const char* name, const Texture* tex, GLint unit);
-    }
-}
+		/// @brief Texture binding - Texture* 비소유 관찰자 + sampler unit 을 Properties.Textures 에 store.
+		/// @details Apply 시점에 (a) `Uniforms::SetInt(prog, name, unit)` 으로 sampler slot 송신 +
+		///          (b) `DeviceContext::BindTexture(unit, texID)` 로 텍스처 바인딩.
+		/// @param mat  대상 Material.
+		/// @param name 셰이더 sampler uniform 이름 (예: @c "uAlbedo").
+		/// @param tex  비소유 텍스처 포인터 - owner 는 ResourceRegistry.
+		/// @param unit GL 텍스처 unit 번호 (0-based; @c GL_TEXTURE0 + unit).
+		void SetTexture(Material &mat, const char *name, const Texture *tex, GLint unit);
+	} // namespace Uniforms
+} // namespace SJH
 
 #endif // __SJH_MATERIAL_UNIFORMS_H__

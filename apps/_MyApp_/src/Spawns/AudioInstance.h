@@ -22,7 +22,7 @@
 #define __TOPDOWNSHOOTER_SPAWNS_AUDIO_INSTANCE_H__
 
 #include <optional>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 // fwd
 namespace SJH::Scene { class Actor; }
@@ -50,7 +50,7 @@ namespace TopdownShooter::Spawns
     /// @param pos      3D 공간 재생 위치. @c std::nullopt 면 2D 재생.
     void SpawnAudioInstance(SJH::Scene::Actor& fxParent,
                             ::FMOD::Studio::EventDescription* desc,
-                            std::optional<vmath::vec3> pos = std::nullopt);
+                            std::optional<glm::vec3> pos = std::nullopt);
 }
 
 #endif // __TOPDOWNSHOOTER_SPAWNS_AUDIO_INSTANCE_H__

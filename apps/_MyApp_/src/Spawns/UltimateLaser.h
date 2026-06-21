@@ -21,7 +21,7 @@
 #ifndef __TOPDOWNSHOOTER_SPAWNS_ULTIMATE_LASER_H__
 #define __TOPDOWNSHOOTER_SPAWNS_ULTIMATE_LASER_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 // fwd - 포인터만 노출.
 class b2World;
@@ -39,7 +39,7 @@ namespace TopdownShooter::Spawns
     /// @param centerWorld     발동 중심 (플레이어 world 좌표). 3초간 고정.
     /// @param startAngleBox2d 시작 회전각 (box2d 평면 라디안 = atan2(box2dForward.y, box2dForward.x)).
     /// @param shooter         발사 주체 (레이캐스트 ignore - 자해 방지). nullptr 허용.
-    void SpawnUltimateLaser(b2World* world, const vmath::vec3& centerWorld,
+    void SpawnUltimateLaser(b2World* world, const glm::vec3& centerWorld,
                             float startAngleBox2d, SJH::Scene::Actor* shooter);
 }
 

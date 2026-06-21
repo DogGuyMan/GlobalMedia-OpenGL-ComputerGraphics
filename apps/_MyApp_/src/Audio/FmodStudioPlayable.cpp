@@ -29,14 +29,14 @@
 #include <spdlog/spdlog.h>
 #include <optional>
 #include <string>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Audio
 {
 	/// @note @p desc=nullptr 이면 경고만 출력 후 no-op 상태로 유지.
 	///       @c SpawnAudioInstance 는 이 경우를 정상 경로로 허용 (bank 누락 시 게임 진행 보장).
 	FmodStudioPlayable::FmodStudioPlayable(::FMOD::Studio::EventDescription *desc,
-	                                       std::optional<vmath::vec3> worldPos)
+	                                       std::optional<glm::vec3> worldPos)
 	    : mDesc(desc), mWorldPos(worldPos)
 	{
 		if (!mDesc) spdlog::warn("[FmodStudioPlayable] ctor: desc=nullptr (event 미존재?)");

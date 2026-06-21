@@ -21,14 +21,14 @@
  *
  *  ### 비-책임
  *  - [X] 상태/데이터 보유 - 각 인터페이스는 계약만 선언, 구현은 concrete Component 가 담당.
- *  - [X] 외부 의존 - 본 헤더 의존은 @c <vmath.h>/@c <cmath> + @c MultipleTimer *전방선언* 뿐(의존-제로).
+ *  - [X] 외부 의존 - 본 헤더 의존은 @c <glm/glm.hpp>/@c <cmath> + @c MultipleTimer *전방선언* 뿐(의존-제로).
  *
  * @note 모든 인터페이스는 복사/이동 금지(가상 소멸자 + delete 5종). Component 는 Actor 가 소유.
  */
 #ifndef _TOPDOWNSHOOTER_CONTRACTS_ENTITYCONTRACTS_H__
 #define _TOPDOWNSHOOTER_CONTRACTS_ENTITYCONTRACTS_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include <cmath>   // Quantize4 의 std::abs
 
 // fwd - ITimerOwner::Timers() 반환 타입. 완전형은 소비처(.cpp)가 timer/multiple_timer.h 로 포함.
@@ -149,7 +149,7 @@ namespace TopdownShooter::Entity
 		/// @brief 단위 방향 @p dir 로 @p dt 초만큼 이동. 구현체가 units/sec 단위 속도 보유 가정.
 		/// @param dir 이동 방향(정규화는 구현체 책임).
 		/// @param dt  경과 시간(초). units/sec 속도와 곱해 프레임 변위 산출(fps-independent).
-		virtual void DoForward(vmath::vec2 dir, float dt) = 0;
+		virtual void DoForward(glm::vec2 dir, float dt) = 0;
 	};
 
 	enum class EFacing : int { Front = 0, ///< 정면(z 양수 방향).
@@ -163,7 +163,7 @@ namespace TopdownShooter::Entity
 	/// @details 부호 규약: x>0=Right, z>0=Front (탑다운 W=-Z 기준, Task6 실행 검증).
 	/// @param v 양자화할 방향 벡터(보통 조준/속도).
 	/// @return @c EFacing 4방향 중 우세 축.
-	inline EFacing Quantize4(vmath::vec2 v)
+	inline EFacing Quantize4(glm::vec2 v)
 	{
 		if (std::abs(v[0]) > std::abs(v[1]))
 			return v[0] > 0.0f ? EFacing::Right : EFacing::Left;
@@ -192,11 +192,11 @@ namespace TopdownShooter::Entity
 		/// @brief 피격 연출 반응(데미지 수신 시점). @param dmg 받은 데미지 양.
 		virtual void ReactDamaged(int /*dmg*/) {}
 		/// @brief 사망 연출 반응(디졸브 등 시작). @param pos 사망 발생 월드 위치.
-		virtual void ReactDied(vmath::vec3 /*pos*/) {}
+		virtual void ReactDied(glm::vec3 /*pos*/) {}
 		/// @brief 공격 연출 반응. @param aimDir 조준 방향.
-		virtual void ReactAttack(vmath::vec2 /*aimDir*/) {}
+		virtual void ReactAttack(glm::vec2 /*aimDir*/) {}
 		/// @brief 조준 방향으로 표시 방향 정렬. @param aimDir 조준 방향.
-		virtual void FaceAim(vmath::vec2 /*aimDir*/) {}
+		virtual void FaceAim(glm::vec2 /*aimDir*/) {}
 		/// @brief 4방향 facing 강제 설정. @param facing 설정할 방향.
 		virtual void SetFacing(EFacing /*facing*/) {}
 		/// @brief 포즈(Idle/Move) 설정. @param pose 설정할 포즈.
@@ -223,7 +223,7 @@ namespace TopdownShooter::Entity
 
 		/// @brief 지정 방향으로 순간 가속(버스트) 발동.
 		/// @param dir 버스트 방향.
-		virtual void DoImpulse(vmath::vec2 dir) = 0;
+		virtual void DoImpulse(glm::vec2 dir) = 0;
 	};
 
 	// ====== 능력 시임 (2026-06-11 신설 - C1/C2 사이클 절단용 DIP) ======
@@ -292,9 +292,9 @@ namespace TopdownShooter::Entity
 		IPlayerCommand &operator=(IPlayerCommand &&) = delete;
 
 		/// @brief 대시 - 지정 방향으로 무적+임펄스+연출 발동. @param dir 대시 방향.
-		virtual void Dash(vmath::vec2 dir) = 0;
+		virtual void Dash(glm::vec2 dir) = 0;
 		/// @brief 무기 사용(발사) - 조준 방향으로 Weapon 위임. @param aim 조준 방향.
-		virtual void UseWeapon(vmath::vec2 aim) = 0;
+		virtual void UseWeapon(glm::vec2 aim) = 0;
 	};
 
 	/**

@@ -23,7 +23,7 @@
 #include <box2d/box2d.h>
 #include <memory>
 #include <string>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Stage::Factories
 {
@@ -42,7 +42,7 @@ namespace TopdownShooter::Stage::Factories
      * @return 생성된 벽 Actor 의 @c unique_ptr. 씬 등록 및 MeshRenderer 부착은 호출자 책임.
      */
     inline std::unique_ptr<SJH::Scene::Actor> CreateWallActor(
-        std::string name, b2World& world, vmath::vec2 center, vmath::vec2 half)
+        std::string name, b2World& world, glm::vec2 center, glm::vec2 half)
     {
         auto actor = std::make_unique<SJH::Scene::Actor>(std::move(name));
 
@@ -54,7 +54,7 @@ namespace TopdownShooter::Stage::Factories
         bc.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Wall);
         bc.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::WallMask);
         // half = half-extents -> BoxBody 는 size(full)*0.5 로 SetAsBox 하므로 half*2 전달(절반크기 보존).
-        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, vmath::vec2(half[0] * 2.0f, half[1] * 2.0f));
+        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, glm::vec2(half[0] * 2.0f, half[1] * 2.0f));
 
         return actor;
     }

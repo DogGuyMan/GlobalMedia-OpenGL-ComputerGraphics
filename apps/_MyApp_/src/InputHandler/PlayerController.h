@@ -28,7 +28,7 @@
 #include "input/mouse_input.h"
 #include "scene/actor.h"
 #include <functional>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH::Scene
 {
@@ -102,8 +102,8 @@ namespace TopdownShooter::Controller
 		/// @brief 조준 정보 - 매 프레임 마우스->Ground raycast 로 갱신 (PlayerActor(owner)->커서 Ground).
 		/// @details `mAimDirection` 은 XZ 평면 정규화 방향(발사/회전 방향). `mAimPoint` 는 커서 월드 좌표.
 		///          `mAimAngleY` 는 facing Y각(degree). 유효 교차 없으면 직전값 유지.
-		const vmath::vec3 &GetAimDirection() const { return mAimDirection; }
-		const vmath::vec3 &GetAimPoint() const { return mAimPoint; }
+		const glm::vec3 &GetAimDirection() const { return mAimDirection; }
+		const glm::vec3 &GetAimPoint() const { return mAimPoint; }
 		float GetAimAngleY() const { return mAimAngleY; }
 		/// @brief player(owner) 중심 -> 커서 Ground 의 XZ 거리(world). *거리 의존* 소비자용.
 		float GetAimDistance() const { return mAimDistance; }
@@ -127,12 +127,12 @@ namespace TopdownShooter::Controller
 
 		std::function<void()> mFireCallback;   // 좌클릭
 
-		vmath::vec3 mInputValue {0.0f};
-		vmath::vec3 mPrevInputValue {0.0f};
+		glm::vec3 mInputValue {0.0f};
+		glm::vec3 mPrevInputValue {0.0f};
 
 		// 매 프레임 마우스->Ground raycast 로 갱신되는 조준 정보 - PlayerActor(owner) 위치 + 커서 Ground 좌표.
-		vmath::vec3 mAimPoint {0.0f};                  // 커서 Ground 월드 좌표 (y~=0)
-		vmath::vec3 mAimDirection {0.0f, 0.0f, -1.0f}; // player -> 커서 방향 (XZ 평면, 정규화)
+		glm::vec3 mAimPoint {0.0f};                  // 커서 Ground 월드 좌표 (y~=0)
+		glm::vec3 mAimDirection {0.0f, 0.0f, -1.0f}; // player -> 커서 방향 (XZ 평면, 정규화)
 		float       mAimAngleY = 0.0f;                 // facing Y각 (degree) = degrees(atan2(-dir.x,-dir.z))
 		float       mAimDistance = 0.0f;               // player(owner)->커서 Ground 의 XZ 거리 (world)
 		float       mAimScreenT = 0.0f;                // 플레이어 화면위치<->커서 NDC 거리 0(중심)~1(가장자리) - 손 spread 보간용
@@ -152,7 +152,7 @@ namespace TopdownShooter::Controller
 		bool UpdateAim();
 		// 좌클릭 액션 - UpdateAim 갱신 -> Weapon 발사 + onFire + 디버그 마커 + GroundClick 콜백.
 		void OnFirePressed();
-		void SpawnGroundMarker(const vmath::vec3 &worldPos);
+		void SpawnGroundMarker(const glm::vec3 &worldPos);
 	};
 } // namespace TopdownShooter::Controller
 

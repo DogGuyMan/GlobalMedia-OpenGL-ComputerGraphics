@@ -9,7 +9,7 @@
 #include <GLFW/glfw3.h>
 #include <sb7.h>
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 #include <imgui.h>
 #include <imgui_impl_glfw_gl3.h>
@@ -34,10 +34,10 @@
 #include "Spawns/WorldTextInstance.h"   // <- 추가 (데모 트리거)
 #include "UI/VfxSpawnLayer.h"
 
-#include "Stage/StageBuilder.h"
 #include "Stage/WaveController.h"
 #include "Stage/Constants.h"   // Stage::ARENA_HALF_EXTENT
 #include "Stage/Stage.h"       // EStageStatus (TogglePause)
+#include "Stage/StageBuilder.h" // CreateStageActor (+ StageConfig) — 누락 include 보완
 #include "Stage/Components/GameContextComponent.h"
 #include "Stage/State/StageStateMachine.h"
 #include "Stage/State/StageState.Impl.h"   // Title/CombatPlay/Pause/GameOver + GetCtx
@@ -45,15 +45,12 @@
 #include "UI/PostFXDebugLayer.h"
 #include "UI/StateOverlayLayer.h"
 #include "UI/UiBootstrap.h"
-#include "buffer/framebuffer.h"
 #include "common/common.h"
 #include "common/window_helper.h"
 #include "render/pass_component.h"
 #include "render_bootstrap/render_pipeline.h"
-#include "buffer/render_target.h"
 #include "render/render_stage/render_stage.impls.h"   // SceneRenderer + ScreenQuadStage + CameraStage 통합
 #include "resource_registry/resource_registry.h"
-#include "texture/image.h"        // SJH::Image::Load
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "render/actor_factory.h" // CreateScreenCameraActor (2026-06-11 E2 이주)
@@ -335,6 +332,12 @@ namespace TopdownShooter
 			// (Title BGM 무음 버그의 원인). FSM Update 뒤에 둬 listener/파라미터 갱신을 함께 flush.
 			TopdownShooter::GameSystems::Get().Audio().Update(dt);
 
+			// 지연 FX 스폰 flush -- Life seam(VFX::Spawn / WorldText::SpawnDamage)이 Director::Update
+			// 순회 *도중*(UltimateLaser RaycastAll->DoDamaged) 적재한 요청을 여기(순회 밖)서 실제 AddChild.
+			// 순회 중 직접 AddChild 시 fxRoot.mChildren 재할당 -> Actor::Update 라이브 iterator
+			// 무효화(SIGSEGV) 회피 (SweepDespawned 와 동일 deferred 패턴).
+			TopdownShooter::VFX::FlushSpawns();
+			TopdownShooter::WorldText::FlushSpawns();
 			if (mFxRoot) TopdownShooter::Spawns::SweepFinishedChildren(*mFxRoot);
 			// 디졸브 끝난 사망 적을 RemoveChild -> OnExit -> Physics::OnExit::DestroyBody (deferred — Director.Update 밖이라 iterator 안전).
 			if (mCtx && mCtx->waveCtrl) mCtx->waveCtrl->SweepDespawned();

@@ -21,7 +21,7 @@
 #define __SJH_SPRITE_SPRITE_COMPONENT_H__
 
 #include "render/mesh_renderer.h"   // base class - Unity SpriteRenderer is_a MeshRenderer 정통
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -53,7 +53,7 @@ namespace SJH::Sprite
      *  auto* mesh = SJH::SpriteResources::EnsureSharedPlane();
      *  auto* mat  = SJH::SpriteResources::CreateInstanceMaterial(atlas);
      *  auto* spr = actor->AddComponent<SJH::Sprite::SpriteRenderer>(atlas, mesh, mat);
-     *  spr->tint = vmath::vec4(1.0f, 0.5f, 0.5f, 1.0f);
+     *  spr->tint = glm::vec4(1.0f, 0.5f, 0.5f, 1.0f);
      *  // SpriteSequencePlayable 부착 시 frameIdx 자동 진행
      *  SJH::SpriteSequence::SpriteFrameClip clip{0, atlas->FrameCount(), 4.0f};
      *  auto* seq = actor->AddComponent<SJH::SpriteSequence::SpriteSequencePlayable>(spr, &clip);
@@ -99,10 +99,10 @@ namespace SJH::Sprite
         int           frameIdx = 0;
 
         /// @brief 월드 단위 sprite 크기. 현재 미사용 - @c Transform::Scale 우선.
-        vmath::vec2   size     = vmath::vec2(1.0f, 1.0f);
+        glm::vec2   size     = glm::vec2(1.0f, 1.0f);
 
         /// @brief 색 곱셈 tint (RGBA, 0..1). 기본값 흰색 (효과 없음).
-        vmath::vec4   tint     = vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        glm::vec4   tint     = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
         /// @brief @c true 이면 셰이더 @c uFlipX = -1 (좌우 반전). 기본값 @c false.
         bool          flipX    = false;
@@ -125,7 +125,7 @@ namespace SJH::Sprite
         float               dissolveOutlineThickness = 0.05f;
 
         /// @brief 디졸브 경계 외곽선 색 (RGB, 0..1). 기본값 주황색.
-        vmath::vec3         dissolveOutlineColor     = vmath::vec3(1.0f, 0.5f, 0.0f);
+        glm::vec3         dissolveOutlineColor     = glm::vec3(1.0f, 0.5f, 0.0f);
 
         /// @brief 디졸브 노이즈 텍스처 (@c unit=1). sink 가 @c resources/texture/dissolve.png 주입.
         /// @note @c nullptr 이면 @c unit0(@c uAtlas) 을 crude erode 로 사용 - sink 는 항상 주입 권장.

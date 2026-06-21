@@ -10,7 +10,7 @@
  *  - 가변 델타 타임 (@ref SJH::DeltaTime) / 고정 스텝 (@ref SJH::FixedTime).
  *  - 텍스트 파일 로드 (@ref SJH::LoadTextFile) - 셰이더 소스 등.
  *  - macOS GLFW CWD 부수효과 보정 (@ref SJH::CrossPlatformDir).
- *  - @c SJH::Size 타입 별칭 (@c vmath::vec2 래핑).
+ *  - @c SJH::Size 타입 별칭 (@c glm::vec2 래핑).
  *
  *  ### 비-책임
  *  - [X] GL 로더(@c gl3w) 포함 금지 - GL 비의존 레이어.
@@ -23,7 +23,7 @@
 #ifndef __SJH_COMMON_H__
 #define __SJH_COMMON_H__
 
-#include "vmath.h"
+#include <glm/glm.hpp>
 #pragma once
 
 #include <memory>
@@ -55,8 +55,8 @@
 
 namespace SJH
 {
-	/// @brief 2D 크기 표현을 위한 @c vmath::vec2 별칭. x=width, y=height.
-	typedef vmath::vec2 Size;
+	/// @brief 2D 크기 표현을 위한 @c glm::vec2 별칭. x=width, y=height.
+	typedef glm::vec2 Size;
 
 	/**
 	 * @brief 텍스트 파일을 한 번에 읽어 @c std::string 으로 반환.
@@ -79,7 +79,7 @@ namespace SJH
 
 	/**
 	 * @brief Radian -> Degree 변환. @c M_PI 기반.
-	 * @details @c constexpr - 컴파일 타임 평가 가능. vmath::perspective 등 degree 입력 API 호환용.
+	 * @details @c constexpr - 컴파일 타임 평가 가능. radian 기반 @c glm API 와 degree 표현 사이 변환용.
 	 */
 	constexpr inline float Rad2Deg(float rad)
 	{

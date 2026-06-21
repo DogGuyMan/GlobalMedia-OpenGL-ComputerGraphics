@@ -200,7 +200,7 @@ namespace SJH::Scene
         const Transform& GetTransform() const { return mTransform; }
         /// @brief 루트까지의 부모 chain 을 곱한 월드 변환 행렬 (column-major).
         /// @details 루트이면 @c GetTransform().GetLocalMatrix() 와 동등.
-        vmath::mat4      GetWorldMatrix() const;
+        glm::mat4      GetWorldMatrix() const;
 
         // === Active ===
         /// @brief 활성 여부 - false 이면 @c Update 가 이 Actor 와 모든 자식을 건너뜀.

@@ -94,13 +94,12 @@ namespace SJH::Scene
 		mComponents.clear();
 	}
 
-	vmath::mat4 Actor::GetWorldMatrix() const
+	glm::mat4 Actor::GetWorldMatrix() const
 	{
-		const vmath::mat4 local = mTransform.GetLocalMatrix();
+		const glm::mat4 local = mTransform.GetLocalMatrix();
 		if (mParent)
 		{
-			// vmath matNM::operator* 는 base 타입 반환 -> Tmat4(const base&) 로 명시 변환
-			return vmath::mat4(mParent->GetWorldMatrix() * local);
+			return mParent->GetWorldMatrix() * local;
 		}
 		return local;
 	}

@@ -19,7 +19,8 @@
 #define __SJH_TRANSFORM_H__
 
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp> // glm::translate / glm::rotate / glm::scale
 
 namespace SJH
 {
@@ -32,32 +33,33 @@ namespace SJH
     class Transform
     {
     public:
-        vmath::vec3 Translate = vmath::vec3(0.0f, 0.0f, 0.0f); ///< 이동량 (로컬 공간 offset).
-        vmath::vec3 EulerRot  = vmath::vec3(0.0f, 0.0f, 0.0f); ///< 오일러 회전각 (degree, XYZ 순서).
-        vmath::vec3 Scale     = vmath::vec3(1.0f, 1.0f, 1.0f); ///< 스케일 팩터.
+        glm::vec3 Translate = glm::vec3(0.0f, 0.0f, 0.0f); ///< 이동량 (로컬 공간 offset).
+        glm::vec3 EulerRot  = glm::vec3(0.0f, 0.0f, 0.0f); ///< 오일러 회전각 (degree, XYZ 순서).
+        glm::vec3 Scale     = glm::vec3(1.0f, 1.0f, 1.0f); ///< 스케일 팩터.
 
 
         /**
          * @brief 로컬 모델 행렬 산출 - T,Rz,Ry,Rx,S 순서.
          * @return 부모를 고려하지 않은 로컬 변환 행렬.
          */
-        vmath::mat4 GetLocalMatrix() const
+        glm::mat4 GetLocalMatrix() const
         {
-            // vmath::rotate 는 degree 직접 수용 (내부에서 radian 변환)
-            return vmath::translate(Translate) *
+            // glm::translate/scale 은 *기존 행렬* 을 1번째 인자로 받는다 - identity 에서 시작.
+            return glm::translate(glm::mat4(1.0f), Translate) *
                    GetRotationMatrix() *
-                   vmath::scale(Scale);
+                   glm::scale(glm::mat4(1.0f), Scale);
         }
 
         /**
          * @brief Translate/Scale 무시한 *로컬 회전 행렬* - Rz,Ry,Rx.
          * @details 6 방향 벡터 추출 / 부모-자식 회전 합성 등 *방향만* 필요할 때 사용.
          */
-        vmath::mat4 GetRotationMatrix() const
+        glm::mat4 GetRotationMatrix() const
         {
-            return vmath::rotate(EulerRot[2], 0.0f, 0.0f, 1.0f) *
-                   vmath::rotate(EulerRot[1], 0.0f, 1.0f, 0.0f) *
-                   vmath::rotate(EulerRot[0], 1.0f, 0.0f, 0.0f);
+            // glm::rotate 는 *radian* 을 받는다 (구 vmath 는 degree 였음) - glm::radians 로 변환.
+            return glm::rotate(glm::mat4(1.0f), glm::radians(EulerRot[2]), glm::vec3(0.0f, 0.0f, 1.0f)) *
+                   glm::rotate(glm::mat4(1.0f), glm::radians(EulerRot[1]), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                   glm::rotate(glm::mat4(1.0f), glm::radians(EulerRot[0]), glm::vec3(1.0f, 0.0f, 0.0f));
         }
 
         // -- 6 방향 벡터 - OpenGL 오른손 좌표계 정통 -------------------------
@@ -69,32 +71,32 @@ namespace SJH
         // EulerRot 적용 후의 회전된 축. Scale 영향 없음.
 
         /// @brief 회전된 +X 축 (right). 행렬의 0번 컬럼.
-        vmath::vec3 GetRight() const
+        glm::vec3 GetRight() const
         {
             const auto R = GetRotationMatrix();
-            return vmath::vec3(R[0][0], R[0][1], R[0][2]);
+            return glm::vec3(R[0][0], R[0][1], R[0][2]);
         }
 
         /// @brief 회전된 +Y 축 (up). 행렬의 1번 컬럼.
-        vmath::vec3 GetUp() const
+        glm::vec3 GetUp() const
         {
             const auto R = GetRotationMatrix();
-            return vmath::vec3(R[1][0], R[1][1], R[1][2]);
+            return glm::vec3(R[1][0], R[1][1], R[1][2]);
         }
 
         /// @brief 회전된 -Z 축 (forward, OpenGL 정통). 행렬의 2번 컬럼의 음수.
-        vmath::vec3 GetForward() const
+        glm::vec3 GetForward() const
         {
             const auto R = GetRotationMatrix();
-            return vmath::vec3(-R[2][0], -R[2][1], -R[2][2]);
+            return glm::vec3(-R[2][0], -R[2][1], -R[2][2]);
         }
 
         /// @brief 회전된 -X 축 (left). @ref GetRight 의 반전.
-        vmath::vec3 GetLeft() const { return -GetRight(); }
+        glm::vec3 GetLeft() const { return -GetRight(); }
         /// @brief 회전된 -Y 축 (down). @ref GetUp 의 반전.
-        vmath::vec3 GetDown() const { return -GetUp(); }
+        glm::vec3 GetDown() const { return -GetUp(); }
         /// @brief 회전된 +Z 축 (back, OpenGL 정통). @ref GetForward 의 반전.
-        vmath::vec3 GetBack() const { return -GetForward(); }
+        glm::vec3 GetBack() const { return -GetForward(); }
 
         /**
          * @brief Translate / EulerRot / Scale 을 한 번에 설정하는 fluent 빌더.
@@ -104,9 +106,9 @@ namespace SJH
          * @return @c *this - 메서드 체이닝 지원.
          */
 	Transform& SetTransformWithVectors(
-		vmath::vec3 translate = vmath::vec3(0.0f, 0.0f, 0.0f),
-		vmath::vec3 rotate = vmath::vec3(0.0f, 0.0f, 0.0f),
-		vmath::vec3 scal = vmath::vec3(1.0f, 1.0f, 1.0f)
+		glm::vec3 translate = glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3 rotate = glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3 scal = glm::vec3(1.0f, 1.0f, 1.0f)
 	)
 	{
 		Translate = translate;
@@ -130,8 +132,8 @@ namespace SJH
     class UVTransform
     {
     public:
-        vmath::vec2 Offset{0.0f, 0.0f}; ///< UV 오프셋 - 텍스처 스크롤 효과.
-        vmath::vec2 Scale{1.0f, 1.0f};  ///< UV 스케일 - 타일링 배수.
+        glm::vec2 Offset{0.0f, 0.0f}; ///< UV 오프셋 - 텍스처 스크롤 효과.
+        glm::vec2 Scale{1.0f, 1.0f};  ///< UV 스케일 - 타일링 배수.
         float RotationDeg = 0.0f;       ///< UV 회전각 (degree).
     };
 }

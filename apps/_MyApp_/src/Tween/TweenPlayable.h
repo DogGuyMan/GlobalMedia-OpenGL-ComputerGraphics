@@ -28,7 +28,7 @@ namespace TopdownShooter::Tween
 {
 	/**
 	 * @brief Tweeny tween<T> wrap leaf Playable (M5 T4).
-	 * @tparam T 보간 대상 값 타입 (float / vmath::vec3 등).
+	 * @tparam T 보간 대상 값 타입 (float / glm::vec3 등).
 	 * @details
 	 *   !! step(int32_t ms) 오버로드 강제 - step(float ratio) 오버로드는 dt(초) 직접 입력 시 양 끝 깜빡임 폭주
 	 *   (memory tweeny_step_overload_trap).

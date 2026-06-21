@@ -60,7 +60,7 @@
 #define __SJH_PROGRAM_UNIFORMS_H__
 
 #include "GL/gl3w.h"
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -80,19 +80,19 @@ namespace SJH
 
         /// @brief @c GL_FLOAT_MAT4 uniform 전송.
         /// @param prog 대상 프로그램. @param name 셰이더 uniform 이름. @param m4 4x4 행렬.
-        void SetMat4 (const Program &prog, const char *name, const vmath::mat4& m4);
+        void SetMat4 (const Program &prog, const char *name, const glm::mat4& m4);
 
         /// @brief @c GL_FLOAT_VEC4 uniform 전송.
         /// @param v4 4-컴포넌트 벡터.
-        void SetVec4 (const Program &prog, const char *name, const vmath::vec4& v4);
+        void SetVec4 (const Program &prog, const char *name, const glm::vec4& v4);
 
         /// @brief @c GL_FLOAT_VEC3 uniform 전송.
         /// @param v3 3-컴포넌트 벡터 (위치/색상/방향 등).
-        void SetVec3 (const Program &prog, const char *name, const vmath::vec3& v3);
+        void SetVec3 (const Program &prog, const char *name, const glm::vec3& v3);
 
         /// @brief @c GL_FLOAT_VEC2 uniform 전송.
         /// @param v2 2-컴포넌트 벡터 (UV 오프셋 등).
-        void SetVec2 (const Program &prog, const char *name, const vmath::vec2& v2);
+        void SetVec2 (const Program &prog, const char *name, const glm::vec2& v2);
 
         /// @brief @c GL_FLOAT uniform 전송.
         /// @param v float 스칼라 (시간/강도/감쇠 계수 등).

@@ -10,14 +10,14 @@
  *  - [X] GPU 업로드 / attrib 설정 - @c Mesh::Init 이 @c VertexLayout::TrySetAttrib 로 담당.
  *  - [X] 탄젠트/바이탄젠트 / 스키닝 가중치 - 현재 미지원. 향후 확장 시 별도 Vertex 변형 도입.
  *
- * @note GL 로더(gl3w) 비의존 - @c vmath 만 의존하므로 어느 번역 단위에서도 안전하게 포함 가능.
+ * @note GL 로더(gl3w) 비의존 - @c glm 만 의존하므로 어느 번역 단위에서도 안전하게 포함 가능.
  *       `offsetof(Vertex, position/normal/texCoord)` 로 VBO stride/offset 를 안전하게 계산.
  */
 
 #ifndef __OBJECT_VERTEX_H__
 #define __OBJECT_VERTEX_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {
@@ -31,9 +31,9 @@ namespace SJH
      */
     struct Vertex
     {
-        vmath::vec3 position; ///< 정점 위치 (object space).
-        vmath::vec3 normal;   ///< 법선 벡터 (object space, 단위 벡터 가정).
-        vmath::vec2 texCoord; ///< UV 좌표 (0~1 범위 권장).
+        glm::vec3 position; ///< 정점 위치 (object space).
+        glm::vec3 normal;   ///< 법선 벡터 (object space, 단위 벡터 가정).
+        glm::vec2 texCoord; ///< UV 좌표 (0~1 범위 권장).
     };
 }
 

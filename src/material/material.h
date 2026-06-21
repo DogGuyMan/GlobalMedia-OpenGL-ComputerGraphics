@@ -52,7 +52,7 @@
 #include <cstdio>
 #include <string>
 #include <unordered_map>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH
 {

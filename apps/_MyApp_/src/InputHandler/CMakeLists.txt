@@ -13,7 +13,7 @@ target_include_directories(myapp_input_handler
 # CameraController.h 헤더 노출 의존 (PUBLIC):
 #   input/keyboard_input_handler.h, input/mouse_input_handler.h   -> SJH::input
 #   scene/actor.h, scene/camera.h                 -> SJH::scene
-#   <vmath.h>                                     -> project_deps (include/ 노출)
+#   <glm/glm.hpp>                                     -> project_deps (include/ 노출)
 #   <spdlog/spdlog.h>                             -> game_deps (spdlog INTERFACE)
 # CameraController.cpp 전용 의존 (PRIVATE):
 #   object/transform.h                            -> SJH::object

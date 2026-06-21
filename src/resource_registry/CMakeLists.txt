@@ -8,7 +8,7 @@ add_library(SJH::resource_registry ALIAS sjhopengl_resource_registry)
 
 target_include_directories(sjhopengl_resource_registry
     PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
-            ${CMAKE_SOURCE_DIR}/include   # vmath.h
+            ${CMAKE_SOURCE_DIR}/include   #.h
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

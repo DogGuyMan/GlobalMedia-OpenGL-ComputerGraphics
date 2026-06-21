@@ -25,11 +25,11 @@ namespace TopdownShooter::Physics
 	namespace
 	{
 		// dir 정규화 + 길이 0 판정. ok=false 면 호출측이 miss 반환.
-		bool NormalizeDir(vmath::vec2 dir, vmath::vec2& out)
+		bool NormalizeDir(glm::vec2 dir, glm::vec2& out)
 		{
 			float len = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
 			if (len <= 1e-8f) return false;
-			out = vmath::vec2(dir[0] / len, dir[1] / len);
+			out = glm::vec2(dir[0] / len, dir[1] / len);
 			return true;
 		}
 
@@ -63,8 +63,8 @@ namespace TopdownShooter::Physics
 				// 후보 기록 후 fraction 반환 -> Box2D 가 더 먼 fixture 를 자동 클립 = 최근접 보장.
 				result.body     = fx->GetBody();
 				result.actor    = a;
-				result.point    = vmath::vec2(point.x, point.y);
-				result.normal   = vmath::vec2(normal.x, normal.y);
+				result.point    = glm::vec2(point.x, point.y);
+				result.normal   = glm::vec2(normal.x, normal.y);
 				result.fraction = fraction;
 				result.hit      = true;
 				return fraction;
@@ -94,8 +94,8 @@ namespace TopdownShooter::Physics
 				RaycastHit h;
 				h.body     = fx->GetBody();
 				h.actor    = a;
-				h.point    = vmath::vec2(point.x, point.y);
-				h.normal   = vmath::vec2(normal.x, normal.y);
+				h.point    = glm::vec2(point.x, point.y);
+				h.normal   = glm::vec2(normal.x, normal.y);
 				h.fraction = fraction;
 				h.hit      = true;
 				results.push_back(h);
@@ -104,10 +104,10 @@ namespace TopdownShooter::Physics
 		};
 	} // anonymous namespace
 
-	RaycastHit Raycast(b2Body* body, vmath::vec2 start, vmath::vec2 dir, float maxDistance)
+	RaycastHit Raycast(b2Body* body, glm::vec2 start, glm::vec2 dir, float maxDistance)
 	{
 		RaycastHit  result;
-		vmath::vec2 d;
+		glm::vec2 d;
 		if (body == nullptr || maxDistance <= 0.0f || !NormalizeDir(dir, d))
 			return result;
 
@@ -141,19 +141,19 @@ namespace TopdownShooter::Physics
 			result.actor    = ActorOf(body);
 			result.fraction = bestFraction;
 			result.distance = maxDistance * bestFraction;
-			result.point    = vmath::vec2(start[0] + d[0] * result.distance,
+			result.point    = glm::vec2(start[0] + d[0] * result.distance,
 			                              start[1] + d[1] * result.distance);
-			result.normal   = vmath::vec2(bestNormal.x, bestNormal.y);
+			result.normal   = glm::vec2(bestNormal.x, bestNormal.y);
 			result.hit      = true;
 		}
 		return result;
 	}
 
-	RaycastHit RaycastClosest(b2World& world, vmath::vec2 start, vmath::vec2 dir,
+	RaycastHit RaycastClosest(b2World& world, glm::vec2 start, glm::vec2 dir,
 	                          float maxDistance, PhysicsLayer mask,
 	                          SJH::Scene::Actor* ignore, bool hitSensors)
 	{
-		vmath::vec2 d;
+		glm::vec2 d;
 		if (maxDistance <= 0.0f || !NormalizeDir(dir, d))
 			return RaycastHit{};
 
@@ -169,18 +169,18 @@ namespace TopdownShooter::Physics
 		if (cb.result.hit)
 		{
 			cb.result.distance = maxDistance * cb.result.fraction;
-			cb.result.point    = vmath::vec2(start[0] + d[0] * cb.result.distance,
+			cb.result.point    = glm::vec2(start[0] + d[0] * cb.result.distance,
 			                                 start[1] + d[1] * cb.result.distance);
 		}
 		return cb.result;
 	}
 
-	std::vector<RaycastHit> RaycastAll(b2World& world, vmath::vec2 start, vmath::vec2 dir,
+	std::vector<RaycastHit> RaycastAll(b2World& world, glm::vec2 start, glm::vec2 dir,
 	                                   float maxDistance, PhysicsLayer mask,
 	                                   SJH::Scene::Actor* ignore, bool hitSensors)
 	{
 		std::vector<RaycastHit> out;
-		vmath::vec2 d;
+		glm::vec2 d;
 		if (maxDistance <= 0.0f || !NormalizeDir(dir, d))
 			return out;
 
@@ -206,7 +206,7 @@ namespace TopdownShooter::Physics
 				if (kept.body == h.body) { dup = true; break; }
 			if (dup) continue;
 			h.distance = maxDistance * h.fraction;
-			h.point    = vmath::vec2(start[0] + d[0] * h.distance, start[1] + d[1] * h.distance);
+			h.point    = glm::vec2(start[0] + d[0] * h.distance, start[1] + d[1] * h.distance);
 			out.push_back(h);
 		}
 		return out;

@@ -35,7 +35,7 @@
 #include "scene/actor.h"
 #include "timer/timer.h"   // SJH::Timer::Timer (spawn 간격 - Timer 객체화)
 #include <vector>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 class b2World;
 
@@ -104,7 +104,7 @@ namespace TopdownShooter::Stage
 
         /// @brief 아레나 4변 중 랜덤 가장자리 좌표 반환 (스폰 위치).
         /// @return 아레나 경계 근방 2D 위치.
-        vmath::vec2 RandomEdgePos() const;
+        glm::vec2 RandomEdgePos() const;
 
         /// @brief @c mEnemies 크기를 @c int 로 반환 (생존 수).
         int         LiveCount() const;

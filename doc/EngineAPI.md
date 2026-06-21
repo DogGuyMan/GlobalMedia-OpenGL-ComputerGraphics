@@ -248,17 +248,17 @@ const std::unordered_map<std::string, Entry>& UniformCache::Entries() const;   /
 ```cpp
 namespace SJH::Uniforms {
     // Basic setter — 즉시 glUniform* 호출. UniformCache 경유 + Diagnostics warn-once.
-    void SetMat4 (const Program&, const char* name, const vmath::mat4&);
-    void SetVec4 (const Program&, const char* name, const vmath::vec4&);
-    void SetVec3 (const Program&, const char* name, const vmath::vec3&);
-    void SetVec2 (const Program&, const char* name, const vmath::vec2&);
+    void SetMat4 (const Program&, const char* name, const glm::mat4&);
+    void SetVec4 (const Program&, const char* name, const glm::vec4&);
+    void SetVec3 (const Program&, const char* name, const glm::vec3&);
+    void SetVec2 (const Program&, const char* name, const glm::vec2&);
     void SetFloat(const Program&, const char* name, float);
     void SetInt  (const Program&, const char* name, int);
 
     // Light struct helper — `<prefix>.{direction,ambient,diffuse,specular,...}` 일괄 송신.
-    void SetDirLight  (const Program&, const char* prefix, const DirLight&,   const vmath::vec3& worldDir);
-    void SetPointLight(const Program&, const char* prefix, const PointLight&, const vmath::vec3& worldPos);
-    void SetSpotLight (const Program&, const char* prefix, const SpotLight&,  const vmath::vec3& worldPos, const vmath::vec3& worldDir);
+    void SetDirLight  (const Program&, const char* prefix, const DirLight&,   const glm::vec3& worldDir);
+    void SetPointLight(const Program&, const char* prefix, const PointLight&, const glm::vec3& worldPos);
+    void SetSpotLight (const Program&, const char* prefix, const SpotLight&,  const glm::vec3& worldPos, const glm::vec3& worldDir);
 }
 ```
 
@@ -340,9 +340,9 @@ const Material* Material::GetRootOriginal() const;       // chain 최상위 root
 namespace SJH::Uniforms {
     void SetFloat  (Material& mat, const char* name, float v);
     void SetInt    (Material& mat, const char* name, int v);
-    void SetVec3   (Material& mat, const char* name, const vmath::vec3& v);
-    void SetVec4   (Material& mat, const char* name, const vmath::vec4& v);
-    void SetMat4   (Material& mat, const char* name, const vmath::mat4& v);
+    void SetVec3   (Material& mat, const char* name, const glm::vec3& v);
+    void SetVec4   (Material& mat, const char* name, const glm::vec4& v);
+    void SetMat4   (Material& mat, const char* name, const glm::mat4& v);
     void SetTexture(Material& mat, const char* name, const Texture* tex, GLint unit);
 }
 ```
@@ -379,21 +379,21 @@ void SJH::PipelineStateSetter::Set(DeviceContext& rc, const Pass::PipelineState&
 
 #### `Transform` ([transform.h](../src/object/transform.h)) — POD-like 값 객체
 ```cpp
-vmath::vec3 Translate = (0,0,0);
-vmath::vec3 EulerRot  = (0,0,0);   // degree, X=pitch, Y=yaw, Z=roll, ZYX 합성
-vmath::vec3 Scale     = (1,1,1);
+glm::vec3 Translate = (0,0,0);
+glm::vec3 EulerRot  = (0,0,0);   // degree, X=pitch, Y=yaw, Z=roll, ZYX 합성
+glm::vec3 Scale     = (1,1,1);
 
-vmath::mat4 GetLocalMatrix()    const;   // T · Rz · Ry · Rx · S
-vmath::mat4 GetRotationMatrix() const;   // Rz · Ry · Rx (Translate/Scale 무시)
+glm::mat4 GetLocalMatrix()    const;   // T · Rz · Ry · Rx · S
+glm::mat4 GetRotationMatrix() const;   // Rz · Ry · Rx (Translate/Scale 무시)
 
 // ── 6 방향 vector (OpenGL 오른손 정통) ──
 // EulerRot=(0,0,0) 기본: Right=(+1,0,0), Up=(0,+1,0), Forward=(0,0,-1)
-vmath::vec3 GetRight()   const;
-vmath::vec3 GetUp()      const;
-vmath::vec3 GetForward() const;
-vmath::vec3 GetLeft()    const;   // -GetRight
-vmath::vec3 GetDown()    const;   // -GetUp
-vmath::vec3 GetBack()    const;   // -GetForward
+glm::vec3 GetRight()   const;
+glm::vec3 GetUp()      const;
+glm::vec3 GetForward() const;
+glm::vec3 GetLeft()    const;   // -GetRight
+glm::vec3 GetDown()    const;   // -GetUp
+glm::vec3 GetBack()    const;   // -GetForward
 ```
 
 #### `Mesh` ([mesh.h](../src/object/mesh.h))
@@ -414,15 +414,15 @@ GLuint Mesh::GetPrimitiveType() const;
 ```cpp
 class DirLight : public Scene::Component {
 public:
-    vmath::vec3 Ambient, Diffuse, Specular;
-    vmath::vec3 GetWorldDirection() const;   // owner.WorldMatrix 의 -Z 컬럼 (OpenGL forward)
+    glm::vec3 Ambient, Diffuse, Specular;
+    glm::vec3 GetWorldDirection() const;   // owner.WorldMatrix 의 -Z 컬럼 (OpenGL forward)
 };
 
 class PointLight : public Scene::Component {
 public:
     float Distance = 32.0f;          // 거리 감쇠 산출 기준
-    vmath::vec3 Ambient, Diffuse, Specular;
-    vmath::vec3 GetWorldPosition() const;
+    glm::vec3 Ambient, Diffuse, Specular;
+    glm::vec3 GetWorldPosition() const;
 };
 
 class SpotLight : public Scene::Component {
@@ -430,9 +430,9 @@ public:
     float CutoffAngleDeg      = 12.5f;
     float OuterCutoffAngleDeg = 17.5f;
     float Distance            = 32.0f;
-    vmath::vec3 Ambient, Diffuse, Specular;
-    vmath::vec3 GetWorldPosition()  const;
-    vmath::vec3 GetWorldDirection() const;
+    glm::vec3 Ambient, Diffuse, Specular;
+    glm::vec3 GetWorldPosition()  const;
+    glm::vec3 GetWorldDirection() const;
 };
 
 // 단일 점광원 데이터 컨테이너 (Component 아님 — 레거시) — `Light` 클래스.
@@ -488,7 +488,7 @@ void RemoveAllComponents();
 // Identity / Transform / Active / Layer
 const std::string& GetName() const;
 Transform&         GetTransform();
-vmath::mat4        GetWorldMatrix() const;        // 부모 Transform 합성
+glm::mat4        GetWorldMatrix() const;        // 부모 Transform 합성
 void               SetLayer(uint32_t);            // Camera::CullingMask 와 AND 검사
 uint32_t           GetLayer() const;
 
@@ -524,8 +524,8 @@ public:
     Camera() = default;
     Camera(float fovY, float aspect, float near, float far);
 
-    vmath::mat4 GetViewMatrix() const;        // owner 미부착 시 assert (Compound Actor 컨벤션)
-    vmath::mat4 GetProjectionMatrix() const;
+    glm::mat4 GetViewMatrix() const;        // owner 미부착 시 assert (Compound Actor 컨벤션)
+    glm::mat4 GetProjectionMatrix() const;
 
     // TargetLock — Unity Cinemachine Composer / Unreal SpringArm 정통
     void TargetLock(const Actor* target);
@@ -581,17 +581,17 @@ namespace SJH::Scene {
 
     std::unique_ptr<Actor> CreateDirLightActor(
         std::string name,
-        vmath::vec3 direction = (0,-1,0));
+        glm::vec3 direction = (0,-1,0));
 
     std::unique_ptr<Actor> CreatePointLightActor(
         std::string name,
-        vmath::vec3 position,
+        glm::vec3 position,
         float distance = 32.0f);
 
     std::unique_ptr<Actor> CreateSpotLightActor(
         std::string name,
-        vmath::vec3 position,
-        vmath::vec3 direction = (0,-1,0),
+        glm::vec3 position,
+        glm::vec3 direction = (0,-1,0),
         float innerCutoffDeg = 12.5f,
         float outerCutoffDeg = 17.5f);
 }
@@ -685,7 +685,7 @@ struct DrawCommand {
     const Program*  program;
     const Mesh*     mesh;
     const Material* material;     // ← GL state SSoT — material->GetPass() 가 PipelineState 결정
-    vmath::mat4     modelMatrix = identity;
+    glm::mat4     modelMatrix = identity;
     int             queueLayer  = 2000;
     const Actor*    actor;
     float           depth = 0.0f; // view-space z (Transparent back-to-front 정렬용)
@@ -693,7 +693,7 @@ struct DrawCommand {
 
 void MeshPassProcessor::Submit(const DrawCommand&);
 void MeshPassProcessor::SortMultiStage();              // Layer -> Program -> Material -> Depth (stable_sort)
-void MeshPassProcessor::Process(DeviceContext&, const vmath::mat4& view, const vmath::mat4& proj);
+void MeshPassProcessor::Process(DeviceContext&, const glm::mat4& view, const glm::mat4& proj);
 ```
 
 **SP-MaterialSSoT** — `DrawCommand` 의 stencil/depthTest/depthWrite override 필드 *전부 폐기*. `Process` 가 `material->GetPass()` 만 보고 `Pass::DefaultPipelineStateOf` 로 PipelineState 도출 -> `PipelineStateSetter::Set` 호출.
@@ -792,7 +792,7 @@ static ImageUPtr Image::Load  (const std::string& name, const std::string& filep
 // Procedural 이미지 (테스트용)
 void SetCheckImage(int gridX, int gridY);
 void SetWhiteImage();
-void SetSingleColorImage(const vmath::vec4& color);
+void SetSingleColorImage(const glm::vec4& color);
 ```
 
 **stb_image 정의 책임**: 데모 `main.cpp` 가 *정확히 한 곳에서* `#define STB_IMAGE_IMPLEMENTATION` 후 `#include "stb_image.h"` 해야 link 심볼 생성.
@@ -821,7 +821,7 @@ UniformAtlas& SetGrid(int cols, int rows);            // tile 수
 UniformAtlas& SetFilter(GLuint min, GLuint mag);      // 픽셀아트 NEAREST 권장
 int           FrameCount() const;                     // cols * rows
 SJH::Texture* GetTexture() const;
-vmath::vec4   ComputeUVRect(int frameIdx) const;      // 좌하단(0,0)부터 row-major (PNG V-flip 적용)
+glm::vec4   ComputeUVRect(int frameIdx) const;      // 좌하단(0,0)부터 row-major (PNG V-flip 적용)
 ```
 
 #### `SpriteRenderer` ([sprite_component.h](../src/sprite/sprite_component.h)) — Unity SpriteRenderer 정통 (MeshRenderer 상속)
@@ -833,8 +833,8 @@ explicit SpriteRenderer(UniformAtlas* atlas = nullptr);
 // public data (POD-ish)
 UniformAtlas* atlas;
 int           frameIdx;
-vmath::vec2   size;     // 월드 단위 (현재 미사용 — Transform.Scale 우선)
-vmath::vec4   tint;
+glm::vec2   size;     // 월드 단위 (현재 미사용 — Transform.Scale 우선)
+glm::vec4   tint;
 bool          flipX;
 // per-Update 마다 uniform (uUvRect/uTint/uFlipX) 자동 송신 → main render() 무동작
 ```
@@ -1148,8 +1148,8 @@ mat->SetProgram(prog);
 mat->SetPass(SJH::Pass::Kind::Opaque);   // 기본값 = Opaque (이 줄 생략 가능)
 
 // 4. Properties bag 에 store (Unity material.SetFloat 정통, MaterialPropertyBlock 에 저장)
-SJH::Uniforms::SetVec3 (*mat, "material.diffuse",   vmath::vec3(0.8f, 0.3f, 0.3f));
-SJH::Uniforms::SetVec3 (*mat, "material.specular",  vmath::vec3(0.5f));
+SJH::Uniforms::SetVec3 (*mat, "material.diffuse",   glm::vec3(0.8f, 0.3f, 0.3f));
+SJH::Uniforms::SetVec3 (*mat, "material.specular",  glm::vec3(0.5f));
 SJH::Uniforms::SetFloat(*mat, "material.shininess", 32.0f);
 SJH::Uniforms::SetTexture(*mat, "uMainTex", tex, 0);
 
@@ -1170,11 +1170,11 @@ Material 에는 *셰이더에 정의된 sampler / 사용자 컨텐츠 properties
 // shared 원본 (a) 와 별도로 *Outline 변형* 인스턴스 (b) 생성 — Clone 자동.
 auto* a = reg.CreateSharedMaterial("mat_box");
 a->SetProgram(prog);
-SJH::Uniforms::SetVec3(*a, "baseColor", vmath::vec3(0.8f));
+SJH::Uniforms::SetVec3(*a, "baseColor", glm::vec3(0.8f));
 
 auto* b = reg.CreateMaterialInstanceFrom("mat_box_outline", a);
 b->SetPass(SJH::Pass::Kind::OutlineVisible);                          // (b) 만 OutlineVisible 로 변형.
-SJH::Uniforms::SetVec3(*b, "baseColor", vmath::vec3(1.0f, 1.0f, 0.0f));
+SJH::Uniforms::SetVec3(*b, "baseColor", glm::vec3(1.0f, 1.0f, 0.0f));
 
 assert(b->IsInstance);                          // true
 assert(b->OriginalMaterial == a);               // direct parent
@@ -1624,7 +1624,7 @@ class BaseEntity : public SJH::Scene::Component,
     void OnEnter() override;  // 4캐시 (.cpp — GetComponent/FindPhysics 완전형 필요)
     bool IsAlive() const override; int GetHp() const override; int GetMaxHp() const override;
     void DoDamaged(int) override; void DoDie() override;        // → Life (i-frame 은 Life 내부)
-    void DoImpulse(vmath::vec2 worldXZ) override;               // → Impulse
+    void DoImpulse(glm::vec2 worldXZ) override;               // → Impulse
     bool IsImpulseActive() const;                              // 버스트 활성 창 = 이동 suppress 게이트
     Physics::Components::Physics* GetPhysics() const;
     Playable::PlayableDirector*  GetDirector() const;
@@ -1636,9 +1636,9 @@ class PlayerEntity : public BaseEntity, public IMovable {
     IMovable* mMovement; Components::Weapon* mWeapon;          // OnEnter 에서 캐시
   public:
     IMovable* GetMovement() const; Components::Weapon* GetWeapon() const;
-    void DoForward(vmath::vec2 worldXZ, float dt) override;    // → mMovement
-    void Dash(vmath::vec2 worldXZ);                            // → DoImpulse (BaseEntity)
-    void Attack(vmath::vec2 box2dAim);                         // → Weapon::UseWeapon
+    void DoForward(glm::vec2 worldXZ, float dt) override;    // → mMovement
+    void Dash(glm::vec2 worldXZ);                            // → DoImpulse (BaseEntity)
+    void Attack(glm::vec2 box2dAim);                         // → Weapon::UseWeapon
 };
 
 // Entity/Enemy/EnemyEntity.h — 베이스만으로 충분 (header-only)
@@ -1670,7 +1670,7 @@ b2Body 생성을 **인라인 외부 생성 + `SetBody()` 주입** → **컴포�
 struct BodyConfig {                  // 5 call-site 모두 커버
     b2World*    world;
     b2BodyType  bodyType = b2_dynamicBody;   // Wall/Pickup=static, Bullet=kinematic→dynamic
-    vmath::vec2 startPosition, linearVelocity;
+    glm::vec2 startPosition, linearVelocity;
     float       linearDamping=0, density=1, friction=0.2; // friction 0.2 = b2 기본(미설정 site 보존)
     bool        isSensor=false;
     uint16_t    categoryBits, maskBits;  float heightOffset=0;
@@ -1683,7 +1683,7 @@ class Physics : public Component, public IContactable {   // abstract base (b2Bo
     void OnEnter() override;  // ⬅ owner userdata 등록 (ctor 엔 GetOwner=null → 여기서). contact 콜백은 런타임에만 읽음
     b2Body* GetBody() const;  bool IsSensor() const; ...
 };
-class BoxBody : public Physics    { BoxBody(const BodyConfig&, vmath::vec2 size); };   // ctor 에서 SetAsBox+fixture
+class BoxBody : public Physics    { BoxBody(const BodyConfig&, glm::vec2 size); };   // ctor 에서 SetAsBox+fixture
 class CircleBody : public Physics { CircleBody(const BodyConfig&, float radius); };
 ```
 
@@ -1701,7 +1701,7 @@ class Impulse : public Component, public Entity::IImpulsable {
     Algebraic::Numeric::Stat mImpulseForce;  // 힘 (DashForce 7.5)
     SJH::Timer::Timer mActiveTimer{0.3f}, mCooldownTimer{0.8f};  // arm-inactive (ctor 에서 Tick(base)→finished)
   public:
-    void DoImpulse(vmath::vec2 worldXZ) override;  // 게이트(쿨다운/active) → SetLinearVelocity + 타이머 Reset
+    void DoImpulse(glm::vec2 worldXZ) override;  // 게이트(쿨다운/active) → SetLinearVelocity + 타이머 Reset
     bool IsActive() const;                         // = !mActiveTimer.IsTimesUp()  (버스트 0.3s 창)
 };
 ```
@@ -1717,10 +1717,10 @@ class Impulse : public Component, public Entity::IImpulsable {
 ```cpp
 class CarrierBase : Component, Physics::IContactable {
   protected:
-    void Deliver(Actor* target, vmath::vec2 knockbackWorldXZ);  // IDamageable→DoDamaged + IImpulsable→DoImpulse + onHitFx
+    void Deliver(Actor* target, glm::vec2 knockbackWorldXZ);  // IDamageable→DoDamaged + IImpulsable→DoImpulse + onHitFx
 };
 class Projectile : CarrierBase, Entity::IDieable {   // 총알 (bullet_factory)
-    void SetLaunchDir(vmath::vec2 box2dDir);          // 넉백 방향 소스
+    void SetLaunchDir(glm::vec2 box2dDir);          // 넉백 방향 소스
     // OnTrigger/CollisionEnter → HandleHit → Deliver(other, 비행방향) → DoDie(지연 despawn)
 };
 class ContactCarrier : CarrierBase {};               // 적 접촉 (EnemyFactory) — Deliver(other, 0)

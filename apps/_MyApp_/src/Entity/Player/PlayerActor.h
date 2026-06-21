@@ -39,7 +39,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Entity::Player
 {
@@ -87,8 +87,8 @@ namespace TopdownShooter::Entity::Player
 		struct PhysicsCfg
 		{
 			b2World*    world         = nullptr;                 ///< 물리 월드 (null 이면 비물리 분기).
-			vmath::vec2 size          = vmath::vec2(1.0f, 1.0f); ///< BoxBody 크기.
-			vmath::vec2 startPosition = vmath::vec2(0.0f, 0.0f); ///< 스폰 위치 (Box2D XY).
+			glm::vec2 size          = glm::vec2(1.0f, 1.0f); ///< BoxBody 크기.
+			glm::vec2 startPosition = glm::vec2(0.0f, 0.0f); ///< 스폰 위치 (Box2D XY).
 			float       density       = 1.0f;                    ///< 밀도.
 			float       friction      = 0.3f;                    ///< 마찰 계수.
 			float       linearDamping = PLAYER_LINEAR_DAMPING;   ///< 선형 감쇠 (관성 정지감).

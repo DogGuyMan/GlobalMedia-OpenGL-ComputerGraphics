@@ -23,7 +23,7 @@
 #include <cstdint>
 #include <utility>
 #include <vector>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH::Scene { class Actor; class Camera; class PassComponent; }
 namespace SJH { class RenderTarget; class Framebuffer; class Mesh; class Material; class Program; }
@@ -85,7 +85,7 @@ namespace SJH
         /// @param actor      현재 순회 노드.
         /// @param viewMat    이번 패스의 View 행렬 (depth 계산용).
         /// @param cullingMask 카메라 CullingMask - Actor layer 비트와 AND 로 가시성 판정.
-        void CollectFromActor(const Scene::Actor& actor, const vmath::mat4& viewMat, uint64_t cullingMask);
+        void CollectFromActor(const Scene::Actor& actor, const glm::mat4& viewMat, uint64_t cullingMask);
 
         MeshPassProcessor      mProcessor;          ///< DrawCommand 큐 보유/정렬/GL draw 발행.
         LightUboUploader       mUploader;           ///< 수집된 Light 를 공유 LightBlock UBO 패킹 + Program 에 결속/송신 (D-LUD O4).

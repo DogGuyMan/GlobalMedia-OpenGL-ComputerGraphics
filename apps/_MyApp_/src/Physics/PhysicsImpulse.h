@@ -86,13 +86,13 @@ namespace TopdownShooter::Physics
 		/// @details 내부에서 @c b2Body::SetLinearVelocity 를 호출 -- Step 잠금 중에도 안전.
 		///          좌표계 변환: XZ dir -> Box2D XY (z -> -y, spec sec.4.4).
 		/// @param dir 이동 방향 (임의 크기 허용, 내부 정규화). 길이가 IMPULSE_LENGTH_EPS 이하이면 skip.
-		void DoImpulse(vmath::vec2 dir) override
+		void DoImpulse(glm::vec2 dir) override
 		{
 			if (!mCooldownTimer || !mCooldownTimer->IsTimesUp() || IsActive()) return;   // 미등록/쿨다운 중/active -> 게이트
 			if (!mBody || !mBody->GetBody()) return;
 			const float len = std::sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
 			if (len <= IMPULSE_LENGTH_EPS) return;
-			vmath::vec2 n(dir[0] / len, dir[1] / len);
+			glm::vec2 n(dir[0] / len, dir[1] / len);
 			const float force = mImpulseForce.GetValue();
 			// XZ -> Box2D XY (Z -> -Y, spec sec.4.4)
 			mBody->GetBody()->SetLinearVelocity(b2Vec2(n[0] * force, -n[1] * force));
@@ -102,7 +102,7 @@ namespace TopdownShooter::Physics
 
 		/// @brief Monster Knockback 편의 래퍼 -- @c DoImpulse 위임.
 		/// @param fromXZ 넉백 방향 (XZ 좌표계, 임의 크기).
-		void ApplyKnockback(vmath::vec2 fromXZ) { DoImpulse(fromXZ); }
+		void ApplyKnockback(glm::vec2 fromXZ) { DoImpulse(fromXZ); }
 		/// @brief 버스트 창(@c mActiveTimer) 이 아직 진행 중이면 true.
 		///        이동 컨트롤러/AI 가 자유이동 skip 게이트로 사용.
 		bool IsActive() const { return mActiveTimer && !mActiveTimer->IsTimesUp(); }

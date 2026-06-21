@@ -91,12 +91,12 @@ glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (void*)(4 * sizeof(float
 
 ```cpp
 // ❌ [1][1][0]과 [1][1][1]의 좌표값 오타
-vmath::vec4(0.0, 0.0, 1.0, 1.0),  // [1][1][0] — y가 0 (1이어야 함)
-vmath::vec4(0.0, 1.0, 1.0, 1.0),  // [1][1][1] — x가 0 (1이어야 함)
+glm::vec4(0.0, 0.0, 1.0, 1.0),  // [1][1][0] — y가 0 (1이어야 함)
+glm::vec4(0.0, 1.0, 1.0, 1.0),  // [1][1][1] — x가 0 (1이어야 함)
 
 // ✅ 인덱스 [z][y][x] -> 좌표 (x, y, z) 규칙 준수
-vmath::vec4(0.0, 1.0, 1.0, 1.0),  // [1][1][0] = (0, 1, 1)
-vmath::vec4(1.0, 1.0, 1.0, 1.0),  // [1][1][1] = (1, 1, 1)
+glm::vec4(0.0, 1.0, 1.0, 1.0),  // [1][1][0] = (0, 1, 1)
+glm::vec4(1.0, 1.0, 1.0, 1.0),  // [1][1][1] = (1, 1, 1)
 ```
 
 **핵심**: 3차원 배열 인덱싱은 실수하기 매우 쉽다. 모든 정점에 주석으로 좌표를 명시하고, `인덱스 -> 좌표` 매핑 규칙을 먼저 정의할 것.
@@ -135,9 +135,9 @@ void SetPosition(vec3 t) {
 }
 
 // ✅ TRS를 독립 저장, 필요 시 합성
-vmath::vec3 mPosition, mEulerAngles, mScale;  // 독립 저장
+glm::vec3 mPosition, mEulerAngles, mScale;  // 독립 저장
 
-vmath::mat4 GetModelMatrix() const {
+glm::mat4 GetModelMatrix() const {
     return translate(mPosition) * rotY * rotX * rotZ * scale(mScale);
 }
 ```
@@ -160,7 +160,7 @@ void Rotate(float, vec3) override { }      // 아무것도 안 함
 
 // ✅ Model과 동일하게 Transformer에 위임
 //    position = eye, rotation -> forward 방향 계산 -> target 자동 도출
-vmath::mat4 GetViewMatrix() const {
+glm::mat4 GetViewMatrix() const {
     vec3 forward = Ry * Rx * (0, 0, -1);  // 회전에서 전방 벡터 계산
     vec3 target = position + forward;
     return lookat(position, target, worldUp);
@@ -410,18 +410,18 @@ static std::unique_ptr<PlaneModel> Create() {
 ```cpp
 // ❌ TRS 벡터를 초기화하지 않음 -> GetModelMatrix()가 가비지 값으로 곱셈
 class ModelBase {
-    vmath::vec4 mTranslateVec;     // ← 미초기화
-    vmath::vec4 mEulerRotateVec;   // ← 미초기화
-    vmath::vec4 mScaleVec;         // ← 미초기화 (특히 scale=0이면 모델이 사라짐)
-    vmath::vec4 mOffset;
+    glm::vec4 mTranslateVec;     // ← 미초기화
+    glm::vec4 mEulerRotateVec;   // ← 미초기화
+    glm::vec4 mScaleVec;         // ← 미초기화 (특히 scale=0이면 모델이 사라짐)
+    glm::vec4 mOffset;
 public:
-    ModelBase(vmath::vec4 _offset = vmath::vec4(0,0,0,0)) {
+    ModelBase(glm::vec4 _offset = glm::vec4(0,0,0,0)) {
         build();   // _offset도 mOffset에 대입 안 함
     }
 };
 
 // ✅ 멤버 초기화 리스트로 명시
-ModelBase::ModelBase(vmath::vec4 _offset)
+ModelBase::ModelBase(glm::vec4 _offset)
     : mOffset(_offset),
       mTranslateVec(0, 0, 0, 0),
       mEulerRotateVec(0, 0, 0, 0),
@@ -594,12 +594,12 @@ for (const auto& prog : programs) {
 
 ```cpp
 // ❌ lookat이 이미 view 행렬인데 또 translate를 곱함
-vmath::mat4 GetViewMatrix() const {
+glm::mat4 GetViewMatrix() const {
     return GetModelMatrix() * vmath::lookat(mEye, mTarget, mWorldUp);
 }
 
 // ✅ lookat 결과 그 자체가 view 행렬
-vmath::mat4 GetViewMatrix() const {
+glm::mat4 GetViewMatrix() const {
     return vmath::lookat(mEye, mTarget, mWorldUp);
 }
 ```
@@ -614,12 +614,12 @@ vmath::mat4 GetViewMatrix() const {
 
 ```cpp
 // ❌ projection이라면서 view × perspective를 반환
-vmath::mat4 GetProjectionMatrix(int w, int h) const {
+glm::mat4 GetProjectionMatrix(int w, int h) const {
     return GetViewMatrix() * vmath::perspective(mFov, /*...*/);
 }
 
 // ✅ projection만 반환
-vmath::mat4 GetProjectionMatrix(int w, int h) const {
+glm::mat4 GetProjectionMatrix(int w, int h) const {
     return vmath::perspective(mFov, (float)w / h, mNearPlane, mFarPlane);
 }
 ```
@@ -650,12 +650,12 @@ vmath::perspective(mFov, (float)window_width / window_height, mNearPlane, mFarPl
 
 ```cpp
 // ❌ Translate가 먼저 적용되어 회전이 오프셋도 함께 회전시킴
-vmath::mat4 GetModelMatrix() {
+glm::mat4 GetModelMatrix() {
     return identity * scaleMat * xRot * yRot * zRot * translateMat;
 }
 
 // ✅ 표준: T × R × S (정점 v 입장에서 S -> R -> T 순으로 적용됨)
-vmath::mat4 GetModelMatrix() {
+glm::mat4 GetModelMatrix() {
     return translateMat * (xRot * yRot * zRot) * scaleMat;
 }
 ```
@@ -1896,7 +1896,7 @@ auto model = vmath::translate(...) * vmath::rotate(...) * vmath::scale(...);
 
 **(B) 일반적인 길** — 명시적 `transpose()` 사용
 ```cpp
-vmath::vec4 v_new = pos * M.transpose();   // 표준 M·v 효과
+glm::vec4 v_new = pos * M.transpose();   // 표준 M·v 효과
 ```
 `mat4::transpose()` 는 vmath 에 정의돼 있음 ([vmath.h:845](include/vmath.h#L845)).
 
@@ -1937,7 +1937,7 @@ auto M = T * R * S;     // 정점 입장에서 S -> R -> T 순으로 적용
 ### 이번 함정 (Octahedron Mirror 변환)
 
 ```cpp
-vmath::mat4 xzMirror = vmath::mat4::identity();
+glm::mat4 xzMirror = glm::mat4::identity();
 xzMirror[1][1] = -1;
 
 // ✓ 첫 시도 (결과는 우연히 맞지만 의미 불명확)

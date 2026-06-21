@@ -20,49 +20,49 @@
 
 namespace SJH
 {
-    vmath::vec3 DirLight::GetWorldDirection() const
+    glm::vec3 DirLight::GetWorldDirection() const
     {
         // worldMatrix 의 -Z 컬럼 = forward (OpenGL 카메라 응시 방향 정통).
         // Transform::GetForward() / Camera::GetViewMatrix 와 일관 - EulerRot=(0,0,0) 기본 시 (0,0,-1).
         if (auto* owner = GetOwner())
         {
             const auto m = owner->GetWorldMatrix();
-            vmath::vec3 forward(-m[2][0], -m[2][1], -m[2][2]);
-            return vmath::normalize(forward);
+            glm::vec3 forward(-m[2][0], -m[2][1], -m[2][2]);
+            return glm::normalize(forward);
         }
-        return vmath::vec3(0.0f, 0.0f, -1.0f);
+        return glm::vec3(0.0f, 0.0f, -1.0f);
     }
 
-    vmath::vec3 PointLight::GetWorldPosition() const
+    glm::vec3 PointLight::GetWorldPosition() const
     {
         if (auto* owner = GetOwner())
         {
             const auto m = owner->GetWorldMatrix();
-            return vmath::vec3(m[3][0], m[3][1], m[3][2]);
+            return glm::vec3(m[3][0], m[3][1], m[3][2]);
         }
-        return vmath::vec3(0.0f, 0.0f, 0.0f);
+        return glm::vec3(0.0f, 0.0f, 0.0f);
     }
 
-    vmath::vec3 SpotLight::GetWorldPosition() const
+    glm::vec3 SpotLight::GetWorldPosition() const
     {
         if (auto* owner = GetOwner())
         {
             const auto m = owner->GetWorldMatrix();
-            return vmath::vec3(m[3][0], m[3][1], m[3][2]);
+            return glm::vec3(m[3][0], m[3][1], m[3][2]);
         }
-        return vmath::vec3(0.0f, 0.0f, 0.0f);
+        return glm::vec3(0.0f, 0.0f, 0.0f);
     }
 
-    vmath::vec3 SpotLight::GetWorldDirection() const
+    glm::vec3 SpotLight::GetWorldDirection() const
     {
         // worldMatrix 의 -Z 컬럼 = forward (DirLight 와 동일 컨벤션).
         if (auto* owner = GetOwner())
         {
             const auto m = owner->GetWorldMatrix();
-            vmath::vec3 forward(-m[2][0], -m[2][1], -m[2][2]);
-            return vmath::normalize(forward);
+            glm::vec3 forward(-m[2][0], -m[2][1], -m[2][2]);
+            return glm::normalize(forward);
         }
-        return vmath::vec3(0.0f, 0.0f, -1.0f);
+        return glm::vec3(0.0f, 0.0f, -1.0f);
     }
 
     // -- SP-SceneContext+ProgramRegistry (2026-05-26) - Component lifecycle hook ------

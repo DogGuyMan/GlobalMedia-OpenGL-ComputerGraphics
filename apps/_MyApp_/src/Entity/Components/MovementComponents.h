@@ -71,7 +71,7 @@ namespace TopdownShooter::Entity::Components
 		///          box2d XZ 매핑: dir[0] -> tr.Translate[0](x), dir[1] -> tr.Translate[2](z).
 		/// @param dir 이동 방향 벡터(정규화 미보장 시 내부에서 normalize 처리).
 		/// @param dt  경과 시간(초).
-		virtual void DoForward(vmath::vec2 dir, float dt) override
+		virtual void DoForward(glm::vec2 dir, float dt) override
 		{
 			auto *owner = GetOwner();
 			if (!owner)
@@ -81,7 +81,7 @@ namespace TopdownShooter::Entity::Components
 				return;
 			auto &tr = owner->GetTransform();
 			// mMoveSpeed = units/sec  dt(초) 곱해 *프레임 변위* 산출. fps-independent.
-			auto displacement = vmath::normalize(dir) * (mMoveSpeed.GetValue() * dt);
+			auto displacement = glm::normalize(dir) * (mMoveSpeed.GetValue() * dt);
 			tr.Translate[0] += displacement[0];
 			tr.Translate[2] += displacement[1];
 		}

@@ -20,7 +20,7 @@
 #define __SJH_TEXT_TEXT_RENDERER_H__
 
 #include "scene/actor.h"   // Component 베이스 + Actor
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include <string>
 #include <vector>
 
@@ -78,7 +78,7 @@ namespace SJH::Text
          * @brief 모든 글리프 child 의 tint 를 @p rgba 로 일괄 설정.
          * @param rgba RGBA 색상 (각 채널 0~1).
          */
-        void SetColor(const vmath::vec4& rgba);
+        void SetColor(const glm::vec4& rgba);
 
         /**
          * @brief 모든 글리프 child 의 알파를 @p a 로 설정 (fade 효과).
@@ -105,7 +105,7 @@ namespace SJH::Text
         const BitmapFont* mFont = nullptr;                   ///< @brief 비소유 폰트 포인터 (ResourceRegistry 보유).
         std::string       mText;                             ///< @brief 현재 표시 중인 문자열.
         float             mCharHeight = 0.5f;                ///< @brief 글리프 1자의 월드 단위 높이 (기본 0.5).
-        vmath::vec4       mColor = vmath::vec4(1, 1, 1, 1);  ///< @brief 전체 글리프 tint 색상 (RGBA, 기본 흰색).
+        glm::vec4       mColor = glm::vec4(1, 1, 1, 1);  ///< @brief 전체 글리프 tint 색상 (RGBA, 기본 흰색).
         std::vector<SJH::Scene::Actor*> mGlyphs;             ///< @brief 글리프 child 포인터 벡터 (비소유 - owner children 소유).
     };
 

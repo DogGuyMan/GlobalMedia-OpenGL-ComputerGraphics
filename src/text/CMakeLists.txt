@@ -16,7 +16,7 @@ target_link_libraries(sjh_text
         SJH::scene             # Component/Actor — TextRenderer 베이스 (T2)
         SJH::sprite            # SpriteRenderer / UniformAtlas — 글리프 렌더 (T2)
         SJH::resource_registry # UniformAtlas 캐시 — BitmapFont
-        project_deps           # vmath, gl3w, OpenGL
+        project_deps           #, gl3w, OpenGL
     PRIVATE
         spdlog                 # bitmap_font.cpp 로드 실패 warn
 )

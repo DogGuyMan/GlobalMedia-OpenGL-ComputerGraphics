@@ -33,7 +33,7 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH::Sprite { class SpriteRenderer; } // DirGroup 핸들 (실타입 .cpp)
 
@@ -115,11 +115,11 @@ namespace TopdownShooter::Playable
 		/// @details 역할별 분리(P2): director 는 [C] 화면 연출 담당. 월드점 death FX[B](폭발 등)는
 		///          도메인 seam(Life::mOnDeathFx)이 @c Spawns/ 로 직접 트리거.
 		/// @param pos 월드 사망 위치 (현재 director 는 미사용 - 도메인 seam 이 처리).
-		void ReactDied(vmath::vec3 pos) override;
+		void ReactDied(glm::vec3 pos) override;
 
 		/// @brief 공격 반응 - "attack" Playable 재생.
 		/// @param aimDir 조준 방향 (현재 미사용 - FX 트리거 목적).
-		void ReactAttack(vmath::vec2 /*aimDir*/) override { Play("attack"); }
+		void ReactAttack(glm::vec2 /*aimDir*/) override { Play("attack"); }
 
 		/// @brief controller(RD5) 가 계산한 facing 으로 8그룹 가시성 토글.
 		/// @param f 새 facing. 변경 없으면 early return.

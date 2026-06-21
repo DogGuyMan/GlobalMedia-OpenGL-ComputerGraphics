@@ -36,7 +36,7 @@
 #include "render/actor_factory.h" // CreateSkyboxActor (2026-06-11 E2 이주)
 #include "scene/scene.h"
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Bootstrap
 {
@@ -57,8 +57,8 @@ namespace TopdownShooter::Bootstrap
 			auto worldCamActor = SJH::Scene::CreateCameraActor("WorldCamera", 45.0f, deps.aspect, 0.1f, 1000.0f);
 			auto &worldCamTransform = worldCamActor->GetTransform();
 			worldCamTransform.SetTransformWithVectors(
-			                     vmath::vec3(0.0f, 3.0f, 6.0f),
-			                     vmath::vec3(-30.0f, 0.0f, 0.0))
+			                     glm::vec3(0.0f, 3.0f, 6.0f),
+			                     glm::vec3(-30.0f, 0.0f, 0.0))
 			    .PrintTransform();
 
 			auto *camera = worldCamActor->GetComponent<SJH::Scene::Camera>();
@@ -90,11 +90,11 @@ namespace TopdownShooter::Bootstrap
 			auto &dir = SJH::Scene::Director::Get();
 
 			auto lightActor = SJH::Scene::CreateDirLightActor("MainDirLight",
-			    vmath::vec3(-0.4f, -1.0f, -0.5f));
+			    glm::vec3(-0.4f, -1.0f, -0.5f));
 			auto *light = lightActor->GetComponent<SJH::DirLight>();
-			light->Ambient  = vmath::vec3(0.3f, 0.3f, 0.3f);
-			light->Diffuse  = vmath::vec3(0.9f, 0.9f, 0.85f);
-			light->Specular = vmath::vec3(0.5f, 0.5f, 0.5f);
+			light->Ambient  = glm::vec3(0.3f, 0.3f, 0.3f);
+			light->Diffuse  = glm::vec3(0.9f, 0.9f, 0.85f);
+			light->Specular = glm::vec3(0.5f, 0.5f, 0.5f);
 			dir.Root().AddChild(std::move(lightActor));
 		}
 

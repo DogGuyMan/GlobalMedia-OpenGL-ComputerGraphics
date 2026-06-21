@@ -41,7 +41,7 @@ namespace SJH
 
 	/**
 	 * @brief @c glfwGetFramebufferSize 로 물리 픽셀 크기를 얻고 aspect ratio 를 계산해 반환.
-	 * @details Retina HiDPI 환경에서 투영 행렬(@c vmath::perspective) 과
+	 * @details Retina HiDPI 환경에서 투영 행렬(@c glm::perspective) 과
 	 *          @c glViewport 설정 모두 물리 픽셀 기준이어야 하므로 본 함수를 통해 얻어야 한다.
 	 * @param window GLFW 윈도우 핸들. @c nullptr 전달 시 기본값(@c {0,0,0.0f}) 반환.
 	 * @return @ref FramebufferInfo - Width, Height, Aspect.

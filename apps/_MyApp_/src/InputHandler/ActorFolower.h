@@ -25,7 +25,7 @@
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include <functional>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Controller
 {
@@ -69,11 +69,11 @@ namespace TopdownShooter::Controller
 
 		/// @brief Follow 시 target 기준 camera offset (default = vec3(0, 0, 0)).
 		/// @param offset target Translate 에 더해질 카메라 위치 오프셋.
-		ActorFolower &SetFollowOffset(vmath::vec3 offset);
+		ActorFolower &SetFollowOffset(glm::vec3 offset);
 
 		/// @brief 초기 yaw/pitch 회전 각도(degree) 설정.
 		/// @param rot (yaw, pitch) 쌍. 탑다운 시점 초기화용.
-		ActorFolower &SetFollowRotate(vmath::vec2 rot);
+		ActorFolower &SetFollowRotate(glm::vec2 rot);
 
 		/// @brief 마우스 감도 (default 0.1).
 		ActorFolower &SetLookSensitivity(float v);
@@ -103,7 +103,7 @@ namespace TopdownShooter::Controller
 		SJH::MouseInput *mMouseInput     = nullptr;      ///< 마우스 look 입력 소스 (비소유).
 		SJH::Scene::Camera *mCamera      = nullptr;      ///< 제어 대상 Camera Component (비소유).
 		SJH::Scene::Actor *mFollowTarget = nullptr;      ///< 추종 target Actor (비소유). nullptr 이면 Update no-op.
-		vmath::vec3 mFollowOffset        = vmath::vec3(0.0f, 0.0f, 0.0f);  ///< target 기준 카메라 위치 오프셋.
+		glm::vec3 mFollowOffset        = glm::vec3(0.0f, 0.0f, 0.0f);  ///< target 기준 카메라 위치 오프셋.
 
 		float mYawDeg          = 0.0f;    ///< 누적 yaw 각도(degree).
 		float mPitchDeg        = 0.0f;    ///< 누적 pitch 각도(degree). 탑다운 기본 시점 - 아래를 향함.
@@ -111,8 +111,8 @@ namespace TopdownShooter::Controller
 
 		// 이동 보간 상태 (카메라 떨림 방지)
 		EaseFn      mEaseFn;                                         ///< 생성함수 커브 (SetUp 에서 default 주입).
-		vmath::vec3 mEaseStart      = vmath::vec3(0.0f, 0.0f, 0.0f); ///< 현재 ease 구간 시작 위치.
-		vmath::vec3 mEaseGoal       = vmath::vec3(0.0f, 0.0f, 0.0f); ///< 현재 ease 구간 목표 위치.
+		glm::vec3 mEaseStart      = glm::vec3(0.0f, 0.0f, 0.0f); ///< 현재 ease 구간 시작 위치.
+		glm::vec3 mEaseGoal       = glm::vec3(0.0f, 0.0f, 0.0f); ///< 현재 ease 구간 목표 위치.
 		float       mEaseProgress   = 1.0f;                          ///< [0,1] ease 진행도.
 		float       mFollowDuration = 0.18f;                         ///< ease 구간 길이(초) - catch-up 속도.
 		float       mArriveEps      = 0.01f;                         ///< EPS - retarget/도착 스레숄드.

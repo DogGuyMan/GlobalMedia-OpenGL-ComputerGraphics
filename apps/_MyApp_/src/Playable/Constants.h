@@ -19,7 +19,7 @@
 
 #include "render_bootstrap/render_pipeline.h" // SJH::Render::PostFXStageConfig (POSTFX_PROGRAM_CONFIGS)
 #include "vector"
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Playable
 {
@@ -45,17 +45,17 @@ namespace TopdownShooter::Playable
 	 * @brief 방향(facing) 판정용 각도 구간 테이블.
 	 * @details
 	 *  단위 = degree, 범위 [0,360), 0 도 = 오른쪽(+X), 반시계 방향이 +.
-	 *  각 @c vmath::vec2 = {start, end} 의 반열린 구간 [start, end).
+	 *  각 @c glm::vec2 = {start, end} 의 반열린 구간 [start, end).
 	 *  start > end 면 0 도를 가로질러 wrap (Right 가 그 경우).
 	 *  네 구간이 360 도를 빈틈없이 덮어야 판정이 결정적.
 	 *  화면 매핑: Back = 화면 위(Up, 약 90 도), Front = 화면 아래(Down, 약 270 도).
 	 */
 	struct FacingThresholdConfig
 	{
-		vmath::vec2 Back;  ///< Up   (약 90 도)
-		vmath::vec2 Front; ///< Down (약 270 도)
-		vmath::vec2 Left;  ///< 약 180 도
-		vmath::vec2 Right; ///< 약 0 도 (0 도를 가로질러 wrap)
+		glm::vec2 Back;  ///< Up   (약 90 도)
+		glm::vec2 Front; ///< Down (약 270 도)
+		glm::vec2 Left;  ///< 약 180 도
+		glm::vec2 Right; ///< 약 0 도 (0 도를 가로질러 wrap)
 	};
 	/// @brief 플레이어 방향 판정 구간 인스턴스 (Up/Down/Left/Right 가 360 도를 분할).
 	const FacingThresholdConfig PLAYER_FACING_THRESHOLD = {
@@ -192,12 +192,12 @@ namespace TopdownShooter::Playable
 
 	/// @brief fog 셰이더 @c uFogColor vec3 초기값 -- RGB (20, 36, 10) 어두운 녹색 안개.
 	/// @note @c PostFXStageConfig.InitFloats 가 float 전용이라 startup 에서 Material 에 직접 set.
-	const     vmath::vec3 FOG_COLOR      = vmath::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
+	const     glm::vec3 FOG_COLOR      = glm::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
 	/// @brief fog 셰이더 @c uFogMode int 초기값 -- 0=Linear, 1=Exp, 2=Exp2. 기본 Exp2.
 	constexpr int         FOG_MODE       = 2;                                                           // 0=Linear, 1=Exp, 2=Exp2
 	/// @brief grayscale_vignetting 셰이더 @c uVignetteColor vec3 초기값 -- 빨강 (255, 0, 0) 비네팅.
 	/// @note startup 에서 Material 에 직접 set (@c PostFXStageConfig.InitFloats 밖).
-	const     vmath::vec3 VIGNETTE_COLOR = vmath::vec3(1.0f, 0.0f, 0.0f);                                // {255,0,0} 빨강 비네팅
+	const     glm::vec3 VIGNETTE_COLOR = glm::vec3(1.0f, 0.0f, 0.0f);                                // {255,0,0} 빨강 비네팅
 }; // namespace TopdownShooter::Playable
 
 #endif //_TOPDOWNSHOOTER_PLAYABLE_CONSTANTS__

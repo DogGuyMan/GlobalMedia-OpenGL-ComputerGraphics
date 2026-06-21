@@ -72,6 +72,29 @@ def normalize_varyings(text, stage):
     return text
 
 
+def normalize_sampler_names(text):
+    """Slang 이 sampler global 에 붙인 _N 접미사를 제거 (author 이름 복원).
+
+    Slang 은 sampler global 을 'uniform sampler2D uTex_0;' 처럼 _N 접미사로 낸다.
+    엔진(PropertyBlockSetter)은 sampler 를 *author 이름*('uTex' = Material.Properties.Textures 키)
+    으로 바인딩하므로, _N 이 붙으면 매칭 실패 -> 텍스처 미바인딩 -> 직전 unit 잔재 샘플(오염).
+    (UBO 블록은 'block_<T>_N' 을 엔진이 별도 정규화하지만 sampler 는 그 경로 밖이라 여기서 처리.)
+    varying(_slangVaryN) / in / out 은 'uniform sampler' 패턴이 아니므로 무영향.
+    """
+    sampler_re = re.compile(r"uniform\s+sampler\w+\s+([A-Za-z_][A-Za-z0-9_]*)_(\d+)\s*;")
+
+    renames = {}  # uTex_0 -> uTex
+    for match in sampler_re.finditer(text):
+        base, suffix = match.group(1), match.group(2)
+        renames[base + "_" + suffix] = base
+
+    # 선언 + 본문 사용처(texture(uTex_0, ...)) 전부 word-boundary 치환.
+    for old, new in renames.items():
+        text = re.sub(r"\b" + re.escape(old) + r"\b", new, text)
+
+    return text
+
+
 def post_process_glsl_410(text, stage):
     """slangc 의 GLSL 출력을 macOS OpenGL 4.1 (GLSL 410) 호환으로 변환."""
     # 1) version
@@ -82,6 +105,8 @@ def post_process_glsl_410(text, stage):
     text = re.sub(r"layout\((?:row|column)_major\) buffer;\n", "", text)
     # 4) inter-stage varying 이름 정규화
     text = normalize_varyings(text, stage)
+    # 5) sampler global _N 접미사 제거 (author 이름 복원 - 텍스처 바인딩 키 일치)
+    text = normalize_sampler_names(text)
     return text
 
 

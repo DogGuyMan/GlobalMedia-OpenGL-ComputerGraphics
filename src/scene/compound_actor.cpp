@@ -24,7 +24,7 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace SJH::Scene
 {
@@ -36,13 +36,13 @@ namespace SJH::Scene
         ///   - yaw   = atan2(d.x, -d.z)
         ///   - roll  = 0
         /// EulerRot=(0,0,0) 인 Transform 의 GetForward() = (0,0,-1) 와 일관.
-        vmath::vec3 DirectionToEulerDeg(const vmath::vec3& dir)
+        glm::vec3 DirectionToEulerDeg(const glm::vec3& dir)
         {
             constexpr float RAD2DEG = 57.295779513f;
-            const auto d = vmath::normalize(dir);
+            const auto d = glm::normalize(dir);
             const float pitchRad = asinf(d[1]);
             const float yawRad   = atan2f(d[0], -d[2]);
-            return vmath::vec3(pitchRad * RAD2DEG, yawRad * RAD2DEG, 0.0f);
+            return glm::vec3(pitchRad * RAD2DEG, yawRad * RAD2DEG, 0.0f);
         }
     }
 
@@ -54,7 +54,7 @@ namespace SJH::Scene
         return actor;
     }
 
-    std::unique_ptr<Actor> CreateDirLightActor(std::string name, vmath::vec3 direction)
+    std::unique_ptr<Actor> CreateDirLightActor(std::string name, glm::vec3 direction)
     {
         auto actor = std::make_unique<Actor>(std::move(name));
         actor->GetTransform().EulerRot = DirectionToEulerDeg(direction);
@@ -63,7 +63,7 @@ namespace SJH::Scene
     }
 
     std::unique_ptr<Actor> CreatePointLightActor(
-        std::string name, vmath::vec3 position, float distance)
+        std::string name, glm::vec3 position, float distance)
     {
         auto actor = std::make_unique<Actor>(std::move(name));
         actor->GetTransform().Translate = position;
@@ -73,7 +73,7 @@ namespace SJH::Scene
     }
 
     std::unique_ptr<Actor> CreateSpotLightActor(
-        std::string name, vmath::vec3 position, vmath::vec3 direction,
+        std::string name, glm::vec3 position, glm::vec3 direction,
         float innerCutoffDeg, float outerCutoffDeg)
     {
         auto actor = std::make_unique<Actor>(std::move(name));

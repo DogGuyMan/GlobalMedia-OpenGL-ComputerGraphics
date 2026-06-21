@@ -41,7 +41,7 @@ namespace TopdownShooter::VFX
 	/// @param yawRad   Y축 초기 회전각(라디안). 0 이면 회전 없음.
 	EffekseerPlayable::EffekseerPlayable(::Effekseer::ManagerRef manager,
 	                                     SJH::Effect            *effect,
-	                                     const vmath::vec3      &spawnPos,
+	                                     const glm::vec3      &spawnPos,
 	                                     TrackPolicy             track,
 	                                     float                   yawRad)
 	    : mManager(manager), mEffect(effect), mSpawnPos(spawnPos), mTrack(track), mYaw(yawRad)

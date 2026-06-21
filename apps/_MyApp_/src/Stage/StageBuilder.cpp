@@ -41,7 +41,7 @@
 #include <box2d/box2d.h>
 #include <cassert>
 #include <string>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Stage
 {
@@ -129,9 +129,9 @@ namespace TopdownShooter::Stage
 			mat->SetPass(SJH::Pass::Kind::Transparent);
 			// emissive sampler(unit 0) 에 PoliceTape 텍스처 - 라이팅 무관 자체발광.
 			SJH::Uniforms::SetTexture(*mat, "emissive", EnsureWallTexture(reg), 0);
-			SJH::Uniforms::SetVec4(*mat, "tintColor", vmath::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+			SJH::Uniforms::SetVec4(*mat, "tintColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 			// 기본 타일링 - 벽마다 길이 비율이 달라 실제 값은 인스턴스가 override.
-			SJH::Uniforms::SetVec2(*mat, "uvScale", vmath::vec2(1.0f, 1.0f));
+			SJH::Uniforms::SetVec2(*mat, "uvScale", glm::vec2(1.0f, 1.0f));
 			// U 방향 시간 스크롤 속도(tile/sec) - VS 가 uTime 과 곱해 PoliceTape 가 흐름.
 			SJH::Uniforms::SetFloat(*mat, "uScrollSpeed", 0.3f);
 			return mat;
@@ -175,10 +175,10 @@ namespace TopdownShooter::Stage
 					mat->SetProgram(pcbProg);
 				// albedo(Vec3) -> baseColor(Vec4) 승격 (idempotent). UBO MaterialBlock 의 입력.
 				const auto albedoIt = mat->Properties.Vec3s.find("material.albedo");
-				const vmath::vec3 albedo = (albedoIt != mat->Properties.Vec3s.end())
+				const glm::vec3 albedo = (albedoIt != mat->Properties.Vec3s.end())
 				                               ? albedoIt->second
-				                               : vmath::vec3(0.8f, 0.8f, 0.8f);
-				mat->Properties.Vec4s["baseColor"] = vmath::vec4(albedo[0], albedo[1], albedo[2], 1.0f);
+				                               : glm::vec3(0.8f, 0.8f, 0.8f);
+				mat->Properties.Vec4s["baseColor"] = glm::vec4(albedo[0], albedo[1], albedo[2], 1.0f);
 			}
 		}
 
@@ -193,14 +193,14 @@ namespace TopdownShooter::Stage
 		// 벽 하나를 생성/배치하는 팩토리 - (name, center, yRot) 만으로 통합.
 		//   half(물리 박스)는 yRot 에서 자동 도출: 0/180 -> 가로(arena,wallH), 90/270 -> 세로(wallH,arena).
 		//   시각 quad 는 항상 (arena*2, 1, 1) 에 yRot 만큼 Y축 회전 -> 세로 PoliceTape 펜스.
-		auto spawnWall = [&](const char *name, vmath::vec2 center, float yRot) {
+		auto spawnWall = [&](const char *name, glm::vec2 center, float yRot) {
 			const bool horizontal = (static_cast<int>(yRot) % 180) == 0;
-			const vmath::vec2 half = horizontal ? vmath::vec2(arena, wallH) : vmath::vec2(wallH, arena);
+			const glm::vec2 half = horizontal ? glm::vec2(arena, wallH) : glm::vec2(wallH, arena);
 
 			auto actor = Factories::CreateWallActor(name, *cfg.world, center, half);
 			auto &tr = actor->GetTransform();
-			tr.EulerRot = vmath::vec3(0.0f, yRot, 0.0f);
-			tr.Scale = vmath::vec3(arena * 2.0f, 1.0f, 1.0f);
+			tr.EulerRot = glm::vec3(0.0f, yRot, 0.0f);
+			tr.Scale = glm::vec3(arena * 2.0f, 1.0f, 1.0f);
 
 			const std::string matKey = std::string(kWallMatKey) + "_" + name;
 			SJH::Material *wallInst = reg.FindMaterialInstance(matKey);
@@ -209,24 +209,24 @@ namespace TopdownShooter::Stage
 				wallInst = reg.CreateMaterialInstanceFrom(matKey, wallMat);
 				const float tile = wallH * 2.0f;
 				SJH::Uniforms::SetVec2(*wallInst, "uvScale",
-				                       vmath::vec2(arena * 2.0f / tile, wallH * 2.0f / tile));
+				                       glm::vec2(arena * 2.0f / tile, wallH * 2.0f / tile));
 			}
 			actor->AddComponent<SJH::Scene::MeshRenderer>(plane, wallInst);
 			// 시간 공급 - VS 의 uTime 을 누적 dt 로 갱신해 PoliceTape U 스크롤 구동.
 			actor->AddComponent<Components::MaterialTime>(wallInst);
 			stage->AddChild(std::move(actor));
 		};
-		spawnWall("WallTop", vmath::vec2(0.0f, +arena), 180.0f);
-		spawnWall("WallBottom", vmath::vec2(0.0f, -arena), 0.0f);
-		spawnWall("WallLeft", vmath::vec2(-arena, 0.0f), 270.0f);
-		spawnWall("WallRight", vmath::vec2(+arena, 0.0f), 90.0f);
+		spawnWall("WallTop", glm::vec2(0.0f, +arena), 180.0f);
+		spawnWall("WallBottom", glm::vec2(0.0f, -arena), 0.0f);
+		spawnWall("WallLeft", glm::vec2(-arena, 0.0f), 270.0f);
+		spawnWall("WallRight", glm::vec2(+arena, 0.0f), 90.0f);
 
 		// 4) PCB 모델 Actor 추가
 		auto pcbActor = std::make_unique<SJH::Scene::Actor>("PcbActor");
 		pcbActor->GetTransform().SetTransformWithVectors(
-		    vmath::vec3(0.0, -1.75, 0.0),
-		    vmath::vec3(90.0, 0.0, 0),
-		    vmath::vec3(0.75, 0.75, 0.75));
+		    glm::vec3(0.0, -1.75, 0.0),
+		    glm::vec3(90.0, 0.0, 0),
+		    glm::vec3(0.75, 0.75, 0.75));
 
 		// ModelSpawner 유틸리티를 사용해 모델의 모든 RenderUnit을 자식 Actor로 펼침
 		SJH::Scene::ModelSpawner::SpawnEntities(*pcbActor, *pcbModel);
@@ -238,7 +238,7 @@ namespace TopdownShooter::Stage
 		{
 			auto  orbitActor = std::make_unique<SJH::Scene::Actor>("OrbitVfx");
 			auto *pl         = orbitActor->AddComponent<VFX::EffekseerPlayable>(
-                GameSystems::Get().VFX().GetManager(), orbitEffect, vmath::vec3(0.0f), VFX::TrackPolicy::Static);
+                GameSystems::Get().VFX().GetManager(), orbitEffect, glm::vec3(0.0f), VFX::TrackPolicy::Static);
 			pl->SetIsLoop(true);
 			pl->Play();
 			stage->AddChild(std::move(orbitActor));

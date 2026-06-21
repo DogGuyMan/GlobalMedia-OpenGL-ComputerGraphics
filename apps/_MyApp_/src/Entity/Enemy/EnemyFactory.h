@@ -32,7 +32,7 @@
 #include "scene/actor.h"
 #include <box2d/box2d.h>
 #include <memory>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Entity::Enemy
 {
@@ -43,7 +43,7 @@ namespace TopdownShooter::Entity::Enemy
     struct EnemyConfig
     {
         b2World*           world;        ///< 적 물리 body 를 생성할 Box2D 월드 (필수).
-        vmath::vec2        pos;          ///< 스폰 위치 (Box2D XY 평면).
+        glm::vec2        pos;          ///< 스폰 위치 (Box2D XY 평면).
         SJH::Scene::Actor* playerTarget; ///< 추적 대상 Actor (플레이어) - SimplePursueAI 가 매 프레임 추종.
         int   hp     = ENEMY_HP;         ///< 초기 체력 (Life Component).
         float speed  = ENEMY_SPEED;      ///< 추적 이동 속도 (SimplePursueAI).

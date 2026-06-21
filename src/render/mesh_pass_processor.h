@@ -27,7 +27,7 @@
 #ifndef __SJH_MESH_PASS_PROCESSOR_H__
 #define __SJH_MESH_PASS_PROCESSOR_H__
 
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include <cstddef>
 #include <vector>
 
@@ -64,7 +64,7 @@ namespace SJH
 
         // -- WorldMesh 전용 -------------------------------------------------
         const Scene::MeshRenderer *meshRenderer = nullptr;      ///< SSoT - program/mesh/material/actor 모두 경유. @c Kind::WorldMesh 에서만 유효.
-        vmath::mat4                modelMatrix  = vmath::mat4::identity();  ///< 수집 시점 Actor 월드 행렬.
+        glm::mat4                modelMatrix  = glm::mat4(1.0f);  ///< 수집 시점 Actor 월드 행렬.
 
         // -- ScreenQuad 전용 (PassComponent) -------------------------------
         Framebuffer *inputFB      = nullptr;  ///< 읽기 소스 - @c uScene sampler 바인딩 대상. @c Kind::ScreenQuad 에서만 유효.
@@ -129,8 +129,8 @@ namespace SJH
         /// @param viewMat 이번 패스 View 행렬.
         /// @param projMat 이번 패스 Projection 행렬.
         void Process(DeviceContext& rc,
-                     const vmath::mat4& viewMat,
-                     const vmath::mat4& projMat);
+                     const glm::mat4& viewMat,
+                     const glm::mat4& projMat);
 
     private:
         std::vector<DrawCommand> mItems;                          ///< 이번 프레임 DrawCommand 큐.

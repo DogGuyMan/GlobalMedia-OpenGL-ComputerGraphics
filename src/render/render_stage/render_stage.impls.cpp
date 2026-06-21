@@ -40,7 +40,7 @@
 #include "program/program_uniforms.h"
 
 #include <GL/gl3w.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -117,11 +117,11 @@ namespace SJH
 		std::vector<PointLight *>   points;
 		std::vector<SpotLight *>    spots;
 
-		vmath::vec3 viewPos(0.0f, 0.0f, 0.0f);
+		glm::vec3 viewPos(0.0f, 0.0f, 0.0f);
 		if (auto *camOwner = cam.GetOwner())
 		{
 			const auto camWorld = camOwner->GetWorldMatrix();
-			viewPos = vmath::vec3(camWorld[3][0], camWorld[3][1], camWorld[3][2]);
+			viewPos = glm::vec3(camWorld[3][0], camWorld[3][1], camWorld[3][2]);
 		}
 
 		auto &ctx = Scene::Director::Get().GetContext();
@@ -150,7 +150,7 @@ namespace SJH
 	}
 
 	void SceneRenderer::CollectFromActor(const Scene::Actor &actor,
-	                                     const vmath::mat4  &viewMat,
+	                                     const glm::mat4  &viewMat,
 	                                     uint64_t            cullingMask)
 	{
 		if (!actor.IsActive())
@@ -164,7 +164,7 @@ namespace SJH
 			{
 				if (mr->IsEnabled() && mr->Visible && mr->Mesh && mr->Material)
 				{
-					const vmath::mat4 model  = actor.GetWorldMatrix();
+					const glm::mat4 model  = actor.GetWorldMatrix();
 					const float       depthZ = (viewMat * model)[3][2];
 					DrawCommand       cmd;
 					cmd.meshRenderer = mr;

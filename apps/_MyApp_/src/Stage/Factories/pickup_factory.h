@@ -24,7 +24,7 @@
 #include <box2d/box2d.h>
 #include <memory>
 #include <string>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Stage::Factories
 {
@@ -44,7 +44,7 @@ namespace TopdownShooter::Stage::Factories
      * @return 생성된 픽업 Actor 의 @c unique_ptr. 씬 등록은 호출자 책임.
      */
     inline std::unique_ptr<SJH::Scene::Actor> CreatePickupActor(
-        std::string name, b2World& world, vmath::vec2 center, vmath::vec2 half)
+        std::string name, b2World& world, glm::vec2 center, glm::vec2 half)
     {
         auto actor = std::make_unique<SJH::Scene::Actor>(std::move(name));
 
@@ -55,7 +55,7 @@ namespace TopdownShooter::Stage::Factories
         bc.isSensor      = true;   // Unity isTrigger ON
         bc.categoryBits  = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Pickup);
         bc.maskBits      = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
-        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, vmath::vec2(half[0] * 2.0f, half[1] * 2.0f));
+        actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, glm::vec2(half[0] * 2.0f, half[1] * 2.0f));
 
         actor->AddComponent<Components::PickupTriggerLogger>();
 

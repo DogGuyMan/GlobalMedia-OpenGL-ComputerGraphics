@@ -31,7 +31,7 @@ namespace SJH::Text
         Rebuild();
     }
 
-    void TextRenderer::SetColor(const vmath::vec4& rgba)
+    void TextRenderer::SetColor(const glm::vec4& rgba)
     {
         mColor = rgba;
         for (auto* g : mGlyphs)
@@ -75,8 +75,8 @@ namespace SJH::Text
             {
                 auto* glyph = owner->AddChild(std::make_unique<SJH::Scene::Actor>("glyph"));
                 auto& t = glyph->GetTransform();
-                t.Translate = vmath::vec3(penX + glyphW * 0.5f, mCharHeight * 0.5f, 0.0f); // 하단중앙
-                t.Scale     = vmath::vec3(glyphW, mCharHeight, 1.0f);                       // 빌보드 sx/sy
+                t.Translate = glm::vec3(penX + glyphW * 0.5f, mCharHeight * 0.5f, 0.0f); // 하단중앙
+                t.Scale     = glm::vec3(glyphW, mCharHeight, 1.0f);                       // 빌보드 sx/sy
                 // D8 DI - 공유 자원(plane/material)을 SpriteResources 로 해결 후 주입 (미주입 시 글리프 무성 소멸).
                 auto* atlas = mFont->GetAtlas();
                 auto* mesh  = SJH::SpriteResources::EnsureSharedPlane();

@@ -95,7 +95,7 @@ namespace TopdownShooter::Playable
 			}
 	}
 
-	void PlayableDirector::ReactDied(vmath::vec3 /*pos*/)
+	void PlayableDirector::ReactDied(glm::vec3 /*pos*/)
 	{
 		// 역할별 분리(P2): director 는 순수 [C]. 화면/엔티티 death 연출은 등록된 "death" Playable.
 		// 월드점 death FX[B](폭발 등)는 도메인 seam(Life::mOnDeathFx / 적 seam)이 Spawns/ 로 직접 트리거.

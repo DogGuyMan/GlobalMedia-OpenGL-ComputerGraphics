@@ -25,7 +25,7 @@
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include <spdlog/spdlog.h>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Controller
 {
@@ -87,7 +87,7 @@ namespace TopdownShooter::Controller
 
 		float mYawDeg = 0.0f;                                    ///< 누적 yaw 각도(degree).
 		float mPitchDeg = 0.0f;                                  ///< 누적 pitch 각도(degree).
-		vmath::vec3 mMoveDelta = vmath::vec3(0.0f, 0.0f, 0.0f);  ///< 이번 프레임 이동 누적 (held handler 가 더함, Update 끝에서 reset).
+		glm::vec3 mMoveDelta = glm::vec3(0.0f, 0.0f, 0.0f);  ///< 이번 프레임 이동 누적 (held handler 가 더함, Update 끝에서 reset).
 
 		float mLookSensitivity = 0.1f;                          ///< 마우스 이동량 -> 각도 변환 감도.
 		float mMoveSpeed = 0.05f;                               ///< 프레임당 이동 거리.

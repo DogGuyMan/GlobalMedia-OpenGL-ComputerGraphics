@@ -61,7 +61,7 @@
 #include <tweeny/tweeny.h>
 #include <memory>
 #include <utility>
-#include <vmath.h>
+#include <glm/glm.hpp>
 
 namespace TopdownShooter::Bootstrap
 {
@@ -209,7 +209,7 @@ namespace TopdownShooter::Bootstrap
 				shadowMat->SetProgram(prog);
 				shadowMat->SetPass(SJH::Pass::Kind::Transparent);
 				shadowMat->Properties.Textures["uTex"]   = {shadowTex, 0};
-				shadowMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 1.0f, 1.0f, 0.5f);
+				shadowMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f);
 			}
 			SJH::Material *hitMat = reg.FindSharedMaterial("hitrange_decal_mat");
 			if (!hitMat)
@@ -223,7 +223,7 @@ namespace TopdownShooter::Bootstrap
 				hitMat->SetProgram(prog);
 				hitMat->SetPass(SJH::Pass::Kind::Transparent);
 				hitMat->Properties.Textures["uTex"]   = {circleTex, 0};
-				hitMat->Properties.Vec4s["baseColor"] = vmath::vec4(1.0f, 0.0f, 0.0f, 0.45f);
+				hitMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 0.0f, 0.0f, 0.45f);
 			}
 
 			// -- 충돌 반경 (첫 fixture) --
@@ -257,14 +257,14 @@ namespace TopdownShooter::Bootstrap
 			auto *shadow = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_shadow"));
 			shadow->AddComponent<SJH::Scene::MeshRenderer>(plane, shadowMat, /*queueOffset*/ 0);
 			shadow->GetTransform().EulerRot[0] = -90.0f;                        // XY -> XZ 눕힘
-			shadow->GetTransform().Scale       = vmath::vec3(shadowD, 1.0f, shadowD);
-			shadow->GetTransform().Translate   = vmath::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
+			shadow->GetTransform().Scale       = glm::vec3(shadowD, 1.0f, shadowD);
+			shadow->GetTransform().Translate   = glm::vec3(0.0f, baseY, 0.0f);                        // z-fight 회피
 
 			auto *circle = ground->AddChild(std::make_unique<SJH::Scene::Actor>("decal_hitrange"));
 			circle->AddComponent<SJH::Scene::MeshRenderer>(plane, hitMat, /*queueOffset*/ 1);
 			circle->GetTransform().EulerRot[0] = -90.0f;
-			circle->GetTransform().Scale       = vmath::vec3(hitD, 1.0f, hitD);
-			circle->GetTransform().Translate   = vmath::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
+			circle->GetTransform().Scale       = glm::vec3(hitD, 1.0f, hitD);
+			circle->GetTransform().Translate   = glm::vec3(0.0f, baseY + DECAL_CIRCLE_Y_DELTA, 0.0f);
 		}
 	} // namespace
 
@@ -283,8 +283,8 @@ namespace TopdownShooter::Bootstrap
 		// director.Register("fire"/"hit"/"death", ...) + 입력 콜백이 director.Play(key)/ReactDamaged (아래 블록).
 		// (config 단계엔 director 가 아직 없으므로 콜백은 액터 빌드 뒤 SetFire/DamageCallback 로 주입.)
 		pac.physics.world = deps.physicsWorld;
-		pac.physics.size = vmath::vec2(1.0f, 1.0f);
-		pac.physics.startPosition = vmath::vec2(0.0f, 0.0f);
+		pac.physics.size = glm::vec2(1.0f, 1.0f);
+		pac.physics.startPosition = glm::vec2(0.0f, 0.0f);
 		pac.physics.density = 1.0f;
 		pac.physics.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Player);
 		pac.physics.maskBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PlayerMask);
@@ -296,8 +296,8 @@ namespace TopdownShooter::Bootstrap
 		// pac.sprite.fps 미설정 - SpriteCfg 기본값(PlayerActor.h SpriteCfg::fps) 이 단일 소스.
 
 		auto spriteActor = TopdownShooter::Entity::Player::CreatePlayerActor(pac);
-		spriteActor->GetTransform().Translate = vmath::vec3(0.0f, 0.0f, 0.0f);
-		spriteActor->GetTransform().Scale = vmath::vec3(1.0f, 1.0f, 1.0f);
+		spriteActor->GetTransform().Translate = glm::vec3(0.0f, 0.0f, 0.0f);
+		spriteActor->GetTransform().Scale = glm::vec3(1.0f, 1.0f, 1.0f);
 
 		// depth+1: renderActor(방향 스프라이트) + aimPivot(조준 회전/손 궤도) - root는 비회전(데칼 spin 분리).
 		// 둘 다 std::move 후에도 주소 안정(spriteActor children 보유). groundActor 는 AttachGroundDecals 가 root 직속에 부착.
@@ -339,12 +339,12 @@ namespace TopdownShooter::Bootstrap
 
 		// VFX seam 주입 - 컴포넌트는 VFX 를 모르고, 빌더가 VFX::Spawn 람다를 주입 (director->Play 패턴).
 		if (auto *life = spriteActor->GetComponent<Entity::Components::Life>())
-			life->SetOnHitFx([](const vmath::vec3 &p) { VFX::Spawn("hit", p); })
-				.SetOnDamageNumber([](int d, const vmath::vec3 &p) { WorldText::SpawnDamage(d, p); });
+			life->SetOnHitFx([](const glm::vec3 &p) { VFX::Spawn("hit", p); })
+				.SetOnDamageNumber([](int d, const glm::vec3 &p) { WorldText::SpawnDamage(d, p); });
 		if (auto *player = spriteActor->GetComponent<Entity::PlayerEntity>())
-			player->SetOnMoveFx([](const vmath::vec3 &p) { VFX::Spawn("dust", p); });
+			player->SetOnMoveFx([](const glm::vec3 &p) { VFX::Spawn("dust", p); });
 		if (auto *weapon = spriteActor->GetComponent<Entity::Components::Weapon>())
-			weapon->SetOnFireFx([](const vmath::vec3 &p, float yaw) { VFX::Spawn("gunshoot", p, yaw); });
+			weapon->SetOnFireFx([](const glm::vec3 &p, float yaw) { VFX::Spawn("gunshoot", p, yaw); });
 		// -------------------------------------------------------------------------
 
 		// 발밑 그림자 + 피격범위 원 (groundActor 자식). std::move 전 = pre-entry.
