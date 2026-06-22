@@ -21,7 +21,7 @@
 #include "object/mesh.h"
 #include "material/material.h"
 #include "render/pass_component.h"
-#include "render/render_stage/render_stage.impls.h"   // SceneRenderer + ScreenQuadStage 통합
+#include "render/render_passable/render_passable.impls.h"   // SceneRenderer + ScreenQuadStage 통합
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/layer.h"
@@ -34,48 +34,44 @@
 
 namespace SJH::Render
 {
-	std::unique_ptr<ScreenQuadStage> SetupDefaultPipeline(
+	DefaultPipelineResult SetupDefaultPipeline(
 	    ResourceRegistry& reg,
-	    SceneRenderer& sceneRenderer,
 	    Framebuffer* sceneFB,
 	    const DefaultPipelineConfig& cfg)
 	{
-		// passthrough Program 등록.
-		auto* passthroughProg = reg.CreateProgram(
-		    cfg.PassthroughKey,
-		    cfg.PassthroughVS,
-		    cfg.PassthroughFS);
+		DefaultPipelineResult result;
+
+		auto* passthroughProg = reg.CreateProgram(cfg.PassthroughKey, cfg.PassthroughVS, cfg.PassthroughFS);
 		if (!passthroughProg)
 		{
 			spdlog::error("[SetupDefaultPipeline] passthrough 셰이더 로드 실패: {}", cfg.PassthroughFS);
-			return nullptr;
+			return result;   // Stage=nullptr
 		}
 
-		// ScreenQuad Mesh 등록.
 		auto* quadMesh = reg.RegisterMesh(cfg.ScreenQuadMeshKey, Mesh::CreateScreenQuad());
 		if (!quadMesh)
 		{
 			spdlog::error("[SetupDefaultPipeline] ScreenQuad Mesh 등록 실패 (중복 키?): {}", cfg.ScreenQuadMeshKey);
-			return nullptr;
+			return result;
 		}
 
-		// ScreenQuadStage 생성 + 초기 sources = sceneFB.
-		auto screenQuadStage = std::make_unique<ScreenQuadStage>(*passthroughProg, *quadMesh);
-		screenQuadStage->SetSources({sceneFB}); // 초기 sources fallback
-
-		// bypassMaterial 등록 + SceneRenderer 주입.
 		auto* bypassMat = reg.CreateSharedMaterial(cfg.BypassMatKey);
 		if (!bypassMat)
 		{
 			spdlog::error("[SetupDefaultPipeline] bypass Material 생성 실패 (중복 키?): {}", cfg.BypassMatKey);
-			return nullptr;
+			return result;
 		}
 		bypassMat->SetProgram(passthroughProg);
 
-		sceneRenderer.SetScreenQuadMesh(quadMesh);
-		sceneRenderer.SetBypassMaterial(bypassMat);
+		// present 스테이지(최종 FBO -> backbuffer). 초기 sources fallback = sceneFB.
+		auto screenQuadStage = std::make_unique<ScreenQuadStage>(*passthroughProg, *quadMesh);
+		screenQuadStage->SetSources({sceneFB});
 
-		return screenQuadStage;
+		// [3.5] SceneRenderer 미터치 - per-effect PostFxPass 가 quad/bypass 를 직접 보유(main 이 주입).
+		result.Stage   = std::move(screenQuadStage);
+		result.Quad    = quadMesh;
+		result.Bypass  = bypassMat;
+		return result;
 	}
 
 	PostFXChainResult BuildPostFXChain(

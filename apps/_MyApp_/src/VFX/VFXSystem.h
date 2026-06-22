@@ -12,7 +12,7 @@
  *  ### 비-책임
  *  - [X] 개별 이펙트 재생 lifecycle - @c EffekseerPlayable leaf 가 빌린 Manager 로 Play/Stop.
  *  - [X] .efk 에셋 로드/캐시 - @c SJH::ResourceRegistry / @c SJH::Effect 담당.
- *  - [X] 렌더 stage 통합 - @c ParticleStage 가 본 시스템의 Draw 를 호출.
+ *  - [X] 렌더 stage 통합 - @c ParticlePass 가 본 시스템의 Draw 를 호출.
  *
  *  ### 정통 매핑
  *  - Cocos2D `ParticleSystem` 엔진 계층 - *엔진/에셋/인스턴스* 3-tier 분리의 엔진 tier.

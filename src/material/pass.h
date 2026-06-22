@@ -4,27 +4,27 @@
  *
  * @details
  *  ### 책임
- *  - `Pass::Kind` enum - 렌더링 의도 종류 (Opaque / AlphaTest / Transparent / Outline 등).
- *  - `PipelineState` struct - Kind 에서 파생되는 7 GL fixed-function 상태 묶음 (Depth / Cull / Blend / Stencil).
- *  - `DefaultPipelineStateOf(Kind)` - Kind -> PipelineState 매핑 (SSoT 함수).
- *  - `QueueOf(Kind, offset)` - queue 정수 도출 헬퍼.
+ *  - `Pass::RenderQueue` enum - 렌더링 의도 종류 (Opaque / AlphaTest / Transparent / Outline 등).
+ *  - `RenderStateBlock` struct - RenderQueue 에서 파생되는 7 GL fixed-function 상태 묶음 (Depth / Cull / Blend / Stencil).
+ *  - `DefaultRenderStateBlockOf(RenderQueue)` - RenderQueue -> RenderStateBlock 매핑 (SSoT 함수).
+ *  - `QueueOf(RenderQueue, offset)` - queue 정수 도출 헬퍼.
  *  - `IsTransparentQueue(q)` - sort 방향 분기 헬퍼.
  *
  *  ### 비-책임
- *  - [X] 실제 GL 상태 적용 - `MeshPassProcessor::Process` 가 `PipelineState` 를 풀어 GL 호출.
+ *  - [X] 실제 GL 상태 적용 - `MeshPassProcessor::Process` 가 `RenderStateBlock` 를 풀어 GL 호출.
  *  - [X] per-instance sort offset - `MeshRenderer::QueueOffset` 이 담당.
  *
  *  ### 핵심 철학 - *진실의 원천 단일화*
- *  `Material::SetPass(Kind)` 한 호출이 **queue 정수 + 7 GL state** 모두를 결정한다.
+ *  `Material::SetPass(RenderQueue)` 한 호출이 **queue 정수 + 7 GL state** 모두를 결정한다.
  *  엔진 (`MeshPassProcessor::Process` + `SortMultiStage`) 이 이 한 값에서:
  *  - Queue layer (sort 우선순위, `enum` underlying = Unity Render Queue 정수)
- *  - Depth test/write/func, Cull mode, Blend enable/src/dst - `DefaultPipelineStateOf(Kind)`
+ *  - Depth test/write/func, Cull mode, Blend enable/src/dst - `DefaultRenderStateBlockOf(RenderQueue)`
  *  - Sort 방향 - `IsTransparentQueue(q)` 가 분기 (queue 2500 = Opaque/Transparent 경계)
  *
  *  ### 직교 축 분리 (sec.4.7)
  *  | 축 | 결정자 | 역할 |
  *  |---|---|---|
- *  | `Pass::Kind` | **Material** | "어떤 종류" (큰 분류 + GL state 일괄) |
+ *  | `Pass::RenderQueue` | **Material** | "어떤 종류" (큰 분류 + GL state 일괄) |
  *  | `QueueOffset` | **MeshRenderer** | "같은 종류 안 인스턴스 순서" (Outline 후행 등) |
  *
  *  ### MeshRenderer override 와의 관계
@@ -44,14 +44,14 @@ namespace SJH::Pass
 	/**
 	 * @brief Material 의 렌더링 의도 종류 - Cocos technique 정통.
 	 * @details **underlying value = Unity Render Queue 정수** - *진실의 원천 단일화*.
-	 *          - `static_cast<int>(Kind::Opaque)` == 2000 (Unity Geometry queue)
-	 *          - `static_cast<int>(Kind::AlphaTest)` == 2450 (Unity AlphaTest queue)
-	 *          - `static_cast<int>(Kind::Transparent)` == 3000 (Unity Transparent queue)
+	 *          - `static_cast<int>(RenderQueue::Opaque)` == 2000 (Unity Geometry queue)
+	 *          - `static_cast<int>(RenderQueue::AlphaTest)` == 2450 (Unity AlphaTest queue)
+	 *          - `static_cast<int>(RenderQueue::Transparent)` == 3000 (Unity Transparent queue)
 	 *
-	 *          추가 종류는 enum 확장 + `DefaultPipelineStateOf` 의 case 추가만으로 도입.
+	 *          추가 종류는 enum 확장 + `DefaultRenderStateBlockOf` 의 case 추가만으로 도입.
 	 *          (예: Background=1000, ShadowCaster=2450, UI=3000+, Skybox=2000 등)
 	 */
-	enum class Kind : int
+	enum class RenderQueue : int
 	{
 		StencilMaskWrite = 1999, ///< Outline 2-pass 의 Pass 1 - Opaque 처럼 그리면서 stencil buffer 에 ref=1 기록.
 		                         ///<   OutlineVisible / XRay 가 이 값에 의존 (GL_NOTEQUAL ref=1 이 의미를 가짐).
@@ -67,12 +67,12 @@ namespace SJH::Pass
 	/// @brief Transparent 임계값 - queue 이 이 값 이상이면 back-to-front sort (Unity TransparencySortMode 정통).
 	inline constexpr int TRANSPARENT_THRESHOLD = 2500;
 
-	/// @brief Kind + offset 으로 queue 정수 도출 - Outline / Skybox 등 *enum 사이 미세 조정* 케이스.
-	/// @details Cocos `Pass::priority` 정통. 예: `QueueOf(Kind::Opaque, 5)` = 2005 (Box 도장 직후 Outline).
-	/// @param k      기준 Kind.
+	/// @brief RenderQueue + offset 으로 queue 정수 도출 - Outline / Skybox 등 *enum 사이 미세 조정* 케이스.
+	/// @details Cocos `Pass::priority` 정통. 예: `QueueOf(RenderQueue::Opaque, 5)` = 2005 (Box 도장 직후 Outline).
+	/// @param k      기준 RenderQueue.
 	/// @param offset 추가 offset (기본 0).
 	/// @return `static_cast<int>(k) + offset`.
-	inline constexpr int QueueOf(Kind k, int offset = 0)
+	inline constexpr int QueueOf(RenderQueue k, int offset = 0)
 	{
 		return static_cast<int>(k) + offset;
 	}
@@ -84,7 +84,7 @@ namespace SJH::Pass
 	 *          - 4 영역 (Depth / Cull / Blend / Stencil) 의 fixed-function GL state + 1 sort key.
 	 *          - `MeshPassProcessor::Process` 가 매 DrawCommand 직전 이 묶음을 풀어 GL 호출로 적용.
 	 */
-	struct PipelineState
+	struct RenderStateBlock
 	{
 		// -- Depth --------------------------------------------------------------
 		/// @brief depth test 활성 여부. false 이면 새 fragment 가 무조건 통과.
@@ -159,28 +159,28 @@ namespace SJH::Pass
 		GLuint StencilWriteMask = 0xFFu;
 	};
 
-	/// @brief Pass::Kind -> 기본 PipelineState 매핑.
+	/// @brief Pass::RenderQueue -> 기본 RenderStateBlock 매핑.
 	/// @details
-	///  - `Kind::StencilMaskWrite` : Outline 2-pass Pass 1 - Opaque 색상/깊이 + stencil ref=1 기록.
-	///  - `Kind::Opaque`           : depth test/write on, CullMode=BACK, blend off.
-	///  - `Kind::AlphaTest`        : Opaque 와 동일하되 CullMode=0 (sprite flipX winding 반전 버그 방지).
-	///  - `Kind::Skybox`           : depth write off, DepthFunc=LEQUAL, CullMode=FRONT, Queue=2500.
-	///  - `Kind::Transparent`      : depth write off, CullMode=0 (양면), blend on (SRC_ALPHA / ONE_MINUS_SRC_ALPHA).
-	///  - `Kind::OutlineVisible`   : stencil NOTEQUAL ref=1, DepthFunc=LEQUAL, depth write off.
-	///  - `Kind::OutlineXRay`      : OutlineVisible 동일 + DepthFunc=GREATER (가려진 부분만 외곽선).
-	///  - `Kind::Screen`           : ScreenQuad/PostFX blit - depth test/write off, CullMode=0, blend off(replace). 2+ 소스 합성은 호출처가 BlendEnable=true 로 조정.
+	///  - `RenderQueue::StencilMaskWrite` : Outline 2-pass Pass 1 - Opaque 색상/깊이 + stencil ref=1 기록.
+	///  - `RenderQueue::Opaque`           : depth test/write on, CullMode=BACK, blend off.
+	///  - `RenderQueue::AlphaTest`        : Opaque 와 동일하되 CullMode=0 (sprite flipX winding 반전 버그 방지).
+	///  - `RenderQueue::Skybox`           : depth write off, DepthFunc=LEQUAL, CullMode=FRONT, Queue=2500.
+	///  - `RenderQueue::Transparent`      : depth write off, CullMode=0 (양면), blend on (SRC_ALPHA / ONE_MINUS_SRC_ALPHA).
+	///  - `RenderQueue::OutlineVisible`   : stencil NOTEQUAL ref=1, DepthFunc=LEQUAL, depth write off.
+	///  - `RenderQueue::OutlineXRay`      : OutlineVisible 동일 + DepthFunc=GREATER (가려진 부분만 외곽선).
+	///  - `RenderQueue::Screen`           : ScreenQuad/PostFX blit - depth test/write off, CullMode=0, blend off(replace). 2+ 소스 합성은 호출처가 BlendEnable=true 로 조정.
 	/// @note inline - 헤더 only. include 하는 모든 TU 가 각자 도출 (ODR 안전).
-	inline PipelineState DefaultPipelineStateOf(const Kind k)
+	inline RenderStateBlock DefaultRenderStateBlockOf(const RenderQueue k)
 	{
 		switch (k)
 		{
-		case Kind::StencilMaskWrite: {
+		case RenderQueue::StencilMaskWrite: {
 			// Outline 2-pass - Pass 1 (stencil write):
 			//   > Opaque 와 동일한 색상/깊이 렌더링 (물체 정상 표시)
 			//   > StencilOpDPPass=GL_REPLACE + Ref=1 + WriteMask=0xFF - depth 통과 픽셀에 ref=1 기록
 			//   > Queue 1999 - Opaque(2000) 직전 -> OutlineVisible(4000) 이 stencil 값에 의존 가능
-			PipelineState s;
-			s.QueueLayer = QueueOf(Kind::StencilMaskWrite);
+			RenderStateBlock s;
+			s.QueueLayer = QueueOf(RenderQueue::StencilMaskWrite);
 			s.StencilEnable = true;
 			s.StencilFunc = GL_ALWAYS; // 항상 stencil 통과 - 도장이 목적
 			s.StencilRef = 1;
@@ -189,48 +189,48 @@ namespace SJH::Pass
 			return s;
 		}
 
-		case Kind::Opaque:
-			return PipelineState{
+		case RenderQueue::Opaque:
+			return RenderStateBlock{
 			    /*DepthTest*/ true, /*DepthWrite*/ true,
 			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ GL_BACK,
 			    /*BlendEnable*/ false, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-			    /*QueueLayer*/ QueueOf(Kind::Opaque)};
+			    /*QueueLayer*/ QueueOf(RenderQueue::Opaque)};
 
-		case Kind::AlphaTest:
+		case RenderQueue::AlphaTest:
 			// CullMode 0 = face culling 비활성 - sprite(빌보드)는 카메라-정면 2D quad 라 컬링이 무의미하고,
 			// flipX(=-1, RIGHT 등 좌우반전)가 quad winding 을 뒤집어 GL_BACK 컬링 시 투명해지는 버그를 막는다.
 			// (AlphaTest 는 현재 sprite 전용 - blast radius = 스프라이트만.)
-			return PipelineState{
+			return RenderStateBlock{
 			    /*DepthTest*/ true, /*DepthWrite*/ true,
 			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ 0,
 			    /*BlendEnable*/ false, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-			    /*QueueLayer*/ QueueOf(Kind::AlphaTest)};
+			    /*QueueLayer*/ QueueOf(RenderQueue::AlphaTest)};
 
-		case Kind::Skybox:
+		case RenderQueue::Skybox:
 			// Skybox 정통:
 			//  > DepthWrite off - skybox 가 depth 갱신하면 뒤 transparent 가 가려짐
 			//  > DepthFunc LEQUAL - 셰이더의 .xyww 트릭으로 NDC z=1.0 강제 -> cleared depth(1.0) 와 동등 통과
 			//  > CullMode FRONT - cube 안쪽에서 보기 때문에 *back face* 가 view 에 보임 -> front 컬링
 			//  > Queue 2500 - Opaque 다음, Transparent 전 (z-cull 효율 우월)
-			return PipelineState{
+			return RenderStateBlock{
 			    /*DepthTest*/ true, /*DepthWrite*/ false,
 			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ GL_FRONT,
 			    /*BlendEnable*/ false, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-			    /*QueueLayer*/ QueueOf(Kind::Skybox)};
+			    /*QueueLayer*/ QueueOf(RenderQueue::Skybox)};
 
-		case Kind::Transparent:
+		case RenderQueue::Transparent:
 			// Transparent 정통 (LearnOpenGL Blending / Unity Lit Transparent):
 			//  > DepthWrite off - Transparent 들끼리 가리지 않도록
 			//  > CullMode 0 (cull off) - *양면 그리기*. 유리창/잎사귀/의류 등 *두께 없는 면*
 			//    이 카메라 어느 방향에서든 보이도록. GL_BACK 이면 plane 의 *뒷면* 이 culling 되어
 			//    카메라가 plane 뒤로 갈 때 *안 보이는 버그*.
-			return PipelineState{
+			return RenderStateBlock{
 			    /*DepthTest*/ true, /*DepthWrite*/ false,
 			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ 0, // * cull off - 양면 그리기
 			    /*BlendEnable*/ true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-			    /*QueueLayer*/ QueueOf(Kind::Transparent)};
+			    /*QueueLayer*/ QueueOf(RenderQueue::Transparent)};
 
-		case Kind::OutlineVisible: {
+		case RenderQueue::OutlineVisible: {
 			// Outline 정통 (LearnOpenGL Stencil testing - *outline draw pass*):
 			//  > 전제: 직전에 *stencil write pass* 가 ref=1 을 객체 영역에 기록.
 			//          -> 같은 mesh 를 Opaque 로 그리되 MeshRenderer override 로
@@ -240,9 +240,9 @@ namespace SJH::Pass
 			//  > DepthFunc=LEQUAL - 다른 Opaque 객체에 가려질 수 있음 (자연스러움)
 			//  > DepthWrite=false - outline 자체가 z 영토 차지 X (위에 다른 객체 정상 그려짐)
 			//  > StencilFunc=NOTEQUAL ref=1, WriteMask=0x00 - 읽기 전용 (stencil 갱신 안 함)
-			PipelineState s;
+			RenderStateBlock s;
 			s.DepthWrite = false;
-			s.QueueLayer = QueueOf(Kind::OutlineVisible);
+			s.QueueLayer = QueueOf(RenderQueue::OutlineVisible);
 			s.StencilEnable = true;
 			s.StencilFunc = GL_NOTEQUAL;
 			s.StencilRef = 1;
@@ -250,16 +250,16 @@ namespace SJH::Pass
 			return s;
 		}
 
-		case Kind::OutlineXRay: {
+		case RenderQueue::OutlineXRay: {
 			// X-Ray outline 월핵 효과
 			//  > OutlineVisible 과 동일 stencil 설정, *DepthFunc 만* GL_GREATER
 			//  > "새 z (outline) > 기존 z (이미 그린 벽)" -> outline 이 벽보다 *뒤에 있는*
 			//    픽셀에서만 통과 = **벽에 가려진 부분만** 외곽선이 그려짐
 			//  > 일반 OutlineVisible 과 *함께* 그리면 (Visible=밝게, XRay=어둡게) 하이브리드 효과
-			PipelineState s;
+			RenderStateBlock s;
 			s.DepthWrite = false;
 			s.DepthFunc = GL_GREATER; // * 핵심 - 가려진 곳만
-			s.QueueLayer = QueueOf(Kind::OutlineXRay);
+			s.QueueLayer = QueueOf(RenderQueue::OutlineXRay);
 			s.StencilEnable = true;
 			s.StencilFunc = GL_NOTEQUAL;
 			s.StencilRef = 1;
@@ -267,23 +267,23 @@ namespace SJH::Pass
 			return s;
 		}
 
-		case Kind::Screen:
+		case RenderQueue::Screen:
 			// ScreenQuad/PostFX blit - NDC 풀스크린 quad (D-RS-5 state-as-data):
 			//  > DepthTest off - z-buffer 불필요 (화면 전체를 덮음)
 			//  > DepthWrite off - 합성 결과가 z 영토 차지 X
 			//  > DepthFunc ALWAYS - test off 라 의미 없으나 명시
 			//  > CullMode 0 - 풀스크린 quad 컬링 비활성
 			//  > BlendEnable false - 첫 소스 = replace (전 프레임 백버퍼 잔상 차단).
-			//    2+ 소스 alpha 합성은 호출처가 도출된 PipelineState 의 BlendEnable=true 로 1필드 조정.
+			//    2+ 소스 alpha 합성은 호출처가 도출된 RenderStateBlock 의 BlendEnable=true 로 1필드 조정.
 			//  > Queue 5000 - 모든 world/outline 패스 후 최종 합성
-			return PipelineState{
+			return RenderStateBlock{
 			    /*DepthTest*/ false, /*DepthWrite*/ false,
 			    /*DepthFunc*/ GL_ALWAYS, /*CullMode*/ 0,
 			    /*BlendEnable*/ false, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
-			    /*QueueLayer*/ QueueOf(Kind::Screen)};
+			    /*QueueLayer*/ QueueOf(RenderQueue::Screen)};
 		}
 		// unreachable - switch 가 enum 전부 커버.
-		return PipelineState{};
+		return RenderStateBlock{};
 	}
 
 	/// @brief Queue layer 가 *Transparent 임계값* 이상인지. Sort 방향 분기에 사용.

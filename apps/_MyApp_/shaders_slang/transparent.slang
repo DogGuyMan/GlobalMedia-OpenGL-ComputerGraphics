@@ -1,6 +1,6 @@
 // apps/_MyApp_/shaders_slang/transparent.slang
 // 기존 transparent.vs + transparent.fs 등가 - 반투명 unlit emissive (벽/PoliceTape).
-// 라이팅 무관 자체발광 텍스처를 alpha-blend, alpha<0.1 discard. Pass::Kind::Transparent 가
+// 라이팅 무관 자체발광 텍스처를 alpha-blend, alpha<0.1 discard. Pass::RenderQueue::Transparent 가
 //   blend(SRC_ALPHA,ONE_MINUS) + depthWrite off + cull off(양면) 자동 도출 (mesh_pass 적용).
 // UV = 타일링(uvScale) 후 U 축을 시간(uTime)에 따라 스크롤 (PoliceTape 흐름).
 // 3블록 UBO(Frame/Draw/Material) + emissive 샘플러(loose - GL4.1 UBO 불가).

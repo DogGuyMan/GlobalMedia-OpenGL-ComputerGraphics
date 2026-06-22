@@ -13,9 +13,11 @@
  *  ### 비-책임
  *  - [X] 스테이지 실행/순서 제어 - Application 의 @c mStages 벡터 순회 책임.
  *  - [X] Framebuffer 소유 - 결과 @c PostFXChainResult::Framebuffers 는 *caller* 가 보관.
- *  - [X] RenderStage 의 추상 실행 - @ref IRenderStage / @ref RenderStage 참조.
+ *  - [X] RenderStage 의 추상 실행 - @ref IPassable / @ref RenderStage 참조.
  *
- * @note 두 함수 모두 *Pure Factory* - 내부 상태 없이 reg/sceneRenderer 에 부수효과만 위임.
+ * @note 두 함수 모두 *Pure Factory* - 내부 상태 없이 reg 에 자원 생성 부수효과만 위임 (3.5a: SceneRenderer 의존 제거).
+ * @note [REVIEW-PHASE5] 사용 중(자원 팩토리)이라 dead 아님. 단 Task 4.1 PassIterator 의 before/GetPassResult 동적
+ *       체이닝 도입 시 @c BuildPostFXChain 의 InputFB/OutputFB 사전배선이 redundant 가능 -> 모든 Task 후 간소화/통합 검토.
  */
 #ifndef __SJH_RENDER_PIPELINE_H__
 #define __SJH_RENDER_PIPELINE_H__
@@ -32,6 +34,8 @@ namespace SJH
 	class ResourceRegistry;
 	class SceneRenderer;
 	class ScreenQuadStage;
+	class Mesh;
+	class Material;
 }
 namespace SJH::Scene
 {
@@ -57,25 +61,19 @@ namespace SJH::Render
 	};
 
 	/**
-	 * @brief PostFX 사용 데모의 표준 파이프라인을 한 호출로 셋업.
-	 * @details
-	 *  수행 순서:
-	 *  1. @c reg.CreateProgram(PassthroughKey, VS, FS) - passthrough 셰이더 등록.
-	 *  2. @c reg.RegisterMesh(ScreenQuadMeshKey, Mesh::CreateScreenQuad()) - 화면 quad 등록.
-	 *  3. @c ScreenQuadStage 생성 + @c SetSources({sceneFB}) 초기화.
-	 *  4. @c reg.CreateSharedMaterial(BypassMatKey) + @c SetProgram - bypass Material 등록.
-	 *  5. @c sceneRenderer.SetScreenQuadMesh / @c SetBypassMaterial 주입.
-	 *
-	 * @param reg           자원 등록 대상 ResourceRegistry.
-	 * @param sceneRenderer 주입 대상 SceneRenderer.
-	 * @param sceneFB       장면 렌더 FBO - nullptr 금지, caller 가 사전 생성해 전달.
-	 * @param cfg           리소스 키/경로 묶음. 기본값 사용 권장.
-	 * @return 생성된 @c ScreenQuadStage UPtr - caller 가 @c mStages.push_back 책임.
-	 *         Program / Mesh / Material 등록 실패 시 spdlog::error + @c nullptr 반환.
+	 * @brief @c SetupDefaultPipeline 반환 - present 스테이지 + PostFxPass 가 쓸 quad/bypass.
 	 */
-	std::unique_ptr<ScreenQuadStage> SetupDefaultPipeline(
+	struct DefaultPipelineResult
+	{
+		std::unique_ptr<ScreenQuadStage> Stage;  ///< 최종 present(체인 마지막 FBO -> backbuffer). caller 가 mStages 에 push.
+		Mesh*     Quad    = nullptr;             ///< PostFxPass per-effect blit 용 screen quad(비소유).
+		Material* Bypass  = nullptr;             ///< disabled 효과 passthrough material(비소유).
+	};
+
+	/// @brief PostFX present 파이프라인 셋업 - passthrough/quad/bypass 등록 + present 스테이지 생성.
+	/// @details [3.5] SceneRenderer 미터치(per-effect PostFxPass 가 quad/bypass 를 직접 사용). 실패 시 Stage=nullptr.
+	DefaultPipelineResult SetupDefaultPipeline(
 	    ResourceRegistry& reg,
-	    SceneRenderer& sceneRenderer,
 	    Framebuffer* sceneFB,
 	    const DefaultPipelineConfig& cfg = {});
 

@@ -1,143 +1,133 @@
 /**
  * @file mesh_pass_processor.h
- * @brief DrawCommand 큐 관리/정렬/GL draw 발행을 담당하는 Low-level Orchestrator.
+ * @brief IRenderable flat 큐 정렬/발행 Orchestrator - Task 2.4 RenderableProcessor 로 일반화.
  *
  * @details
- *  ### 책임 (SP-MeshPassProcessor)
- *  - @c Submit / @c Clear / @c Size - DrawCommand 수집/관리.
- *  - @c SortMultiStage - queueLayer / program / material / depth 다단계 정렬.
- *  - @c Process - 정렬된 command 를 Program/Material 전환 + Applier 위임 + GL draw 발행.
+ *  ### 책임 (Task 2.4 - DrawCommand -> IRenderable flat)
+ *  - @c Submit(IRenderable*, viewDepth) - World flat 수집. queueLayer 는 r->QueueLayer() 캡처.
+ *  - @c SubmitScreenQuad - PassComponent (PostFX) ScreenQuad 수집 (Phase 3.5 전이 - PostFxPass 이관 예정).
+ *  - @c Sort - queueLayer asc + 투명 back-to-front / 불투명 front-to-back. stable_sort 결정성 보장.
+ *  - @c Process(DeviceContext&, Camera&) - ROP 적용(ApplyRenderStateBlock) 후 r->Render(rc, cam) 잎 위임.
  *
  *  ### 비-책임 (분리된 책임)
- *  - [X] GL state machine (stencil/depth/cull/blend) 캐싱/적용 -> @c DeviceContext::ApplyPipelineState 위임 (D-RS-1).
- *  - [X] Material 값 uniform 송신 -> @c Program::UpdateUniformMember (UBO 멤버, Phase C). sampler 만 본 TU 의 BindSamplers.
- *
- *  ### DrawCommand 구조
- *  두 가지 Kind 를 구분:
- *  - @c WorldMesh - @c MeshRenderer 포인터를 SSoT 로 사용 (program/mesh/material/actor 모두 경유).
- *  - @c ScreenQuad - PassComponent (PostFX) 용 inputFB -> outputFB blit.
+ *  - [X] GL 자가 draw 로직 - @c MeshRenderer::Render(잎 자가발행) 위임 (Task 2.3).
+ *  - [X] GL state machine 캐싱/적용 - @c DeviceContext::ApplyRenderStateBlock 위임 (D-RS-1).
+ *  - [X] Material 값 uniform 송신 - MeshRenderer::Render 내부 @c draw_ops 헬퍼 담당.
  *
  *  ### 정통 매핑
- *  - Unreal `FMeshPassProcessor` - 한 Pass 안의 mesh draw command 들을 처리하는 Orchestrator.
- *  - Cocos2D `RenderQueue` - Layer 정렬 + 순서 발행.
+ *  - Unreal @c FMeshPassProcessor - 한 Pass 안의 mesh draw command 들을 처리하는 Orchestrator.
+ *  - Cocos2D @c RenderQueue - Layer 정렬 + 순서 발행.
  *
- * @note @c SortMultiStage 는 @c std::stable_sort 사용 - z-fighting 깜빡임 차단 + 결정성 보장
- *       (골든 이미지 비교 가능). 자세한 정렬 정책은 @c mesh_pass_processor.cpp 참조.
+ * @note @c Sort 는 @c std::stable_sort - z-fighting 깜빡임 차단 + 결정성 보장 (골든 이미지 비교 가능).
+ * @note 파일명/헤더가드는 유지 (git mv 개명은 Phase 5). 클래스명만 RenderableProcessor 로 변경.
  */
 #ifndef __SJH_MESH_PASS_PROCESSOR_H__
 #define __SJH_MESH_PASS_PROCESSOR_H__
 
-#include <glm/glm.hpp>
+#include "render/i_renderable.h"
 #include <cstddef>
 #include <vector>
 
-namespace SJH::Scene { class MeshRenderer; }
+namespace SJH::Scene { class Camera; }
 namespace SJH
 {
-    class DeviceContext;
-    class Framebuffer;
-    class Material;
-    class Mesh;
+	class DeviceContext;
+	class Framebuffer;
+	class Material;
+	class Mesh;
 
-    /**
-     * @brief 한 프레임의 정렬 가능한 draw command - WorldMesh 또는 ScreenQuad(PassComponent) 구분.
-     * @details
-     *  ### SSoT - MeshRenderer 단일 의존 (WorldMesh)
-     *  program/mesh/material/actor 4-필드 직접 보관 폐기. 모두 @c meshRenderer 경유 접근:
-     *  - mesh:     `meshRenderer->Mesh`
-     *  - material: `meshRenderer->Material`
-     *  - program:  `meshRenderer->Material->GetProgram()`
-     *  - actor:    `meshRenderer->GetOwner()` (Component 베이스)
-     *
-     *  *수집 시점 가변 데이터* (@c modelMatrix / @c queueLayer / @c depth) 만 별도 필드 - per-frame 계산값.
-     *  GL state 는 @c Pass::DefaultPipelineStateOf(material->GetPass()) 로 도출 (Material 이 SSoT).
-     */
-    struct DrawCommand
-    {
-        /// @brief DrawCommand 의 종류 - WorldMesh(일반 메시) 또는 ScreenQuad(PostFX PassComponent).
-        enum class Kind { WorldMesh, ScreenQuad };
+	/**
+	 * @brief IRenderable flat 큐 정렬/GL draw 발행 Orchestrator - Task 2.4 일반화.
+	 * @details
+	 *  구 MeshPassProcessor(DrawCommand SSoT) 를 IRenderable flat 모델로 교체.
+	 *
+	 *  World 루프(본질): ApplyRenderStateBlock(r->GetRenderStateBlock()) -> r->Render(rc, cam).
+	 *  ROP 는 Process 루프에서만 적용 - 잎(MeshRenderer::Render) 은 ROP 미호출 (역할 분리).
+	 *
+	 *  ### [DEAD-PHASE5] ScreenQuad 서브시스템 = 미사용(dead, 삭제 후보)
+	 *  본 클래스의 *최종 책임* 은 "IRenderable 들을 정렬해 발행" 하나뿐이다. ScreenQuad(PostFX 화면합성)
+	 *  관련 멤버/메서드(@c mScreen / @c ScreenEntry / @c SubmitScreenQuad / @c mScreenQuadMesh /
+	 *  @c mBypassMat / @c mLastOutputFB / @c GetLastOutputFB / @c SetScreenQuadMesh / @c SetBypassMaterial)는
+	 *  per-effect @c PostFxPass(3.5a) 가 흡수 완료 -> **현재 호출처 0(dead)** (유일 호출자였던 @c SceneRenderer 도 dead).
+	 *  삭제는 *모든 Task 종료 후 Phase 5* 판정 - 제거 시 본 클래스는 @c mWorld(IRenderable) 단일 큐로 응집.
+	 *  신규 코드에서 screen API 사용 금지. grep: 본 파일 + .cpp 의 `[TRANSITIONAL-3.5]`(=삭제 라인) + `[DEAD-PHASE5]`.
+	 */
+	class RenderableProcessor
+	{
+	  public:
+		/// @brief World IRenderable 수집.
+		/// @param r         렌더할 IRenderable (비소유). nullptr 시 undefined - 호출처 보장.
+		/// @param viewDepth view-space z (카메라 전방 음수 - 정렬 시 부호 주의).
+		void Submit(const IRenderable *r, float viewDepth)
+		{
+			mWorld.push_back({r, r->QueueLayer(), viewDepth});
+		}
 
-        // -- 공통 필드 ------------------------------------------------------
-        Kind  kind       = Kind::WorldMesh;  ///< DrawCommand 종류.
-        int   queueLayer = 2000;             ///< 렌더 큐 레이어 (낮을수록 먼저 그림). Opaque~=2000, Transparent~=3000.
-        float depth      = 0.0f;             ///< view-space z (카메라 전방이 음수 - 정렬 시 부호 주의).
+		/// @brief [TRANSITIONAL-3.5] ScreenQuad(PassComponent) 수집 - Phase 3.5 PostFxPass 로 이관 후 제거 대상.
+		/// @details passMat=nullptr 이면 bypass(passthrough). 본 메서드/관련 screen 멤버는 응집도 위반 - 제거 예정.
+		void SubmitScreenQuad(Framebuffer *in, Framebuffer *out, Material *passMat)
+		{
+			mScreen.push_back({in, out, passMat});
+		}
 
-        // -- WorldMesh 전용 -------------------------------------------------
-        const Scene::MeshRenderer *meshRenderer = nullptr;      ///< SSoT - program/mesh/material/actor 모두 경유. @c Kind::WorldMesh 에서만 유효.
-        glm::mat4                modelMatrix  = glm::mat4(1.0f);  ///< 수집 시점 Actor 월드 행렬.
+		/// @brief 큐를 비우고 mLastOutputFB 를 nullptr 로 초기화 (프레임 시작 시 호출).
+		void Clear()
+		{
+			mWorld.clear();
+			mScreen.clear();
+			mLastOutputFB = nullptr;
+		}
 
-        // -- ScreenQuad 전용 (PassComponent) -------------------------------
-        Framebuffer *inputFB      = nullptr;  ///< 읽기 소스 - @c uScene sampler 바인딩 대상. @c Kind::ScreenQuad 에서만 유효.
-        Framebuffer *outputFB     = nullptr;  ///< 쓰기 대상 - @c BeginFrame 바인딩 + @c mLastOutputFB 갱신.
-        Material    *passMaterial = nullptr;  ///< ScreenQuad 셰이더. nullptr 이면 bypass blit (passthrough).
-    };
+		/// @brief 현재 큐에 쌓인 항목 총합 (World + Screen).
+		std::size_t Size() const { return mWorld.size() + mScreen.size(); }
 
-    /**
-     * @brief Low-level Orchestrator - DrawCommand 컬렉션의 정렬/조건 결정 + Applier 위임.
-     * @details
-     *  Unreal @c FMeshPassProcessor 정통 - 한 Pass 안의 mesh draw command 들을 처리.
-     *
-     *  책임 (orchestration 만):
-     *  - @c Submit / @c Clear / @c Size - command 수집/관리.
-     *  - @c SortMultiStage - queueLayer/program/material/depth 다단계 정렬.
-     *  - @c Process - 정렬된 command 발행 (Program/Material 전환 + Applier 위임 + draw).
-     *
-     *  GL state machine (stencil/depth/cull/blend) 은 @c DeviceContext::ApplyPipelineState 에 위임 (D-RS-1).
-     *  Material 값은 UBO 멤버(@c UpdateUniformMember), sampler 는 본 TU 의 @c BindSamplers (Phase C).
-     */
-    class MeshPassProcessor
-    {
-    public:
-        /// @brief DrawCommand 를 큐에 추가.
-        /// @param cmd 추가할 DrawCommand.
-        void Submit(const DrawCommand& cmd) { mItems.push_back(cmd); }
+		// ===== [TRANSITIONAL-3.5] 아래 3 ScreenQuad 접근자 = Phase 3.5 PostFxPass 이관 후 제거 =====
+		/// @brief [TRANSITIONAL-3.5] ScreenQuad 드로우용 풀스크린 메시 지정. m=nullptr 이면 skip.
+		void SetScreenQuadMesh(Mesh *m) { mScreenQuadMesh = m; }
 
-        /// @brief 큐를 비우고 @c mLastOutputFB 를 nullptr 로 초기화 (프레임 시작 시 호출).
-        void Clear()
-        {
-            mItems.clear();
-            mLastOutputFB = nullptr;  // 프레임마다 리셋
-        }
+		/// @brief [TRANSITIONAL-3.5] disabled PassComponent bypass blit passthrough material. m=nullptr 이면 skip.
+		void SetBypassMaterial(Material *m) { mBypassMat = m; }
 
-        /// @brief 현재 큐에 쌓인 DrawCommand 개수.
-        std::size_t Size() const { return mItems.size(); }
+		/// @brief [TRANSITIONAL-3.5] 마지막 처리된 ScreenQuad outputFB. 없으면 nullptr.
+		const Framebuffer *GetLastOutputFB() const { return mLastOutputFB; }
 
-        /// @brief ScreenQuad 드로우에 사용할 풀스크린 메시 지정.
-        /// @param mesh nullptr 이면 ScreenQuad DrawCommand 가 skip 됨.
-        void SetScreenQuadMesh(Mesh *mesh) { mScreenQuadMesh = mesh; }
+		/// @brief World 큐 정렬 - queueLayer asc -> 투명 back-to-front / 불투명 front-to-back.
+		/// @details stable_sort 사용 - z-fighting 깜빡임 차단 + DFS 순서 보존 + 결정성 보장.
+		void Sort();
 
-        /// @brief disabled PassComponent 의 bypass blit 에 사용할 passthrough material.
-        /// @details @c cmd.passMaterial == nullptr 일 때 이 material 로 inputFB -> outputFB blit.
-        /// @param mat passthrough 셰이더를 담은 Material. nullptr 이면 blit skip.
-        void SetBypassMaterial(Material *mat) { mBypassMat = mat; }
+		/// @brief 정렬된 큐를 발행 - World(ROP + 잎 위임) + ScreenQuad(구 동작 보존).
+		/// @details
+		///  World: ApplyRenderStateBlock(r->GetRenderStateBlock()) 후 r->Render(rc, cam).
+		///  Screen: 구 ScreenQuad 분기와 픽셀 동등.
+		///  Process 진입 시 InvalidateStateCache - per-Process 캐시 무효화 (foreign GL 대비, D-RS-2).
+		/// @param rc  DeviceContext (BindVAO/DrawIndexed/ApplyRenderStateBlock 등).
+		/// @param cam 이번 패스 Camera (MeshRenderer::Render 가 view/proj 도출).
+		void Process(DeviceContext &rc, const Scene::Camera &cam);
 
-        /// @brief 마지막으로 처리된 ScreenQuad(PassComponent) 의 outputFB.
-        /// @return 이번 프레임 PassComponent 가 없거나 아직 @c Process 전이면 nullptr.
-        const Framebuffer *GetLastOutputFB() const { return mLastOutputFB; }
+	  private:
+		/// @brief World 항목 - IRenderable 포인터 + 정렬 키.
+		struct WorldEntry
+		{
+			const IRenderable *r;
+			int   queueLayer;
+			float depth;
+		};
 
-        /// @brief 큐를 다단계 정렬 - queueLayer -> program -> material -> depth (back-to-front / front-to-back).
-        /// @details @c std::stable_sort 사용으로 동등 명령의 순서가 매 프레임 동일 (결정성 보장).
-        void SortMultiStage();
+		/// @brief [TRANSITIONAL-3.5] ScreenQuad 항목 - PassComponent 배선 데이터 (Phase 3.5 제거).
+		struct ScreenEntry
+		{
+			Framebuffer *in;
+			Framebuffer *out;
+			Material    *mat;
+		};
 
-        /// @brief 정렬된 DrawCommand 를 순서대로 발행 - Program/Material 전환 + PipelineState 적용 + draw.
-        /// @details
-        ///  - Program 전환 시 @c DeviceContext::UseProgram + FrameBlock(view/proj) UBO 갱신.
-        ///  - Material 전환 시 @c BindSamplers (sampler 바인딩) + per-draw UBO 멤버 업로드.
-        ///  - 매 command 마다 @c DeviceContext::ApplyPipelineState (Pass.PipelineState -> GL state machine, D-RS-1).
-        ///  - Process 진입 시 @c DeviceContext::InvalidateStateCache - per-Process 캐시 무효화 (foreign GL 대비).
-        /// @param rc      DeviceContext 레퍼런스 (UseProgram/BindVAO/DrawIndexed 등).
-        /// @param viewMat 이번 패스 View 행렬.
-        /// @param projMat 이번 패스 Projection 행렬.
-        void Process(DeviceContext& rc,
-                     const glm::mat4& viewMat,
-                     const glm::mat4& projMat);
-
-    private:
-        std::vector<DrawCommand> mItems;                          ///< 이번 프레임 DrawCommand 큐.
-        Mesh              *mScreenQuadMesh = nullptr;             ///< ScreenQuad 드로우용 풀스크린 메시.
-        Material          *mBypassMat      = nullptr;             ///< PassComponent disabled 시 bypass blit material.
-        const Framebuffer *mLastOutputFB   = nullptr;             ///< 마지막 ScreenQuad outputFB 추적.
-    };
+		std::vector<WorldEntry>  mWorld;                ///< World flat IRenderable 큐 (본질 - 유지).
+		// ----- [TRANSITIONAL-3.5] 아래 screen 멤버 = Phase 3.5 PostFxPass 이관 후 전량 삭제 -----
+		std::vector<ScreenEntry> mScreen;               ///< [TRANSITIONAL-3.5] ScreenQuad(PassComponent) 큐.
+		Mesh              *mScreenQuadMesh = nullptr;   ///< [TRANSITIONAL-3.5] ScreenQuad 풀스크린 메시.
+		Material          *mBypassMat      = nullptr;   ///< [TRANSITIONAL-3.5] disabled bypass blit material.
+		const Framebuffer *mLastOutputFB   = nullptr;   ///< [TRANSITIONAL-3.5] 마지막 ScreenQuad outputFB.
+	};
 }
 
 #endif // __SJH_MESH_PASS_PROCESSOR_H__

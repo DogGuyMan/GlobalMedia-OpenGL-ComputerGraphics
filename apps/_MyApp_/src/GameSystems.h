@@ -26,7 +26,7 @@
 #include "Physics/PhysicsSystem.h"
 #include "VFX/VFXSystem.h"
 #include "Text/WorldTextSystem.h"   // <- 추가
-#include "render/render_stage/render_stage.impls.h"   // SceneRenderer
+#include "render/render_passable/render_passable.impls.h"   // SceneRenderer
 
 namespace TopdownShooter
 {
@@ -70,6 +70,8 @@ namespace TopdownShooter
 		/// @return 보유 중인 @c Physics::PhysicsSystem 레퍼런스.
 		Physics::PhysicsSystem  &Physics() { return mPhysics; }
 		/// @brief 씬 렌더러 레퍼런스 접근자.
+		/// @deprecated [DEAD-PHASE5] SceneRenderer 미사용(3.5a: world->WorldPass, screen->PostFxPass). 호출처 0.
+		///             이 accessor + @c mScenesRender 멤버는 *모든 Task 종료 후 Phase 5* 제거 후보.
 		/// @return 보유 중인 @c SJH::SceneRenderer 레퍼런스.
 		SJH::SceneRenderer      &SceneRenderer() { return mScenesRender; }
 		/// @brief 월드 텍스트 시스템 레퍼런스 접근자.

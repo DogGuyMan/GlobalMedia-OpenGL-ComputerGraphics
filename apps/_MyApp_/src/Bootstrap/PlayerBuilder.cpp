@@ -49,7 +49,7 @@
 #include "object/mesh.h"              // SJH::Mesh::CreatePlane
 #include "render/mesh_renderer.h"     // SJH::Scene::MeshRenderer
 #include "material/material.h"        // SJH::Material
-#include "material/pass.h"            // SJH::Pass::Kind::Transparent
+#include "material/pass.h"            // SJH::Pass::RenderQueue::Transparent
 #include "texture/image.h"  // SJH::Image::Load
 #include "Physics/PhysicsComponent.h" // FindPhysics / Physics::GetBody
 #include "scene/actor.h"
@@ -207,7 +207,7 @@ namespace TopdownShooter::Bootstrap
 					return;
 				}
 				shadowMat->SetProgram(prog);
-				shadowMat->SetPass(SJH::Pass::Kind::Transparent);
+				shadowMat->SetPass(SJH::Pass::RenderQueue::Transparent);
 				shadowMat->Properties.Textures["uTex"]   = {shadowTex, 0};
 				shadowMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f);
 			}
@@ -221,7 +221,7 @@ namespace TopdownShooter::Bootstrap
 					return;
 				}
 				hitMat->SetProgram(prog);
-				hitMat->SetPass(SJH::Pass::Kind::Transparent);
+				hitMat->SetPass(SJH::Pass::RenderQueue::Transparent);
 				hitMat->Properties.Textures["uTex"]   = {circleTex, 0};
 				hitMat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 0.0f, 0.0f, 0.45f);
 			}

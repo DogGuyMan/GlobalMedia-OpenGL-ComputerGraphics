@@ -1,0 +1,146 @@
+// render-class-dependency.dot
+// 렌더링 엔진 Class & Dependency Diagram (src/render + src/render_bootstrap + apps/_MyApp_/main.cpp)
+// 작성: 2026-06-21 (Phase C 정착 상태 반영 - PropertyBlockSetter/uniform_cache 삭제, BindSamplers/UBO).
+//
+// 렌더:  dot -Tsvg render-class-dependency.dot -o render-class-dependency.svg
+//        dot -Tpng render-class-dependency.dot -o render-class-dependency.png
+//
+// 범례(에지):
+//   실선 빈삼각(empty triangle)  = 상속(is-a / implements)
+//   실선 다이아(diamond)         = 합성/집약(owns / has-a)
+//   점선 화살(dashed open)       = 의존(uses / calls)
+
+digraph RenderArchitecture {
+    rankdir=TB;
+    fontname="Helvetica";
+    node  [shape=record, fontname="Helvetica", fontsize=10, style=filled];
+    edge  [fontname="Helvetica", fontsize=9];
+    compound=true;
+
+    // ============================ Application (apps/_MyApp_/main.cpp) ===========
+    subgraph cluster_app {
+        label="apps/_MyApp_/main.cpp";
+        style="rounded,filled"; fillcolor="#fff4e6"; color="#e8a33d";
+        game_application [fillcolor="#ffe0b2", label="{game_application|+ render(dt)\l+ startup() / OnSceneSetup()\l- mStages : vector\<IRenderStage*\>\l- mScreenQuadStagePtr\l- mSceneFB / mPostFXFBs\l- mPassComponents\l- mCamera / mScreenCamera\l- mStageFsm\l}"];
+        sb7app   [shape=record, fillcolor="#f0f0f0", label="sb7::application\n(extern)"];
+        iboot    [shape=record, fillcolor="#f0f0f0", label="IClientBootstrap\n(Bootstrap)"];
+    }
+
+    // ============================ render_bootstrap (SJH::render_bootstrap) ======
+    subgraph cluster_bootstrap {
+        label="src/render_bootstrap  (SJH::Render — Pure Factory 함수)";
+        style="rounded,filled"; fillcolor="#e6f7ff"; color="#3da5e8";
+        setupPipe [shape=note, fillcolor="#cceeff", label="SetupDefaultPipeline()\n-> unique_ptr<ScreenQuadStage>"];
+        buildChain[shape=note, fillcolor="#cceeff", label="BuildPostFXChain()\n-> PostFXChainResult"];
+        cfgStructs[shape=record, fillcolor="#e3f2fd", label="{DefaultPipelineConfig|PostFXStageConfig|PostFXChainResult}"];
+    }
+
+    // ============================ render (SJH::render) ==========================
+    subgraph cluster_render {
+        label="src/render  (SJH::render)";
+        style="rounded,filled"; fillcolor="#eef9ee"; color="#5cb85c";
+
+        IRenderPassable   [fillcolor="#dff0d8", label="{«interface»\nIRenderPassable|+ Render(RenderTarget&)\l+ OnResize(w,h)\l}"];
+        SceneRenderer  [fillcolor="#d4edda", label="{SceneRenderer|+ RenderWithCamera(Camera&)\l+ SetActivePrograms(...)\l+ GetLastSceneOutput()\l- CollectFromActor(...)\l- mProcessor / mUploader\l- mActivePrograms\l}"];
+        ScreenQuadStage[fillcolor="#d4edda", label="{ScreenQuadStage|+ SetSources(FBs)\l+ Render(...)\l- mProgram& / mMesh&\l- mSources\l}"];
+        CameraStage    [fillcolor="#d4edda", label="{CameraStage|+ Render(...)\l- mRenderer* / mCamera*\l}"];
+
+        MeshPassProcessor [fillcolor="#d4edda", label="{MeshPassProcessor|+ SortMultiStage()\l+ Process(rc,view,proj)\l- UploadMaterialUboMembers()\l- BindSamplers()\l- mItems : DrawCommand[]\l}"];
+        LightUboUploader  [fillcolor="#d4edda", label="{LightUboUploader|+ Update(dir,points,spots,viewPos)\l+ BindTo(programs)\l- mLightBlockUbo\l}"];
+        DeviceContext     [fillcolor="#c3e6cb", label="{«singleton»\nDeviceContext|+ Get()\l+ UseProgram / BindVAO / BindTexture\l+ ApplyRenderStateBlock(RenderStateBlock)\l+ InvalidateStateCache()\l+ BeginFrame(RT) / DrawIndexed()\l- mBoundProgram / mLast\l}"];
+
+        MeshRenderer  [fillcolor="#d4edda", label="{MeshRenderer\n«Scene::Component»|+ Mesh* / Material*\l+ Visible / QueueOffset\l}"];
+        PassComponent [fillcolor="#d4edda", label="{PassComponent\n«Scene::Component»|+ InputFB / OutputFB\l+ mMaterial\l}"];
+        actorFactory  [shape=note, fillcolor="#e2efda", label="actor_factory\nCreateScreenCameraActor()\nCreateSkyboxActor()"];
+        modelSpawner  [shape=note, fillcolor="#e2efda", label="ModelSpawner\nSpawnEntities()"];
+    }
+
+    // ============================ Collaborators (다른 SJH 모듈) =================
+    subgraph cluster_deps {
+        label="협력 모듈 (요약)";
+        style="rounded,filled"; fillcolor="#f5f5f5"; color="#aaaaaa";
+        Program   [shape=record, fillcolor="#ffffff", label="Program\n(SJH::program)\nUBO 블록/멤버 + GetLocation(live)"];
+        Material  [shape=record, fillcolor="#ffffff", label="Material / MaterialPropertyBlock\n(SJH::material)"];
+        Pass      [shape=record, fillcolor="#ffffff", label="Pass::PipelineState\n(SJH::material)"];
+        Mesh      [shape=record, fillcolor="#ffffff", label="Mesh (SJH::object)"];
+        RT        [shape=record, fillcolor="#ffffff", label="RenderTarget / Framebuffer\n(SJH::buffer)"];
+        Actor     [shape=record, fillcolor="#ffffff", label="Actor / Component / Camera /\nSceneContext (SJH::scene)"];
+        UBO       [shape=record, fillcolor="#ffffff", label="UniformBuffer\n(SJH::program)"];
+        RR        [shape=record, fillcolor="#ffffff", label="ResourceRegistry\n(SJH::resource_registry)"];
+    }
+
+    // ---------------- 상속 (empty triangle) ----------------
+    edge [arrowhead=empty, style=solid, color="#2e7d32"];
+    SceneRenderer    -> IRenderPassable;
+    ScreenQuadStage  -> IRenderPassable;
+    CameraStage      -> IRenderPassable;
+    MeshRenderer     -> Actor   [label="Component", color="#888888"];
+    PassComponent    -> Actor   [label="Component", color="#888888"];
+    game_application -> sb7app  [color="#888888"];
+    game_application -> iboot   [color="#888888"];
+
+    // ---------------- 합성/집약 (diamond) ----------------
+    edge [arrowhead=diamond, style=solid, color="#1565c0"];
+    SceneRenderer -> MeshPassProcessor [label="owns mProcessor"];
+    SceneRenderer -> LightUboUploader  [label="owns mUploader"];
+    LightUboUploader -> UBO            [label="owns mLightBlockUbo"];
+    ScreenQuadStage -> Program [arrowhead=odiamond, label="ref mProgram"];
+    ScreenQuadStage -> Mesh    [arrowhead=odiamond, label="ref mMesh"];
+    CameraStage -> SceneRenderer [arrowhead=odiamond, label="mRenderer*"];
+    CameraStage -> Actor         [arrowhead=odiamond, label="mCamera*"];
+    game_application -> IRenderPassable [arrowhead=odiamond, label="mStages[]"];
+    game_application -> ScreenQuadStage [arrowhead=odiamond, style=dashed, label="mScreenQuadStagePtr"];
+    game_application -> PassComponent   [arrowhead=odiamond, style=dashed, label="mPassComponents[]"];
+
+    // ---------------- 의존 (dashed open arrow) ----------------
+    edge [arrowhead=open, style=dashed, color="#6a1b9a"];
+    // application -> bootstrap factory + stages
+    game_application -> setupPipe;
+    game_application -> buildChain;
+    game_application -> CameraStage [label="creates"];
+    game_application -> SceneRenderer [label="via GameSystems", style=dotted];
+
+    // bootstrap factory -> render/scene/rr
+    setupPipe  -> ScreenQuadStage [label="creates"];
+    setupPipe  -> SceneRenderer   [label="injects mesh/bypass"];
+    setupPipe  -> RR;
+    buildChain -> PassComponent   [label="creates"];
+    buildChain -> RR;
+    buildChain -> Actor [label="addChild PassActor"];
+    setupPipe  -> cfgStructs [style=dotted, arrowhead=none];
+    buildChain -> cfgStructs [style=dotted, arrowhead=none];
+
+    // SceneRenderer -> processor/uploader/scene/devicecontext
+    SceneRenderer -> Actor         [label="DFS collect"];
+    SceneRenderer -> MeshRenderer  [label="collect"];
+    SceneRenderer -> PassComponent [label="collect (Screen)"];
+    SceneRenderer -> DeviceContext [label="BeginFrame"];
+
+    // MeshPassProcessor -> devicecontext/program/material/mesh
+    MeshPassProcessor -> DeviceContext [label="UseProgram/Apply/Draw"];
+    MeshPassProcessor -> Program       [label="UpdateUniformBlock/Member\nGetLocation"];
+    MeshPassProcessor -> Material      [label="Properties"];
+    MeshPassProcessor -> Mesh;
+    MeshPassProcessor -> MeshRenderer  [label="DrawCommand src"];
+
+    // LightUboUploader -> program
+    LightUboUploader -> Program [label="Disown/FindUniformBlock"];
+
+    // DeviceContext -> program/rt/pass
+    DeviceContext -> Program [label="glUseProgram"];
+    DeviceContext -> RT      [label="BindTarget"];
+    DeviceContext -> Pass    [label="ApplyRenderStateBlock 입력"];
+
+    // ScreenQuadStage -> devicecontext/framebuffer
+    ScreenQuadStage -> DeviceContext [label="bind/draw"];
+    ScreenQuadStage -> RT            [label="sources blit"];
+
+    // factories
+    actorFactory -> Actor [label="creates"];
+    modelSpawner -> Actor [label="creates"];
+    actorFactory -> MeshRenderer [label="attaches"];
+    MeshRenderer -> Material [style=dotted, label="ref"];
+    MeshRenderer -> Mesh     [style=dotted, label="ref"];
+    PassComponent -> Material [style=dotted, label="ref"];
+    PassComponent -> RT       [style=dotted, label="InputFB/OutputFB"];
+}

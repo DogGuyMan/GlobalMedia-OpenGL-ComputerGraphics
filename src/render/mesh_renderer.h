@@ -32,11 +32,12 @@
 #define __SJH_SCENE_COMPONENTS_H__
 
 #include "scene/actor.h"
+#include "render/i_renderable.h"
+#include "material/material.h"
 
 namespace SJH
 {
 	class Mesh;
-	class Material;
 } // namespace SJH
 
 namespace SJH::Scene
@@ -47,8 +48,11 @@ namespace SJH::Scene
 	 *  SceneRenderer 가 씬 그래프에서 이 컴포넌트를 수집해 @c DrawCommand 를 빌드.
 	 *  GL state 는 @c Material::SetPass(Kind) 가 단독으로 결정 (SP-MaterialSSoT).
 	 *  같은 PassKind 내 렌더 순서가 필요할 때 @c QueueOffset 사용.
+	 *
+	 *  Task 2.3: IRenderable 구현 - 잎 자가발행. RenderableProcessor 가 소비하는 건 다음 Task.
+	 *  다중상속 다이아몬드 없음 - Component 는 IRenderStateProvider 를 상속하지 않음.
 	 */
-	class MeshRenderer : public Component
+	class MeshRenderer : public Component, public IRenderable
 	{
 	  public:
 		/// @brief 기본 생성자 - Mesh/Material null, Visible=true, QueueOffset=0.
@@ -69,6 +73,23 @@ namespace SJH::Scene
 		virtual void OnEnter() override {}
 		virtual void OnExit() override  {}
 		virtual void Update(float /*dt*/) override {}
+
+		/// @brief D7 Facade 위임 - Material 저장처. null 이면 중립(D9).
+		const Pass::RenderStateBlock &GetRenderStateBlock() const override
+		{
+			static const Pass::RenderStateBlock kNeutral{};
+			return Material ? Material->GetRenderStateBlock() : kNeutral;
+		}
+
+		/// @brief Material PassKind + QueueOffset 으로 draw sort 우선순위 도출.
+		int QueueLayer() const override
+		{
+			return Material ? Pass::QueueOf(Material->GetPass(), QueueOffset) : QueueOffset;
+		}
+
+		/// @brief 잎 자가발행 draw - DeviceContext + Camera 로 mesh+material 을 GL 에 전송.
+		/// @details dormant(미호출) - RenderableProcessor::Process 가 소비하는 건 다음 Task.
+		void Render(DeviceContext &rec, const Camera &cam) const override;
 
 		SJH::Mesh     *const Mesh     = nullptr; ///< 렌더 지오메트리 (비소유). nullptr 시 SceneRenderer skip.
 		SJH::Material *const Material = nullptr; ///< 셰이더 + GL state 진실의 원천 (비소유). nullptr 시 skip.

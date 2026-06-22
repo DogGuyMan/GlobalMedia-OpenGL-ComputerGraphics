@@ -1,19 +1,19 @@
 /**
  * @file ParticleStage.cpp
- * @brief ParticleStage 구현 - Effekseer 파티클을 WorldCamera 의 sceneFB 에 합성하는 렌더 stage.
+ * @brief ParticlePass 구현 - Effekseer 파티클을 WorldCamera 의 sceneFB 에 합성하는 역할군 Pass.
  *
  * @details
  *  ### 구현 흐름
  *  1. ctor - @c VFXSystem 포인터와 @c SJH::Scene::Camera 포인터를 비소유로 보관.
- *  2. @c Render - IRenderStage 인터페이스 구현.
+ *  2. @c Draw - IPassable 인터페이스 구현.
  *     a. vfx/worldCam nullptr 가드 - nullptr 이면 warn + skip.
  *     b. worldCam->GetTargetRenderTarget() 으로 sceneFB 도출 (진실의 원천 단일화).
  *     c. DeviceContext::BindTarget(*rt) 로 sceneFB bind. NoClear - WorldCamera 가 이미 그린 결과 보존.
  *     d. VFXSystem::Draw(view, proj) 로 Effekseer BeginRendering/Draw/EndRendering 실행.
  *
  *  ### 렌더 순서 보장
- *  stages 컬렉션에서 [SceneRenderer] -> [ParticleStage] -> [ScreenQuadStage] 순서.
- *  SceneRenderer 가 먼저 씬을 sceneFB 에 그리고, ParticleStage 가 그 위에 파티클을 얹는다.
+ *  PassIterator 에서 [SkyboxPass, WorldPass] -> [ParticlePass] -> [PostFx] 순서.
+ *  WorldPass 가 먼저 씬을 sceneFB 에 그리고, ParticlePass 가 그 위에 파티클을 얹는다.
  *  반투명 파티클이 불투명 오브젝트보다 위에 올라오게 되는 정석 순서.
  *
  *  ### 비-책임
@@ -40,25 +40,24 @@
 namespace TopdownShooter::VFX
 {
 	/// @brief 생성자.
-	/// @param vfx       VFXSystem 포인터 (비소유). nullptr 시 @c Render 무시.
+	/// @param vfx       VFXSystem 포인터 (비소유). nullptr 시 @c Draw 무시.
 	/// @param worldCam  view/proj + sceneFB 출처 Camera 포인터 (비소유). nullptr 시 무시.
-	ParticleStage::ParticleStage(VFXSystem* vfx, SJH::Scene::Camera* worldCam)
+	ParticlePass::ParticlePass(VFXSystem* vfx, SJH::Scene::Camera* worldCam)
 	    : mVFX(vfx), mWorldCam(worldCam)
 	{
 	}
 
 	/// @brief sceneFB 에 파티클 합성.
 	/// @details
-	///  @p target 인자는 사용하지 않는다 - worldCam->GetTargetRenderTarget() 이 sceneFB 의
+	///  @p rec/@p before 파라미터는 사용하지 않는다 - worldCam->GetTargetRenderTarget() 이 sceneFB 의
 	///  진실의 원천 (architecture.md sec.11.5). resize 자동 추적 구현.
 	///  @n * VAO/EBO 오염 주의 - VFXSystem::Draw (Effekseer BeginRendering/Draw) 호출 후
 	///  현재 바인딩된 VAO 의 EBO 가 변경될 수 있다. 이후 패스에서 EBO 재핀 필요.
-	/// @param target IRenderStage 인터페이스 인자. 미사용 - Camera RT 를 직접 사용.
-	void ParticleStage::Render(SJH::RenderTarget& /*target*/)
+	void ParticlePass::Draw(SJH::DeviceContext & /*rec*/, const SJH::Texture * /*before*/)
 	{
 		if (!mVFX || !mWorldCam)
 		{
-			spdlog::warn("ParticleStage::Render - vfx/worldCam nullptr - skip.");
+			spdlog::warn("ParticlePass::Draw - vfx/worldCam nullptr - skip.");
 			return;
 		}
 
@@ -66,7 +65,7 @@ namespace TopdownShooter::VFX
 		auto* rt = mWorldCam->GetTargetRenderTarget();
 		if (!rt)
 		{
-			spdlog::warn("ParticleStage::Render - worldCam.GetTargetRenderTarget() nullptr - skip.");
+			spdlog::warn("ParticlePass::Draw - worldCam.GetTargetRenderTarget() nullptr - skip.");
 			return;
 		}
 

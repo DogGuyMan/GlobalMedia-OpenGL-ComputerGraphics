@@ -1,0 +1,289 @@
+// 렌더링 시스템 마이그레이션 - 예상 클래스 다이어그램 (v5, in-place 목표 형태)
+// 반영: D1~D13. 이번=렌더 아키텍처만 (고수준은 구체 DeviceContext& / A-dedup).
+//       백엔드 Facade+Strategy(IGraphicsBackend)+PSO = 후속 프로젝트 (점선 클러스터).
+// 배치: rankdir=BT - 피참조多(위) / 참조多(아래)
+// 관계: 실현(dashed 삼각) / 상속(solid 삼각) / 합성(파랑 채운마름모) / 집약(초록 빈마름모) / 의존(주황 점선)
+digraph EngineMigrationClassV5
+{
+	rankdir = BT;
+	splines = line;
+	ranksep = 1.9;
+	nodesep = 0.45;
+	graph [bgcolor="white", fontname="Helvetica", fontsize=11, labelloc="t",
+	       label="렌더링 마이그레이션 - 예상 클래스 다이어그램 (v5, 2026-06-23) - 이번=렌더 아키텍처만 / 백엔드 Facade+Strategy=후속"];
+	node  [shape=plaintext, fontname="Helvetica", fontsize=10];
+	edge  [fontname="Helvetica", fontsize=9];
+
+	// ======================= 추상 인터페이스 (top) =======================
+	IRenderStateProvider [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#FFF2CC"><I>&#171;interface&#187;</I><BR/><B>IRenderStateProvider</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ GetRenderStateBlock() : RenderStateBlock&amp; {const}</TD></TR>
+		</TABLE>>];
+
+	IRenderable [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#FFF2CC"><I>&#171;interface : IRenderStateProvider&#187;</I><BR/><B>IRenderable</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Render(rec : DeviceContext&amp;, cam : Camera&amp;) {const}<BR/>+ QueueLayer() : int {const}<BR/>+ GetRenderStateBlock() : RenderStateBlock&amp; {const}</TD></TR>
+		</TABLE>>];
+
+	IPassable [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#FFF2CC"><I>&#171;interface - 역할군 Pass&#187;</I><BR/><B>IPassable</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw(rec : DeviceContext&amp;, before : Texture*)<BR/>+ GetPassResult() : Texture* {const}<BR/>+ OnResize(w, h)<BR/># BeforeIndex : int</TD></TR>
+		</TABLE>>];
+
+	RenderTarget [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#FFF2CC"><I>&#171;abstract&#187;</I><BR/><B>RenderTarget</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Bind()<BR/>+ GetWidth() : int / GetHeight() : int</TD></TR>
+		</TABLE>>];
+
+	// ======================= 값/구조체 =======================
+	RenderStateBlock [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#E8E8E8"><I>&#171;struct - ROP / PSO 디스크립터 씨앗&#187;</I><BR/><B>Pass::RenderStateBlock</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ DepthTest / DepthWrite / DepthFunc<BR/>+ CullMode<BR/>+ BlendEnable / BlendSrc / BlendDst<BR/>+ QueueLayer : int<BR/>+ Stencil* (Func/Ref/Mask/Op...)</TD></TR>
+		</TABLE>>];
+
+	// ======================= 도메인 concrete =======================
+	Material [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><B>Material</B><BR/><I>: IRenderStateProvider</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Properties : MaterialPropertyBlock<BR/>- mPassKind : RenderQueue<BR/>- mState : RenderStateBlock  (D7 저장처)<BR/>- mProgram : Program*</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ SetPass(k) : Material&amp;  (mState seed)<BR/>+ GetRenderStateBlock() : RenderStateBlock&amp;<BR/>+ GetPass() / GetProgram()</TD></TR>
+		</TABLE>>];
+
+	Component [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><I>&#171;abstract&#187;</I><BR/><B>Scene::Component</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ OnEnter() / OnExit() / Update(dt)<BR/>+ GetOwner() : Actor*</TD></TR>
+		</TABLE>>];
+
+	MeshRenderer [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><B>Scene::MeshRenderer</B><BR/><I>: Component, IRenderable</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Mesh : Mesh* {const} / Material : Material* {const}<BR/>+ Visible : bool / QueueOffset : int</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Render(rec, cam) {const}  (자가발행 잎)<BR/>+ QueueLayer() : int<BR/>+ GetRenderStateBlock()  (Material 위임)</TD></TR>
+		</TABLE>>];
+
+	Camera [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><B>Scene::Camera</B><BR/><I>: Component</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ CullingMask : uint64<BR/>+ FovY / Aspect / Near / Far<BR/>- mTargetRT : RenderTarget*</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ GetViewMatrix() / GetProjectionMatrix()<BR/>+ SetTargetRenderTarget(rt) / Sees(layerBits)</TD></TR>
+		</TABLE>>];
+
+	Program [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><B>Program</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ GetID() / GetLocation(name)<BR/>+ UpdateUniformBlock(blk, data, sz, off)<BR/>+ BindUniformBlocks() / HasUniformBlocks()</TD></TR>
+		</TABLE>>];
+
+	Mesh [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><B>Mesh</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ GetVAO() : GLuint / GetIndexCount() : GLsizei</TD></TR>
+		</TABLE>>];
+
+	Framebuffer [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><B>Framebuffer</B><BR/><I>: RenderTarget</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ GetColorAttachment() : Texture*<BR/>+ Bind() / GetWidth / GetHeight / Resize</TD></TR>
+		</TABLE>>];
+
+	DefaultRenderTarget [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><B>DefaultRenderTarget</B><BR/><I>: RenderTarget (backbuffer)</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Bind()  (FBO 0) / GetWidth / GetHeight</TD></TR>
+		</TABLE>>];
+
+	Texture [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#DAE8FC"><B>Texture</B></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ GetTextureID() : GLuint / Resize(w, h)</TD></TR>
+		</TABLE>>];
+
+	// ======================= 백엔드 (구체 - 유일 gl* 소유, D10) =======================
+	DeviceContext [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#F8CECC"><B>DeviceContext</B><BR/><I>&#171;구체 Facade, 싱글톤 - gl* 유일 소유&#187;</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mBoundProgram : Program*  (A-dedup)<BR/>- mLast : RenderStateBlock  (A-dedup, D-RS-1)<BR/>- mStateInitialized : bool</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Get() {static}<BR/>+ UseProgram / BindVAO / BindTexture / BindTarget<BR/>+ ApplyRenderStateBlock(rsb)  (dedup)<BR/>+ BeginFrame / DrawIndexed / InvalidateStateCache</TD></TR>
+		</TABLE>>];
+
+	ResourceRegistry [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#F8CECC"><B>ResourceRegistry</B><BR/><I>&#171;구체, 싱글톤&#187;</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">- 9종 캐시 (unordered_map&lt;string, UPtr&gt;)</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Get() {static}<BR/>+ CreateTexture / CreateFramebuffer / FindFramebuffer<BR/>+ CreateProgram / RegisterMesh / CreateSharedMaterial ...</TD></TR>
+		</TABLE>>];
+
+	// ======================= Pass (역할군) =======================
+	RenderableProcessor [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#D5E8D4"><B>RenderableProcessor</B><BR/><I>&#171;Flat - 구 MeshPassProcessor&#187;</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mItems : vector&lt;Entry{IRenderable*, queueLayer, depth}&gt;</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Submit(r, depth) / Clear() / Size()<BR/>+ Sort()  (stable_sort: QueueLayer&#8594;depth)<BR/>+ Process(rec, cam)  (&#167;0.5 flat - 배치는 DeviceContext dedup)</TD></TR>
+		</TABLE>>];
+
+	WorldPass [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#D5E8D4"><B>WorldPass</B><BR/><I>: IPassable</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mProc : RenderableProcessor<BR/>- mCamera : Camera* / mTarget : Framebuffer*</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw(rec, before) / GetPassResult()<BR/>- CollectFromActor(actor, cam)  (depth 동봉 Submit)</TD></TR>
+		</TABLE>>];
+
+	SkyboxPass [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#D5E8D4"><B>SkyboxPass</B><BR/><I>: IPassable</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw(rec, before) / GetPassResult()</TD></TR>
+		</TABLE>>];
+
+	ParticlePass [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#D5E8D4"><B>ParticlePass</B><BR/><I>: IPassable &#171;foreign-GL&#187;</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mEfkManager : Effekseer::ManagerRef</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw  (InvalidateStateCache 경계) / GetPassResult</TD></TR>
+		</TABLE>>];
+
+	ImGuiPass [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#D5E8D4"><B>ImGuiPass</B><BR/><I>: IPassable &#171;foreign-GL&#187;</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw  (InvalidateStateCache 경계) / GetPassResult</TD></TR>
+		</TABLE>>];
+
+	PostFxPass [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#D5E8D4"><B>PostFxPass</B><BR/><I>: IPassable (before&#8594;출력)</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mMaterial : Material* / mOutputFB : Framebuffer*</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw(rec, before) / GetPassResult()</TD></TR>
+		</TABLE>>];
+
+	// ======================= 오케스트레이션 (bottom) =======================
+	PassIterator [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#E1D5E7"><B>PassIterator</B><BR/><I>&#171;main 의 유일 렌더 진입점 - D8 코스&#187;</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mPasses : vector&lt;IPassable*&gt;<BR/>+ DebugPassIndex : int</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Add(pass) : int<BR/>+ Execute(rec : DeviceContext&amp;, backbuffer : RenderTarget&amp;)<BR/>+ Resize(w, h)</TD></TR>
+		</TABLE>>];
+
+	// ======================= extern =======================
+	GraphicsAPI [label=<
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+		<TR><TD BGCOLOR="#B85450"><FONT COLOR="white"><B>Graphics API [extern]</B></FONT></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT"><FONT COLOR="#7B1F1F">OpenGL 4.1 (현재)<BR/>Vulkan / D3D12 / Metal (후속)</FONT></TD></TR>
+		</TABLE>>];
+
+	// ======================= 후속 프로젝트 클러스터 (점선) =======================
+	subgraph cluster_future
+	{
+		label = "후속 멀티백엔드 프로젝트 (이번 범위 밖, D10/D11/D13) - Unreal FDynamicRHI / Godot RenderingDevice driver 정통";
+		style = "dashed,rounded";
+		color = "#9E9E9E";
+		fontcolor = "#757575";
+		fontsize = 10;
+
+		IGraphicsBackend [label=<
+			<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3" COLOR="#BBBBBB">
+			<TR><TD BGCOLOR="#F0F0F0"><FONT COLOR="#777777"><I>&#171;interface - swap 백엔드 Strategy&#187;</I><BR/><B>IGraphicsBackend</B></FONT></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT"><FONT COLOR="#777777">+ BindPipelineState(PipelineStateDesc&amp;)  (PSO)<BR/>+ CreateTexture / CreateFramebuffer  (자원 생성)<BR/>+ Draw(...) ...</FONT></TD></TR>
+			</TABLE>>];
+
+		OpenGLBackend [label=<
+			<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3" COLOR="#BBBBBB">
+			<TR><TD BGCOLOR="#F0F0F0"><FONT COLOR="#777777"><B>OpenGLBackend</B><BR/><I>: IGraphicsBackend (gl*)</I></FONT></TD></TR>
+			</TABLE>>];
+		VulkanBackend [label=<
+			<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3" COLOR="#BBBBBB">
+			<TR><TD BGCOLOR="#F0F0F0"><FONT COLOR="#777777"><B>VulkanBackend</B><BR/><I>: IGraphicsBackend (vk*, PSO)</I></FONT></TD></TR>
+			</TABLE>>];
+		MetalBackend [label=<
+			<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3" COLOR="#BBBBBB">
+			<TR><TD BGCOLOR="#F0F0F0"><FONT COLOR="#777777"><B>MetalBackend</B><BR/><I>: IGraphicsBackend (mtl*)</I></FONT></TD></TR>
+			</TABLE>>];
+	}
+
+	// ========================================================================
+	// 관계 (edge)
+	// ========================================================================
+
+	// ---- 실현 (class -> interface): 점선 + 빈 삼각 ----
+	edge [style=dashed, arrowhead=onormal, color="#333333", penwidth=1.1];
+	Material     -> IRenderStateProvider;
+	MeshRenderer -> IRenderable;
+	WorldPass    -> IPassable;
+	SkyboxPass   -> IPassable;
+	ParticlePass -> IPassable;
+	ImGuiPass    -> IPassable;
+	PostFxPass   -> IPassable;
+
+	// ---- 상속 (class/interface -> base): 실선 + 빈 삼각 ----
+	edge [style=solid, arrowhead=onormal, color="#333333", penwidth=1.1];
+	IRenderable         -> IRenderStateProvider;
+	MeshRenderer        -> Component;
+	Camera              -> Component;
+	Framebuffer         -> RenderTarget;
+	DefaultRenderTarget -> RenderTarget;
+
+	// ---- 합성 (whole owns part): 파랑 채운 마름모 ----
+	edge [style=solid, color="#1565C0", dir=back, arrowtail=diamond, arrowhead=none, penwidth=1.2];
+	Material         -> RenderStateBlock;
+	WorldPass        -> RenderableProcessor;
+	Framebuffer      -> Texture;
+	ResourceRegistry -> Material;
+	ResourceRegistry -> Program;
+	ResourceRegistry -> Mesh;
+	ResourceRegistry -> Framebuffer;
+	ResourceRegistry -> Texture;
+
+	// ---- 집약 (holds ptr/ref, non-owning): 초록 빈 마름모 ----
+	edge [style=solid, color="#2E7D32", dir=back, arrowtail=odiamond, arrowhead=none, penwidth=1.1];
+	MeshRenderer        -> Mesh;
+	MeshRenderer        -> Material;
+	Material            -> Program;
+	Camera              -> RenderTarget;
+	RenderableProcessor -> IRenderable;
+	PassIterator        -> IPassable;
+	WorldPass           -> Camera;
+	WorldPass           -> Framebuffer;
+	PostFxPass          -> Material;
+
+	// ---- 의존 (uses in signature): 주황 점선 + open arrow ----
+	edge [style=dashed, color="#E65100", arrowhead=vee, dir=forward, penwidth=1.0];
+	IRenderable         -> DeviceContext;   // Render(rec,..) - 구체 (D10)
+	IRenderable         -> Camera;
+	IPassable           -> DeviceContext;   // Draw(rec,..) - 구체 (D10)
+	IPassable           -> Texture;         // before / GetPassResult
+	RenderableProcessor -> DeviceContext;   // Process(rec,..)
+	RenderableProcessor -> Camera;
+	PassIterator        -> DeviceContext;   // Execute(rec,..)
+	PassIterator        -> RenderTarget;
+
+	// ---- ★ 백엔드 -> Graphics API (현재 - 유일 gl* 소유, 강조) ----
+	edge [style=solid, color="#D50000", arrowhead=vee, dir=forward, penwidth=2.6, fontcolor="#D50000"];
+	DeviceContext    -> GraphicsAPI [label="  ★ 현재: gl* 직접"];
+	ResourceRegistry -> GraphicsAPI [label="  ★ 현재: gl* 직접"];
+
+	// ---- 후속: Facade -> Strategy, Strategy 구현 (점선 회색) ----
+	edge [style=dashed, color="#9E9E9E", arrowhead=vee, dir=forward, penwidth=1.3, fontcolor="#757575"];
+	DeviceContext -> IGraphicsBackend [label="  후속: Facade 가 Strategy 보유 (gl* 이주)"];
+
+	edge [style=dashed, color="#9E9E9E", arrowhead=onormal, dir=forward, penwidth=1.1];
+	OpenGLBackend -> IGraphicsBackend;
+	VulkanBackend -> IGraphicsBackend;
+	MetalBackend  -> IGraphicsBackend;
+
+	// ======================= 범례 =======================
+	Legend [shape=plaintext, label=<
+		<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="2" CELLPADDING="3" BGCOLOR="#FAFAFA">
+		<TR><TD ALIGN="LEFT"><B>범례 (관계)</B></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#333333">&#9651;&#8230; 실현 (점선) / &#9651;&#8212; 상속 (실선)</FONT></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#1565C0">&#9670;&#8212; 합성 (whole 소유 - 값 멤버)</FONT></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#2E7D32">&#9671;&#8212; 집약 (포인터/참조 보유, 비소유)</FONT></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#E65100">&#8594;&#8230; 의존 (시그니처 사용 - 고수준은 구체 DeviceContext)</FONT></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#D50000"><B>&#8594; ★ 현재 gl* 직접 (DeviceContext/ResourceRegistry 만)</B></FONT></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#757575">&#8230; 점선 회색 = 후속 멀티백엔드 (이번 범위 밖)</FONT></TD></TR>
+		<TR><TD ALIGN="LEFT">배치: 위=피참조多 / 아래=참조多 (BT)</TD></TR>
+		</TABLE>>];
+}

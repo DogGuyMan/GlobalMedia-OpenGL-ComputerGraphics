@@ -1,0 +1,79 @@
+// render-sequence.dot
+// 렌더링 엔진 per-frame Sequence (호출 순서) - game_application::render(dt) 1프레임.
+// Graphviz 는 네이티브 sequence 가 없어 *순번 라벨 에지* 로 호출 순서를 표현한다.
+// 작성: 2026-06-21 (Phase C 반영).
+//
+// 렌더:  dot -Tsvg render-sequence.dot -o render-sequence.svg
+//
+// 읽는 법: 에지 라벨의 [N] 숫자 = 호출 순서. 굵은 파랑 = stages 순회(핵심 렌더).
+
+digraph RenderSequence {
+    rankdir=LR;
+    fontname="Helvetica";
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10, fillcolor="#f7f7f7"];
+    edge [fontname="Helvetica", fontsize=9];
+
+    // 참여자 (lifeline 역할 노드)
+    App      [label="game_application\n::render(dt)", fillcolor="#ffe0b2"];
+    Fsm      [label="StageStateMachine\n(게임 로직)", fillcolor="#fde0dc"];
+    Director [label="Scene::Director\n(Actor 트리 Update)", fillcolor="#fde0dc"];
+    SR       [label="SceneRenderer", fillcolor="#d4edda"];
+    CamW     [label="CameraStage\n(WorldCamera)", fillcolor="#d4edda"];
+    Particle [label="ParticleStage\n(Effekseer)", fillcolor="#e2efda"];
+    CamS     [label="CameraStage\n(ScreenCamera)", fillcolor="#d4edda"];
+    SQ       [label="ScreenQuadStage", fillcolor="#d4edda"];
+    Uploader [label="LightUboUploader", fillcolor="#c8e6c9"];
+    MPP      [label="MeshPassProcessor", fillcolor="#c8e6c9"];
+    DC       [label="DeviceContext\n(GL facade)", fillcolor="#c3e6cb"];
+    ImGui    [label="ImGuiLayerStack", fillcolor="#f0f0f0"];
+
+    // ---- 프레임 전반: 로직/준비 (회색) ----
+    edge [color="#777777"];
+    App -> Fsm        [label="[1] Update(dt)\n(CombatPlay 시 Director.Update)"];
+    Fsm -> Director   [label="[2] Update(dt)\nActor 트리 순회"];
+    App -> App        [label="[3] Audio.Update / FlushSpawns\n/ Sweep / skybox·fog uniform 갱신"];
+    App -> SR         [label="[4] SetActivePrograms(reg.GetAllPrograms())"];
+    App -> SQ         [label="[5] SetSources({SR.GetLastSceneOutput()})"];
+
+    // ---- stages 순회 (굵은 파랑 = 핵심 렌더 경로) ----
+    edge [color="#1565c0", penwidth=2.0];
+    App  -> CamW      [label="[6] Render(backbuffer)"];
+    App  -> Particle  [label="[10] Render()"];
+    App  -> CamS      [label="[12] Render()"];
+    App  -> SQ        [label="[14] Render()"];
+
+    // ---- [6] WorldCamera pass 내부 ----
+    edge [color="#2e7d32", penwidth=1.2];
+    CamW -> SR        [label="[7] RenderWithCamera(worldCam)"];
+    SR   -> DC        [label="[7.1] BeginFrame(sceneFB)"];
+    SR   -> Uploader  [label="[7.2] Update(lights) + BindTo(programs)\n(공유 LightBlock UBO 결속)"];
+    SR   -> MPP       [label="[7.3] CollectFromActor -> Submit(DrawCommand)"];
+    SR   -> MPP       [label="[8] SortMultiStage()"];
+    SR   -> MPP       [label="[9] Process(rc, view, proj)"];
+
+    // ---- [9] Process 내부 (per program/material/draw) ----
+    edge [color="#6a1b9a", penwidth=1.0, style=dashed];
+    MPP -> DC  [label="[9.a] (program 전환) UseProgram\n+ FrameBlock UBO + BindUniformBlocks"];
+    MPP -> DC  [label="[9.b] (material 전환) BindSamplers\n(GetLocation + glUniform1i + BindTexture)"];
+    MPP -> DC  [label="[9.c] (per draw) UploadMaterialUboMembers\n+ DrawBlock UBO + ApplyRenderStateBlock"];
+    MPP -> DC  [label="[9.d] DrawIndexed(count)"];
+
+    // ---- [10] Particle ----
+    edge [color="#e8a33d", penwidth=1.2, style=solid];
+    Particle -> DC [label="[11] Effekseer Draw\n+ InvalidateStateCache()"];
+
+    // ---- [12] ScreenCamera pass (PostFX 체인) ----
+    edge [color="#2e7d32", penwidth=1.2, style=solid];
+    CamS -> SR  [label="[13] RenderWithCamera(screenCam)\n(PassComponent=PostFX DrawCommand)"];
+
+    // ---- [14] 최종 합성 ----
+    edge [color="#1565c0", penwidth=1.2, style=solid];
+    SQ -> DC [label="[15] FBO color -> backbuffer 합성 blit"];
+
+    // ---- 프레임 후반: UI ----
+    edge [color="#777777", penwidth=1.0, style=solid];
+    App -> ImGui [label="[16] RenderAll + ImGui::Render"];
+
+    // lifeline 정렬 힌트
+    { rank=same; App; }
+}

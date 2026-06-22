@@ -53,7 +53,7 @@ namespace SJH::SpriteResources
 			if (tpl)
 			{
 				tpl->SetProgram(prog);
-				tpl->SetPass(SJH::Pass::Kind::AlphaTest);
+				tpl->SetPass(SJH::Pass::RenderQueue::AlphaTest);
 			}
 			return tpl;
 		}

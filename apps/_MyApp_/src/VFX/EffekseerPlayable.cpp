@@ -19,7 +19,7 @@
  *  ### 비-책임
  *  - [X] Manager/Renderer 소유 - @c VFXSystem 담당.
  *  - [X] .efkefc 로드/캐시 - @c SJH::ResourceRegistry / @c SJH::Effect 담당.
- *  - [X] 시뮬레이션 Update/렌더 Draw - @c VFXSystem / @c ParticleStage 담당.
+ *  - [X] 시뮬레이션 Update/렌더 Draw - @c VFXSystem / @c ParticlePass 담당.
  */
 #include "EffekseerPlayable.h"
 

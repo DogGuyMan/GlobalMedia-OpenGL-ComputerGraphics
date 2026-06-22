@@ -42,6 +42,7 @@
 #include "Stage/State/StageStateMachine.h"
 #include "Stage/State/StageState.Impl.h"   // Title/CombatPlay/Pause/GameOver + GetCtx
 #include "UI/ImGuiLayerStack.h"
+#include "UI/ImGuiPass.h"   // ImGuiPass : IPassable (종단 Pass, Task 3.4)
 #include "UI/PostFXDebugLayer.h"
 #include "UI/StateOverlayLayer.h"
 #include "UI/UiBootstrap.h"
@@ -49,7 +50,9 @@
 #include "common/window_helper.h"
 #include "render/pass_component.h"
 #include "render_bootstrap/render_pipeline.h"
-#include "render/render_stage/render_stage.impls.h"   // SceneRenderer + ScreenQuadStage + CameraStage 통합
+#include "render/render_passable/render_passable.impls.h"   // SceneRenderer + ScreenQuadStage + CameraStage 통합
+#include "render/device_context.h"
+#include "render/pass_iterator.h"   // PassIterator (Task 4.1/4.2 - mStages 실행 + before/GetPassResult 체이닝)
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
@@ -131,11 +134,13 @@ namespace TopdownShooter
 				    Playable::PASSTHOURH_PROGRAM_CONFIG.VertFile,
 				    Playable::PASSTHOURH_PROGRAM_CONFIG.FragFile,
 				};
-				auto sqStage = SJH::Render::SetupDefaultPipeline(reg, manager.SceneRenderer(), mSceneFB.get(), pipelineCfg);
-				if (!sqStage)
+				auto pipeline = SJH::Render::SetupDefaultPipeline(reg, mSceneFB.get(), pipelineCfg);
+				if (!pipeline.Stage)
 					return false;
-				mScreenQuadStagePtr = sqStage.get();
-				mStages.push_back(std::move(sqStage));
+				mScreenQuadStagePtr = pipeline.Stage.get();
+				mScreenQuadMeshPtr  = pipeline.Quad;
+				mBypassMatPtr       = pipeline.Bypass;
+				mStages.push_back(std::move(pipeline.Stage));
 
 				auto screenCamActor    = SJH::Scene::CreateScreenCameraActor(ACTOR_SCREEN_CAMERA, mFbInfo.Aspect, mSceneFB.get());
 				mScreenCamera          = screenCamActor->GetComponent<SJH::Scene::Camera>();
@@ -169,8 +174,9 @@ namespace TopdownShooter
 			//             + muzzle 이펙트 + 플레이어 + 웨이브 컨트롤러.
 			sched.Task(Bootstrap::EInitTask::World).Needs({Bootstrap::EInitTask::VfxUi}).Gl().Does([&] {  // vfxUi 가 TEST_EFFECTS(orbital_background) 를 선행 로드 -> 스테이지 FindEffect 의존
 				auto worldScene = Bootstrap::BuildWorldScene({mFbInfo.Aspect, &mMouse, mSceneFB.get()});
-				mCamera    = worldScene.WorldCamera;
-				mSkyboxMat = worldScene.SkyboxMat;
+				mCamera        = worldScene.WorldCamera;
+				mSkyboxMat     = worldScene.SkyboxMat;
+				mSkyboxRenderer = worldScene.SkyboxRenderer;
 
 				dir.Root().AddChild(std::move(TopdownShooter::Stage::CreateStageActor({&phys.World(), &reg})));
 
@@ -190,12 +196,32 @@ namespace TopdownShooter
 
 			// T4 stages -- stages 컬렉션 명령형 조립 (worldCam/particle/screenCam 순서 보존).
 			sched.Task(Bootstrap::EInitTask::Stages).Needs({Bootstrap::EInitTask::ScreenPipeline, Bootstrap::EInitTask::World}).Cpu().Does([&] {
+				auto worldPass = std::make_unique<SJH::WorldPass>(mCamera);
+				// background-first: 선행 SkyboxPass 가 sceneFB clear 책임 인수. fluent 설정 + 포인터 캡처 체이닝.
+				mWorldPassPtr  = &worldPass->SetClearsTarget(false);
+				mStages.insert(mStages.begin(), std::move(worldPass));
 				mStages.insert(mStages.begin(),
-				    std::make_unique<SJH::CameraStage>(&GameSystems::Get().SceneRenderer(), mScreenCamera));
-				mStages.insert(mStages.begin(),
-				    std::make_unique<SJH::CameraStage>(&GameSystems::Get().SceneRenderer(), mCamera));
-				mStages.insert(mStages.begin() + 1,
-				    std::make_unique<TopdownShooter::VFX::ParticleStage>(&GameSystems::Get().VFX(), mCamera));
+				    std::make_unique<SJH::SkyboxPass>(mSkyboxRenderer, mCamera));  // 맨 앞
+				mStages.insert(mStages.begin() + 2,
+				    std::make_unique<TopdownShooter::VFX::ParticlePass>(&GameSystems::Get().VFX(), mCamera));
+				// PostFX per-effect - PassComponent 하나당 PostFxPass 하나. present(ScreenQuad, 현재 마지막) 앞에 체인순 삽입.
+				//   삽입 시점 mStages = [Skybox, World, Particle, ScreenQuad] -> end()-1 = ScreenQuad 앞.
+				for (auto *pc : mPassComponents)
+					if (pc)
+						mStages.insert(mStages.end() - 1,
+						    std::make_unique<SJH::PostFxPass>(pc, mScreenQuadMeshPtr, mBypassMatPtr));
+				// present 입력 = 체인 마지막 OutputFB(효과 없으면 sceneFB). in-place Resize 라 포인터 안정 -> 1회 배선.
+				{
+					const SJH::Framebuffer *lastFBO = mSceneFB.get();
+					for (auto *pc : mPassComponents)
+						if (pc)
+							lastFBO = pc->OutputFB;
+					mScreenQuadStagePtr->SetSources({lastFBO});
+				}
+				mStages.push_back(std::make_unique<UI::ImGuiPass>());  // 종단 Pass
+				// PassIterator 조립 - mStages(소유)의 raw 포인터를 코스 순서대로 등록. 이후 mStages 변경 없음(포인터 안정).
+				for (auto &s : mStages)
+					mPassIterator.Add(s.get());
 				return true;
 			});
 
@@ -352,22 +378,18 @@ namespace TopdownShooter
 				fogMat->Properties.Mat4s[UNI_FOG_INV_PROJ] =
 				    mCamera->GetInverseProjectionMatrix();
 
-			// ── stages 컬렉션 순회 — World -> Screen -> ScreenQuad ─────────────────
-			// D-1 push -- 라이트 uniform 송신 대상 Program 집합을 SceneRenderer 에 주입
-			// (SceneRenderer 가 rr 을 직접 pull 하던 의존 제거 -> render->rr 사이클 절단).
-			GameSystems::Get().SceneRenderer().SetActivePrograms(SJH::ResourceRegistry::Get().GetAllPrograms());
+			// worldCam 라이트 업로드 - WorldPass 자체 uploader 에 스냅샷 주입(3.1). (SceneRenderer screen 경로 폐기 - 3.5)
+			if (mWorldPassPtr)
+				mWorldPassPtr->SetActivePrograms(SJH::ResourceRegistry::Get().GetAllPrograms());
 
-			// ScreenQuadStage 의 sources 는 *stages 순회 직전* 갱신 (지난 프레임 PassComponent 출력).
-			{
-				auto *out = GameSystems::Get().SceneRenderer().GetLastSceneOutput();
-				mScreenQuadStagePtr->SetSources({out ? out : mSceneFB.get()}); // ! ??? 필요한 것 맞나?
-			}
-			for (auto &s : mStages)
-				s->Render(*mDefaultTarget);
-
-			// ImGui 창 빌드 + 렌더 (항상 최상위).
+			// present(ScreenQuad) backbuffer 는 resize 마다 재생성되므로 매 프레임 주입. sources(체인 마지막 FBO)는 T4 1회 배선(포인터 안정).
+			mScreenQuadStagePtr->SetBackbuffer(mDefaultTarget.get());
+			// ImGui 창 빌드 (GL draw 아님 - command 기록만). 종단 ImGuiPass 가 ImGui::Render 로 발행하기 전에 빌드.
 			mImGuiStack.RenderAll(mShowEditor);
-			ImGui::Render();
+
+			// stages 실행 - PassIterator 가 before/GetPassResult 체이닝으로 순회(현재 BeforeIndex=-1 -> before=nullptr, 사전배선 사용).
+			//   [Skybox, World, Particle, PostFx(e0..eN), ScreenQuad, ImGuiPass]. ImGuiPass(종단)가 ImGui::Render.
+			mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
 		}
 
 		void shutdown() override
@@ -383,6 +405,8 @@ namespace TopdownShooter
 			mFxRoot = nullptr;
 			mStageFsm.reset();   // States 해제 (WaveController->mStageFsm 는 이후 미사용)
 			mCtx = nullptr;
+			mWorldPassPtr   = nullptr;
+			mSkyboxRenderer = nullptr;
 			mStages.clear();
 			mDefaultTarget.reset();
 			TopdownShooter::GameSystems::Get().Shutdown();
@@ -444,8 +468,12 @@ namespace TopdownShooter
 		SJH::FramebufferInfo  mFbInfo{};       ///< startup 캐시 -- 3 hook 이 공유하는 window/fb 크기/비율.
 		SJH::RenderTargetUPtr mDefaultTarget;
 		// SP-RenderStage 완성 — Application 이 stages 컬렉션을 명시 순서로 순회.
-		std::vector<std::unique_ptr<SJH::IRenderStage>> mStages;
-		SJH::ScreenQuadStage *mScreenQuadStagePtr = nullptr;
+		std::vector<std::unique_ptr<SJH::IPassable>> mStages;
+		SJH::PassIterator mPassIterator;                       ///< before/GetPassResult 체이닝으로 mStages 실행 (Task 4.1/4.2).
+		SJH::ScreenQuadStage *mScreenQuadStagePtr  = nullptr;
+		SJH::WorldPass       *mWorldPassPtr        = nullptr;   ///< worldCam WorldPass(3.1) - 매 프레임 SetActivePrograms 주입용.
+		SJH::Mesh            *mScreenQuadMeshPtr   = nullptr;   ///< PostFxPass per-effect blit 용 quad (비소유, SetupDefaultPipeline).
+		SJH::Material        *mBypassMatPtr        = nullptr;   ///< disabled 효과 passthrough material (비소유).
 
 		SJH::FramebufferUPtr mSceneFB;
 		std::vector<SJH::FramebufferUPtr> mPostFXFBs;  // configs 가변 size 대응 (D-6)
@@ -459,7 +487,8 @@ namespace TopdownShooter
 		bool mShowEditor = true;
 
 		// 씬 오브젝트
-		SJH::Material *mSkyboxMat = nullptr;
+		SJH::Material      *mSkyboxMat      = nullptr;
+		SJH::IRenderable   *mSkyboxRenderer = nullptr; ///< Matrix Skybox MeshRenderer - SkyboxPass 주입용(비소유).
 		SJH::Scene::Actor *mSpriteActor = nullptr;
 		SJH::Scene::Actor *mFxRoot = nullptr; // 단발 시퀀스 전용 부모 (sweep 대상)
 		SJH::Scene::Camera *mCamera = nullptr;

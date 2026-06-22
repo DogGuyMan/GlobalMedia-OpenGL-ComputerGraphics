@@ -63,7 +63,7 @@ namespace TopdownShooter::HUD
 		SJH::Material *mat = reg.CreateSharedMaterial(matKey);
 		if (!mat) return;
 		mat->SetProgram(prog);
-		mat->SetPass(SJH::Pass::Kind::Transparent);
+		mat->SetPass(SJH::Pass::RenderQueue::Transparent);
 		mat->Properties.Vec4s["uColor"]           = cfg.fillColor;
 		mat->Properties.Vec4s["uBgColor"]         = cfg.bgColor;
 		mat->Properties.Floats["uSegmentCount"]   = cfg.segmentCount;

@@ -1,271 +1,126 @@
 /**
  * @file mesh_pass_processor.cpp
- * @brief MeshPassProcessor 구현 - SortMultiStage 정렬 정책 + Process Orchestrator 발행 흐름.
+ * @brief RenderableProcessor 구현 - Sort 정렬 정책 + Process IRenderable flat 발행 흐름.
  *
  * @details
- *  ### 책임 (SP-PipelineSetter 후 단순화, SP-MeshPassProcessor rename)
- *  - DrawCommand 순회 + program/material 전환 시점 결정.
- *  - 각 결정에서 위임:
- *    - Program 전환 -> @c DeviceContext::UseProgram + FrameBlock(view/proj) UBO 갱신.
- *    - Material 전환 -> @c BindSamplers (sampler) + per-draw UBO 멤버 업로드 (값, Phase C).
- *    - 매 cmd -> @c DeviceContext::ApplyPipelineState (Pass.PipelineState -> GL state machine, D-RS-1).
+ *  ### Task 2.4 - DrawCommand -> IRenderable flat 전환
+ *  - World 루프: ApplyRenderStateBlock(r->GetRenderStateBlock()) -> r->Render(rc, cam).
+ *    ROP 위치: Process 루프 (잎 미호출 - 역할 분리 유지).
+ *  - ScreenQuad 루프: 구 MeshPassProcessor ScreenQuad 분기 동작 동등 보존.
+ *  - 익명 namespace UploadMaterialUboMembers/BindSamplers 제거 -> draw_ops.h 공유 헬퍼 사용.
  *
- *  ### 분리된 책임 (이전엔 본 파일 안에 있었음)
- *  - GL state machine 전환 (Stencil/Depth/Cull/Blend) -> @c DeviceContext::ApplyPipelineState (D-RS-1 흡수).
- *  - Material 값 uniform -> UBO 멤버 (@c Program::UpdateUniformMember). sampler 는 본 TU 의 @c BindSamplers (Phase C).
- *
- *  @c Process 본문 = 순서 + 조건 결정만 (Orchestrator 정통 - Unreal @c FMeshPassProcessor).
- *
- *  ### SortMultiStage 정렬 정책 요약
- *  - Opaque (queue < 2500): program 그룹 -> material 그룹 -> front-to-back (z-cull 효율).
+ *  ### Sort 정렬 정책 요약 (구 SortMultiStage 값 보존)
+ *  - Opaque (queue < 2500): front-to-back (z-cull 효율). 구 program/material 그룹핑 키 생략
+ *    (A-dedup 흡수 - DECISION 2.4-b). stable_sort 결정성 보장.
  *  - Transparent (queue >= 2500): back-to-front (알파 합성 정확도).
- *  - @c std::stable_sort: z-fighting 깜빡임 차단 + Actor DFS 순서 보존 + 골든 이미지 결정성.
+ *  - view-space z 부호: 카메라 앞 = 음수. front-to-back = a.depth > b.depth.
  *
  *  ### 비-책임
- *  - [X] GL state machine *캐싱/적용 로직* 소유 -> @c DeviceContext::ApplyPipelineState 위임 (호출 시점만 결정).
- *  - [X] Material 값 uniform -> @c Program::UpdateUniformMember (UBO 멤버). sampler 만 본 TU 의 @c BindSamplers.
+ *  - [X] GL 자가 draw - MeshRenderer::Render 잎 위임 (Task 2.3).
+ *  - [X] Material 값 uniform 송신 - MeshRenderer::Render 내부 draw_ops 헬퍼.
+ *  - [X] GL state machine 캐싱/적용 - DeviceContext::ApplyRenderStateBlock (D-RS-1).
  */
 #include "render/mesh_pass_processor.h"
-#include <glm/glm.hpp>
+#include "render/draw_ops.h"
 #include "render/device_context.h"
-#include "render/mesh_renderer.h"     // DrawCommand 의 meshRenderer 경유 접근 (SSoT).
-#include "program/program.h"
-#include "object/mesh.h"
 #include "material/material.h"
-#include "material/material_property_block.h"   // Phase C - BindSamplers 의 MaterialPropertyBlock.Textures.
 #include "material/pass.h"
-#include "texture/texture.h"                     // Phase C - BindSamplers 의 Texture::GetTextureID.
-#include "GL/gl3w.h"                             // Phase C - BindSamplers 의 glUniform1i.
+#include "object/mesh.h"
+#include "program/program.h"
 #include "buffer/framebuffer.h"
+#include "scene/camera.h"
 #include <algorithm>
-#include <functional>
 
 namespace SJH
 {
-    // SP-MaterialSSoT - MergeBool 헬퍼 제거. Material 이 진실의 원천 (override 합성 없음).
+	void RenderableProcessor::Sort()
+	{
+		// --- 정렬 정책 (Unity TransparencySortMode 정통, 구 SortMultiStage 값 보존) --------
+		// Opaque (queue < 2500): front-to-back (z-cull 효율)
+		//   구 program/material 2/3차 그룹핑 키 생략 (A-dedup 이 흡수 - DECISION 2.4-b).
+		//   픽셀 무관: 불투명은 depth-test 가 결과 보존.
+		// Transparent (queue >= 2500): back-to-front (먼 객체 먼저 - 알파 합성 정확도).
+		//
+		// --- view-space z 부호 함정 ------------------------------------------
+		// OpenGL 카메라는 -Z 방향 -> 카메라 앞 = 음수 z. 멀수록 더 음수.
+		//   가까운 객체: z = -10  (덜 음수, 큰 값)
+		//   먼  객체:   z = -100 (더 음수, 작은 값)
+		//   front-to-back = a.depth > b.depth (큰 값 = 덜 음수 = 가까움)
+		//   back-to-front = a.depth < b.depth (작은 값 = 더 음수 = 멂)
+		//
+		// --- stable_sort 3가치 -----------------------------------------------
+		// 1. z-fighting 깜빡임 차단 - 동등 depth 두 면이 매 프레임 같은 순서 (flicker 회피).
+		// 2. Actor DFS 순서 보존 - Submit 순서 = 씬 계층 -> 시각 디버깅 일관성.
+		// 3. 골든 이미지 결정성 - 동등 항목 정렬 결과 매 호출 동일 (false-positive flicker 차단).
+		std::stable_sort(mWorld.begin(), mWorld.end(),
+			[](const WorldEntry &a, const WorldEntry &b) {
+				if (a.queueLayer != b.queueLayer) return a.queueLayer < b.queueLayer;
+				if (Pass::IsTransparentQueue(a.queueLayer)) return a.depth < b.depth;   // back-to-front
+				return a.depth > b.depth;   // front-to-back
+			});
+	}
 
-    namespace
-    {
-        /// @brief UBO 셰이더의 MaterialBlock 멤버를 material Properties 에서 author 이름 매칭으로 일반 업로드.
-        /// @details Phase 3 Slice 0 (D-DPP-1(b)) - 구 baseColor-only 하드코드 대체. 각 typed map 값을
-        ///          @c Program::UpdateUniformMember(name, &v, size) 로 송신 (비-UBO 멤버는 자동 skip).
-        ///          Textures(sampler)는 UBO 불가라 제외 - BindSamplers 가 별도 바인딩 (Slice 0.5).
-        ///          glm 값의 주소는 void* 로 전달 (value_ptr 불요 - UpdateUniformMember 가 void*).
-        void UploadMaterialUboMembers(const Program& prog, const MaterialPropertyBlock& props)
-        {
-            for (const auto& kv : props.Floats) prog.UpdateUniformMember(kv.first, &kv.second, sizeof(float));
-            for (const auto& kv : props.Ints)   prog.UpdateUniformMember(kv.first, &kv.second, sizeof(int));
-            for (const auto& kv : props.Vec2s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec2));
-            for (const auto& kv : props.Vec3s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec3));
-            for (const auto& kv : props.Vec4s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec4));
-            for (const auto& kv : props.Mat4s)  prog.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::mat4));
-        }
+	void RenderableProcessor::Process(DeviceContext &rc, const Scene::Camera &cam)
+	{
+		// Process 진입 - GL state 캐시 무효화 (per-Process 캐시 불변식 보존, D-RS-2).
+		//   직전 stage(다른 카메라 Process / Effekseer ParticlePass 등)가 GL state 를
+		//   캐시 뒤에서 바꿨을 수 있으므로 첫 ApplyRenderStateBlock 가 전체 강제 적용하도록 한다.
+		rc.InvalidateStateCache();
 
-        /// @brief material 의 sampler(texture)를 program 에 바인딩 (Phase C - 구 PropertyBlockSetter 대체).
-        /// @details GL 4.1 은 sampler 를 UBO 에 못 넣으므로 *값* uniform 이 전부 UBO 화돼도 sampler 는 영구 loose.
-        ///          material 이 *설정한* 텍스처(@c block.Textures)만 순회 - 셰이더에 없는 이름은 location<0 으로 skip
-        ///          (구 PropertyBlockSetter 의 schema-outer 와 동일 결과: material 미설정/셰이더 미선언 모두 skip).
-        ///          sampler 는 author 이름 그대로 (Slang `_N` 접미는 toolchain post-process 가 정규화).
-        void BindSamplers(DeviceContext& rc, const MaterialPropertyBlock& block, const Program& prog)
-        {
-            for (const auto& kv : block.Textures)
-            {
-                const auto& binding = kv.second;
-                if (!binding.Tex)
-                    continue;
-                const GLint loc = prog.GetLocation(kv.first.c_str());
-                if (loc < 0)
-                    continue;   // 셰이더가 선언 안 한 sampler - skip (warn 안 함).
-                glUniform1i(loc, binding.Unit);
-                rc.BindTexture(static_cast<GLuint>(binding.Unit), binding.Tex->GetTextureID());
-            }
-        }
-    }
+		// -- World flat (IRenderable 잎 위임) ------------------------------------------
+		// ROP 는 여기서만 적용 (잎은 ROP 미호출 - 역할 분리 D7).
+		for (const auto &e : mWorld)
+		{
+			rc.ApplyRenderStateBlock(e.r->GetRenderStateBlock());
+			e.r->Render(rc, cam);
+		}
 
-    void MeshPassProcessor::SortMultiStage()
-    {
-        // --- 정렬 정책 (Unity TransparencySortMode 정통) ------------------------
-        // Opaque (queue < 2500): "같은 셰이더/머티리얼끼리 모아 그려서 GL state 전환 최소화"
-        //   -> program 그룹핑 -> material 그룹핑 -> 같은 그룹 안에서 *가까운 거 먼저*
-        //     (z-cull 효율: 가까운 면이 depth buffer 채워 뒤 fragment 자동 skip)
-        // Transparent (queue >= 2500): "뒤에서 앞으로 그려야 알파 합성이 정확"
-        //   -> depth 만 본다 (그룹핑 무시) - *먼 거 먼저* 그린 위에 알파 블렌딩
-        //
-        // --- view-space z 부호 함정 ------------------------------------------
-        // OpenGL 카메라는 -Z 방향을 본다 -> *카메라 앞 = 음수 z*. 멀수록 *더 음수*.
-        //   가까운 객체: z = -10  <- 덜 음수 (큰 값)
-        //   먼 객체:    z = -100 <- 더 음수 (작은 값)
-        // 그래서 부호가 *방향 정반대*:
-        //   front-to-back = a.depth > b.depth  (큰 값 = 덜 음수 = 가까움)
-        //   back-to-front = a.depth < b.depth  (작은 값 = 더 음수 = 멈)
-        //
-        // --- std::less<> 의 이유 ---------------------------------------------
-        // raw pointer 의 `<` 는 *서로 다른 객체끼리 UB* (C++ [expr.rel]).
-        // std::less<> 는 *정의된 strict total order* 보장 - 안전한 그룹핑.
-        //
-        // --- 왜 std::stable_sort 인가? - 3 가치 ------------------------------
-        // 1. **z-fighting 깜빡임 차단** - 같은 depth 두 면이 *매 프레임 같은 순서* 로
-        //    그려져 flicker 회피 (std::sort 면 quicksort pivot 마다 순서 변동 -> 깜빡임)
-        // 2. **Actor 트리 DFS 순서 보존** - Submit 순서 = 씬 계층 구조 ->
-        //    시각 디버깅 시 *언제나 같은 순서* 로 그려져 회귀 추적 쉬움
-        // 3. **시각 회귀 테스트 결정성** - 동등 cmd 의 정렬 결과가 *매 호출 동일* ->
-        //    골든 이미지 비교 가능 (비결정적 정렬은 false-positive flicker 유발)
-        std::stable_sort(mItems.begin(), mItems.end(),
-            [](const DrawCommand& a, const DrawCommand& b) {
-                if (a.queueLayer != b.queueLayer) return a.queueLayer < b.queueLayer;
+		// -- [TRANSITIONAL-3.5] ScreenQuad (PassComponent) - Phase 3.5 PostFxPass 이관 후 제거 ---------
+		// 이 screen 루프 전체 + mScreen/SubmitScreenQuad/mScreenQuadMesh/mBypassMat/mLastOutputFB 는
+		// PostFxPass(:IPassable) 가 PassComponent 체인+화면 blit 을 직접 보유하며 이관 -> 본 클래스에서 삭제.
+		// 구 MeshPassProcessor ScreenQuad 분기와 픽셀 동등:
+		//   BeginFrame(outputFB) -> ApplyRenderStateBlock(Screen) -> uScene 바인딩
+		//   -> UseProgram -> UBO/sampler -> BindVAO -> EBO 재핀 -> DrawIndexed -> mLastOutputFB.
+		for (auto &e : mScreen)
+		{
+			if (!e.in || !e.out || !mScreenQuadMesh)
+				continue;
+			// passMat=nullptr = disabled 패스 bypass: passthrough blit (구 동작 보존).
+			Material *effectiveMat = e.mat ? e.mat : mBypassMat;
+			if (!effectiveMat)
+				continue;
+			const Program *prog = effectiveMat->GetProgram();
+			if (!prog)
+				continue;
 
-                if (Pass::IsTransparentQueue(a.queueLayer))
-                    return a.depth < b.depth;   // back-to-front
+			rc.BeginFrame(*e.out);
+			// ScreenQuad blit state-as-data (D-RS-5) - depth test/write off, cull off, blend off(replace).
+			rc.ApplyRenderStateBlock(Pass::DefaultRenderStateBlockOf(Pass::RenderQueue::Screen));
 
-                // SSoT - meshRenderer 경유 program/material 추출 (DrawCommand 직접 필드 폐기).
-                const Material* aMat = a.meshRenderer ? a.meshRenderer->Material : nullptr;
-                const Material* bMat = b.meshRenderer ? b.meshRenderer->Material : nullptr;
-                const Program*  aProg = aMat ? aMat->GetProgram() : nullptr;
-                const Program*  bProg = bMat ? bMat->GetProgram() : nullptr;
+			// uScene sampler 바인딩 - inputFB color attachment 를 unit 0 에 연결 (구 동작 보존).
+			effectiveMat->Properties.Textures["uScene"] = {e.in->GetColorAttachment().get(), 0};
 
-                if (aProg != bProg) return std::less<const Program*>{}(aProg, bProg);
-                if (aMat  != bMat)  return std::less<const Material*>{}(aMat, bMat);
-                return a.depth > b.depth;       // front-to-back
-            });
-    }
+			rc.UseProgram(*prog);
+			// UBO postfx 셰이더 지원 (WorldMesh 와 동형, 구 동작 보존).
+			//   passthrough(비-UBO GLSL blit)는 HasUniformBlocks()==false -> BindSamplers 만 처리.
+			if (prog->HasUniformBlocks())
+			{
+				UploadMaterialUboMembers(*prog, effectiveMat->Properties);
+				prog->BindUniformBlocks();
+			}
+			BindSamplers(rc, effectiveMat->Properties, *prog);
 
-    void MeshPassProcessor::Process(DeviceContext& rc,
-                            const glm::mat4& viewMat,
-                            const glm::mat4& projMat)
-    {
-        // ============================================================================
-        // [REVISIT - 설계 재검토 대상] (사용자 직감, 2026-06-21)
-        //   분기 축 (Phase C 후 갱신):
-        //     (1) [해소됨] useUbo vs loose(else) ABI 분기 - Gate Bᴳ(전 셰이더 UBO) + PropertyBlockSetter/
-        //         uniform_cache 삭제로 loose 행렬 else 분기 제거됨. 남은 useUbo 게이트는 방어적(항상 true).
-        //     (2) [구조적, 남는 스멜] 한 함수가 (a) DrawCommand kind dispatch(ScreenQuad vs WorldMesh)
-        //         + (b) program/material 전이 추적(lastProg/lastMat) + (c) UBO 멤버 업로드 + sampler 바인딩 혼재.
-        //         - 후보 방향: ScreenQuad 경로를 별 함수/패스로 분리(Unreal 은 mesh draw 와 분리),
-        //           transition 추적을 작은 상태객체로, material 업로드를 Applier 로 추출 등.
-        //   조치: (1) 해소 완료. (2) 는 후속 세션 재설계 판단 (지금은 마킹만).
-        // ============================================================================
-        const Program*       lastProg = nullptr;
-        const Material*      lastMat  = nullptr;
+			rc.BindVAO(mScreenQuadMesh->GetVAO());
+			// VAO EBO 오염 가드 - Effekseer/Box2D 가 EBO 를 덮어쓸 수 있음 (구 동작 보존).
+			if (auto ebo = mScreenQuadMesh->GetIndexBuffer())
+				ebo->Bind();
+			rc.DrawIndexed(mScreenQuadMesh->GetIndexCount());
 
-        // Process 진입 - GL state 캐시 무효화 (per-Process 캐시 불변식 보존, D-RS-2).
-        //   직전 stage(다른 카메라 Process / Effekseer ParticleStage 등)가 GL state 를 캐시 뒤에서
-        //   바꿨을 수 있으므로, 첫 ApplyPipelineState 가 first-call 처럼 전체 강제 적용하도록 한다.
-        rc.InvalidateStateCache();
+			mLastOutputFB = e.out;
+			// 상태 복원 불요 - 다음 World 가 ApplyRenderStateBlock, 다음 패스는 BeginFrame 으로 자기 state 적용.
+		}
 
-        for (const auto& cmd : mItems)
-        {
-            // -- ScreenQuad (PassComponent) ----------------------------------------
-            if (cmd.kind == DrawCommand::Kind::ScreenQuad)
-            {
-                if (!cmd.inputFB || !cmd.outputFB || !mScreenQuadMesh)
-                    continue;
-                // passMaterial == nullptr ->disabled 패스 bypass: passthrough blit
-                Material *effectiveMat = cmd.passMaterial ? cmd.passMaterial : mBypassMat;
-                if (!effectiveMat)
-                    continue;
-                auto *prog = effectiveMat->GetProgram();
-                if (!prog)
-                    continue;
-
-                rc.BeginFrame(*cmd.outputFB);
-                // ScreenQuad blit state-as-data (D-RS-5) - depth test/write off, cull off, blend off(replace).
-                rc.ApplyPipelineState(Pass::DefaultPipelineStateOf(Pass::Kind::Screen));
-
-                effectiveMat->Properties.Textures["uScene"] = {
-                    cmd.inputFB->GetColorAttachment().get(), 0};
-
-                rc.UseProgram(*prog);
-                // Phase 3 Slice 2 - UBO postfx 셰이더 지원 (WorldMesh 와 동형). effect 파라미터(gamma 등)는
-                //   MaterialBlock 일반 업로드, uScene/uDepth 샘플러는 BindSamplers loose 바인딩 (sampler 는 UBO 불가).
-                //   passthrough(비-UBO GLSL blit)는 HasUniformBlocks()==false 라 BindSamplers 의 sampler 만 처리.
-                if (prog->HasUniformBlocks()) {
-                    UploadMaterialUboMembers(*prog, effectiveMat->Properties);
-                    prog->BindUniformBlocks();
-                }
-                BindSamplers(rc, effectiveMat->Properties, *prog);
-
-                rc.BindVAO(mScreenQuadMesh->GetVAO());
-                // VAO 오염 가드 - Effekseer/Box2D 가 EBO 를 덮어쓸 수 있음
-                if (auto ebo = mScreenQuadMesh->GetIndexBuffer())
-                    ebo->Bind();
-                rc.DrawIndexed(mScreenQuadMesh->GetIndexCount());
-
-                // 상태 복원 불요 - 다음 WorldMesh 가 ApplyPipelineState 로, 다음 패스는 BeginFrame 으로 자기 state 적용.
-                mLastOutputFB = cmd.outputFB;
-                // FB 전환 후 program/material 상태 초기화 - 다음 WorldMesh 가 재바인딩
-                lastProg = nullptr;
-                lastMat  = nullptr;
-                continue;
-            }
-
-            // -- WorldMesh ---------------------------------------------------------
-            // SSoT - meshRenderer 경유 program/mesh/material 추출 (DrawCommand 직접 필드 폐기).
-            if (!cmd.meshRenderer) continue;
-            const Material* material = cmd.meshRenderer->Material;
-            const Mesh*     mesh     = cmd.meshRenderer->Mesh;
-            if (!material || !mesh) continue;
-            const Program*  program  = material->GetProgram();
-            if (!program) continue;
-
-            // Phase 2 T4 - Slang UBO 셰이더 여부 게이트 (program 가 active uniform block 1개 이상 보유).
-            //   true  -> UpdateUniformBlock + BindUniformBlocks 경로 (FrameBlock/DrawBlock/MaterialBlock 분할 갱신).
-            //   Phase C (Gate Bᴳ) - 전 WorldMesh 셰이더 UBO 라 false 분기(구 loose glUniform*) 는 제거됨.
-            //     게이트는 방어적 잔존(항상 true). 행렬은 D13 비전치 raw 바이트 송신.
-            const bool useUbo = program->HasUniformBlocks();
-
-            // 결정 1: Program 전환 - FrameBlock(view/proj) UBO 갱신 + BindBufferBase 결속.
-            //   Phase C (Gate Bᴳ) - 전 WorldMesh 셰이더 UBO 라 loose 행렬 else 분기 제거 (DEAD).
-            if (program != lastProg) {
-                rc.UseProgram(*program);
-                if (useUbo) {
-                    // FrameBlock std140 : { mat4 uView @0; mat4 uProj @64; } - 비전치 raw 바이트 (D13).
-                    program->UpdateUniformBlock("FrameBlock", &viewMat,
-                                                sizeof(glm::mat4), 0);
-                    program->UpdateUniformBlock("FrameBlock", &projMat,
-                                                sizeof(glm::mat4), sizeof(glm::mat4));
-                    program->BindUniformBlocks();
-                }
-                lastProg = program;
-                lastMat  = nullptr;   // program 바뀌면 material 재바인딩 강제
-            }
-
-            // 결정 2a: Material 전환 - sampler 바인딩 (material 변경 시만 - 텍스처는 per-frame 불변).
-            //   GL 4.1 은 sampler 를 UBO 에 못 넣으므로 *값* uniform 이 전부 UBO 화돼도 sampler 는 영구 loose.
-            //   BindSamplers 가 material.Textures 순회 + GetLocation(live) 로 바인딩 (textureless 머티리얼은 대상 0).
-            if (material != lastMat) {
-                BindSamplers(rc, material->Properties, *program);
-                lastMat = material;
-            }
-
-            // 결정 2b (Phase 3 Slice 0 - D-DPP-1(b)): UBO MaterialBlock 멤버 일반 업로드 - *매 draw*.
-            //   매 draw 이유: (1) per-frame 멤버(transparent uTime 등), (2) 같은 program 공유 UBO 를 쓰는
-            //   여러 material 간 값 교체. author 이름 매칭(UpdateUniformMember) - 비-UBO 멤버/sampler 자동 skip.
-            if (useUbo) {
-                UploadMaterialUboMembers(*program, material->Properties);
-                // baseColor 미지정 머티리얼은 기본 흰색 (구 하드코드 fallback 이름기반 보존 - phong 등
-                //   baseColor 키 없는 머티리얼이 UBO 초기 0(검정) 으로 떨어지지 않게).
-                if (material->Properties.Vec4s.find("baseColor") == material->Properties.Vec4s.end()) {
-                    const glm::vec4 white(1.0f);
-                    program->UpdateUniformMember("baseColor", &white, sizeof(glm::vec4));
-                }
-            }
-
-            // 결정 3: PipelineState 적용
-            //   override 합성 없음 - 변형은 Material::Clone() + 별도 인스턴스 사용 (Unreal MID 정통).
-            const Pass::PipelineState passState = Pass::DefaultPipelineStateOf(material->GetPass());
-            rc.ApplyPipelineState(passState);
-
-            // 결정 4: model 송신 + draw. (Phase C - loose UNI_MODEL else 제거, DrawBlock UBO 전용)
-            if (useUbo) {
-                // DrawBlock std140 : { mat4 uModel @0; } - 비전치 raw (D13).
-                program->UpdateUniformBlock("DrawBlock", &cmd.modelMatrix,
-                                            sizeof(glm::mat4), 0);
-            }
-            rc.BindVAO(mesh->GetVAO());
-            rc.DrawIndexed(mesh->GetIndexCount());
-        }
-
-        // RestoreDefaults 불요 (D-RS-2) - 다음 consumer(BeginFrame / 다음 Process / foreign InvalidateStateCache)가
-        //   진입 시 캐시를 무효화하고 자기 state 를 적용한다. "consumer 진입 시 무효화" 불변식.
-    }
+		// RestoreDefaults 불요 (D-RS-2) - 다음 consumer 진입 시 InvalidateStateCache + 자기 state 적용.
+	}
 }
+

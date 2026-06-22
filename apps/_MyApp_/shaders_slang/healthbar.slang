@@ -1,6 +1,6 @@
 // apps/_MyApp_/shaders_slang/healthbar.slang
 // 기존 healthbar.vs + healthbar.fs 등가 - 머리 위 빌보드 체력바 (조각 분할 + fill + AA).
-// 3블록 UBO(Frame/Draw/Material). 텍스처 없음 (절차적 조각 렌더). Pass::Kind::Transparent (gap alpha=0).
+// 3블록 UBO(Frame/Draw/Material). 텍스처 없음 (절차적 조각 렌더). Pass::RenderQueue::Transparent (gap alpha=0).
 // 생성물: healthbar.vs (vsMain) / healthbar.fs (fsMain) + healthbar.refl.json
 //
 // ★ 빌보드 카메라축 추출: 구 GLSL 은 uView 원소 직접 접근(uView[0][0] 등)으로 right/up 을 뽑았으나,

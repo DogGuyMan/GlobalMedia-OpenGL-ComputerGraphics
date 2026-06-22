@@ -124,7 +124,7 @@ namespace TopdownShooter::Entity::Bullet
                 if (mat != nullptr)
                 {
                     mat->SetProgram(prog);
-                    mat->SetPass(SJH::Pass::Kind::Opaque);
+                    mat->SetPass(SJH::Pass::RenderQueue::Opaque);
                     mat->Properties.Vec4s["baseColor"] = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
                 }
             }

@@ -126,7 +126,7 @@ namespace TopdownShooter::Stage
 			auto *mat = reg.CreateSharedMaterial(kWallMatKey);
 			mat->SetProgram(EnsureTransparentProgram(reg));
 			// Transparent Pass - blend on, depthWrite off, cull off(양면). pass.h 가 자동 도출.
-			mat->SetPass(SJH::Pass::Kind::Transparent);
+			mat->SetPass(SJH::Pass::RenderQueue::Transparent);
 			// emissive sampler(unit 0) 에 PoliceTape 텍스처 - 라이팅 무관 자체발광.
 			SJH::Uniforms::SetTexture(*mat, "emissive", EnsureWallTexture(reg), 0);
 			SJH::Uniforms::SetVec4(*mat, "tintColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));

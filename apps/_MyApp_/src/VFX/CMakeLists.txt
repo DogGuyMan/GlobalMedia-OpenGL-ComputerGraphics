@@ -18,7 +18,7 @@ target_include_directories(myapp_vfx
 target_link_libraries(myapp_vfx
     PUBLIC
         SJH::playable   # PlayableBase 베이스 (헤더 노출)
-        SJH::render     # IRenderStage 헤더 노출 (ParticleStage.h 의 #include)
+        SJH::render     # IPassable 헤더 노출 (ParticleStage.h 의 #include)
         project_deps    # / GL
         game_deps       # Effekseer + EffekseerRendererGL 헤더 + lib 자동 link
     PRIVATE

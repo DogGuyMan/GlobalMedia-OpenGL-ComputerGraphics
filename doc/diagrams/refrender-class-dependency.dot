@@ -1,0 +1,224 @@
+// Reference Render Pipeline — Class & Dependency Diagram (v2)
+// 대상: docs/superpowers/plans/2026-06-22-reference-render-pipeline.md + RenderingSystemRefactorReserch.md §7
+// 렌더: dot -Tsvg refrender-class-dependency.dot -o refrender-class-dependency.svg
+//
+// 배치 규칙 (의존 레이어링):
+//   - 최상단 = 가장 많이 *피참조* 되는 요소 (Texture / TargetDesc / Math / ITargetAllocator)
+//   - 최하단 = 가장 많이 *참조* 하는 요소 (PassIterator / WorldPass / PostFxPass)
+//   - rankdir=BT + 구조 엣지(상속/포함/집약) constraint=true 가 레이어를 형성
+//     (referencer -> referenced; BT 에서 referenced 가 위로 = 피참조 상단)
+//   - 의존 엣지(메서드 인자/반환) constraint=false 로 cross-cut (레이아웃 비간섭)
+//
+// 관계 범례:
+//   realization (구현/상속)  : 점선 + 빈 삼각형(onormal)
+//   composition (by-value 소유): 채운 다이아(diamond, 파랑)  — 부분이 전체와 생사 동일
+//   aggregation (비소유 *,&)  : 빈 다이아(odiamond, 초록)     — 부분 독립 생존
+//   dependency  (인자/반환 사용): 점선 화살(vee, 주황)
+digraph RefRenderV2 {
+    rankdir=BT;
+    graph [fontname="Helvetica", labelloc="t", fontsize=20,
+           label="Reference Render Pipeline v2 — Class & Dependency (top = most referenced, bottom = references most)",
+           nodesep=0.5, ranksep=2.55, splines=line];
+    node [shape=plain, fontname="Helvetica", fontsize=10];
+    edge [fontname="Helvetica", fontsize=8];
+
+    // ═══════════════ 노드 (HTML 라벨: 제목 / 멤버 / 메서드 3구획) ═══════════════
+
+    Math [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#eeeeee" align="center"><b>&lt;&lt;free functions&gt;&gt; math.h</b></td></tr>
+        <tr><td align="left">using Mat4 = std::array&lt;float,16&gt;</td></tr>
+        <tr><td align="left">+ Identity() : Mat4<br align="left"/>+ Mul(a:Mat4, b:Mat4) : Mat4<br align="left"/></td></tr>
+      </table>>];
+
+    Texture [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#e8f5e9" align="center"><b>&lt;&lt;struct&gt;&gt; Texture</b></td></tr>
+        <tr><td align="left">+ id : TextureId = kInvalidTexture<br align="left"/>+ width : int = 0<br align="left"/>+ height : int = 0<br align="left"/></td></tr>
+      </table>>];
+
+    TargetDesc [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#e8f5e9" align="center"><b>&lt;&lt;struct&gt;&gt; TargetDesc</b></td></tr>
+        <tr><td align="left">+ width : int = 0<br align="left"/>+ height : int = 0<br align="left"/></td></tr>
+        <tr><td align="left">+ operator==(o:TargetDesc) : bool<br align="left"/></td></tr>
+      </table>>];
+
+    ITargetAllocator [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#ffe0b2" align="center"><b>&lt;&lt;interface, Factory&gt;&gt; ITargetAllocator</b></td></tr>
+        <tr><td align="left">(no data)</td></tr>
+        <tr><td align="left">+ CreateTarget(desc:TargetDesc&amp;) : Texture<br align="left"/>+ DestroyTarget(t:Texture) : void<br align="left"/></td></tr>
+      </table>>];
+
+    Camera [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#e8f5e9" align="center"><b>&lt;&lt;struct&gt;&gt; Camera</b></td></tr>
+        <tr><td align="left">+ view : Mat4 = Identity()<br align="left"/>+ proj : Mat4 = Identity()<br align="left"/>+ cullMask : uint32 = 0xFFFFFFFF<br align="left"/></td></tr>
+        <tr><td align="left">+ ViewProj() : Mat4<br align="left"/>+ Sees(layerMask:uint32) : bool<br align="left"/></td></tr>
+      </table>>];
+
+    ICommandRecorder [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#ffe0b2" align="center"><b>&lt;&lt;interface, CommandList&gt;&gt; ICommandRecorder</b></td></tr>
+        <tr><td align="left">(no data)</td></tr>
+        <tr><td align="left">+ BindTarget(t:Texture) : void<br align="left"/>+ DrawMesh(meshTag:uint32, mvp:Mat4&amp;) : void<br align="left"/>+ Blit(src:Texture, dst:Texture) : void<br align="left"/>+ Present(src:Texture) : void<br align="left"/></td></tr>
+      </table>>];
+
+    IRenderBackend [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#d9e8ff" align="center"><b>&lt;&lt;interface, umbrella&gt;&gt; IRenderBackend</b></td></tr>
+        <tr><td align="left">(no data — 자체 책임 0)</td></tr>
+        <tr><td align="left">: ITargetAllocator, ICommandRecorder<br align="left"/>(두 facet 의 합집합)<br align="left"/></td></tr>
+      </table>>];
+
+    IRenderTargetPool [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#d9e8ff" align="center"><b>&lt;&lt;interface&gt;&gt; IRenderTargetPool</b></td></tr>
+        <tr><td align="left">(no data)</td></tr>
+        <tr><td align="left">+ Acquire(key:string&amp;, desc:TargetDesc&amp;) : Texture<br align="left"/>+ Release(key:string&amp;) : void<br align="left"/></td></tr>
+      </table>>];
+
+    IRenderable [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#d9e8ff" align="center"><b>&lt;&lt;interface&gt;&gt; IRenderable</b></td></tr>
+        <tr><td align="left">(no data)</td></tr>
+        <tr><td align="left">+ LayerMask() : uint32<br align="left"/>+ Render(rec:ICommandRecorder&amp;, cam:Camera&amp;) : void<br align="left"/></td></tr>
+      </table>>];
+
+    IPassable [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#d9e8ff" align="center"><b>&lt;&lt;interface&gt;&gt; IPassable</b></td></tr>
+        <tr><td align="left">+ BeforeIndex : int = -1<br align="left"/></td></tr>
+        <tr><td align="left">+ Draw(rec:ICommandRecorder&amp;, before:Texture&amp;) : void<br align="left"/>+ GetPassResult() : Texture<br align="left"/>+ Key() : string<br align="left"/></td></tr>
+      </table>>];
+
+    MockBackend [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#fff3cd" align="center"><b>MockBackend</b></td></tr>
+        <tr><td align="left">+ createCount : int = 0<br align="left"/>+ destroyCount : int = 0<br align="left"/>+ boundTarget : TextureId<br align="left"/>+ presented : TextureId<br align="left"/>+ draws : vector&lt;DrawRecord&gt;<br align="left"/>+ blits : vector&lt;pair&lt;TextureId,TextureId&gt;&gt;<br align="left"/>- mNextId : TextureId = 1<br align="left"/></td></tr>
+        <tr><td align="left">+ CreateTarget(desc) : Texture<br align="left"/>+ DestroyTarget(t) : void<br align="left"/>+ BindTarget(t) : void<br align="left"/>+ DrawMesh(tag, mvp) : void<br align="left"/>+ Blit(src, dst) : void<br align="left"/>+ Present(src) : void<br align="left"/></td></tr>
+      </table>>];
+
+    DedicatedTargetPool [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#fff3cd" align="center"><b>DedicatedTargetPool</b></td></tr>
+        <tr><td align="left">- mAlloc : ITargetAllocator&amp;<br align="left"/>- mByKey : unordered_map&lt;string,Texture&gt;<br align="left"/></td></tr>
+        <tr><td align="left">+ DedicatedTargetPool(alloc:ITargetAllocator&amp;)<br align="left"/>+ Acquire(key, desc) : Texture<br align="left"/>+ Release(key) : void  // no-op (생존)<br align="left"/></td></tr>
+      </table>>];
+
+    TransientTargetPool [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#fff3cd" align="center"><b>TransientTargetPool</b></td></tr>
+        <tr><td align="left">- mAlloc : ITargetAllocator&amp;<br align="left"/>- mInUse : unordered_map&lt;string,Texture&gt;<br align="left"/>- mFree : vector&lt;Texture&gt;<br align="left"/></td></tr>
+        <tr><td align="left">+ TransientTargetPool(alloc:ITargetAllocator&amp;)<br align="left"/>+ Acquire(key, desc) : Texture  // alias 재사용<br align="left"/>+ Release(key) : void  // free list 반납<br align="left"/></td></tr>
+      </table>>];
+
+    MeshRenderable [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#fff3cd" align="center"><b>MeshRenderable</b></td></tr>
+        <tr><td align="left">- mMeshTag : uint32<br align="left"/>- mLayerMask : uint32<br align="left"/>- mModel : Mat4<br align="left"/></td></tr>
+        <tr><td align="left">+ MeshRenderable(meshTag, layerMask, model)<br align="left"/>+ LayerMask() : uint32<br align="left"/>+ Render(backend, cam) : void<br align="left"/></td></tr>
+      </table>>];
+
+    WorldPass [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#fff3cd" align="center"><b>WorldPass</b></td></tr>
+        <tr><td align="left">- mCamera : Camera<br align="left"/>- mPool : IRenderTargetPool*<br align="left"/>- mDesc : TargetDesc<br align="left"/>- mKey : string<br align="left"/>- mRenderables : vector&lt;IRenderable*&gt;<br align="left"/>- mOutput : Texture<br align="left"/></td></tr>
+        <tr><td align="left">+ WorldPass(cam:Camera, pool, desc, key="World")<br align="left"/>+ Add(r:IRenderable*) : void<br align="left"/>+ Draw(backend, before) : void<br align="left"/>+ GetPassResult() : Texture<br align="left"/>+ Key() : string<br align="left"/></td></tr>
+      </table>>];
+
+    PostFxPass [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#fff3cd" align="center"><b>PostFxPass</b></td></tr>
+        <tr><td align="left">- mPool : IRenderTargetPool*<br align="left"/>- mDesc : TargetDesc<br align="left"/>- mKey : string<br align="left"/>- mOutput : Texture<br align="left"/></td></tr>
+        <tr><td align="left">+ PostFxPass(pool, desc, key)<br align="left"/>+ Draw(backend, before) : void  // Blit(before, output)<br align="left"/>+ GetPassResult() : Texture<br align="left"/>+ Key() : string<br align="left"/></td></tr>
+      </table>>];
+
+    PassIterator [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="white">
+        <tr><td bgcolor="#fff3cd" align="center"><b>PassIterator</b></td></tr>
+        <tr><td align="left">- mPasses : vector&lt;IPassable*&gt;  // 순서 SSOT<br align="left"/>+ DebugPassIndex : int = -1<br align="left"/></td></tr>
+        <tr><td align="left">+ Add(p:IPassable*) : void<br align="left"/>+ Size() : size_t<br align="left"/>+ Execute(backend, sceneRaw:Texture&amp;) : Texture<br align="left"/>+ Present(backend, sceneRaw:Texture&amp;) : void<br align="left"/></td></tr>
+      </table>>];
+
+    // ═══════════════ realization / generalization (구조, constraint=true) ═══════════════
+    edge [style=dashed, arrowhead=onormal, dir=forward, color="#444444", constraint=true];
+    IRenderBackend      -> ITargetAllocator   [label="extends"];
+    IRenderBackend      -> ICommandRecorder   [label="extends"];
+    MockBackend         -> IRenderBackend;
+    MeshRenderable      -> IRenderable;
+    DedicatedTargetPool -> IRenderTargetPool;
+    TransientTargetPool -> IRenderTargetPool;
+    WorldPass           -> IPassable;
+    PostFxPass          -> IPassable;
+
+    // ═══════════════ composition (by-value 소유, 구조, constraint=true) ═══════════════
+    edge [style=solid, dir=both, arrowtail=diamond, arrowhead=none, color="#1f5fbf", constraint=true];
+    Camera              -> Math       [label="2x Mat4"];
+    MeshRenderable      -> Math       [label="mModel"];
+    WorldPass           -> Camera     [label="mCamera"];
+    WorldPass           -> TargetDesc [label="mDesc"];
+    WorldPass           -> Texture    [label="mOutput"];
+    PostFxPass          -> TargetDesc [label="mDesc"];
+    PostFxPass          -> Texture    [label="mOutput"];
+    DedicatedTargetPool -> Texture    [label="mByKey vals"];
+    TransientTargetPool -> Texture    [label="mInUse/mFree vals"];
+
+    // ═══════════════ aggregation (비소유 *,&, 구조, constraint=true) ═══════════════
+    edge [style=solid, dir=both, arrowtail=odiamond, arrowhead=none, color="#159a3f", constraint=true];
+    DedicatedTargetPool -> ITargetAllocator  [label="mAlloc &amp; (ISP)"];
+    TransientTargetPool -> ITargetAllocator  [label="mAlloc &amp; (ISP)"];
+    WorldPass           -> IRenderTargetPool [label="mPool *"];
+    WorldPass           -> IRenderable       [label="mRenderables *[]"];
+    PostFxPass          -> IRenderTargetPool [label="mPool *"];
+    PassIterator        -> IPassable         [label="mPasses *[] (SSOT)"];
+
+    // ═══════════════ dependency (메서드 인자/반환, cross-cut, constraint=false) ═══════════════
+    edge [style=dashed, dir=forward, arrowtail=none, arrowhead=vee, color="#b0681f", constraint=false];
+    ITargetAllocator -> Texture        [label="Create ret"];
+    ITargetAllocator -> TargetDesc     [label="Create arg"];
+    ICommandRecorder -> Texture        [label="bind/blit/present"];
+    ICommandRecorder -> Math           [label="DrawMesh mvp"];
+    IRenderTargetPool -> Texture       [label="Acquire ret"];
+    IRenderTargetPool -> TargetDesc    [label="Acquire arg"];
+    IRenderable      -> ICommandRecorder [label="Render uses"];
+    IRenderable      -> Camera         [label="Render uses"];
+    IPassable        -> ICommandRecorder [label="Draw uses"];
+    IPassable        -> Texture        [label="before/result"];
+    PassIterator     -> ICommandRecorder [label="Execute uses"];
+    PassIterator     -> Texture        [label="sceneRaw/result"];
+    Camera           -> Math           [label="ViewProj:Mul"];
+
+    // ═══════════════ 🔒 의존성 격리 마킹 — Graphics API 는 구체 backend 만 ═══════════════
+    GraphicsAPI [label=<
+      <table border="2" cellborder="0" cellspacing="0" cellpadding="5" bgcolor="#ffd6d6">
+        <tr><td align="center"><b>&lt;&lt;extern lib&gt;&gt; Graphics API</b></td></tr>
+        <tr><td align="left">OpenGL / Vulkan / Metal / D3D<br align="left"/>glXxx / vkXxx / MTL…<br align="left"/></td></tr>
+      </table>>];
+    GlBackend [label=<
+      <table border="1" cellborder="1" cellspacing="0" cellpadding="4" bgcolor="#f2f2f2">
+        <tr><td bgcolor="#dddddd" align="center"><b>GlBackend  &lt;&lt;2차 / out-of-scope&gt;&gt;</b></td></tr>
+        <tr><td align="left">// GL 헤더·링크가 *여기에만* 존재<br align="left"/>// find_package(OpenGL) / -lGL = PRIVATE<br align="left"/></td></tr>
+        <tr><td align="left">+ CreateTarget/DestroyTarget  (glGenFramebuffers…)<br align="left"/>+ BindTarget/DrawMesh/Blit/Present  (glXxx)<br align="left"/></td></tr>
+      </table>>];
+
+    // GlBackend 는 우산을 구현 (MockBackend 와 형제 — 둘 다 IRenderBackend)
+    edge [style=dashed, arrowhead=onormal, dir=forward, color="#444444", constraint=true];
+    GlBackend -> IRenderBackend;
+    // ★ 유일한 Graphics API 의존 — 굵은 빨강
+    edge [style=bold, dir=forward, arrowtail=none, arrowhead=vee, color="#cc0000", constraint=false];
+    GlBackend -> GraphicsAPI [label="★ 유일한 API 의존 (PRIVATE link)", fontcolor="#cc0000"];
+
+    // ═══════════════ 범례 ═══════════════
+    Legend [label=<
+      <table border="1" cellborder="0" cellspacing="2" cellpadding="2" bgcolor="white">
+        <tr><td align="left"><b>Legend</b></td></tr>
+        <tr><td align="left"><font color="#444444">┄┄▷ realization</font> — implements / extends interface</td></tr>
+        <tr><td align="left"><font color="#1f5fbf">◆━━ composition</font> — by-value 소유 (생사 동일)</td></tr>
+        <tr><td align="left"><font color="#159a3f">◇━━ aggregation</font> — 비소유 포인터/참조 (독립 생존)</td></tr>
+        <tr><td align="left"><font color="#b0681f">┄┄▷ dependency</font> — 메서드 인자/반환에서 사용</td></tr>
+        <tr><td align="left"><font color="#cc0000"><b>━━▶ Graphics API 의존 = 구체 backend(GlBackend) ONLY · 그 외 전 모듈 0</b></font></td></tr>
+        <tr><td align="left">배치: 위=최다 피참조(foundations) · 아래=최다 참조(orchestrators)</td></tr>
+      </table>>];
+}

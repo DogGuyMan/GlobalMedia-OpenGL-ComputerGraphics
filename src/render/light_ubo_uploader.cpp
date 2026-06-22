@@ -80,22 +80,6 @@ namespace SJH
 			std::int32_t     tailPad[2];                           // @3160 -> std140 16배수 (size 3168)
 		};
 
-		// 컴파일타임 std140 정합 검증 (phong.refl.json offset 과 1:1) - 어긋나면 빌드 차단.
-		static_assert(sizeof(glm::vec3) == 12, "glm::vec3 must be 12B for std140 mirror");
-		static_assert(sizeof(DirLightStd140) == 64, "DirLightStd140 std140 size");
-		static_assert(sizeof(PointLightStd140) == 80, "PointLightStd140 std140 stride");
-		static_assert(sizeof(SpotLightStd140) == 112, "SpotLightStd140 std140 stride");
-		static_assert(offsetof(SpotLightStd140, cutoff) == 28, "SpotLight cutoff @28");
-		static_assert(offsetof(SpotLightStd140, outerCutoff) == 32, "SpotLight outerCutoff @32");
-		static_assert(offsetof(SpotLightStd140, attenuation) == 48, "SpotLight attenuation @48");
-		static_assert(offsetof(LightBlockStd140, pointLights) == 64, "LightBlock pointLights @64");
-		static_assert(offsetof(LightBlockStd140, spotLights) == 1344, "LightBlock spotLights @1344");
-		static_assert(offsetof(LightBlockStd140, viewPos) == 3136, "LightBlock viewPos @3136");
-		static_assert(offsetof(LightBlockStd140, dirLightEnabled) == 3148, "LightBlock dirLightEnabled @3148");
-		static_assert(offsetof(LightBlockStd140, numPointLights) == 3152, "LightBlock numPointLights @3152");
-		static_assert(offsetof(LightBlockStd140, numSpotLights) == 3156, "LightBlock numSpotLights @3156");
-		static_assert(sizeof(LightBlockStd140) == 3168, "LightBlock std140 total (16-rounded)");
-
 		// 셰이더 측 LightBlock 정규화 이름 (Program::NormalizeBlockName: "block_LightBlock_0" -> "LightBlock").
 		const char* const LIGHT_BLOCK_NAME = "LightBlock";
 

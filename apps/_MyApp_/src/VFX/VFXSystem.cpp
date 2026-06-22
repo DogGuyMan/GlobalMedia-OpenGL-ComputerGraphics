@@ -11,13 +11,13 @@
  *     Effekseer Update 인자는 초(sec)가 아니라 60fps 기준 프레임 수. 그냥 dt 를 넘기면 파티클 60배 슬로우.
  *  3. @c Draw - SJH/vmath 행렬 포인터를 @c Effekseer::Matrix44 에 memcpy 후
  *     SetCameraMatrix -> SetProjectionMatrix -> BeginRendering -> Draw -> EndRendering.
- *     씬 렌더 후 호출해야 반투명 파티클이 위에 얹힘 (@c ParticleStage 가 순서 보장).
+ *     씬 렌더 후 호출해야 반투명 파티클이 위에 얹힘 (@c ParticlePass 가 순서 보장).
  *  4. @c Shutdown - Manager 먼저 Reset, Renderer 나중 순서 엄수 (Ref 타입이라 명시 delete 불요).
  *
  *  ### 비-책임
  *  - [X] 개별 이펙트 재생 lifecycle - @c EffekseerPlayable 담당.
  *  - [X] .efkefc 에셋 로드/캐시 - @c SJH::ResourceRegistry / @c SJH::Effect 담당.
- *  - [X] 렌더 stage 통합(bind/clear) - @c ParticleStage 담당.
+ *  - [X] 렌더 stage 통합(bind/clear) - @c ParticlePass 담당.
  */
 #include "VFXSystem.h"
 

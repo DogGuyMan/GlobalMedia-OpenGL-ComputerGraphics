@@ -17,8 +17,8 @@
  *  - [X] Uniform location 조회 - @c Program::GetLocation 직접 사용.
  *
  *  ### 책임 추가 (D-RS-1 - GL pipeline-state 단일 권위)
- *  - Material/Pass GL state(Depth/Cull/Blend/Stencil) 전환 - @c ApplyPipelineState 가 흡수
- *    (구 @c PipelineStateSetter + 구 명령형 @c SetDepthTest/SetBlend 대체). @c mLast 단일 캐시.
+ *  - Material/Pass GL state(Depth/Cull/Blend/Stencil) 전환 - @c ApplyRenderStateBlock 가 흡수
+ *    (구 @c RenderStateBlockSetter + 구 명령형 @c SetDepthTest/SetBlend 대체). @c mLast 단일 캐시.
  *  - foreign GL 소비자(Effekseer/Box2D/ImGui) 경계는 @c InvalidateStateCache 로 캐시 desync 차단.
  *
  *  ### 호출자 가이드
@@ -40,7 +40,7 @@
 #include "GL/gl3w.h"
 #include "program/program.h"
 #include "buffer/render_target.h"
-#include "material/pass.h"   // Pass::PipelineState - ApplyPipelineState 입력 (D-RS-1 GL state 권위 흡수).
+#include "material/pass.h"   // Pass::RenderStateBlock - ApplyRenderStateBlock 입력 (D-RS-1 GL state 권위 흡수).
 #include <memory>
 
 namespace SJH
@@ -88,17 +88,17 @@ namespace SJH
 		/// @param mask @c GL_COLOR_BUFFER_BIT / @c GL_DEPTH_BUFFER_BIT / @c GL_STENCIL_BUFFER_BIT 조합.
 		void Clear(GLbitfield mask);
 
-		/// @brief @c Pass::PipelineState (Depth/Cull/Blend/Stencil) 를 GL state machine 에 적용 (dirty check).
+		/// @brief @c Pass::RenderStateBlock (Depth/Cull/Blend/Stencil) 를 GL state machine 에 적용 (dirty check).
 		/// @details
-		///  D-RS-1 - GL pipeline-state 단일 권위. 구 @c PipelineStateSetter 흡수 + 구 명령형
+		///  D-RS-1 - GL pipeline-state 단일 권위. 구 @c RenderStateBlockSetter 흡수 + 구 명령형
 		///  @c SetDepthTest/SetBlend 대체. @c mLast 캐시로 redundant GL 호출 회피.
 		///  Stencil 4결정 + Depth 3결정 + Cull 1결정 + Blend 2결정 단위로 분기.
 		///  @c mStateInitialized = false 이면(=@c InvalidateStateCache 직후) dirty check 없이 전체 강제 적용.
-		///  ScreenQuad/blit 도 @c Pass::DefaultPipelineStateOf(Kind::Screen) 로 동일 경로 (state-as-data).
-		/// @param want 적용할 목표 PipelineState (Material 의 Pass 에서 도출).
-		void ApplyPipelineState(const Pass::PipelineState& want);
+		///  ScreenQuad/blit 도 @c Pass::DefaultRenderStateBlockOf(Kind::Screen) 로 동일 경로 (state-as-data).
+		/// @param want 적용할 목표 RenderStateBlock (Material 의 Pass 에서 도출).
+		void ApplyRenderStateBlock(const Pass::RenderStateBlock& want);
 
-		/// @brief GL state 캐시 무효화 - 다음 @c ApplyPipelineState 가 first-call 처럼 전체 강제 적용.
+		/// @brief GL state 캐시 무효화 - 다음 @c ApplyRenderStateBlock 가 first-call 처럼 전체 강제 적용.
 		/// @details D-RS-2 - foreign GL 소비자(Effekseer/Box2D/ImGui)가 끼어든 *후* 또는 consumer 진입 시
 		///          호출. 캐시(@c mLast)와 실제 GL state 의 desync 를 끊는다 (ebo->Bind 재핀과 동일 결).
 		void InvalidateStateCache();
@@ -116,10 +116,10 @@ namespace SJH
 
 		// -- 유틸리티 ---------------------------------------------------------
 
-		/// @brief 패스 시작 alias - BindTarget + (write mask 복원) + Clear(color|depth|stencil) + InvalidateStateCache + ApplyPipelineState(Opaque).
+		/// @brief 패스 시작 alias - BindTarget + (write mask 복원) + Clear(color|depth|stencil) + InvalidateStateCache + ApplyRenderStateBlock(Opaque).
 		/// @details Stencil 도 함께 clear (@c DEPTH24_STENCIL8 포맷 가정). D-RS-5 - 구 SetDepthTest/SetBlend 대체.
 		///          clear 전 glDepthMask(TRUE)/glStencilMask(0xFF) 복원 (직전 패스가 닫았을 수 있음).
-		///          Opaque baseline 적용 후 각 draw 가 자기 PipelineState 로 override.
+		///          Opaque baseline 적용 후 각 draw 가 자기 RenderStateBlock 로 override.
 		/// @param target 이번 패스의 출력 RenderTarget.
 		void BeginFrame(RenderTarget &target);
 
@@ -138,8 +138,8 @@ namespace SJH
 
 		const Program *mBoundProgram = nullptr;  ///< 현재 glUseProgram 으로 활성화된 Program.
 
-		// -- GL pipeline-state 단일 캐시 (D-RS-1 PipelineStateSetter 흡수) -----
-		Pass::PipelineState mLast;                       ///< 직전 적용된 GL state (Stencil 포함 통합 캐시).
+		// -- GL pipeline-state 단일 캐시 (D-RS-1 RenderStateBlockSetter 흡수) -----
+		Pass::RenderStateBlock mLast;                       ///< 직전 적용된 GL state (Stencil 포함 통합 캐시).
 		bool                mStateInitialized = false;   ///< first-call 강제 적용 flag - false 면 dirty check 없이 전체 적용 (InvalidateStateCache 가 리셋).
 	};
 } // namespace SJH

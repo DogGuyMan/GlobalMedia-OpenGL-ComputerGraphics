@@ -8,7 +8,7 @@
  *    카메라 culling mask = Default | Player | Enemy | DebugDraw.
  *  - @c BuildLighting : 주 방향광(@c DirLight) 생성 + Ambient(0.3)/Diffuse(0.9,0.85)/Specular(0.5) 설정.
  *  - @c BuildSkybox : Matrix 스타일 스크롤 skybox - chars 텍스처(GL_REPEAT) + noise 텍스처(GL_REPEAT)
- *    + @c Pass::Kind::Skybox 머티리얼 + Box 메시 + SkyboxActor 등록. 반환된 머티리얼 포인터로
+ *    + @c Pass::RenderQueue::Skybox 머티리얼 + Box 메시 + SkyboxActor 등록. 반환된 머티리얼 포인터로
  *    render() 가 매 프레임 @c u_time 을 갱신해 스크롤 애니메이션을 구동.
  *
  *  ### 비-책임
@@ -33,7 +33,8 @@
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/compound_actor.h"
-#include "render/actor_factory.h" // CreateSkyboxActor (2026-06-11 E2 이주)
+#include "render/actor_factory.h"  // CreateSkyboxActor (2026-06-11 E2 이주)
+#include "render/mesh_renderer.h"  // SJH::Scene::MeshRenderer - BuildSkybox 반환 타입
 #include "scene/scene.h"
 
 #include <glm/glm.hpp>
@@ -104,11 +105,11 @@ namespace TopdownShooter::Bootstrap
 		///  - 프로그램 : matrix_skybox.vs / .fs.
 		///  - chars 텍스처 : GL_REPEAT + GL_LINEAR (기본 CLAMP_TO_EDGE + MIPMAP_LINEAR 덮어씀).
 		///  - noise 텍스처 : GL_REPEAT (NOISE_SCALE 8배 타일링 필수).
-		///  - 머티리얼 : @c Pass::Kind::Skybox (DepthFunc LEQUAL + CullFront + DepthWrite off).
+		///  - 머티리얼 : @c Pass::RenderQueue::Skybox (DepthFunc LEQUAL + CullFront + DepthWrite off).
 		///  - 텍스처 유닛 분리 : chars -> unit 0, noise_tex -> unit 1 (같은 유닛이면 한 텍스처만 읽힘).
 		///  - SkyboxActor 스케일 50.
-		/// @return 생성된 Skybox 머티리얼 포인터 (caller 가 매 프레임 @c u_time 갱신).
-		SJH::Material *BuildSkybox()
+		/// @return Skybox MeshRenderer(IRenderable) 포인터. SkyboxMat 은 mr->Material 로 도출. SkyboxPass 가 그릴 대상.
+		SJH::Scene::MeshRenderer *BuildSkybox()
 		{
 			auto &reg = SJH::ResourceRegistry::Get();
 			auto &dir = SJH::Scene::Director::Get();
@@ -137,7 +138,7 @@ namespace TopdownShooter::Bootstrap
 			skyboxMat->SetProgram(skyboxProg);
 			// Skybox Pass - DepthFunc LEQUAL(.xyww 트릭) + CullMode FRONT(박스 안쪽 면) +
 			// DepthWrite off + queue 2500(Opaque 다음). pass.h 의 Kind::Skybox 가 전부 자동 도출.
-			skyboxMat->SetPass(SJH::Pass::Kind::Skybox);
+			skyboxMat->SetPass(SJH::Pass::RenderQueue::Skybox);
 			// 텍스처 유닛 분리 필수 - TextureBinding.Unit 이 둘 다 기본값 0 이면
 			// 두 sampler 가 같은 유닛을 가리켜 한 텍스처만 읽힌다 (BindSamplers 가
 			// binding.Unit 그대로 BindTexture + sampler int 송신).
@@ -146,9 +147,9 @@ namespace TopdownShooter::Bootstrap
 			skyboxMat->Properties.Floats["u_time"] = 0.0f;
 
 			auto *skyboxMesh = reg.RegisterMesh("mesh_skybox", SJH::Mesh::CreateBox());
-			// actor 생성은 Pure factory.
-			dir.Root().AddChild(SJH::Scene::CreateSkyboxActor("MatrixSkybox", skyboxMesh, skyboxMat, 50.0f));
-			return skyboxMat;
+			// actor 생성은 Pure factory. SkyboxPass 가 그릴 수 있게 MeshRenderer 를 반환(skyboxMat 는 mr->Material 로 도출).
+			auto *skyboxActor = dir.Root().AddChild(SJH::Scene::CreateSkyboxActor("MatrixSkybox", skyboxMesh, skyboxMat, 50.0f));
+			return skyboxActor->GetComponent<SJH::Scene::MeshRenderer>();
 		}
 	} // namespace
 
@@ -157,7 +158,9 @@ namespace TopdownShooter::Bootstrap
 		WorldSceneResult result;
 		result.WorldCamera = BuildWorldCamera(deps);
 		BuildLighting();
-		result.SkyboxMat = BuildSkybox();
+		auto *skyboxRenderer  = BuildSkybox();
+		result.SkyboxRenderer = skyboxRenderer;
+		result.SkyboxMat      = skyboxRenderer ? skyboxRenderer->Material : nullptr;
 		return result;
 	}
 }

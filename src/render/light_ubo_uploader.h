@@ -24,7 +24,7 @@
  *
  *  ### 모듈 경계 (D6 유지)
  *  광원 struct -> std140/uniform 변환 지식(cutoff degree->cosine, attenuation)을 @c .cpp 익명 ns 에 가둬
- *  render -> object/scene 역의존을 차단 (render_stage TU 가 광원 타입 세부를 직접 알지 않게).
+ *  render -> object/scene 역의존을 차단 (render_passable TU 가 광원 타입 세부를 직접 알지 않게).
  *
  * @note 다중 phong 셰이더 hardening 보류 (YAGNI): 현재 phong 셰이더 1종이라 LightBlock 의 introspected
  *       binding point 가 안정적. 2종 이상이면 reserved binding point + @c glUniformBlockBinding 재배치 필요.

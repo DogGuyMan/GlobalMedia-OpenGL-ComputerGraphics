@@ -31,6 +31,7 @@ namespace SJH
 	class MouseInput;
 	class Framebuffer;
 	class Material;
+	class IRenderable;
 }
 namespace SJH::Scene
 {
@@ -57,8 +58,9 @@ namespace TopdownShooter::Bootstrap
 	 */
 	struct WorldSceneResult
 	{
-		SJH::Scene::Camera *WorldCamera = nullptr; ///< 생성된 WorldCamera 포인터 (main -> mCamera, PlayerBuilder deps 주입).
-		SJH::Material      *SkyboxMat   = nullptr; ///< Matrix Skybox 머티리얼 (main -> mSkyboxMat, render() 에서 매 프레임 u_time 갱신).
+		SJH::Scene::Camera *WorldCamera    = nullptr; ///< 생성된 WorldCamera 포인터 (main -> mCamera, PlayerBuilder deps 주입).
+		SJH::Material      *SkyboxMat      = nullptr; ///< Matrix Skybox 머티리얼 (main -> mSkyboxMat, render() 에서 매 프레임 u_time 갱신).
+		SJH::IRenderable   *SkyboxRenderer = nullptr; ///< Matrix Skybox MeshRenderer(IRenderable) - SkyboxPass 가 그릴 대상.
 	};
 
 	/**

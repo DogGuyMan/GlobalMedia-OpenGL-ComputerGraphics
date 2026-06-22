@@ -1,7 +1,7 @@
 // apps/_MyApp_/shaders_slang/matrix_skybox.slang
 // 기존 matrix_skybox.vs + matrix_skybox.fs 등가 - Matrix 스타일 스크롤 skybox.
 // VS: aPos(loc0)만 사용. uView 회전만(translation 제거)으로 무한 원경, gl_Position.xyww 로 depth=1.0.
-//     -> Pass::Kind::Skybox (DepthFunc LEQUAL, cull FRONT, depthWrite off) 와 짝.
+//     -> Pass::RenderQueue::Skybox (DepthFunc LEQUAL, cull FRONT, depthWrite off) 와 짝.
 // FS: equirectangular UV + 글자 아틀라스(chars) + 노이즈(noise_tex) rain + u_time 스크롤.
 // 블록: FrameBlock(view/proj) + MaterialBlock(u_time). uModel/DrawBlock 없음(mesh_pass 가 미존재 블록 자연 skip).
 // 샘플러 chars/noise_tex 는 loose (이름 = Properties.Textures 키). 생성물: matrix_skybox.vs/.fs + .refl.json.

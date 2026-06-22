@@ -4,7 +4,7 @@
  *
  * @details
  *  ### 책임
- *  - `mPassKind` - *어떤 종류의 렌더링* (Pass::Kind, GL state 자동 도출 - SSoT)
+ *  - `mPassKind` - *어떤 종류의 렌더링* (Pass::RenderQueue, GL state 자동 도출 - SSoT)
  *  - `mProgram` (비소유) - 셰이더 schema 출처 + `EagerBuild` 의 검증 기준
  *  - `Properties` (`MaterialPropertyBlock`) - *셰이더 무관 typed properties*
  *  - `IsInstance` + `OriginalMaterial` - Clone 추적 (Unreal `UMaterialInstanceDynamic::Parent` 정통)
@@ -46,6 +46,7 @@
 
 #include "GL/gl3w.h"
 #include "common/common.h"
+#include "material/i_render_state_provider.h"
 #include "material/material_property_block.h"
 #include "material/pass.h"
 #include "program/program.h"
@@ -69,7 +70,7 @@ namespace SJH
 	 *  - `Properties` bag 에 typed 값을 적재 -> draw 시점 `MeshPassProcessor` 가 UBO 멤버 + sampler 로 송신.
 	 *  - `Clone()` 은 private + `ResourceRegistry` friend 전용 - 외부 직접 호출 불가.
 	 */
-	class Material
+	class Material : public IRenderStateProvider
 	{
 	  public:
 		/// @brief 텍스처 바인딩 - `MaterialPropertyBlock::TextureBinding` forwarding alias.
@@ -119,14 +120,15 @@ namespace SJH
 		/// @brief Pass 종류 변경 - fluent setter. `SetPass(Transparent)` 한 줄로 depth/blend/queue 자동.
 		/// @param k 렌더링 의도 (Opaque / AlphaTest / Transparent / Outline 등).
 		/// @return `*this` - fluent setter.
-		Material &SetPass(Pass::Kind k)
+		Material &SetPass(Pass::RenderQueue k)
 		{
 			mPassKind = k;
+			mState    = Pass::DefaultRenderStateBlockOf(k); // D7 seed - SetPass 시 1회 계산, 이후 매 draw 참조.
 			return *this;
 		}
 
 		/// @brief 현재 Pass 종류 반환.
-		Pass::Kind GetPass() const
+		Pass::RenderQueue GetPass() const
 		{
 			return mPassKind;
 		}
@@ -136,6 +138,13 @@ namespace SJH
 		int GetQueueLayer() const
 		{
 			return Pass::QueueOf(mPassKind);
+		}
+
+		/// @brief D7 Facade - SetPass 시 seed 된 ROP 반환. MeshPassProcessor 가 매 draw 호출.
+		/// @details 값은 `DefaultRenderStateBlockOf(mPassKind)` 와 동일 - 저장 위치만 이전(무회귀).
+		const Pass::RenderStateBlock &GetRenderStateBlock() const override
+		{
+			return mState;
 		}
 
 		// -- Instance metadata (Unreal `UMaterialInstanceDynamic::Parent` 정통, 읽기 전용) --
@@ -183,10 +192,13 @@ namespace SJH
 		{
 			Properties = other.Properties; // MaterialPropertyBlock 통째로 복사 (7 typed map 자동)
 			mPassKind = other.mPassKind;   // Pass 의도 - Clone 시 Transparent 유지.
+			mState    = other.mState;      // D7 ROP 승계 - Clone 결과도 즉시 유효한 RenderStateBlock 보유.
 			mProgram = other.mProgram;     // Program 참조 승계 (raw pointer - Program 이 더 오래 사는 컨벤션).
 		}
 
-		Pass::Kind mPassKind = Pass::Kind::Opaque; ///< 렌더링 의도 종류 - GL state SSoT.
+		Pass::RenderQueue mPassKind = Pass::RenderQueue::Opaque; ///< 렌더링 의도 종류 - GL state SSoT.
+		/// @brief PassKind 에서 seed 된 ROP (D7 저장처). 값은 DefaultRenderStateBlockOf 와 동일 - 저장 위치만 이전.
+		Pass::RenderStateBlock mState = Pass::DefaultRenderStateBlockOf(Pass::RenderQueue::Opaque);
 		const Program *mProgram = nullptr; ///< 비소유 - owner 는 ResourceRegistry (or 데모 임시).
 	};
 } // namespace SJH
