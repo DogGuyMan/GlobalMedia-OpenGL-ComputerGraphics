@@ -1,14 +1,14 @@
 /**
  * @file GameSystems.h
- * @brief 게임 클라이언트의 중앙 허브 - 하위 시스템(Physics/Audio/VFX/WorldText) + SceneRenderer 를
+ * @brief 게임 클라이언트의 중앙 허브 - 하위 시스템(Physics/Audio/VFX/WorldText) 을
  *        한 곳에 집계하는 게임 시스템 허브(GameSystems) 싱글톤.
  *
  * @details
  *  ### 책임
- *  - 게임 시스템 4종(@c PhysicsSystem / @c AudioSystem / @c VFXSystem / @c WorldTextSystem)과
- *    @c SJH::SceneRenderer 를 값으로 보유하고 단일 접근점 제공.
+ *  - 게임 시스템 4종(@c PhysicsSystem / @c AudioSystem / @c VFXSystem / @c WorldTextSystem) 을
+ *    값으로 보유하고 단일 접근점 제공.
  *  - 시스템 라이프사이클 일괄 조율 - @c Init / @c Update / @c Shutdown.
- *  - 각 시스템에 대한 레퍼런스 접근자(@c Audio / @c VFX / @c Physics / @c SceneRenderer / @c WorldText) 노출.
+ *  - 각 시스템에 대한 레퍼런스 접근자(@c Audio / @c VFX / @c Physics / @c WorldText) 노출.
  *
  *  ### 비-책임
  *  - [X] 엔진 씬 그래프 관리 - @c SJH::Scene::Director (engine) 가 별도 담당. 본 클래스와 namespace 분리.
@@ -26,12 +26,11 @@
 #include "Physics/PhysicsSystem.h"
 #include "VFX/VFXSystem.h"
 #include "Text/WorldTextSystem.h"   // <- 추가
-#include "render/render_passable/render_passable.impls.h"   // SceneRenderer
 
 namespace TopdownShooter
 {
 	/**
-	 * @brief 게임 시스템 허브(GameSystems) - PhysicsSystem + AudioSystem + VFXSystem + WorldTextSystem + SceneRenderer 집계 싱글톤.
+	 * @brief 게임 시스템 허브(GameSystems) - PhysicsSystem + AudioSystem + VFXSystem + WorldTextSystem 집계 싱글톤.
 	 * @details
 	 *  - @b SJH::Scene::Director @b (engine) @b 와 @b 무관 - namespace 분리, Cocos cc::Director 정통 *별도 인스턴스*.
 	 *  - main 의 startup 에서 @c Init, render 마다 @c Update(dt), shutdown 에서 @c Shutdown 호출.
@@ -69,11 +68,6 @@ namespace TopdownShooter
 		/// @brief 물리 시스템 레퍼런스 접근자.
 		/// @return 보유 중인 @c Physics::PhysicsSystem 레퍼런스.
 		Physics::PhysicsSystem  &Physics() { return mPhysics; }
-		/// @brief 씬 렌더러 레퍼런스 접근자.
-		/// @deprecated [DEAD-PHASE5] SceneRenderer 미사용(3.5a: world->WorldPass, screen->PostFxPass). 호출처 0.
-		///             이 accessor + @c mScenesRender 멤버는 *모든 Task 종료 후 Phase 5* 제거 후보.
-		/// @return 보유 중인 @c SJH::SceneRenderer 레퍼런스.
-		SJH::SceneRenderer      &SceneRenderer() { return mScenesRender; }
 		/// @brief 월드 텍스트 시스템 레퍼런스 접근자.
 		/// @return 보유 중인 @c Text::WorldTextSystem 레퍼런스.
 		Text::WorldTextSystem   &WorldText() { return mWorldText; }   // <- 추가
@@ -87,7 +81,6 @@ namespace TopdownShooter
 		GameSystems()  = default;
 		~GameSystems() = default;
 
-		SJH::SceneRenderer	mScenesRender;        ///< 씬 렌더러 - Camera 컬렉션 순회 + 1패스 렌더.
 		Audio::AudioSystem      mAudio;            ///< 오디오 시스템 - FMOD Studio 래퍼.
 		VFX::VFXSystem          mVFX;              ///< VFX 시스템 - Effekseer 파티클 매니저.
 		Physics::PhysicsSystem  mPhysics;          ///< 물리 시스템 - Box2D world.

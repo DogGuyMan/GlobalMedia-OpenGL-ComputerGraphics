@@ -22,21 +22,35 @@
 
 namespace SJH
 {
+    namespace
+    {
+        /// @brief 중립 @ref PrimitiveTopology -> GL 드로우 모드. GL 의존을 이 파일 안에 격리한다.
+        GLuint ToGLTopology(PrimitiveTopology topology)
+        {
+            switch (topology)
+            {
+            case PrimitiveTopology::Triangles: return GL_TRIANGLES;
+            }
+            return GL_TRIANGLES;
+        }
+    } // namespace
+
     MeshUPtr Mesh::Create(
         const std::vector<Vertex> &vertices,
         const std::vector<uint32_t> &indices,
-        uint32_t primitiveType)
+        PrimitiveTopology topology)
     {
         auto mesh = MeshUPtr(new Mesh());
-        mesh->Init(vertices, indices, primitiveType);
+        mesh->Init(vertices, indices, topology);
         return std::move(mesh);
     }
 
     void Mesh::Init(
         const std::vector<Vertex> &vertices,
         const std::vector<uint32_t> &indices,
-        uint32_t primitiveType)
+        PrimitiveTopology topology)
     {
+        mPrimitiveType = ToGLTopology(topology);
         mVertexLayout = VertexLayout::Create();
         mVertexBuffer = Buffer::CreateWithData(GL_ARRAY_BUFFER, GL_STATIC_DRAW, vertices.data(), sizeof(Vertex), vertices.size());
         mIndexBuffer = Buffer::CreateWithData(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW, indices.data(), sizeof(uint32_t), indices.size());
@@ -54,21 +68,21 @@ namespace SJH
     {
         // 도형 데이터 생성은 SJH::Geometry 책임 - engine 빌더에 위임.
         MeshData data = Geometry::Box();
-        return Create(data.vertices, data.indices, GL_TRIANGLES);
+        return Create(data.vertices, data.indices, PrimitiveTopology::Triangles);
     }
 
     MeshUPtr Mesh::CreatePlane()
     {
         // 도형 데이터 생성은 SJH::Geometry 책임 - engine 빌더에 위임.
         MeshData data = Geometry::Plane();
-        return Create(data.vertices, data.indices, GL_TRIANGLES);
+        return Create(data.vertices, data.indices, PrimitiveTopology::Triangles);
     }
 
     MeshUPtr Mesh::CreateScreenQuad()
     {
         // NDC clip-space 화면 가득 quad - SP4 post-processing 패스용.
         MeshData data = Geometry::ScreenQuad();
-        return Create(data.vertices, data.indices, GL_TRIANGLES);
+        return Create(data.vertices, data.indices, PrimitiveTopology::Triangles);
     }
 
     GLuint Mesh::GetVAO() const

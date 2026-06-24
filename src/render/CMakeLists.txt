@@ -1,13 +1,11 @@
 add_library(sjhopengl_render STATIC
     device_context.cpp           # D-RS-1 — GL state 단일 권위 흡수 (구 pipeline_state_setter 통합)
     mesh_renderer.cpp             # Task 2.3 — MeshRenderer IRenderable 잎 자가발행 구현
-    mesh_pass_processor.cpp       # Phase C — sampler 바인딩(BindSamplers) 흡수 (구 property_block_setter 삭제)
+    renderable_processor.cpp       # Phase C — sampler 바인딩(BindSamplers) 흡수 (구 property_block_setter 삭제)
     pass_iterator.cpp             # Task 4.1 — IPassable 평탄 실행 반복자 (before/GetPassResult 체이닝)
     light_ubo_uploader.cpp        # Phase 2.5 D-LUD — LightUniformDispatcher O4 승격(UBO owner). Phase C loose 경로 제거
-    # render_passable(IPassable 추상 + vtable 홈) / camera_stage / scene_renderer / screen_quad_stage 는
+    # render_passable(IPassable 추상 + vtable 홈) / 역할 Pass 구현체(WorldPass/SkyboxPass/PostFxPass/ScreenQuadStage) 는
     # render_passable/ 서브폴더로 이동. add_subdirectory(render_passable) 가 target_sources 로 본 타겟에 기여 (아래).
-    actor_factory.cpp             # 2026-06-11 E2 — Skybox/ScreenCamera 팩토리 (scene 에서 이주)
-    model_spawner.cpp             # 2026-06-11 E2 — Model RenderUnit -> Actor (scene 에서 이주)
 )
 add_library(SJH::render ALIAS sjhopengl_render)
 
@@ -16,7 +14,7 @@ target_include_directories(sjhopengl_render
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# device_context / mesh_pass_processor 는 GL 호출이 본업이므로 render 모듈 소속.
+# device_context / renderable_processor 는 GL 호출이 본업이므로 render 모듈 소속.
 # (Phase C - property_block_setter / pipeline_state_setter 모듈은 각각 mesh_pass / device_context 로 흡수 후 삭제.)
 # SJH::resource_registry 는 D-1 push 로 의존 제거 (2026-06-19).
 target_link_libraries(sjhopengl_render
@@ -25,12 +23,12 @@ target_link_libraries(sjhopengl_render
             SJH::scene    # 2026-06-11 E2 — actor_factory.h/model_spawner.h(공개) 가 SJH::Scene::Actor 반환 -> PUBLIC 승격
             SJH::material # 2026-06-21 D-RS-1 — device_context.h(공개) 가 material/pass.h(Pass::RenderStateBlock) 노출 -> PRIVATE->PUBLIC 승격 (사이클 없음, pass.h 는 GL 헤더만 의존)
     PRIVATE SJH::diagnostics SJH::object
-            SJH::texture  # Phase C — mesh_pass_processor.cpp 의 BindSamplers 가 Texture::GetTextureID (구 property_block_setter)
+            SJH::texture  # Phase C — renderable_processor.cpp 의 BindSamplers 가 Texture::GetTextureID (구 property_block_setter)
 )
 
 target_compile_features(sjhopengl_render PUBLIC cxx_std_17)
 
-# render_passable 서브폴더 -- IPassable 구현체(SceneRenderer + ScreenQuadStage) 통합 TU 를
+# render_passable 서브폴더 -- IPassable 구현체(WorldPass/SkyboxPass/PostFxPass/ScreenQuadStage) 통합 TU 를
 # 본 타겟에 기여 (별도 라이브러리 아님 -- 서브 CMakeLists 의 사이클 회피 주석 참조).
 # add_library 정의 이후에 호출해야 target_sources 대상 타겟이 존재한다.
 add_subdirectory(render_passable)

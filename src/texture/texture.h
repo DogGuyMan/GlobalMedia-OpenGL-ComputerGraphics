@@ -26,6 +26,7 @@
 #define __SJH_TEXTURE_H__
 
 #include "common/common.h"
+#include "common/render_enums.h"
 #include "image.h"
 #include "GL/gl3w.h"
 #include <memory>
@@ -96,13 +97,13 @@ namespace SJH
         /// @brief @c GL_TEXTURE_2D 타깃에 본 텍스처를 바인딩.
         void Bind() const;
         /// @brief 축소/확대 필터 설정 (@c GL_TEXTURE_MIN_FILTER / @c GL_TEXTURE_MAG_FILTER).
-        /// @param minFilter 축소 필터 (@c GL_LINEAR, @c GL_NEAREST, @c GL_LINEAR_MIPMAP_LINEAR 등).
-        /// @param magFilter 확대 필터 (@c GL_LINEAR, @c GL_NEAREST).
-        void SetFilter(GLuint minFilter, GLuint magFilter) const;
+        /// @param minFilter 축소 필터 (@ref FilterMode - Linear/Nearest/LinearMipmapLinear).
+        /// @param magFilter 확대 필터 (@ref FilterMode - Linear/Nearest).
+        void SetFilter(FilterMode minFilter, FilterMode magFilter) const;
         /// @brief S/T 좌표 wrap 모드 설정 (@c GL_TEXTURE_WRAP_S / @c GL_TEXTURE_WRAP_T).
-        /// @param sWrap S(U) 축 wrap (@c GL_CLAMP_TO_EDGE, @c GL_REPEAT 등).
+        /// @param sWrap S(U) 축 wrap (@ref WrapMode - ClampToEdge/Repeat).
         /// @param tWrap T(V) 축 wrap.
-        void SetWrap(GLuint sWrap, GLuint tWrap) const;
+        void SetWrap(WrapMode sWrap, WrapMode tWrap) const;
 
         /**
          * @brief 같은 GL 핸들을 유지한 채 텍스처 스토리지를 새 크기로 재할당 - FBO 어태치먼트 리사이즈용.

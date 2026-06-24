@@ -8,6 +8,8 @@ add_library(myapp_bootstrap STATIC
     EnemyBuilder.cpp
     EntityPresentation.cpp   # Player/Enemy 공통 연출 클러스터 부착 헬퍼 (director+hit/death+deathDelay+healthbar)
     InitScheduler.cpp        # 데이터주도 topo-sort 초기화 (spec 2026-06-19)
+    actor_factory.cpp        # 2026-06-24 — Skybox/ScreenCamera 팩토리 (scene->render 사이클 회피, apps 이주)
+    model_spawner.cpp        # 2026-06-24 — Model RenderUnit -> Actor (scene->render 사이클 회피, apps 이주)
 )
 add_library(MyApp::Bootstrap ALIAS myapp_bootstrap)
 

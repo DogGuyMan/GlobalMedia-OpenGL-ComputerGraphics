@@ -29,7 +29,7 @@ namespace TopdownShooter::UI { class StateOverlayLayer; }
 namespace TopdownShooter::Stage { class WaveController; }
 namespace TopdownShooter::Audio { class AudioSystem; class FmodStudioPlayable; }
 namespace TopdownShooter::Entity::Components { class Life; }
-namespace SJH::Scene { class PassComponent; }
+namespace SJH { class IPassable; } // blurPass 핸들 - 포인터만 보유, 전방선언 충분
 
 namespace TopdownShooter::Stage::Components
 {
@@ -65,8 +65,8 @@ namespace TopdownShooter::Stage::Components
 		// + Player 사망 감시/GameOver 전이 주체 (WaveController 가 구동)
 		WaveController *waveCtrl = nullptr; ///< 웨이브 진행 조회 + Player 사망 감시/GameOver 전이 주체 (비소유).
 
-		// Title 동안 blur PostFX ON (TitleState OnEnter/OnExit 에서 Enabled 토글)
-		SJH::Scene::PassComponent *blurPass = nullptr; ///< Title/Pause 동안 blur PostFX Enabled 토글 (비소유).
+		// Title/Pause 동안 blur PostFX ON (TitleState OnEnter/OnExit 에서 Enabled 토글)
+		SJH::IPassable *blurPass = nullptr; ///< blur PostFxPass 핸들 - Enabled 토글 대상 (비소유).
 
 		// FMOD 재생 레퍼런스 - State 는 GameSystems 싱글톤이 아니라 ctx 를 통해 오디오 접근.
 		//   audio        = AudioSystem (global parameter "Health" 등 System 스코프 호출)

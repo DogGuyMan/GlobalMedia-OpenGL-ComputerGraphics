@@ -37,8 +37,7 @@
  *  - @c Framebuffer (FBO) - **ResourceRegistry** 가 보유 (Unity RTHandleSystem 정통)
  *  - @c DeviceContext 는 *보유 없음* - @c BindTarget(RenderTarget&) 으로 명령만 발행
  *
- * @note @c Framebuffer 는 @c RenderTarget 을 상속한다 (@c class @c Framebuffer @c : @c public @c RenderTarget). @c ScreenQuadStage 는
- *       소스(FBO)를 @c const @c Framebuffer* 로 직접 보유하고, 출력 대상(@c target)만 @c RenderTarget& 로 받는다.
+ * @note @c Framebuffer 는 @c RenderTarget 을 상속한다 (@c class @c Framebuffer @c : @c public @c RenderTarget).
  */
 #ifndef __SJH_RENDER_TARGET_H__
 #define __SJH_RENDER_TARGET_H__

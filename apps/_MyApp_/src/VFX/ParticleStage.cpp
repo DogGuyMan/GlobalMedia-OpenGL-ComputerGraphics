@@ -76,10 +76,7 @@ namespace TopdownShooter::VFX
 		const glm::mat4 view = mWorldCam->GetViewMatrix();
 		const glm::mat4 proj = mWorldCam->GetProjectionMatrix();
 		mVFX->Draw(&view[0][0], &proj[0][0]);
-
-		// D-RS-2 - Effekseer 가 depth/blend/cull 등 GL state 를 DeviceContext 캐시 뒤에서 바꾼다.
-		// foreign 경계에서 캐시를 무효화해 다음 consumer(ScreenQuadStage / 다음 프레임 BeginFrame)가
-		// stale 캐시로 glEnable 을 skip 하는 것을 막는다 (VAO-EBO 재핀과 같은 결).
+		
 		SJH::DeviceContext::Get().InvalidateStateCache();
 	}
 }

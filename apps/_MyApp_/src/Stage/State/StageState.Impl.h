@@ -39,7 +39,7 @@
 #include "Tween/TweenPlayable.h"                // GameOver Health 0->1.0 ramp (tweeny 포함)
 #include "GameSystems.h"      // TopdownShooter::GameSystems::Get()
 #include <memory>             // std::unique_ptr / make_unique (GameOver Health tween)
-#include "render/pass_component.h" // SJH::Scene::PassComponent::Enabled (Title blur 토글)
+#include "render/render_passable/render_passable.h" // SJH::IPassable::Enabled (Title blur 토글)
 #include "scene/actor.h"
 #include "scene/scene.h"      // SJH::Scene::Director
 #include <cstdint>           // uint64_t (CombatPlay transit OR-composite)

@@ -6,7 +6,7 @@
  *  ### 책임
  *  - ImGui v1.53 CreateContext + StyleColorsDark + ImGui_ImplGlfwGL3_Init(install_callbacks=false).
  *  - sb7 가 GLFW 콜백 소유하므로 Scroll/Char 콜백만 수동 설치.
- *  - PauseButtonLayer + PostFXDebugLayer 를 @c ImGuiLayerStack 에 Push (등록 순서 = 렌더 순서).
+ // ! *  - PauseButtonLayer + PostFXDebugLayer 를 @c ImGuiLayerStack 에 Push (등록 순서 = 렌더 순서).
  *  - @c ImGuiContext* 반환 - main 이 @c mImGuiCtx 로 보관 후 종료 시 @c DestroyContext 호출.
  *
  *  ### 비-책임
@@ -22,7 +22,6 @@
 #ifndef __MYAPP_UI_BOOTSTRAP_H__
 #define __MYAPP_UI_BOOTSTRAP_H__
 
-#include "UI/PostFXDebugLayer.h" // PassDebugEntry (값 멤버라 완전 타입 필요)
 #include <functional>
 #include <vector>
 
@@ -49,16 +48,14 @@ namespace TopdownShooter::UI
 		GLFWwindow                 *window = nullptr;  ///< GLFW 윈도우 포인터 - ImGui_ImplGlfwGL3_Init + Scroll/Char 콜백 설치에 사용.
 		SJH::ResourceRegistry      *reg    = nullptr;  ///< 텍스처 로드(@c pause_button)에 사용.
 		ImGuiLayerStack            *stack  = nullptr;  ///< 레이어를 Push 할 대상 스택 (비소유).
-		std::vector<PassDebugEntry> debugEntries;       ///< PostFXDebugLayer 에 주입할 PassComponent 매핑 목록.
-		float                      *gamma  = nullptr;  ///< main 의 mGamma - PostFXDebugLayer 가 float& 보유 (lifetime caller-owned).
 		std::function<void()>       onPauseToggle;     ///< Pause 버튼(PauseButtonLayer) 클릭 콜백 - main: TogglePause.
 	};
 
-	/// @brief ImGui v1.53 컨텍스트 초기화 + 기본 게임 UI 레이어(PauseButton / PostFXDebug) 등록.
+	/// @brief ImGui v1.53 컨텍스트 초기화 + 기본 게임 UI 레이어(PauseButton) 등록.
 	/// @details
 	///  내부 등록 순서 (= 렌더 순서):
 	///  1. PauseButtonLayer (Game kind, @p onPauseToggle 콜백 연결).
-	///  2. PostFXDebugLayer (Editor kind, @p debugEntries + @p *gamma 주입).
+	///  (PostFXDebugLayer 는 2026-06-24 폐기.)
 	///
 	///  기존 main.cpp 의 WarmupImgui 함수와 동일한 역할. ImGui 의존이라 @c UI_SRC 로 executable 직접 컴파일.
 	/// @param deps 초기화에 필요한 의존성 묶음 (창/레지스트리/스택/감마/콜백).

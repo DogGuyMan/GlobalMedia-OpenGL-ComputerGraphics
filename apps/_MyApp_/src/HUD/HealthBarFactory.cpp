@@ -16,7 +16,6 @@
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 
-#include <GL/glcorearb.h> // GL_TRIANGLES
 #include <memory>
 #include <string>
 #include <utility>
@@ -53,7 +52,7 @@ namespace TopdownShooter::HUD
 		if (!quad)
 		{
 			SJH::MeshData data = SJH::Geometry::Plane();
-			quad = reg.RegisterMesh(kQuadKey, SJH::Mesh::Create(data.vertices, data.indices, GL_TRIANGLES));
+			quad = reg.RegisterMesh(kQuadKey, SJH::Mesh::Create(data.vertices, data.indices, SJH::PrimitiveTopology::Triangles));
 		}
 		if (!quad) return;
 

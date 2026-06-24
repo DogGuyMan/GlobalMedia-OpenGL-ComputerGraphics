@@ -72,8 +72,8 @@ namespace SJH::Sprite
 
         // === 3. 픽셀아트 매개변수 - NEAREST + CLAMP_TO_EDGE (인접 tile bleed 방지) ===
         mTexture->Bind();
-        mTexture->SetFilter(GL_NEAREST, GL_NEAREST);
-        mTexture->SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+        mTexture->SetFilter(FilterMode::Nearest, FilterMode::Nearest);
+        mTexture->SetWrap(WrapMode::ClampToEdge, WrapMode::ClampToEdge);
 
         spdlog::info("[UniformAtlas] loaded {} ({}x{}) - grid 미설정, SetGrid/SetTileSize 호출 필요",
                       path, mAtlasWidth, mAtlasHeight);

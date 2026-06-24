@@ -20,13 +20,38 @@
 
 namespace SJH
 {
+	namespace
+	{
+		/// @brief 중립 @ref FilterMode -> GL 필터 상수. GL 의존을 이 파일 안에 격리한다.
+		GLuint ToGLFilter(FilterMode mode)
+		{
+			switch (mode)
+			{
+			case FilterMode::Nearest:            return GL_NEAREST;
+			case FilterMode::Linear:             return GL_LINEAR;
+			case FilterMode::LinearMipmapLinear: return GL_LINEAR_MIPMAP_LINEAR;
+			}
+			return GL_LINEAR;
+		}
+
+		/// @brief 중립 @ref WrapMode -> GL wrap 상수.
+		GLuint ToGLWrap(WrapMode mode)
+		{
+			switch (mode)
+			{
+			case WrapMode::Repeat:      return GL_REPEAT;
+			case WrapMode::ClampToEdge: return GL_CLAMP_TO_EDGE;
+			}
+			return GL_CLAMP_TO_EDGE;
+		}
+	} // namespace
 
 	TextureUPtr Texture::Create(int width, int height, uint32_t format)
 	{
 		auto texture = TextureUPtr(new Texture());
 		texture->CreateTexture();
 		texture->SetTextureFormat(width, height, format);
-		texture->SetFilter(GL_LINEAR, GL_LINEAR);
+		texture->SetFilter(FilterMode::Linear, FilterMode::Linear);
 		return std::move(texture);
 	}
 
@@ -38,8 +63,8 @@ namespace SJH
 		texture->SetTextureFormat(width, height, internalFormat, format, type);
 		// depth/packed 텍스처 - CreateTexture 기본값(LINEAR_MIPMAP_LINEAR)은 mipmap 미생성 시
 		// incomplete + depth 보간 부적합. NEAREST + CLAMP 로 덮어쓴다.
-		texture->SetFilter(GL_NEAREST, GL_NEAREST);
-		texture->SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+		texture->SetFilter(FilterMode::Nearest, FilterMode::Nearest);
+		texture->SetWrap(WrapMode::ClampToEdge, WrapMode::ClampToEdge);
 		return texture;
 	}
 
@@ -86,16 +111,16 @@ namespace SJH
 		glBindTexture(GL_TEXTURE_2D, mTextureID);
 	}
 
-	void Texture::SetFilter(GLuint minFilter, GLuint magFilter) const
+	void Texture::SetFilter(FilterMode minFilter, FilterMode magFilter) const
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, ToGLFilter(minFilter));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, ToGLFilter(magFilter));
 	}
 
-	void Texture::SetWrap(GLuint sWrap, GLuint tWrap) const
+	void Texture::SetWrap(WrapMode sWrap, WrapMode tWrap) const
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, sWrap);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, tWrap);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, ToGLWrap(sWrap));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, ToGLWrap(tWrap));
 	}
 
 	void Texture::CreateTexture()
@@ -103,8 +128,8 @@ namespace SJH
 		glGenTextures(1, &mTextureID);
 		// bind and set default filter and wrap option
 		Bind();
-		SetFilter(GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR);
-		SetWrap(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+		SetFilter(FilterMode::LinearMipmapLinear, FilterMode::Linear);
+		SetWrap(WrapMode::ClampToEdge, WrapMode::ClampToEdge);
 	}
 
 	void Texture::SetTextureFromImage(const Image *image)

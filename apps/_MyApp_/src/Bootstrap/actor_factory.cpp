@@ -7,14 +7,15 @@
  *  - @c CreateScreenCameraActor - Orthographic ScreenCamera (PostFX 2-Camera 합성용).
  *  - @c CreateSkyboxActor - 큰 scale Mesh + MeshRenderer 조립.
  *
- *  ### 거주지 (2026-06-11 E2 사이클 해소로 scene -> render 이주)
- *  두 팩토리는 MeshRenderer(render)/Framebuffer(buffer) 상위 자원에 결합 - render 모듈 소속.
- *  Camera 조립은 scene 의 @c CreateCameraActor(compound_actor.h) 를 재사용한다 (render -> scene 단방향).
+ *  ### 거주지 (2026-06-24 apps client 이주 - scene->render 사이클 회피)
+ *  두 팩토리는 MeshRenderer(render)/Framebuffer(buffer) 상위 자원에 결합 - 엔진 모듈에 두면
+ *  scene->render 역의존이 생기므로 apps client(Bootstrap)에 거주시켜 엔진 단방향을 유지한다.
+ *  Camera 조립은 scene 의 @c CreateCameraActor(compound_actor.h) 를 재사용한다.
  *
  *  ### 비-책임
  *  - [X] 씬 트리 편입 - 반환된 @c unique_ptr 의 소유권 및 @c AddChild 는 호출자 책임.
  */
-#include "render/actor_factory.h"
+#include "Bootstrap/actor_factory.h"
 #include "scene/compound_actor.h" // CreateCameraActor 재사용
 #include "scene/actor.h"
 #include "scene/camera.h"

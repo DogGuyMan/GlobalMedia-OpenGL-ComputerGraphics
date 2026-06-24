@@ -5,7 +5,6 @@
  *          (UseProgram 내부 dedup 으로 glUseProgram 만 skip; FrameBlock 멱등 dedup 은 post-profile).
  */
 #include "render/mesh_renderer.h"
-#include "render/draw_ops.h"
 #include "scene/camera.h"
 #include "program/program.h"
 #include "object/mesh.h"
@@ -27,10 +26,10 @@ namespace SJH::Scene
 			program->UpdateUniformBlock("FrameBlock", &view, sizeof(glm::mat4), 0);
 			program->UpdateUniformBlock("FrameBlock", &proj, sizeof(glm::mat4), sizeof(glm::mat4));
 		}
-		SJH::BindSamplers(rec, Material->Properties, *program);
+		Material->Properties.BindSamplers(rec, *program);
 		if (program->HasUniformBlocks())
 		{
-			SJH::UploadMaterialUboMembers(*program, Material->Properties);
+			Material->Properties.UploadMaterialUboMembers(*program);
 			if (Material->Properties.Vec4s.find("baseColor") == Material->Properties.Vec4s.end())
 			{
 				const glm::vec4 white(1.0f);               // 구 fallback 보존

@@ -36,7 +36,7 @@
 #include "program/program.h"
 #include "render/mesh_renderer.h"
 #include "resource_registry/resource_registry.h"
-#include <GL/glcorearb.h> // GL_TRIANGLES
+#include "common/render_enums.h" // SJH::PrimitiveTopology
 #include <box2d/box2d.h>
 #include <memory>
 #include <glm/glm.hpp>
@@ -112,7 +112,7 @@ namespace TopdownShooter::Entity::Bullet
                 constexpr double kTwoPi = 6.283185307179586; // 2pi - 경도 한 바퀴 (M_PI 의존 회피)
                 SJH::MeshData data = SJH::Geometry::Sphere(0.0, kTwoPi, 16, 0.0, 1.0, 8, BULLET_RADIUS);
                 mesh = reg.RegisterMesh(kBulletMeshKey,
-                                        SJH::Mesh::Create(data.vertices, data.indices, GL_TRIANGLES));
+                                        SJH::Mesh::Create(data.vertices, data.indices, SJH::PrimitiveTopology::Triangles));
             }
 
             // 공유 Material (Magenta 1,0,1 단색, Opaque pass)
