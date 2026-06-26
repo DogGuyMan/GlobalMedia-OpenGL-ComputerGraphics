@@ -15,52 +15,56 @@
 #include <imgui_impl_glfw_gl3.h>
 
 #include "Audio/AudioSystem.h"
-#include "Audio/Constants.h" // Audio::ACTOR_BGM
+#include "Audio/Constants.h"
 #include "Bootstrap/AudioWarmup.h"
 #include "Bootstrap/EngineBootstrap.h"
 #include "Bootstrap/InitScheduler.h"
 #include "Bootstrap/PlayerBuilder.h"
 #include "Bootstrap/WorldSceneBuilder.h"
-#include "Constants.h" // app-root: ACTOR_SCREEN_CAMERA / STR_UI_* / UNI_* 등
+#include "Constants.h"
 #include "GameSystems.h"
 #include "InputHandler/PlayerController.h"
-#include "VFX/Constants.h" // MUZZLE_EFFECT / TEST_EFFECTS (VFX 자원 테이블)
+#include "VFX/Constants.h"
 #include "VFX/ParticleStage.h"
 
-#include "Playable/Constants.h" // PostFX 파이프라인 정의(PASSTHOURH/POSTFX_PROGRAM_CONFIGS + PASS_*) + fog/vignette 색
+#include "Playable/Constants.h"
 #include "Spawns/OneShotSweeper.h"
 #include "Spawns/VfxInstance.h"
-#include "Spawns/WorldTextInstance.h" // <- 추가 (데모 트리거)
+#include "Spawns/WorldTextInstance.h"
 #include "UI/VfxSpawnLayer.h"
 
-#include "Bootstrap/actor_factory.h" // CreateScreenCameraActor (2026-06-24 apps client 이주)
+#include "Audio/FmodStudioPlayable.h"
+#include "Bootstrap/actor_factory.h"
+#include "Entity/Components/LifeComponents.h"
 #include "Stage/Components/GameContextComponent.h"
-#include "Stage/Constants.h"    // Stage::ARENA_HALF_EXTENT
-#include "Stage/Stage.h"        // EStageStatus (TogglePause)
-#include "Stage/StageBuilder.h" // CreateStageActor (+ StageConfig) — 누락 include 보완
+#include "Stage/Constants.h"
+#include "Stage/Stage.h"
+#include "Stage/StageBuilder.h"
+#include "Stage/State/StageState.Impl.h"
 #include "Stage/State/StageStateMachine.h"
-#include "Stage/State/StageState.Impl.h" // TitleState / CombatPlayState / PauseState / GameOverState (RegisterState 완전 타입)
 #include "Stage/WaveController.h"
-#include "Audio/FmodStudioPlayable.h"          // GetComponent<FmodStudioPlayable> 완전 타입(is_polymorphic_v)
-#include "Entity/Components/LifeComponents.h"  // GetComponent<Entity::Components::Life> 완전 타입
 #include "UI/ImGuiLayerStack.h"
-#include "UI/ImGuiPass.h" // ImGuiPass : IPassable (종단 Pass, Task 3.4)
-#include "UI/PassDebugLayer.h" // Pass Enabled 토글 + grayscale 강도 표시 디버그 패널(Editor)
+#include "UI/ImGuiPass.h"
+#include "UI/PassDebugLayer.h"
 #include "UI/StateOverlayLayer.h"
 #include "UI/UiBootstrap.h"
 #include "common/common.h"
 #include "common/window_helper.h"
+#include "material/material.h"
+#include "object/mesh.h"
 #include "render/device_context.h"
-#include "render/pass_iterator.h" // PassIterator (Pass 소유 + 코스 순서 실행 + Find(key) 조회)
-#include "render/render_passable/render_passable.impls.h" // WorldPass / SkyboxPass / PostFxPass
-#include "object/mesh.h"           // SJH::Mesh::CreateScreenQuad (grayscale present quad)
-#include "material/material.h"     // SJH::Material (grayscale 공유 Material Properties)
+#include "render/pass_iterator.h"
+#include "render/render_passable/render_passable.impls.h"
 #include "resource_registry/resource_registry.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/scene.h"
 
+#include "Capture/golden_capture.h"
+
+#include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <utility>
@@ -71,7 +75,7 @@ namespace TopdownShooter
 	class game_application : public sb7::application, public Bootstrap::IClientBootstrap
 	{
 	  public:
-		void init() override
+		void init() override // ! 모듈화 대상 (GL 컨텍스트/창 설정 = sb7 boot lifecycle)
 		{
 			sb7::application::init();
 			info.majorVersion = 4;
@@ -87,8 +91,17 @@ namespace TopdownShooter
 			SJH::CrossPlatformDir();
 		}
 
-		void startup() override
+		void startup() override // ! 모듈화 대상 (boot 진입점 = AppRunner boot; capture 트리거는 test 모듈로)
 		{
+			// GU0 capture 모드 활성화 -- SJH_GOLDEN_CAPTURE 환경 변수 존재 시.
+			// GL 컨텍스트 생성 직후, 부트 시퀀스 전에 설정.
+			mCaptureMode = (std::getenv("SJH_GOLDEN_CAPTURE") != nullptr);
+			if (mCaptureMode)
+			{
+				spdlog::info("[GoldenCapture] capture 모드 활성화 -- 고정-dt 1/60, 180 프레임 후 PNG 저장 후 종료.");
+				std::srand(42); // 결정적 시뮬을 위한 고정 시드
+			}
+
 			// A1 -- GLFW window 정보 캐시 (hook 들이 공유).
 			mFbInfo = SJH::GetFramebufferInfo(window);
 			glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
@@ -100,7 +113,7 @@ namespace TopdownShooter
 		}
 
 		// -- phase 1: 자원/시스템 (topo L0~L2) --
-		void OnResourcesReady() override
+		void OnResourcesReady() override // ! 모듈화 대상 (phase1 자원/시스템 boot)
 		{
 			Bootstrap::InitScheduler sched;
 
@@ -118,7 +131,7 @@ namespace TopdownShooter
 		}
 
 		// -- phase 2: 씬/파이프라인 (topo L3~L5) --
-		void OnSceneSetup() override
+		void OnSceneSetup() override // ! 모듈화 대상 (phase2 씬/파이프라인 조립 = 핵심 추출 대상)
 		{
 			auto &reg = SJH::ResourceRegistry::Get();
 			auto &dir = SJH::Scene::Director::Get();
@@ -175,7 +188,7 @@ namespace TopdownShooter
 				if (auto *fogMat = reg.FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_FOG))
 				{
 					fogMat->Properties.Vec3s["uFogColor"] = Playable::FOG_COLOR;
-					fogMat->Properties.Ints["uFogMode"]   = Playable::FOG_MODE;
+					fogMat->Properties.Ints["uFogMode"] = Playable::FOG_MODE;
 				}
 				// grayscale 공유 Material - HpGrayscalePostFX SSOT + PassDebugLayer read-only 표시용 캡처.
 				mGrayscaleMatPtr = reg.FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_GRAYSCALE_VIGNETTING);
@@ -283,7 +296,12 @@ namespace TopdownShooter
 
 				// Pass 활성화 토글 디버그 패널(Editor kind, F1). mPassIterator 는 Stages task 에서 채워지므로
 				// 포인터만 주입(매 프레임 OnBuildUI 가 lazy 조회). grayscale 강도 관찰용 공유 Material 도 주입.
-				mImGuiStack.Push(std::make_unique<UI::PassDebugLayer>(&mPassIterator, mGrayscaleMatPtr));
+				// capture G1 에서 일시 비활성화를 위해 raw 포인터 캡처 (소유 = 스택).
+				{
+					auto dbg = std::make_unique<UI::PassDebugLayer>(&mPassIterator, mGrayscaleMatPtr);
+					mPassDebugLayerPtr = dbg.get();
+					mImGuiStack.Push(std::move(dbg));
+				}
 				return mImGuiCtx != nullptr;
 			});
 
@@ -291,7 +309,7 @@ namespace TopdownShooter
 		}
 
 		// -- phase 3: 진입/FSM (topo L6~L9) --
-		void OnBeforeFirstFrame() override
+		void OnBeforeFirstFrame() override // ! 모듈화 대상 (phase3 Director.Enter + Stage FSM 진입)
 		{
 			auto &reg = SJH::ResourceRegistry::Get();
 			auto &dir = SJH::Scene::Director::Get();
@@ -349,9 +367,17 @@ namespace TopdownShooter
 			sched.RunAll();
 		}
 
-		void render(double currentTime) override
+		void render(double currentTime) override // ! 모듈화 대상 (매프레임 렌더 루프 = capture 가 override 로 재사용하는 핵심)
 		{
-			const float dt = static_cast<float>(SJH::DeltaTime(currentTime));
+			// GU0 capture 모드 -- 고정-dt 1/60 로 결정적 시뮬.
+			// capture 모드에서는 currentTime 인자를 무시하고 프레임 번호 기반 가상 시간을 사용.
+			double effectiveTime = currentTime;
+			float dt = static_cast<float>(SJH::DeltaTime(currentTime));
+			if (mCaptureMode)
+			{
+				effectiveTime = mCaptureFrame / 60.0;
+				dt = 1.0f / 60.0f;
+			}
 
 			int fbW = 0, fbH = 0;
 			glfwGetFramebufferSize(window, &fbW, &fbH);
@@ -403,8 +429,9 @@ namespace TopdownShooter
 				mCtx->waveCtrl->SweepDespawned();
 
 			// 스카이박스 시간(u_time) 동기화 — 위치는 셰이더가 view 이동 제거로 자동 처리.
+			// capture 모드에서는 effectiveTime(프레임 번호 기반 가상 시간) 사용 -> 결정적 시뮬.
 			if (mSkyboxMat)
-				mSkyboxMat->Properties.Floats[UNI_SKYBOX_TIME] = static_cast<float>(currentTime);
+				mSkyboxMat->Properties.Floats[UNI_SKYBOX_TIME] = static_cast<float>(effectiveTime);
 
 			// fog — WorldCamera projection 역행렬 송신 (Properties.Mat4s 자동 송신, D4).
 			// Camera 의 닫힌 해 inverse (cofactor 일반 inverse 폐기 — perspective/ortho 분기 자체 처리).
@@ -425,9 +452,75 @@ namespace TopdownShooter
 			// stages 실행 - PassIterator 가 before/GetPassResult 체이닝으로 순회(현재 BeforeIndex=-1 -> before=nullptr, 사전배선 사용).
 			// ! 제거 대상  [S ! kybox, World, Particle, PostFx(e0..eN), ScreenQuad, ImGuiPass]. ImGuiPass(종단)가 ImGui::Render.
 			mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
+
+			// GU1 capture 모드 -- 180 프레임 도달 시 3 변형 렌더+캡처 후 종료.
+			// 변형 순서: G1(전체, PassDebugLayer 제외) -> G2(ImGui 제외) -> G3(Skybox+PostFX+ScreenQuad 만).
+			if (mCaptureMode)
+			{
+				if (mCaptureFrame == 180)
+				{
+					// test/golden/ 디렉토리 생성 보장 -- 실행 cwd 기준(build_ninja/apps/_MyApp_/).
+					const std::string outDir = "test/golden";
+					std::filesystem::create_directories(outDir);
+
+					// --- G1: 전체 파이프라인 (PassDebugLayer 만 제외, 다른 ImGui 유지) ---
+					// PassDebugLayer(Editor kind) 를 일시 비활성화 후 ImGui 프레임을 재빌드+실행하여 캡처.
+					if (mPassDebugLayerPtr)
+						mPassDebugLayerPtr->Enabled = false;
+					ImGui_ImplGlfwGL3_NewFrame();
+					mImGuiStack.RenderAll(mShowEditor);
+					mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
+					if (mPassDebugLayerPtr)
+						mPassDebugLayerPtr->Enabled = true;
+					const bool okG1 = TopdownShooter::Capture::CaptureBackbufferToPng(
+					    outDir + "/golden_full.png", fbW, fbH);
+					spdlog::info("[GoldenCapture] G1 {}", okG1 ? "OK" : "FAIL");
+
+					// --- G2: ImGui 제외 (Skybox/World/Particle/PostFX/present 만) ---
+					// DebugPassIndex 를 ImGuiPass 직전 인덱스로 설정해 ImGuiPass 를 건너뜀.
+					// Keys() 마지막 = "ImGui" -> Keys().size()-2 = ImGuiPass 직전 인덱스.
+					{
+						const int stopAt = static_cast<int>(mPassIterator.Keys().size()) - 2;
+						mPassIterator.DebugPassIndex = stopAt;
+						mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
+						mPassIterator.DebugPassIndex = -1;
+					}
+					const bool okG2 = TopdownShooter::Capture::CaptureBackbufferToPng(
+					    outDir + "/golden_no_imgui.png", fbW, fbH);
+					spdlog::info("[GoldenCapture] G2 {}", okG2 ? "OK" : "FAIL");
+
+					// --- G3: Skybox+PostFX+present 만 (World/Particle/ImGui 제외) ---
+					// WorldPass 와 ParticlePass 를 일시 비활성화 후 Execute, 복원.
+					// DebugPassIndex = present 인덱스(Keys().size()-2) 로 ImGui 까지 스킵.
+					{
+						auto *worldPass = mPassIterator.Find("World");
+						auto *particlePass = mPassIterator.Find("Particle");
+						if (worldPass)
+							worldPass->Enabled = false;
+						if (particlePass)
+							particlePass->Enabled = false;
+						const int stopAt = static_cast<int>(mPassIterator.Keys().size()) - 2;
+						mPassIterator.DebugPassIndex = stopAt;
+						mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
+						mPassIterator.DebugPassIndex = -1;
+						if (worldPass)
+							worldPass->Enabled = true;
+						if (particlePass)
+							particlePass->Enabled = true;
+					}
+					const bool okG3 = TopdownShooter::Capture::CaptureBackbufferToPng(
+					    outDir + "/golden_skybox.png", fbW, fbH);
+					spdlog::info("[GoldenCapture] G3 {}", okG3 ? "OK" : "FAIL");
+
+					// glfwSetWindowShouldClose 로 sb7 run 루프 정상 종료.
+					// GLFW_TRUE 는 3.2+ 이후 정의 -- sb7 내장 GLFW 3.0.4 는 1 로 대체.
+					glfwSetWindowShouldClose(window, 1);
+				}
+				++mCaptureFrame;
+			}
 		}
 
-		void shutdown() override
+		void shutdown() override // ! 모듈화 대상 (자원/씬 정리 = boot 의 역순)
 		{
 			ImGui_ImplGlfwGL3_Shutdown();
 			ImGui::DestroyContext(mImGuiCtx);
@@ -452,7 +545,7 @@ namespace TopdownShooter
 			TopdownShooter::GameSystems::Get().Shutdown();
 		}
 
-		void onKey(int key, int action) override
+		void onKey(int key, int action) override // ! 모듈화 대상 (키 입력 핸들러 = 게임루프 입력)
 		{
 			ImGui_ImplGlfwGL3_KeyCallback(window, key, /*scancode*/ 0, action, /*mods*/ 0);
 			if (ImGui::GetIO().WantCaptureKeyboard)
@@ -467,7 +560,7 @@ namespace TopdownShooter
 			mKeyboard.Dispatch(key, action);
 		}
 
-		void onMouseButton(int button, int action) override
+		void onMouseButton(int button, int action) override // ! 모듈화 대상 (마우스 버튼 핸들러 = 게임루프 입력)
 		{
 			ImGui_ImplGlfwGL3_MouseButtonCallback(window, button, action, /*mods*/ 0);
 			if (ImGui::GetIO().WantCaptureMouse)
@@ -480,7 +573,7 @@ namespace TopdownShooter
 			mMouse.HandleButton(button, action, x, y);
 		}
 
-		void onMouseMove(int x, int y) override
+		void onMouseMove(int x, int y) override // ! 모듈화 대상 (마우스 이동 핸들러 = 게임루프 입력)
 		{
 			// ImGui v1.53 은 NewFrame 시 직접 glfwGetCursorPos 폴링 — forward 불필요.
 			if (ImGui::GetIO().WantCaptureMouse)
@@ -488,7 +581,7 @@ namespace TopdownShooter
 			mMouse.HandleMove(static_cast<double>(x), static_cast<double>(y));
 		}
 
-		void onResize(int /*logicalW*/, int /*logicalH*/) override
+		void onResize(int /*logicalW*/, int /*logicalH*/) override // ! 모듈화 대상 (리사이즈 핸들러 = 렌더 타깃 재생성)
 		{
 			int w = 0, h = 0;
 			glfwGetFramebufferSize(window, &w, &h);
@@ -504,50 +597,62 @@ namespace TopdownShooter
 		}
 
 	  private:
-		// ── 멤버 ────────────────────────────────────────────────────────────────────
-		SJH::FramebufferInfo mFbInfo{}; ///< startup 캐시 -- 3 hook 이 공유하는 window/fb 크기/비율.
-		SJH::RenderTargetUPtr mDefaultTarget;
-		// SP-RenderStage 완성 — Application 이 stages 컬렉션을 명시 순서로 순회.
-		SJH::PassIterator mPassIterator; ///< 모든 Pass 소유(unique_ptr) + 코스 순서 실행 + Find(key) 조회.
-		SJH::WorldPass   *mWorldPassPtr     = nullptr; ///< worldCam WorldPass(비소유 관찰, 소유=PassIterator) - 매 프레임 SetActivePrograms 주입.
-		SJH::PostFxPass  *mPresentPassPtr   = nullptr; ///< present PostFxPass(passthrough, output=nullptr, 비소유 관찰) - 매 프레임 SetBackbuffer 주입.
-		SJH::Mesh        *mScreenQuadMeshPtr = nullptr; ///< PostFxPass blit 용 screen quad (비소유, 소유=ResourceRegistry).
-		SJH::Material    *mGrayscaleMatPtr   = nullptr; ///< grayscale_vignetting 공유 Material (HpGrayscalePostFX 와 SSOT 공유, 소유=ResourceRegistry).
-		SJH::Material    *mPresentMatPtr     = nullptr; ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry).
+		// ── 캡처 모드 멤버 (GU0) ────────────────────────────────────────────────────
+		/// SJH_GOLDEN_CAPTURE 환경 변수 설정 시 capture 모드 활성화.
+		bool mCaptureMode = false; // ! 모듈화 대상 (capture 전용 상태 → test/ 캡처 모듈; AppRunner 아님)
+		/// capture 모드에서 누적된 렌더 프레임 수. 180 도달 후 PNG 저장 + 종료.
+		int mCaptureFrame = 0; // ! 모듈화 대상 (capture 전용 상태 → test/ 캡처 모듈; AppRunner 아님)
 
-		SJH::FramebufferUPtr mSceneFB;
-		std::vector<SJH::FramebufferUPtr> mPostFXFBs; ///< 효과별 중간 FBO (POSTFX_PROGRAM_CONFIGS 와 1:1, 소유). resize 동기.
+		// ── 멤버 ────────────────────────────────────────────────────────────────────
+		SJH::FramebufferInfo mFbInfo{}; ///< startup 캐시 -- 3 hook 이 공유하는 window/fb 크기/비율. // ! 모듈화 대상 (창/fb 정보 = boot+render 공유 상태)
+		SJH::RenderTargetUPtr mDefaultTarget; // ! 모듈화 대상 (backbuffer 렌더 타깃 = 파이프라인 출력)
+		// SP-RenderStage 완성 — Application 이 stages 컬렉션을 명시 순서로 순회.
+		SJH::PassIterator mPassIterator;            ///< 모든 Pass 소유(unique_ptr) + 코스 순서 실행 + Find(key) 조회. // ! 모듈화 대상 (전 패스 소유 = 렌더 파이프라인 본체)
+		SJH::WorldPass *mWorldPassPtr = nullptr;    ///< worldCam WorldPass(비소유 관찰, 소유=PassIterator) - 매 프레임 SetActivePrograms 주입. // ! 모듈화 대상 (매프레임 SetActivePrograms 주입점 = 렌더루프 결합)
+		SJH::PostFxPass *mPresentPassPtr = nullptr; ///< present PostFxPass(passthrough, output=nullptr, 비소유 관찰) - 매 프레임 SetBackbuffer 주입. // ! 모듈화 대상 (매프레임 SetBackbuffer 주입점 = 렌더루프 결합)
+		SJH::Mesh *mScreenQuadMeshPtr = nullptr;    ///< PostFxPass blit 용 screen quad (비소유, 소유=ResourceRegistry). // ! 모듈화 대상 (PostFX blit mesh = 파이프라인 자원)
+		SJH::Material *mGrayscaleMatPtr = nullptr;  ///< grayscale_vignetting 공유 Material (HpGrayscalePostFX 와 SSOT 공유, 소유=ResourceRegistry). // ! 모듈화 대상 (PostFX 머티리얼 = 파이프라인 자원)
+		SJH::Material *mPresentMatPtr = nullptr;    ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry). // ! 모듈화 대상 (present 머티리얼 = 파이프라인 자원)
+
+		SJH::FramebufferUPtr mSceneFB; // ! 모듈화 대상 (씬 렌더 FBO + depth(fog) = 파이프라인 중간 출력)
+		std::vector<SJH::FramebufferUPtr> mPostFXFBs; ///< 효과별 중간 FBO (POSTFX_PROGRAM_CONFIGS 와 1:1, 소유). resize 동기. // ! 모듈화 대상 (PostFX 중간 FBO = 파이프라인 자원)
 
 		// ImGui
-		ImGuiContext *mImGuiCtx = nullptr;
-		UI::ImGuiLayerStack mImGuiStack;
-		UI::VfxSpawnLayer *mVfxLayer = nullptr; // VFX 테스트 드롭다운 (비소유 — 스택이 소유)
-		bool mShowEditor = true;
+		ImGuiContext *mImGuiCtx = nullptr; // ! 모듈화 대상 (ImGui 컨텍스트 = UI 레이어)
+		UI::ImGuiLayerStack mImGuiStack; // ! 모듈화 대상 (ImGui 레이어 스택 = UI)
+		UI::VfxSpawnLayer *mVfxLayer = nullptr;        // VFX 테스트 드롭다운 (비소유 — 스택이 소유) // ! 모듈화 대상 (VFX UI 레이어)
+		UI::IImGuiLayer *mPassDebugLayerPtr = nullptr; // PassDebugLayer raw 포인터 (비소유 — 스택이 소유). capture G1 일시 비활성화용. // ! 모듈화 대상 (디버그 UI + capture G1 토글 결합)
+		bool mShowEditor = true; // ! 모듈화 대상 (에디터 토글 상태 = UI/입력)
 
 		// 씬 오브젝트
-		SJH::Material    *mSkyboxMat      = nullptr; ///< skybox Material (비소유, 소유=ResourceRegistry).
-		SJH::IRenderable *mSkyboxRenderer = nullptr; ///< skybox MeshRenderer(IRenderable) - SkyboxPass 주입용(비소유).
-		SJH::Scene::Actor *mSpriteActor = nullptr;
-		SJH::Scene::Actor *mFxRoot = nullptr; // 단발 시퀀스 전용 부모 (sweep 대상)
-		SJH::Scene::Camera *mCamera = nullptr;
-		SJH::Scene::Camera *mScreenCamera = nullptr;
-		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard;
-		SJH::MouseInput mMouse;
+		SJH::Material *mSkyboxMat = nullptr;         ///< skybox Material (비소유, 소유=ResourceRegistry). // ! 모듈화 대상 (매프레임 u_time 주입점 = 렌더루프 결합)
+		SJH::IRenderable *mSkyboxRenderer = nullptr; ///< skybox MeshRenderer(IRenderable) - SkyboxPass 주입용(비소유). // ! 모듈화 대상 (SkyboxPass 주입 대상 = 파이프라인)
+		SJH::Scene::Actor *mSpriteActor = nullptr; // ! 모듈화 대상 (플레이어 = 씬 상태)
+		SJH::Scene::Actor *mFxRoot = nullptr; // 단발 시퀀스 전용 부모 (sweep 대상) // ! 모듈화 대상 (FX 부모 = 씬 상태)
+		SJH::Scene::Camera *mCamera = nullptr; // ! 모듈화 대상 (world 카메라 = 렌더 입력)
+		SJH::Scene::Camera *mScreenCamera = nullptr; // ! 모듈화 대상 (화면 카메라 = 렌더 입력)
+		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard; // ! 모듈화 대상 (입력 = 게임루프)
+		SJH::MouseInput mMouse; // ! 모듈화 대상 (입력 = 게임루프)
 
 		// Stage FSM (Hybrid) — render() 의 게임로직 Update 를 State 가 게이트.
-		std::unique_ptr<Stage::StageStateMachine> mStageFsm;
-		Stage::Components::GameContextComponent *mCtx = nullptr; // 비소유 — Root 의 GameContext actor 가 소유
+		std::unique_ptr<Stage::StageStateMachine> mStageFsm; // ! 모듈화 대상 (게임로직 FSM = 루프 드라이브)
+		Stage::Components::GameContextComponent *mCtx = nullptr; // 비소유 — Root 의 GameContext actor 가 소유 // ! 모듈화 대상 (게임 컨텍스트 와이어링 = 상태)
+
+		// ! 모듈화 대상 — 위 mFbInfo~mCtx 의존 멤버 전체(렌더 타깃 · PassIterator · PostFX 자원 · 씬 ·
+		//   시스템(GameSystems) · ImGui 스택 · Stage FSM)는 "부트 + 렌더루프" 단위로 추출 예정.
+		//   golden capture 가 main 무침투로 이 파이프라인을 재사용하기 위한 모듈화 경계.
+		//   (capture 전용 mCaptureMode / mCaptureFrame 은 test/ 캡처 모듈로 별도 분리.)
 
 		// PostFX 공유 Material 단축 조회 — rr 의 mat_pass_<name> (ScreenPipeline 에서 생성한 것만 존재).
 		// fog 패스는 현재 미생성이라 nullptr 반환 → 호출부(uInverseProjection/uDepth 송신)는 자연 no-op.
-		SJH::Material *FindFogMaterial()
+		SJH::Material *FindFogMaterial() // ! 모듈화 대상 (fog 머티리얼 조회 헬퍼 = 파이프라인 보조)
 		{
 			return SJH::ResourceRegistry::Get().FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_FOG);
 		}
 
 		// fog material 의 uDepth 를 현재 mSceneFB depth 텍스처(unit 1)로 (재)바인딩. fog 미생성 시 guard no-op.
 		// startup + resize 직후 호출 — sceneFB 재생성 시 dangling 방지 (D2).
-		void RebindFogUniforms()
+		void RebindFogUniforms() // ! 모듈화 대상 (fog uDepth 재바인딩 = 파이프라인 보조, resize 시 호출)
 		{
 			auto *fogMat = FindFogMaterial();
 			if (!fogMat || !mSceneFB || !mSceneFB->GetDepthAttachment())
@@ -556,7 +661,7 @@ namespace TopdownShooter
 		}
 
 		// Pause 버튼(PauseButtonLayer) 콜백 — 현재 State 기준 CombatPlay↔Pause 토글.
-		void TogglePause()
+		void TogglePause() // ! 모듈화 대상 (Pause 버튼 콜백 = 게임로직 FSM 토글)
 		{
 			if (!mStageFsm)
 				return;
