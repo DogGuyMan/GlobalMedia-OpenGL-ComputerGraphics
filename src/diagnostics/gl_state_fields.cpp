@@ -371,8 +371,13 @@ namespace SJH::Diagnostics
 
         // 7. Vertex attribute layouts - audit 트랙 A 추가
         // glGetVertexAttribiv는 부수효과 0; 현재 바인딩된 VAO의 attribute state를 query
-        for (GLuint i = 0; i < 16; ++i) {
-            f.attribute_layouts[i] = QueryAttribInfo(i);
+        // ⚠ GL 4.1 Core 는 VAO=0(default) 가 비유효 - 그 상태서 glGetVertexAttribiv 는
+        //    GL_INVALID_OPERATION 을 낸다. 유효 VAO 가 바인딩됐을 때만 query 하고,
+        //    VAO=0 이면 attribute_layouts 는 기본값(전부 disabled) 유지 (no VAO = no attributes).
+        if (f.vao != 0) {
+            for (GLuint i = 0; i < 16; ++i) {
+                f.attribute_layouts[i] = QueryAttribInfo(i);
+            }
         }
 
         // 8. post-check

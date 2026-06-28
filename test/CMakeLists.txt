@@ -71,3 +71,11 @@ add_dependencies(tests golden_compare _MyApp_)
 if(EXISTS ${CMAKE_SOURCE_DIR}/smoke/CMakeLists.txt)
     add_subdirectory(smoke)
 endif()
+
+# ============================================================================
+# Phase C — GPU 테스트 (gpu_tests: 숨김 GL 컨텍스트 + 셰이더 링크검증)
+# ============================================================================
+# 별도 실행파일. slangc 미발견 시 내부에서 graceful return (Slang.cmake 패턴 일관).
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/gpu/CMakeLists.txt)
+    add_subdirectory(gpu)
+endif()

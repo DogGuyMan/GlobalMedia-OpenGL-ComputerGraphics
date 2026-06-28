@@ -158,13 +158,17 @@ namespace SJH
 
 		/// @brief Chain of Clones 의 *최상위 root* - direct parent 따라 거슬러 올라감.
 		/// @details Clone 체인을 root 까지 거슬러 올라 OriginalMaterial 슬롯에 *경로 압축* (mutable 캐시).
-		/// @return 공유 원본 Material 포인터. @warning 현재 호출자 없음 - 진짜 root(@c OriginalMaterial==nullptr)에서 호출하면 자기참조를 세팅해 *재호출 시 무한루프* 가 되는 잠재 버그 (코드 가드 필요).
+		/// @return 공유 원본 Material 포인터. 진짜 root(@c OriginalMaterial==nullptr)면 자기 자신.
+		/// @note 진짜 root 는 경로 압축 캐시를 *쓰지 않는다* (자기참조 세팅 시 재호출 무한루프가 되는
+		///       잠재 버그를 @c p!=this 가드로 차단 - root 슬롯은 nullptr 유지).
 		const Material *GetRootOriginal() const
 		{
 			const Material *p = this;
 			while (p->OriginalMaterial)
 				p = p->OriginalMaterial;
-			return this->OriginalMaterial = p; // 경로 압축 - mutable 슬롯에 cache.
+			if (p != this)                  // 진짜 root 면 자기참조 캐시 금지 (무한루프 가드)
+				this->OriginalMaterial = p; // 경로 압축 - 조상이 있을 때만 mutable 슬롯에 cache.
+			return p;
 		}
 
 	  private:

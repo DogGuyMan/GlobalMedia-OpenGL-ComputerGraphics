@@ -129,6 +129,19 @@ TEST_CASE("Material: root(원본)는 자기 자신을 root 로 반환", "[materi
     REQUIRE(root->GetRootOriginal() == root.get());
 }
 
+// 자기참조 무한루프 가드(2026-06-28 수정) - 진짜 root 는 OriginalMaterial 슬롯에
+// 자기 자신을 캐시하지 않는다. 캐시했다면 재호출 시 while(p->OriginalMaterial) 가 무한루프.
+TEST_CASE("Material: root 재호출은 무한루프 없이 자기 자신 (자기참조 가드)", "[material]")
+{
+    auto root = Material::Create();
+    REQUIRE(root->GetRootOriginal() == root.get());
+    // ★ root 슬롯이 자기참조로 오염되지 않았다 - 그래야 재호출이 무한루프가 아님.
+    REQUIRE(root->OriginalMaterial == nullptr);
+    // 재호출 - 무한루프 없이 동일 반환 (가드 동작 확인).
+    REQUIRE(root->GetRootOriginal() == root.get());
+    REQUIRE(root->OriginalMaterial == nullptr);
+}
+
 TEST_CASE("Material: 체인 root 추적 + 경로압축 캐시", "[material]")
 {
     // root <- mid <- leaf 체인을 public 필드로 수동 배선 (Clone 대체).
