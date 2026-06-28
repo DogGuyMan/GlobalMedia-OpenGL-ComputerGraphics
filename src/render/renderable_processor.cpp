@@ -1,13 +1,11 @@
 /**
- * @file mesh_pass_processor.cpp
+ * @file renderable_processor.cpp
  * @brief RenderableProcessor 구현 - Sort 정렬 정책 + Process IRenderable flat 발행 흐름.
  *
  * @details
  *  ### Task 2.4 - DrawCommand -> IRenderable flat 전환
  *  - World 루프: ApplyRenderStateBlock(r->GetRenderStateBlock()) -> r->Render(rc, cam).
  *    ROP 위치: Process 루프 (잎 미호출 - 역할 분리 유지).
- *  - ScreenQuad 루프: 구 MeshPassProcessor ScreenQuad 분기 동작 동등 보존.
- *  - 익명 namespace UploadMaterialUboMembers/BindSamplers 제거 -> draw_ops.h 공유 헬퍼 사용.
  *
  *  ### Sort 정렬 정책 요약 (구 SortMultiStage 값 보존)
  *  - Opaque (queue < 2500): front-to-back (z-cull 효율). 구 program/material 그룹핑 키 생략
@@ -19,9 +17,9 @@
  *  - [X] GL 자가 draw - MeshRenderer::Render 잎 위임 (Task 2.3).
  *  - [X] Material 값 uniform 송신 - MeshRenderer::Render 내부 draw_ops 헬퍼.
  *  - [X] GL state machine 캐싱/적용 - DeviceContext::ApplyRenderStateBlock (D-RS-1).
+ *  - [X] PostFX ScreenQuad blit - PostFxPass(3.5a) 가 전담.
  */
-#include "render/mesh_pass_processor.h"
-#include "render/draw_ops.h"
+#include "render/renderable_processor.h"
 #include "render/device_context.h"
 #include "material/material.h"
 #include "material/pass.h"
@@ -73,51 +71,6 @@ namespace SJH
 		{
 			rc.ApplyRenderStateBlock(e.r->GetRenderStateBlock());
 			e.r->Render(rc, cam);
-		}
-
-		// -- [TRANSITIONAL-3.5] ScreenQuad (PassComponent) - Phase 3.5 PostFxPass 이관 후 제거 ---------
-		// 이 screen 루프 전체 + mScreen/SubmitScreenQuad/mScreenQuadMesh/mBypassMat/mLastOutputFB 는
-		// PostFxPass(:IPassable) 가 PassComponent 체인+화면 blit 을 직접 보유하며 이관 -> 본 클래스에서 삭제.
-		// 구 MeshPassProcessor ScreenQuad 분기와 픽셀 동등:
-		//   BeginFrame(outputFB) -> ApplyRenderStateBlock(Screen) -> uScene 바인딩
-		//   -> UseProgram -> UBO/sampler -> BindVAO -> EBO 재핀 -> DrawIndexed -> mLastOutputFB.
-		for (auto &e : mScreen)
-		{
-			if (!e.in || !e.out || !mScreenQuadMesh)
-				continue;
-			// passMat=nullptr = disabled 패스 bypass: passthrough blit (구 동작 보존).
-			Material *effectiveMat = e.mat ? e.mat : mBypassMat;
-			if (!effectiveMat)
-				continue;
-			const Program *prog = effectiveMat->GetProgram();
-			if (!prog)
-				continue;
-
-			rc.BeginFrame(*e.out);
-			// ScreenQuad blit state-as-data (D-RS-5) - depth test/write off, cull off, blend off(replace).
-			rc.ApplyRenderStateBlock(Pass::DefaultRenderStateBlockOf(Pass::RenderQueue::Screen));
-
-			// uScene sampler 바인딩 - inputFB color attachment 를 unit 0 에 연결 (구 동작 보존).
-			effectiveMat->Properties.Textures["uScene"] = {e.in->GetColorAttachment().get(), 0};
-
-			rc.UseProgram(*prog);
-			// UBO postfx 셰이더 지원 (WorldMesh 와 동형, 구 동작 보존).
-			//   passthrough(비-UBO GLSL blit)는 HasUniformBlocks()==false -> BindSamplers 만 처리.
-			if (prog->HasUniformBlocks())
-			{
-				UploadMaterialUboMembers(*prog, effectiveMat->Properties);
-				prog->BindUniformBlocks();
-			}
-			BindSamplers(rc, effectiveMat->Properties, *prog);
-
-			rc.BindVAO(mScreenQuadMesh->GetVAO());
-			// VAO EBO 오염 가드 - Effekseer/Box2D 가 EBO 를 덮어쓸 수 있음 (구 동작 보존).
-			if (auto ebo = mScreenQuadMesh->GetIndexBuffer())
-				ebo->Bind();
-			rc.DrawIndexed(mScreenQuadMesh->GetIndexCount());
-
-			mLastOutputFB = e.out;
-			// 상태 복원 불요 - 다음 World 가 ApplyRenderStateBlock, 다음 패스는 BeginFrame 으로 자기 state 적용.
 		}
 
 		// RestoreDefaults 불요 (D-RS-2) - 다음 consumer 진입 시 InvalidateStateCache + 자기 state 적용.

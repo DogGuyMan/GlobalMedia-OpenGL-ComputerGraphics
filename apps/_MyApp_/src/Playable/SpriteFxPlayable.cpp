@@ -12,8 +12,6 @@
  *  - @c SpriteDissolvePlayable::OnUpdate : t = clamp(elapsed/duration). t >= 1.0 이면
  *    @c mIsFinished = true (dissolved 상태 유지, 액터 비활성/despawn 은 Life 책임).
  *
- * @note enableHit/enableDissolve 는 bool -> SetInt(Ints) 저장 후 draw 시점 UBO MaterialBlock 의
- *       int 멤버(@c UploadMaterialUboMembers)로 업로드 (Phase C - 구 PropertyBlockSetter GL_BOOL 경로 폐지).
  */
 #include "Playable/SpriteFxPlayable.h"
 

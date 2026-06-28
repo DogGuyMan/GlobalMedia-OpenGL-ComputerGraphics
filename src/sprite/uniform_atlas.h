@@ -21,7 +21,6 @@
 #ifndef __SJH_SPRITE_UNIFORM_ATLAS_H__
 #define __SJH_SPRITE_UNIFORM_ATLAS_H__
 
-#include "GL/gl3w.h"
 #include "common/common.h"
 #include "texture/texture.h" // SJH::Texture / SJH::TextureUPtr (CLASS_PTR)
 #include <glm/glm.hpp>
@@ -155,7 +154,7 @@ namespace SJH::Sprite
 		// =====================================================================
 
 		/// @brief GL 텍스처 오브젝트 ID - @c glBindTexture 등에 사용. 미로드 시 0.
-		GLuint TextureId() const
+		uint32_t TextureId() const
 		{
 			return mTexture ? mTexture->GetTextureID() : 0;
 		}

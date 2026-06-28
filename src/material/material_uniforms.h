@@ -53,8 +53,8 @@ namespace SJH
 		/// @param v    저장할 값.
 		void SetFloat(Material &mat, const char *name, float v);
 
-		/// @brief int / bool uniform 값을 Properties.Ints 에 store.
-		/// @details GL_BOOL uniform 도 이 함수로 저장 - UBO MaterialBlock 의 int 멤버로 업로드됨 (UploadMaterialUboMembers).
+		/// @brief int / bool uniform 값을 Properties.Ints 에 store.UploadMaterialUboMembers
+		/// @details GL_BOOL uniform 도 이 함수로 저장 - UBO MaterialBlock 의 int 멤버로 업로드됨 ().
 		/// @param mat  대상 Material.
 		/// @param name 셰이더 uniform 이름.
 		/// @param v    저장할 값.

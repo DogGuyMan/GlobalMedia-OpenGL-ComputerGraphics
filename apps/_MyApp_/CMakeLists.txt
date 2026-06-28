@@ -14,14 +14,19 @@ set(IMGUI_SRC
 add_subdirectory(src)
 
 # ImGui 의존 UI 레이어 — client-side compile (SJH::engine 모듈 아님)
-# PostFXDebugLayer.cpp 는 <imgui.h> 가 필요 ->executable PRIVATE include path 상속을 위해 직접 추가
+# <imgui.h> 가 필요 -> executable PRIVATE include path 상속을 위해 직접 추가.
+# (PostFXDebugLayer 는 2026-06-24 폐기 - PassComponent 토글 UI 제거)
 set(UI_SRC
-    src/UI/PostFXDebugLayer.cpp
     src/UI/UiBootstrap.cpp
 )
 
+# 골든 이미지 캡처 헬퍼 (STB_IMAGE_WRITE_IMPLEMENTATION 포함 — 이 TU 전용).
+set(CAPTURE_SRC
+    src/Capture/golden_capture.cpp
+)
+
 # 실행파일
-add_executable(${CHAPTER_NAME} main.cpp ${IMGUI_SRC} ${UI_SRC})
+add_executable(${CHAPTER_NAME} main.cpp ${IMGUI_SRC} ${UI_SRC} ${CAPTURE_SRC})
 
 target_include_directories(${CHAPTER_NAME} PRIVATE
     ${CMAKE_CURRENT_DIR}

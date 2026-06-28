@@ -17,7 +17,6 @@
 #ifndef _TOPDOWNSHOOTER_PLAYABLE_CONSTANTS__
 #define _TOPDOWNSHOOTER_PLAYABLE_CONSTANTS__
 
-#include "render_bootstrap/render_pipeline.h" // SJH::Render::PostFXStageConfig (POSTFX_PROGRAM_CONFIGS)
 #include "vector"
 #include <glm/glm.hpp>
 
@@ -59,10 +58,10 @@ namespace TopdownShooter::Playable
 	};
 	/// @brief 플레이어 방향 판정 구간 인스턴스 (Up/Down/Left/Right 가 360 도를 분할).
 	const FacingThresholdConfig PLAYER_FACING_THRESHOLD = {
-	    {45.0f, 135.0f},   // Back  (Up)
-	    {225.0f, 315.0f},  // Front (Down)
-	    {135.0f, 225.0f},  // Left
-	    {315.0f, 45.0f},   // Right (0 도 wrap)
+	    {45.0f, 135.0f},  // Back  (Up)
+	    {225.0f, 315.0f}, // Front (Down)
+	    {135.0f, 225.0f}, // Left
+	    {315.0f, 45.0f},  // Right (0 도 wrap)
 	};
 
 	/// @brief 조준 손(에임 피벗에 부착) 단일 스프라이트 - 방향과 무관하게 공용.
@@ -138,19 +137,19 @@ namespace TopdownShooter::Playable
 
 	// -- 연출 지속시간 / PostFX 튜닝 (분해 Task6) --
 	constexpr float SPRITE_HIT_FLASH_DURATION = 0.18f; // 피격 hit-flash 표시(초)
-	constexpr float SPRITE_DISSOLVE_DURATION  = 1.0f;  // 사망 dissolve 표시 기본(초; Player/Enemy override)
-	constexpr float VIGNETTE_PEAK             = 0.45f; // 피격 비네팅 시작 강도(0.45->0)
-	constexpr int   VIGNETTE_DURATION_MS      = 300;   // 피격 비네팅 tween 길이(ms)
+	constexpr float SPRITE_DISSOLVE_DURATION = 1.0f;   // 사망 dissolve 표시 기본(초; Player/Enemy override)
+	constexpr float VIGNETTE_PEAK = 0.45f;             // 피격 비네팅 시작 강도(0.45->0)
+	constexpr int VIGNETTE_DURATION_MS = 300;          // 피격 비네팅 tween 길이(ms)
 
 	// -- PostFX 패스명 (POSTFX_PROGRAM_CONFIGS Name + 토글/연출/UI 단일 출처) --
-	constexpr const char *PASS_GAMMA                = "gamma";
-	constexpr const char *PASS_SHARPENING           = "sharpening";
-	constexpr const char *PASS_BLOOM                = "bloom";
-	constexpr const char *PASS_FOG                  = "fog";
+	constexpr const char *PASS_GAMMA = "gamma";
+	constexpr const char *PASS_SHARPENING = "sharpening";
+	constexpr const char *PASS_BLOOM = "bloom";
+	constexpr const char *PASS_FOG = "fog";
 	constexpr const char *PASS_GRAYSCALE_VIGNETTING = "grayscale_vignetting";
-	constexpr const char *PASS_INVERT               = "invert";
-	constexpr const char *PASS_BLURRING             = "blurring";
-	constexpr const char *PASS_SOBEL                = "sobel";
+	constexpr const char *PASS_INVERT = "invert";
+	constexpr const char *PASS_BLURRING = "blurring";
+	constexpr const char *PASS_SOBEL = "sobel";
 
 	// -- PostFX 파이프라인 구성 (PostFXConstants.h 통합 2026-06-20) --
 	/**
@@ -160,9 +159,9 @@ namespace TopdownShooter::Playable
 	 */
 	struct ProgramConfig
 	{
-		const char *Name;      ///< 프로그램 식별 이름 (예: "screen_passthrough").
-		const char *VertFile;  ///< 버텍스 셰이더 파일 경로 (실행 파일 디렉토리 기준 상대경로).
-		const char *FragFile;  ///< 프래그먼트 셰이더 파일 경로 (실행 파일 디렉토리 기준 상대경로).
+		const char *Name;     ///< 프로그램 식별 이름 (예: "screen_passthrough").
+		const char *VertFile; ///< 버텍스 셰이더 파일 경로 (실행 파일 디렉토리 기준 상대경로).
+		const char *FragFile; ///< 프래그먼트 셰이더 파일 경로 (실행 파일 디렉토리 기준 상대경로).
 	};
 	/// @brief 화면 패스스루 프로그램 설정 상수. @c PassComponent bypass blit 용.
 	const ProgramConfig PASSTHOURH_PROGRAM_CONFIG = {
@@ -176,15 +175,25 @@ namespace TopdownShooter::Playable
 	///          D-6 data-driven -- 순서 변경/패스 추가 시 이 배열만 수정.
 	///          vec3/int 타입 초기값(@c uFogColor / @c FOG_MODE / @c uVignetteColor) 은
 	///          InitFloats 에 표현 불가능해 startup 에서 Material 에 직접 set.
-	const std::vector<SJH::Render::PostFXStageConfig> POSTFX_PROGRAM_CONFIGS = {
-	    {PASS_GAMMA, "./resources/shaders/postprocess/gamma.vs", "./resources/shaders/postprocess/gamma.fs", {{"gamma", 1.0f}}},  // Slice 2(B) 자립 VS (Slang UBO)
+	/**
+	 * @brief @c BuildPostFXChain 의 단일 PostFX 스테이지 설정.
+	 * @details
+	 *  @c Name 은 Program 키 겸 PassActor 이름으로 사용.
+	 *  @c InitFloats 는 Material::Properties::Floats 에 복사 (D-6 data-driven, 예: @c gamma=1.0).
+	 */
+	struct PostFXStageConfig
+	{
+		std::string Name;                                  ///< 스테이지 이름 (Program 키 겸 PassActor 이름).
+		std::string VertFile;                              ///< 버텍스 셰이더 경로.
+		std::string FragFile;                              ///< 프래그먼트 셰이더 경로.
+		std::unordered_map<std::string, float> InitFloats; ///< 초기 float uniform 값 맵 (예: @c {{"gamma", 1.0f}}).
+	};
+	const std::vector<PostFXStageConfig> POSTFX_PROGRAM_CONFIGS = {
+	    {PASS_GAMMA, "./resources/shaders/postprocess/gamma.vs", "./resources/shaders/postprocess/gamma.fs", {{"gamma", 1.0f}}}, // Slice 2(B) 자립 VS (Slang UBO)
 	    {PASS_SHARPENING, "./resources/shaders/postprocess/sharpening.vs", "./resources/shaders/postprocess/sharpening.fs", {}},
-	    {PASS_BLOOM, "./resources/shaders/postprocess/bloom.vs", "./resources/shaders/postprocess/bloom.fs",
-	     {{"uBloomThreshold", 0.769f}, {"uBloomSpread", 2.342f}, {"uBloomIntensity", 0.927f}}},
-	    {PASS_FOG, "./resources/shaders/postprocess/fog.vs", "./resources/shaders/postprocess/fog.fs",
-	     {{"uFogDensity", 0.042f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
-	    {PASS_GRAYSCALE_VIGNETTING, "./resources/shaders/postprocess/grayscale_vignetting.vs", "./resources/shaders/postprocess/grayscale_vignetting.fs",
-	     {{"uGrayscaleAmount", 1.0f}, {"uVignetteAmount", 0.0f}}}, // uVignetteColor(vec3)는 startup 에서 set(VIGNETTE_COLOR).
+	    {PASS_BLOOM, "./resources/shaders/postprocess/bloom.vs", "./resources/shaders/postprocess/bloom.fs", {{"uBloomThreshold", 0.769f}, {"uBloomSpread", 2.342f}, {"uBloomIntensity", 0.927f}}},
+	    {PASS_FOG, "./resources/shaders/postprocess/fog.vs", "./resources/shaders/postprocess/fog.fs", {{"uFogDensity", 0.042f}, {"uFogStart", 0.0f}, {"uFogEnd", 50.0f}}},
+	    {PASS_GRAYSCALE_VIGNETTING, "./resources/shaders/postprocess/grayscale_vignetting.vs", "./resources/shaders/postprocess/grayscale_vignetting.fs", {{"uGrayscaleAmount", 1.0f}, {"uVignetteAmount", 0.0f}}}, // uVignetteColor(vec3)는 startup 에서 set(VIGNETTE_COLOR).
 	    {PASS_INVERT, "./resources/shaders/postprocess/invert.vs", "./resources/shaders/postprocess/invert.fs", {}},
 	    {PASS_BLURRING, "./resources/shaders/postprocess/blurring.vs", "./resources/shaders/postprocess/blurring.fs", {}},
 	    {PASS_SOBEL, "./resources/shaders/postprocess/sobel.vs", "./resources/shaders/postprocess/sobel.fs", {}},
@@ -192,12 +201,12 @@ namespace TopdownShooter::Playable
 
 	/// @brief fog 셰이더 @c uFogColor vec3 초기값 -- RGB (20, 36, 10) 어두운 녹색 안개.
 	/// @note @c PostFXStageConfig.InitFloats 가 float 전용이라 startup 에서 Material 에 직접 set.
-	const     glm::vec3 FOG_COLOR      = glm::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
+	const glm::vec3 FOG_COLOR = glm::vec3(20.0f / 255.0f, 36.0f / 255.0f, 10.0f / 255.0f); // {20,36,10}
 	/// @brief fog 셰이더 @c uFogMode int 초기값 -- 0=Linear, 1=Exp, 2=Exp2. 기본 Exp2.
-	constexpr int         FOG_MODE       = 2;                                                           // 0=Linear, 1=Exp, 2=Exp2
+	constexpr int FOG_MODE = 2; // 0=Linear, 1=Exp, 2=Exp2
 	/// @brief grayscale_vignetting 셰이더 @c uVignetteColor vec3 초기값 -- 빨강 (255, 0, 0) 비네팅.
 	/// @note startup 에서 Material 에 직접 set (@c PostFXStageConfig.InitFloats 밖).
-	const     glm::vec3 VIGNETTE_COLOR = glm::vec3(1.0f, 0.0f, 0.0f);                                // {255,0,0} 빨강 비네팅
+	const glm::vec3 VIGNETTE_COLOR = glm::vec3(1.0f, 0.0f, 0.0f); // {255,0,0} 빨강 비네팅
 }; // namespace TopdownShooter::Playable
 
 #endif //_TOPDOWNSHOOTER_PLAYABLE_CONSTANTS__

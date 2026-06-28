@@ -33,7 +33,7 @@
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/compound_actor.h"
-#include "render/actor_factory.h"  // CreateSkyboxActor (2026-06-11 E2 이주)
+#include "Bootstrap/actor_factory.h"  // CreateSkyboxActor (2026-06-24 apps client 이주)
 #include "render/mesh_renderer.h"  // SJH::Scene::MeshRenderer - BuildSkybox 반환 타입
 #include "scene/scene.h"
 
@@ -124,15 +124,15 @@ namespace TopdownShooter::Bootstrap
 			// CreateTexture 기본 wrap 은 GL_CLAMP_TO_EDGE(texture.cpp) 라 끝 열에 고착돼 세로 줄로
 			// 보이므로, 글자 열이 순환하도록 REPEAT 로 덮어쓴다 (uniform_atlas Bind->SetWrap 선례).
 			charsTex->Bind();
-			charsTex->SetWrap(GL_REPEAT, GL_REPEAT);
+			charsTex->SetWrap(SJH::WrapMode::Repeat, SJH::WrapMode::Repeat);
 			// 촘촘한 격자에서 글자칸이 작아지면 기본 MIPMAP_LINEAR(texture.cpp)가 LOD 를 올려
 			// 글자를 회색으로 뭉갠다 -> mipmap 없는 GL_LINEAR 로 또렷하게 유지.
-			charsTex->SetFilter(GL_LINEAR, GL_LINEAR);
+			charsTex->SetFilter(SJH::FilterMode::Linear, SJH::FilterMode::Linear);
 			auto *noiseTex = reg.CreateTexture("noise_tex", SJH::Image::Load("noise_tex", "resources/texture/matrix_noise.png").get());
 			// 셰이더가 noise 좌표를 NOISE_SCALE(=8)배로 키워 샘플 -> 1 을 넘는 좌표가 클램프되지
 			// 않고 타일링되도록 REPEAT 필수 (CLAMP 면 가장자리 한 색으로 뭉개짐).
 			noiseTex->Bind();
-			noiseTex->SetWrap(GL_REPEAT, GL_REPEAT);
+			noiseTex->SetWrap(SJH::WrapMode::Repeat, SJH::WrapMode::Repeat);
 
 			auto *skyboxMat = reg.CreateSharedMaterial("mat_matrix_skybox");
 			skyboxMat->SetProgram(skyboxProg);

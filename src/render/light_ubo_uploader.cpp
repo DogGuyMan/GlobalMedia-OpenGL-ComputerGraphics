@@ -62,7 +62,7 @@ namespace SJH
 		{
 			glm::vec3 position;    float pad0;       // @0   position(12) + pad
 			glm::vec3 direction;   float cutoff;     // @16  direction(12) + cutoff @28 (4번째 슬롯)
-			float       outerCutoff; float pad1[3];    // @32  outerCutoff + pad -> @48
+			float     outerCutoff; float pad1[3];    // @32  outerCutoff + pad -> @48
 			glm::vec3 attenuation; float pad2;        // @48
 			glm::vec3 ambient;     float pad3;        // @64
 			glm::vec3 diffuse;     float pad4;        // @80
@@ -73,7 +73,7 @@ namespace SJH
 			DirLightStd140   dirLight;                              // @0
 			PointLightStd140 pointLights[Const::MAX_POINT_LIGHTS];  // @64
 			SpotLightStd140  spotLights[Const::MAX_SPOT_LIGHTS];    // @1344
-			glm::vec3      viewPos;                               // @3136
+			glm::vec3      viewPos;                                // @3136
 			std::int32_t     dirLightEnabled;                      // @3148
 			std::int32_t     numPointLights;                       // @3152
 			std::int32_t     numSpotLights;                        // @3156

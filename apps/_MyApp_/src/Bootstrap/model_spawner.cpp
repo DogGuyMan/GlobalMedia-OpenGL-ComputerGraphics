@@ -10,7 +10,7 @@
  *  ### 비-책임
  *  - [X] @c Model / @c Mesh / @c Material 소유권 - 모두 @c ResourceRegistry 보유.
  */
-#include "render/model_spawner.h"
+#include "Bootstrap/model_spawner.h"
 #include "scene/actor.h"
 #include "render/mesh_renderer.h"
 #include "object/model.h"

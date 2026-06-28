@@ -3,6 +3,8 @@
 
 #include "render/render_passable/render_passable.h"
 
+#include <string>
+
 namespace SJH::Scene { class Camera; }
 
 namespace TopdownShooter::VFX
@@ -28,6 +30,9 @@ namespace TopdownShooter::VFX
 		void Draw(SJH::DeviceContext& rec, const SJH::Texture* before) override;
 		/// @brief 이 Pass 의 출력 - 파티클은 worldCam sceneFB 에 직접 합성, 텍스처 결과 없음.
 		const SJH::Texture* GetPassResult() const override { return nullptr; }
+
+		/// @brief Pass 조회 키(PassIterator::Find) - 고정 역할명.
+		std::string GetPassKey() const override { return "Particle"; }
 
 	  private:
 		VFXSystem*           mVFX      = nullptr;

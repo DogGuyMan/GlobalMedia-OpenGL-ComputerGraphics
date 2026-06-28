@@ -35,56 +35,90 @@
 #define __SJH_MATERIAL_PROPERTY_BLOCK_H__
 
 #include "GL/gl3w.h"
+#include <glm/glm.hpp>
 #include <string>
 #include <unordered_map>
-#include <glm/glm.hpp>
+#include "program/program.h"        // Program 완전 타입 (UpdateUniformMember)
+#include "render/device_context.h"  // DeviceContext 완전 타입 (BindTexture)
+#include "texture/texture.h"        // Texture 완전 타입 (GetTextureID)
 
 namespace SJH
 {
-    class Texture; // 비소유 관찰자.
+	class Texture; // 비소유 관찰자.
 
-    /**
-     * @brief Unity MaterialPropertyBlock 정통 - typed properties bag.
-     * @details 7 typed map (`Floats` / `Ints` / `Vec2s` / `Vec3s` / `Vec4s` / `Mat4s` / `Textures`) +
-     *          `TextureBinding` nested struct.
-     *          type erasure 대신 *typed 분리* - Unity URP/HDRP / Cocos Material 정통.
-     */
-    struct MaterialPropertyBlock
-    {
-        /**
-         * @brief 텍스처 바인딩 - sampler unit 과 비소유 텍스처 관찰자.
-         * @details Apply 시점에:
-         *          (a) `Uniforms::SetInt(prog, name, Unit)` 으로 sampler slot 번호 송신,
-         *          (b) `DeviceContext::BindTexture(Unit, Tex->ID())` 로 실제 텍스처 바인딩.
-         */
-        struct TextureBinding
-        {
-            const Texture *Tex = nullptr; ///< 비소유 텍스처 포인터 - owner 는 ResourceRegistry.
-            GLint Unit = 0;               ///< GL 텍스처 unit 번호 (GL_TEXTURE0 + Unit).
-        };
+	/**
+	 * @brief Unity MaterialPropertyBlock 정통 - typed properties bag.
+	 * @details 7 typed map (`Floats` / `Ints` / `Vec2s` / `Vec3s` / `Vec4s` / `Mat4s` / `Textures`) +
+	 *          `TextureBinding` nested struct.
+	 *          type erasure 대신 *typed 분리* - Unity URP/HDRP / Cocos Material 정통.
+	 */
+	struct MaterialPropertyBlock
+	{
+		/**
+		 * @brief 텍스처 바인딩 - sampler unit 과 비소유 텍스처 관찰자.
+		 * @details Apply 시점에:
+		 *          (a) `Uniforms::SetInt(prog, name, Unit)` 으로 sampler slot 번호 송신,
+		 *          (b) `DeviceContext::BindTexture(Unit, Tex->ID())` 로 실제 텍스처 바인딩.
+		 */
+		struct TextureBinding
+		{
+			const Texture *Tex = nullptr; ///< 비소유 텍스처 포인터 - owner 는 ResourceRegistry.
+			GLint Unit = 0;               ///< GL 텍스처 unit 번호 (GL_TEXTURE0 + Unit).
+		};
 
-        /// @brief float uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, float> Floats;
+		/// @brief float uniform 값 map. 키 = 셰이더 uniform 이름.
+		std::unordered_map<std::string, float> Floats;
 
-        /// @brief int / bool uniform 값 map. 키 = 셰이더 uniform 이름.
-        /// @details GL_BOOL uniform 도 이 map 에 저장 (SetInt + GL_BOOL fall-through 컨벤션).
-        std::unordered_map<std::string, int> Ints;
+		/// @brief int / bool uniform 값 map. 키 = 셰이더 uniform 이름.
+		/// @details GL_BOOL uniform 도 이 map 에 저장 (SetInt + GL_BOOL fall-through 컨벤션).
+		std::unordered_map<std::string, int> Ints;
 
-        /// @brief vec2 uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, glm::vec2> Vec2s;
+		/// @brief vec2 uniform 값 map. 키 = 셰이더 uniform 이름.
+		std::unordered_map<std::string, glm::vec2> Vec2s;
 
-        /// @brief vec3 uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, glm::vec3> Vec3s;
+		/// @brief vec3 uniform 값 map. 키 = 셰이더 uniform 이름.
+		std::unordered_map<std::string, glm::vec3> Vec3s;
 
-        /// @brief vec4 uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, glm::vec4> Vec4s;
+		/// @brief vec4 uniform 값 map. 키 = 셰이더 uniform 이름.
+		std::unordered_map<std::string, glm::vec4> Vec4s;
 
-        /// @brief mat4 uniform 값 map. 키 = 셰이더 uniform 이름.
-        std::unordered_map<std::string, glm::mat4> Mat4s;
+		/// @brief mat4 uniform 값 map. 키 = 셰이더 uniform 이름.
+		std::unordered_map<std::string, glm::mat4> Mat4s;
 
-        /// @brief 텍스처 바인딩 map. 키 = 셰이더 sampler uniform 이름 (예: `"uAlbedo"`).
-        std::unordered_map<std::string, TextureBinding> Textures;
-    };
+		/// @brief 텍스처 바인딩 map. 키 = 셰이더 sampler uniform 이름 (예: `"uAlbedo"`).
+		std::unordered_map<std::string, TextureBinding> Textures;
+
+		void UploadMaterialUboMembers(const Program &p)
+		{
+			for (auto &kv : Floats)
+				p.UpdateUniformMember(kv.first, &kv.second, sizeof(float));
+			for (auto &kv : Ints)
+				p.UpdateUniformMember(kv.first, &kv.second, sizeof(int));
+			for (auto &kv : Vec2s)
+				p.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec2));
+			for (auto &kv : Vec3s)
+				p.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec3));
+			for (auto &kv : Vec4s)
+				p.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::vec4));
+			for (auto &kv : Mat4s)
+				p.UpdateUniformMember(kv.first, &kv.second, sizeof(glm::mat4));
+		}
+
+		void BindSamplers(DeviceContext &rc, const Program &p)
+		{
+			for (auto &kv : Textures)
+			{
+				if (!kv.second.Tex)
+					continue;
+				const GLint loc = p.GetLocation(kv.first.c_str());
+				if (loc < 0)
+					continue;
+				glUniform1i(loc, kv.second.Unit);
+				rc.BindTexture(static_cast<GLuint>(kv.second.Unit), kv.second.Tex->GetTextureID());
+			}
+		}
+	};
+
 } // namespace SJH
 
 #endif // __SJH_MATERIAL_PROPERTY_BLOCK_H__

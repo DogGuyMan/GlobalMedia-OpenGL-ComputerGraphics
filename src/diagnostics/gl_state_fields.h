@@ -37,6 +37,7 @@
 #include "GL/gl3w.h"
 #include <array>
 #include <string>
+#include <vector>
 
 namespace SJH::Diagnostics
 {
@@ -129,6 +130,31 @@ namespace SJH::Diagnostics
         /// @details bug-coverage-audit 카테고리 C (vertex attribute layout 회귀) 대응.
         std::array<VertexAttribInfo, 16> attribute_layouts{};
     };
+
+    /**
+     * @brief 두 @c GLStateFields 간 바뀐 필드 1건 (A3 - 순수 CPU diff).
+     * @details @c DiffStates 가 채우는 원소. @c category 는 bug-coverage-audit 매핑
+     *          ('B'=binding / 'C'=vertex attribute layout / 'D'=픽셀 파이프라인).
+     */
+    struct FieldChange
+    {
+        std::string field;    ///< 바뀐 필드 이름 (예: "blend_src_rgb", "attribute_layouts[2].stride").
+        std::string before;   ///< 변경 전 값의 문자열 표현 (enum 은 @c SymbolicName).
+        std::string after;    ///< 변경 후 값의 문자열 표현.
+        char        category; ///< 'B'(binding) / 'C'(attribute layout) / 'D'(pixel pipeline).
+    };
+
+    /**
+     * @brief 두 GL 상태 스냅샷을 비교해 바뀐 필드 목록을 반환 (A3 - 순수 CPU, GL 무관).
+     * @details 필드 단위로 @c operator== 가 아닌 멤버별 비교를 수행해 *무엇이* 바뀌었는지
+     *          식별한다. enum 필드는 @c SymbolicName 으로, 핸들/정수는 raw 로 표기
+     *          (@c FieldsToString 의 비대칭 정책 답습). 동일하면 빈 벡터.
+     * @param before 변경 전 상태 (예: 패스 렌더 전 캡처).
+     * @param after  변경 후 상태 (예: 패스 렌더 후 캡처).
+     * @return 바뀐 필드 목록 (C-4 GL 상태누수 테스트가 소비).
+     */
+    std::vector<FieldChange> DiffStates(const GLStateFields& before,
+                                        const GLStateFields& after);
 
     /**
      * @brief 현재 GL 상태를 @c GLStateFields 로 캡처해 반환.

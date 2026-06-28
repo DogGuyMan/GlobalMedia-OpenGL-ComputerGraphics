@@ -35,7 +35,7 @@
 #include "resource_registry/resource_registry.h"
 #include "texture/texture.h"
 #include "scene/actor.h"
-#include "render/model_spawner.h"
+#include "Bootstrap/model_spawner.h"
 
 #include <assimp/defs.h>
 #include <box2d/box2d.h>
@@ -109,7 +109,7 @@ namespace TopdownShooter::Stage
 			auto *tex = reg.CreateTexture(kWallTexKey, SJH::Image::Load(kWallTexKey, kWallTexPath).get());
 			// uvScale 타일링이 1 을 넘어도 끝에서 고착되지 않고 반복되도록 REPEAT.
 			tex->Bind();
-			tex->SetWrap(GL_REPEAT, GL_REPEAT);
+			tex->SetWrap(SJH::WrapMode::Repeat, SJH::WrapMode::Repeat);
 			return tex;
 		}
 

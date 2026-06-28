@@ -52,7 +52,8 @@ namespace SJH
          * @brief 파일에서 셰이더 소스를 읽어 컴파일 후 @c Shader 인스턴스 생성.
          * @param filename     셰이더 소스 파일 경로 (예: @c "resources/shaders/simple.vert").
          * @param shader_type  GL 셰이더 타입 (@c GL_VERTEX_SHADER / @c GL_FRAGMENT_SHADER 등).
-         * @return 성공 시 @c ShaderUPtr (소유권 이전), 실패(파일 없음/컴파일 에러) 시 @c nullptr.
+         * @return 성공 시 @c ShaderUPtr (소유권 이전). 실패(파일 없음/컴파일 에러) 시 @b fail-fast
+         *         (Debug: 진단 메시지 후 @c std::abort / Release: @c std::runtime_error throw) - silent nullptr 미반환.
          * @details 내부적으로 @c sb7::shader::load (파일 IO + @c glCreateShader +
          *          @c glShaderSource + @c glCompileShader 일괄 수행) 를 경유한다.
          *          컴파일 에러 InfoLog 는 @c Diagnostics::GLObjectLog::CheckShaderCompile 가 spdlog 에 출력.
@@ -63,7 +64,7 @@ namespace SJH
          * @brief 인라인 소스 문자열에서 직접 컴파일 후 @c Shader 인스턴스 생성.
          * @param source        GLSL 소스 코드 (@c #version 디렉티브 포함 권장).
          * @param shader_type   GL 셰이더 타입 (@c GL_VERTEX_SHADER / @c GL_FRAGMENT_SHADER 등).
-         * @return 성공 시 @c ShaderUPtr, 컴파일 실패 시 @c nullptr.
+         * @return 성공 시 @c ShaderUPtr. 컴파일 실패 시 @b fail-fast (Debug @c std::abort / Release throw) - silent nullptr 미반환.
          * @details 파일 I/O 우회 - 단위 테스트의 인라인 GLSL 또는 런타임 생성 셰이더 용도.
          *          @c CreateFromFile 과 동일한 팩토리 불변식 보장. 진단 tag 는 빈 문자열.
          */

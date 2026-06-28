@@ -6,6 +6,8 @@ add_library(sjhopengl_scene STATIC
     compound_actor.cpp
     light.cpp              # 2026-06-11 E1 — DirLight/PointLight/SpotLight 컴포넌트 (object 에서 이주)
 )
+# 2026-06-24 — render-결합 팩토리(actor_factory/model_spawner)는 apps client(Bootstrap)로 이주.
+#   엔진에 두면 scene->render 역의존이 생기므로 클라이언트 거주로 단방향 유지.
 add_library(SJH::scene ALIAS sjhopengl_scene)
 
 target_include_directories(sjhopengl_scene

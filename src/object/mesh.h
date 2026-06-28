@@ -23,6 +23,7 @@
 
 #include "buffer/buffer.h"
 #include "common/common.h"
+#include "common/render_enums.h"
 #include "layout/vertex_layout.h"
 #include "object/vertex.h"
 #include "GL/gl3w.h"
@@ -46,10 +47,10 @@ namespace SJH
          * @brief 정점/인덱스 배열로 메시를 생성하고 GPU 에 업로드.
          * @param vertices      정점 배열 (position + normal + texCoord).
          * @param indices       인덱스 배열 (EBO 에 업로드).
-         * @param primitiveType 드로우 토폴로지 (@c GL_TRIANGLES / @c GL_LINES 등).
+         * @param topology      드로우 토폴로지 (@ref PrimitiveTopology - 현재 Triangles).
          * @return 생성된 메시 (@c unique_ptr). 실패 시 @c nullptr.
          */
-        static MeshUPtr Create(const std::vector<Vertex> &vertices, const std::vector<GLuint> &indices, GLuint primitiveType);
+        static MeshUPtr Create(const std::vector<Vertex> &vertices, const std::vector<GLuint> &indices, PrimitiveTopology topology);
 
         /// @brief 기본 박스(큐브) 메시 생성 - 6면 x 2삼각형, 정점 24개, 법선/UV 포함.
         static MeshUPtr CreateBox();
@@ -81,7 +82,7 @@ namespace SJH
 
     private:
         Mesh() = default;
-        void Init(const std::vector<Vertex> &vertices, const std::vector<GLuint> &indices, GLuint primitiveType);
+        void Init(const std::vector<Vertex> &vertices, const std::vector<GLuint> &indices, PrimitiveTopology topology);
 
         GLuint mPrimitiveType{GL_TRIANGLES}; ///< 드로우 토폴로지 (@c GL_TRIANGLES / @c GL_LINES 등)
         VertexLayoutUPtr mVertexLayout;      ///< VAO 소유 - 메시와 수명 결합

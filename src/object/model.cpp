@@ -138,7 +138,7 @@ namespace SJH
 
         // aiMesh -> MeshData 변환은 Geometry::FromAssimp 책임 (절차적 빌더와 동일한 출력 형식).
         auto data = Geometry::FromAssimp(mesh);
-        auto glMesh = Mesh::Create(data.vertices, data.indices, GL_TRIANGLES);
+        auto glMesh = Mesh::Create(data.vertices, data.indices, PrimitiveTopology::Triangles);
 
         Material *mat = nullptr;
         if (mesh->mMaterialIndex < mMaterials.size())

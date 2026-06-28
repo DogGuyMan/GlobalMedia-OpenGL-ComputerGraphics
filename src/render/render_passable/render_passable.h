@@ -21,6 +21,7 @@
  *       vtable 홈 TU 는 같은 폴더의 render_passable.cpp (header-only abstract ODR 보장).
  *       GL 격리: 이 헤더는 GL 헤더를 include 하지 않는다 (Texture/DeviceContext 전방선언만).
  */
+#include <string>
 #ifndef __SJH_I_PASSABLE_H__
 #define __SJH_I_PASSABLE_H__
 
@@ -45,6 +46,7 @@ namespace SJH
 	class IPassable
 	{
 	  public:
+		virtual std::string GetPassKey() const = 0;
 		virtual ~IPassable() = default;
 
 		/// @brief 매 프레임 호출 - GL facade 와 선행 Pass 결과 텍스처를 받아 자기 출력을 그린다.
@@ -62,6 +64,9 @@ namespace SJH
 
 		/// @brief 입력으로 삼을 선행 Pass 인덱스. -1=없음(scene raw). PassIterator 가 해석.
 		int BeforeIndex = -1;
+
+		/// @brief false 면 PassIterator 가 이 Pass 를 skip(동적 비활성, design B). 체인은 자동 재연결.
+		bool Enabled = true;
 	};
 } // namespace SJH
 

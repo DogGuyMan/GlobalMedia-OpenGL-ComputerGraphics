@@ -17,8 +17,6 @@
  *  ### 정통 매핑
  *  - Unity @c Material.SetFloat("_DissolveAmount", t) 를 Playable 로 래핑한 패턴.
  *
- * @note enableHit/enableDissolve 는 bool -> SetInt(Ints) 저장 후 draw 시점 UBO MaterialBlock 의
- *       int 멤버(@c UploadMaterialUboMembers)로 업로드 (Phase C - 구 PropertyBlockSetter GL_BOOL 경로 폐지).
  * @note dissolveTex 미주입 시 unit0(=atlas)를 fallback 사용 - 스프라이트 내용 의존 crude erode.
  *       반드시 @c SpriteDissolvePlayable 이 노이즈 텍스처를 주입해야 균일한 디졸브 보장.
  */

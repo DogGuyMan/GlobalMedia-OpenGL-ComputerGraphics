@@ -32,10 +32,71 @@
 
 #include "GL/gl3w.h"
 #include <cstddef>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace SJH::Diagnostics::GLValidate
 {
+    // ----------------------------------------------------------------------
+    // A3 (diagnostics-as-oracle) - 구조화 반환 타입 (additive)
+    // ----------------------------------------------------------------------
+
+    /// @brief @c CheckIndices 위반 1건의 분류 + 상세.
+    /// @details 순수 CPU - GL 무관. @c DiagResult 의 원소.
+    enum class IndexFindingKind
+    {
+        OutOfBounds, ///< 삼각형 인덱스가 @c vertexCount 초과.
+        Degenerate,  ///< 두 인덱스가 동일 (zero-area).
+        Duplicate,   ///< 정렬된 트리플이 이미 등장 (중복 삼각형).
+        NotMultipleOf3, ///< 인덱스 개수가 3 의 배수 아님 (삼각형 가정 위반).
+        Empty        ///< 인덱스 vector 가 비어 있음.
+    };
+
+    /// @brief @c CheckIndices 위반 1건 - 분류 + 사람이 읽는 상세 문자열.
+    struct DiagFinding
+    {
+        IndexFindingKind kind;   ///< 위반 분류.
+        std::string      detail; ///< 상세 (예: "triangle 5 OOB: (0, 1, 99) vs vertexCount=3").
+    };
+
+    /// @brief @c CheckIndices 의 구조화 결과 - 발견된 위반 목록 + 편의 질의.
+    /// @details 기존 @c size_t 반환은 wrapper 로 보존 (호출처 무수정). 순수 CPU.
+    struct DiagResult
+    {
+        std::vector<DiagFinding> findings; ///< 발견된 위반 (빈 벡터 = clean).
+
+        /// @brief 위반 개수.
+        size_t Count() const { return findings.size(); }
+        /// @brief 위반이 하나도 없으면 @c true.
+        bool   Clean() const { return findings.empty(); }
+    };
+
+    /// @brief InfoLog 텍스트의 심각도 분류 (A3 - @c containsBad 람다 로직 추출).
+    /// @details 순수 CPU - 대소문자 무시 'error'/'warning' 키워드 판정 (현 동작 그대로).
+    enum class InfoLogSeverity
+    {
+        Clean,   ///< 'error'/'warning' 키워드 없음 (또는 빈 로그).
+        Warning, ///< 'warning' 만 포함.
+        Error    ///< 'error' 포함 (warning 동반 여부 무관 - error 가 우선).
+    };
+
+    /// @brief 프로그램 링크 결과의 구조화 반환 (A3 - @c CheckProgramLink 승격 변형).
+    /// @details @c glGetProgramInfoLog 수집은 GL 이지만 *분류*는 @c ClassifyInfoLog 재사용.
+    struct LinkReport
+    {
+        bool        ok{false};       ///< @c GL_LINK_STATUS 성공 여부.
+        std::string infoLog;         ///< 수집된 program InfoLog (비어 있을 수 있음).
+        bool        hasError{false}; ///< InfoLog 가 'error' 키워드 포함 (@c ClassifyInfoLog == Error).
+    };
+
+    /// @brief InfoLog 문자열을 심각도로 분류 (순수 CPU, GL 무관).
+    /// @details @c gl_validate.cpp 의 @c containsBad 람다 와 동일 로직 - 대소문자 무시
+    ///          'error'/'warning' 부분 문자열 판정. 'error' 가 'warning' 보다 우선.
+    /// @param log 분류할 InfoLog 텍스트.
+    /// @return @c Clean / @c Warning / @c Error.
+    InfoLogSeverity ClassifyInfoLog(std::string_view log);
+
     /// @brief **Cat A** - CPU 측 EBO 인덱스 OOB / degenerate / 중복 삼각형 검사.
     /// @details GL context 불필요 - 순수 CPU 검사. 삼각형 단위(3 인덱스마다) 순회.
     ///          OOB(@p vertexCount 초과) / degenerate(두 인덱스 동일) / 중복(정렬된 트리플 집합) 탐지.
@@ -43,9 +104,21 @@ namespace SJH::Diagnostics::GLValidate
     /// @param vertexCount VBO 에 들어 있는 정점 개수.
     /// @param tag         로그 식별자 (예: 메시 이름).
     /// @return 발견된 위반 개수 (0 = clean).
+    /// @note A3 - 구조화 결과는 @c CheckIndicesDetailed 사용. 본 함수는 그 wrapper (동작 보존).
     size_t CheckIndices(const std::vector<uint32_t>& indices,
                         size_t vertexCount,
                         const char* tag);
+
+    /// @brief **Cat A (구조화)** - @c CheckIndices 의 구조화 반환 변형 (A3, additive).
+    /// @details 동일 검사를 수행하되 위반을 @c DiagResult 로 수집해 반환. 로그 출력은 동일.
+    ///          순수 CPU - 입력은 @p indices / @p vertexCount 뿐.
+    /// @param indices     EBO 에 업로드된 인덱스 vector (CPU 측 원본).
+    /// @param vertexCount VBO 에 들어 있는 정점 개수.
+    /// @param tag         로그 식별자 (예: 메시 이름).
+    /// @return 발견된 위반을 담은 @c DiagResult (@c Clean() == true 면 위반 없음).
+    DiagResult CheckIndicesDetailed(const std::vector<uint32_t>& indices,
+                                    size_t vertexCount,
+                                    const char* tag);
 
     /// @brief **Cat B** - VS active attribute <-> 현재 VAO enabled attribute layout 정합.
     /// @details @c glGetActiveAttrib + @c glGetAttribLocation 으로 VS 선언 attribute 를 열거한 뒤
@@ -87,6 +160,14 @@ namespace SJH::Diagnostics::GLValidate
     /// @param program 검사 대상 GL 프로그램 핸들.
     /// @param tag     로그 식별자.
     void DumpShaderInfoLogs(GLuint program, const char* tag);
+
+    /// @brief **Cat F (구조화)** - program 링크 결과를 @c LinkReport 로 수집 (A3, additive).
+    /// @details @c GLObjectLog::CheckProgramLink 의 bool 반환은 보존. 본 함수는 @c GL_LINK_STATUS +
+    ///          @c glGetProgramInfoLog 를 수집해 구조화 반환하며, 분류는 @c ClassifyInfoLog 재사용.
+    ///          로그 *수집*만 GL, 분류는 순수 CPU. (셰이더 링크 검증 테스트 C-1 이 소비.)
+    /// @param program 검사 대상 GL 프로그램 핸들.
+    /// @return @c ok / @c infoLog / @c hasError 가 채워진 @c LinkReport.
+    LinkReport CheckProgramLinkReport(GLuint program);
 
     /// @brief **Cat G** - 현재 GL viewport 가 기대 렌더 타깃 크기와 일치하는지 검사.
     /// @details HiDPI/Retina 에서 viewport 를 *논리* 픽셀 크기로 잘못 잡거나,

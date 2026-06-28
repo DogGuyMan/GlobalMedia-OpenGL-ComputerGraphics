@@ -56,7 +56,8 @@ namespace SJH
         /**
          * @brief 셰이더 벡터를 받아 프로그램 생성 + attach + link 일괄 수행.
          * @param shaders 링크할 셰이더 (vertex / fragment 등 - 보통 2~3개). @c ShaderPtr (shared) 사용.
-         * @return 성공 시 @c ProgramUPtr (uniform 캐시 빌드 완료 상태), 링크 실패 시 @c nullptr.
+         * @return 성공 시 @c ProgramUPtr (uniform 캐시 빌드 완료 상태). 링크 실패 시 @b fail-fast
+         *         (Debug @c std::abort / Release @c std::runtime_error throw) - silent nullptr 미반환.
          * @note 링크 에러 로그는 @c Diagnostics::GLObjectLog::CheckProgramLink 가 출력.
          * @see Shader::CreateFromFile
          */
@@ -66,7 +67,8 @@ namespace SJH
          * @brief VS/FS 파일 경로 2개로부터 직접 Program 생성하는 편의 팩토리.
          * @param vertShaderFilename 정점 셰이더 GLSL 파일 경로 (예: @c "resources/shaders/lighting.vert").
          * @param fragShaderFilename 프래그먼트 셰이더 GLSL 파일 경로.
-         * @return 두 셰이더 컴파일 + 프로그램 link 모두 성공 시 @c ProgramUPtr, 실패 시 @c nullptr.
+         * @return 두 셰이더 컴파일 + 프로그램 link 모두 성공 시 @c ProgramUPtr. 실패 시 @b fail-fast
+         *         (Shader::CreateFromFile / Create 가 abort/throw) - silent nullptr 미반환.
          * @details 내부적으로 @c Shader::CreateFromFile 2회 호출 후 @c Create 에 위임.
          *          호출자가 @c Shader 인스턴스를 따로 보관할 필요 없을 때 사용 (대부분의 경우).
          * @see Create, Shader::CreateFromFile
