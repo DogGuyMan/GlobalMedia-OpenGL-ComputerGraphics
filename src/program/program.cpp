@@ -24,9 +24,32 @@
 #include <cctype>      // Phase 2 T3 - NormalizeBlockName 의 isdigit 판정.
 #include <cstdio>      // Phase 2 T3 - UBO 생성 실패 시 stderr 출력 (fail-fast 로그).
 #include <cstdlib>     // Phase 2 T3 - std::abort (UBO 생성 실패 정통 fail-fast).
+#include <stdexcept>   // F-2 fail-fast - Release 빌드 std::runtime_error.
+#include <string>      // F-2 fail-fast - 실패 메시지 조립.
 #include <type_traits>
 #include <utility>     // Phase 2 T3 - std::move (UniformBlock 보관).
 #include <vector>      // Phase 2 T3 - BuildUniformBlocks 의 이름 버퍼.
+
+namespace
+{
+    /// @brief F-2 프로그램 링크 실패 = fail-fast (silent nullptr 금지).
+    /// @details 정책: Debug(NDEBUG 미정의) = 메시지 출력 후 abort, Release = runtime_error throw.
+    ///          이미 BuildUniformBlocks 의 UBO 생성 실패가 동일 패턴(abort) - link 실패도 통일.
+    ///          진단 로그(CheckProgramLink)는 이미 출력된 상태 - 여기선 tag 를 한 번 더 명시.
+    /// @param what 프로그램 식별자 (예: "vs=foo.vert fs=foo.frag").
+    [[noreturn]] void FailFastProgram(const std::string& what)
+    {
+        const std::string msg =
+            "[SJH::Program] 프로그램 링크 실패 (fail-fast): " + what
+            + " - 상세 InfoLog 는 직전 진단 로그 참조.";
+#ifndef NDEBUG
+        std::fprintf(stderr, "%s\n", msg.c_str());
+        std::abort();
+#else
+        throw std::runtime_error(msg);
+#endif
+    }
+}
 
 // SP1 - RAII 의미론 컴파일 타임 검증.
 // glDeleteProgram 이중 호출 위험 차단 - 명시적 = delete 가 필요.
@@ -49,7 +72,7 @@ namespace SJH
     {
         auto program = ProgramUPtr(new Program());
         if (!program->TryLink(shaders))
-            return nullptr;
+            FailFastProgram("Program::Create (셰이더 " + std::to_string(shaders.size()) + "개)"); // F-2
 
         // Phase 2 T3 - Slang UBO 블록 introspection + UBO 객체 생성 (비-UBO 셰이더는 빈 벡터).
         //   Phase C (D-DPP-5) - 구 UniformCache eager build 제거. sampler location 은 GetLocation(live).
@@ -60,10 +83,9 @@ namespace SJH
     ProgramUPtr Program::CreateWithVSFS(const std::string &vertShaderFilename,
                                         const std::string &fragShaderFilename)
     {
+        // CreateFromFile 은 컴파일/로드 실패 시 fail-fast(noreturn) - 여기 도달하면 vs/fs 는 항상 유효.
         ShaderPtr vs = Shader::CreateFromFile(vertShaderFilename, GL_VERTEX_SHADER);
         ShaderPtr fs = Shader::CreateFromFile(fragShaderFilename, GL_FRAGMENT_SHADER);
-        if (!vs || !fs)
-            return nullptr;
         return Create({vs, fs});
     }
 

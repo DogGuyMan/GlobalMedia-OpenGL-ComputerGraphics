@@ -22,12 +22,13 @@ sjh_add_test(test_input SJH::input)
 sjh_add_test(test_multiple_timer SJH::timer)
 sjh_add_test(test_material SJH::material)
 sjh_add_test(test_text SJH::text)
+sjh_add_test(test_diagnostics_cpu SJH::diagnostics)
 
 # 우산 타겟 - `cmake --build --preset ninja --target tests` 로 전체 일괄 빌드.
 add_custom_target(tests DEPENDS
     test_timer test_transform test_light test_sprite_uvrect test_fsm
     test_scene test_playable test_input test_multiple_timer
-    test_material test_text)
+    test_material test_text test_diagnostics_cpu)
 
 # test_smoke 는 소스 정착 시에만 (현재 디렉토리 미존재 — 부재해도 빌드 진행)
 if(EXISTS ${CMAKE_SOURCE_DIR}/smoke/CMakeLists.txt)

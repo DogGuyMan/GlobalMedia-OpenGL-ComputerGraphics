@@ -171,6 +171,119 @@ namespace SJH::Diagnostics
         return out;
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // A3 - DiffStates (순수 CPU diff). GL 무관 - 두 POD 멤버별 비교.
+    // ─────────────────────────────────────────────────────────────────────
+    namespace
+    {
+        /// enum 값 -> SymbolicName 문자열 (thread_local 버퍼라 즉시 복사).
+        std::string EnumStr(GLenum e) { return std::string(SymbolicName(e)); }
+        /// 핸들/정수 -> raw 문자열 (FieldsToString 비대칭 정책 답습).
+        std::string RawStr(long long v) { return std::to_string(v); }
+        std::string BoolStr(bool b) { return b ? "true" : "false"; }
+
+        /// 한 필드를 비교해 다르면 changes 에 push. (enum 표기)
+        void DiffEnum(std::vector<FieldChange>& changes, const char* field,
+                      GLenum b, GLenum a, char category)
+        {
+            if (b != a)
+                changes.push_back({field, EnumStr(b), EnumStr(a), category});
+        }
+        /// 한 필드를 비교해 다르면 changes 에 push. (raw 정수 표기)
+        void DiffRaw(std::vector<FieldChange>& changes, const char* field,
+                     long long b, long long a, char category)
+        {
+            if (b != a)
+                changes.push_back({field, RawStr(b), RawStr(a), category});
+        }
+        /// 한 필드를 비교해 다르면 changes 에 push. (bool 표기)
+        void DiffBool(std::vector<FieldChange>& changes, const char* field,
+                      bool b, bool a, char category)
+        {
+            if (b != a)
+                changes.push_back({field, BoolStr(b), BoolStr(a), category});
+        }
+    }
+
+    std::vector<FieldChange> DiffStates(const GLStateFields& before, const GLStateFields& after)
+    {
+        std::vector<FieldChange> changes;
+
+        // -- 바인딩 (카테고리 B) - 핸들은 raw 표기 --------------------------
+        DiffRaw(changes, "vao",            before.vao,            after.vao,            'B');
+        DiffRaw(changes, "program",        before.program,        after.program,        'B');
+        DiffRaw(changes, "array_buffer",   before.array_buffer,   after.array_buffer,   'B');
+        DiffRaw(changes, "element_buffer", before.element_buffer, after.element_buffer, 'B');
+        DiffRaw(changes, "draw_fbo",       before.draw_fbo,       after.draw_fbo,       'B');
+        DiffRaw(changes, "read_fbo",       before.read_fbo,       after.read_fbo,       'B');
+
+        // -- 텍스처 (카테고리 B - 바인딩 계열) -------------------------------
+        DiffEnum(changes, "active_texture", before.active_texture, after.active_texture, 'B');
+        for (int i = 0; i < 16; ++i)
+        {
+            if (before.texture_2d_per_unit[i] != after.texture_2d_per_unit[i])
+                changes.push_back({fmt::format("texture_2d_per_unit[{}]", i),
+                                   RawStr(before.texture_2d_per_unit[i]),
+                                   RawStr(after.texture_2d_per_unit[i]), 'B'});
+        }
+
+        // -- viewport (카테고리 D - 렌더 타깃 상태) --------------------------
+        for (int i = 0; i < 4; ++i)
+        {
+            if (before.viewport[i] != after.viewport[i])
+                changes.push_back({fmt::format("viewport[{}]", i),
+                                   RawStr(before.viewport[i]),
+                                   RawStr(after.viewport[i]), 'D'});
+        }
+
+        // -- 픽셀 파이프라인 (카테고리 D) ------------------------------------
+        DiffBool(changes, "depth_test_enabled", before.depth_test_enabled, after.depth_test_enabled, 'D');
+        DiffEnum(changes, "depth_func",         before.depth_func,         after.depth_func,         'D');
+        DiffBool(changes, "depth_write_mask",   before.depth_write_mask,   after.depth_write_mask,   'D');
+
+        DiffBool(changes, "blend_enabled", before.blend_enabled, after.blend_enabled, 'D');
+        DiffEnum(changes, "blend_src_rgb", before.blend_src_rgb, after.blend_src_rgb, 'D');
+        DiffEnum(changes, "blend_dst_rgb", before.blend_dst_rgb, after.blend_dst_rgb, 'D');
+
+        DiffBool(changes, "cull_face_enabled", before.cull_face_enabled, after.cull_face_enabled, 'D');
+        DiffEnum(changes, "cull_face_mode",    before.cull_face_mode,    after.cull_face_mode,    'D');
+        DiffEnum(changes, "front_face",        before.front_face,        after.front_face,        'D');
+
+        for (int i = 0; i < 4; ++i)
+        {
+            if (before.color_write_mask[i] != after.color_write_mask[i])
+                changes.push_back({fmt::format("color_write_mask[{}]", i),
+                                   BoolStr(before.color_write_mask[i]),
+                                   BoolStr(after.color_write_mask[i]), 'D'});
+        }
+        for (int i = 0; i < 4; ++i)
+        {
+            if (before.clear_color[i] != after.clear_color[i])
+                changes.push_back({fmt::format("clear_color[{}]", i),
+                                   fmt::format("{:.3f}", before.clear_color[i]),
+                                   fmt::format("{:.3f}", after.clear_color[i]), 'D'});
+        }
+
+        // -- vertex attribute layouts (카테고리 C) --------------------------
+        for (size_t i = 0; i < before.attribute_layouts.size(); ++i)
+        {
+            const auto& bl = before.attribute_layouts[i];
+            const auto& al = after.attribute_layouts[i];
+            if (bl == al) continue;
+
+            const std::string p = fmt::format("attribute_layouts[{}]", i);
+            DiffBool(changes, fmt::format("{}.enabled", p).c_str(), bl.enabled, al.enabled, 'C');
+            DiffRaw(changes,  fmt::format("{}.size", p).c_str(),    bl.size,    al.size,    'C');
+            DiffEnum(changes, fmt::format("{}.type", p).c_str(),    bl.type,    al.type,    'C');
+            DiffBool(changes, fmt::format("{}.normalized", p).c_str(), bl.normalized, al.normalized, 'C');
+            DiffRaw(changes,  fmt::format("{}.stride", p).c_str(),  bl.stride,  al.stride,  'C');
+            DiffRaw(changes,  fmt::format("{}.buffer_binding", p).c_str(),
+                    bl.buffer_binding, al.buffer_binding, 'C');
+        }
+
+        return changes;
+    }
+
     namespace
     {
         /// 단일 attribute slot의 layout을 query.

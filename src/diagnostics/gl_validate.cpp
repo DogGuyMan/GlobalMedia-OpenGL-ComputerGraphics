@@ -18,7 +18,9 @@
 #include "diagnostics/gl_validate.h"
 
 #include <spdlog/spdlog.h>
+#include <spdlog/fmt/fmt.h>
 #include <algorithm>
+#include <cctype>
 #include <set>
 #include <string>
 #include <string_view>
@@ -81,23 +83,43 @@ namespace SJH::Diagnostics::GLValidate
     }
 
     // ----------------------------------------------------------------------
-    // Cat A - CheckIndices (CPU only)
+    // A3 - ClassifyInfoLog (CPU only, containsBad 람다 로직 추출)
     // ----------------------------------------------------------------------
-    size_t CheckIndices(const std::vector<uint32_t>& indices, size_t vertexCount,
-                        const char* tag)
+    InfoLogSeverity ClassifyInfoLog(std::string_view log)
     {
-        size_t violations = 0;
+        // 대소문자 무시 부분 문자열 판정 - DumpShaderInfoLogs 의 containsBad 와 동일 로직.
+        std::string lower(log);
+        std::transform(lower.begin(), lower.end(), lower.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        const bool hasError   = lower.find("error")   != std::string::npos;
+        const bool hasWarning = lower.find("warning") != std::string::npos;
+
+        if (hasError)   return InfoLogSeverity::Error;   // error 가 warning 보다 우선.
+        if (hasWarning) return InfoLogSeverity::Warning;
+        return InfoLogSeverity::Clean;
+    }
+
+    // ----------------------------------------------------------------------
+    // Cat A - CheckIndicesDetailed (CPU only, 구조화 반환) + wrapper
+    // ----------------------------------------------------------------------
+    DiagResult CheckIndicesDetailed(const std::vector<uint32_t>& indices, size_t vertexCount,
+                                    const char* tag)
+    {
+        DiagResult result;
 
         if (indices.empty())
         {
             spdlog::warn("[GLValidate/{}/Cat A] indices empty", tag);
-            return 1;
+            result.findings.push_back({IndexFindingKind::Empty, "indices empty"});
+            return result;
         }
         if (indices.size() % 3 != 0)
         {
             spdlog::warn("[GLValidate/{}/Cat A] indices.size() {} not multiple of 3 (assumes triangles)",
                          tag, indices.size());
-            ++violations;
+            result.findings.push_back({IndexFindingKind::NotMultipleOf3,
+                                       fmt::format("indices.size() {} not multiple of 3", indices.size())});
         }
 
         // OOB + degenerate
@@ -114,7 +136,8 @@ namespace SJH::Diagnostics::GLValidate
             {
                 spdlog::warn("[GLValidate/{}/Cat A] triangle {} OOB: ({}, {}, {}) vs vertexCount={}",
                              tag, t, a, b, c, vertexCount);
-                ++violations;
+                result.findings.push_back({IndexFindingKind::OutOfBounds,
+                    fmt::format("triangle {} OOB: ({}, {}, {}) vs vertexCount={}", t, a, b, c, vertexCount)});
                 continue;
             }
 
@@ -123,7 +146,8 @@ namespace SJH::Diagnostics::GLValidate
             {
                 spdlog::warn("[GLValidate/{}/Cat A] triangle {} degenerate: ({}, {}, {})",
                              tag, t, a, b, c);
-                ++violations;
+                result.findings.push_back({IndexFindingKind::Degenerate,
+                    fmt::format("triangle {} degenerate: ({}, {}, {})", t, a, b, c)});
                 continue;
             }
 
@@ -137,10 +161,19 @@ namespace SJH::Diagnostics::GLValidate
             {
                 spdlog::warn("[GLValidate/{}/Cat A] triangle {} duplicate: ({}, {}, {})",
                              tag, t, a, b, c);
-                ++violations;
+                result.findings.push_back({IndexFindingKind::Duplicate,
+                    fmt::format("triangle {} duplicate: ({}, {}, {})", t, a, b, c)});
             }
         }
-        return violations;
+        return result;
+    }
+
+    /// @copydoc CheckIndices
+    size_t CheckIndices(const std::vector<uint32_t>& indices, size_t vertexCount,
+                        const char* tag)
+    {
+        // A3 - 구조화 결과로 위임 후 개수만 반환 (기존 size_t 계약 보존).
+        return CheckIndicesDetailed(indices, vertexCount, tag).Count();
     }
 
     // ----------------------------------------------------------------------
@@ -191,13 +224,9 @@ namespace SJH::Diagnostics::GLValidate
             glGetAttachedShaders(program, shaderCount, nullptr, shaders.data());
         }
 
+        // A3 - 키워드 판정을 ClassifyInfoLog 자유함수로 일원화 (구 containsBad 람다 대체).
         auto containsBad = [](std::string_view s) {
-            // "error", "warning" 키워드 (대소문자 무시)
-            auto lower = std::string(s);
-            std::transform(lower.begin(), lower.end(), lower.begin(),
-                           [](unsigned char c) { return std::tolower(c); });
-            return lower.find("error") != std::string::npos
-                || lower.find("warning") != std::string::npos;
+            return ClassifyInfoLog(s) != InfoLogSeverity::Clean;
         };
 
         for (GLuint sh : shaders)
@@ -225,6 +254,37 @@ namespace SJH::Diagnostics::GLValidate
             else
                 spdlog::info("[GLValidate/{}/Cat F] program {} info log:\n{}", tag, program, log);
         }
+    }
+
+    // ----------------------------------------------------------------------
+    // A3 - CheckProgramLinkReport (GL 수집 + ClassifyInfoLog 분류, 구조화 반환)
+    // ----------------------------------------------------------------------
+    LinkReport CheckProgramLinkReport(GLuint program)
+    {
+        LinkReport report;
+
+        if (program == 0)
+            return report;   // ok=false, 빈 로그, hasError=false.
+
+        GLint linkStatus = 0;
+        glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+        report.ok = (linkStatus == GL_TRUE);
+
+        // program InfoLog 수집 (로그 수집만 GL, 분류는 CPU).
+        GLint plogLen = 0;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &plogLen);
+        if (plogLen > 1)
+        {
+            std::string log(static_cast<size_t>(plogLen), '\0');
+            glGetProgramInfoLog(program, plogLen, nullptr, log.data());
+            // 끝의 null 패딩 정리.
+            if (!log.empty() && log.back() == '\0')
+                log.pop_back();
+            report.infoLog = std::move(log);
+        }
+
+        report.hasError = (ClassifyInfoLog(report.infoLog) == InfoLogSeverity::Error);
+        return report;
     }
 
     // ----------------------------------------------------------------------

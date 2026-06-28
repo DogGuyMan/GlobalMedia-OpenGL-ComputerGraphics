@@ -17,9 +17,33 @@
  */
 #include "shader/shader.h"
 #include "diagnostics/gl_log.h"
+#include <cstdio>       // F-2 fail-fast - 실패 메시지 stderr 출력.
+#include <cstdlib>      // F-2 fail-fast - Debug 빌드 std::abort.
 #include <memory>
 #include <shader.h>     // sb7::shader::load - 파일 -> GLuint, sb7code 제공
+#include <stdexcept>    // F-2 fail-fast - Release 빌드 std::runtime_error.
+#include <string>
 #include <type_traits>
+
+namespace
+{
+    /// @brief F-2 셰이더 컴파일 실패 = fail-fast (silent nullptr 금지).
+    /// @details 정책: Debug(NDEBUG 미정의) = 메시지 출력 후 abort, Release = runtime_error throw.
+    ///          진단 로그(CheckShaderCompile)는 이미 출력된 상태 - 여기선 경로/tag 를 한 번 더 명시.
+    /// @param what      셰이더 식별자 (파일 경로 또는 "<inline source>").
+    [[noreturn]] void FailFastShader(const std::string& what)
+    {
+        const std::string msg =
+            "[SJH::Shader] 셰이더 컴파일 실패 (fail-fast): " + what
+            + " - 상세 InfoLog 는 직전 진단 로그 참조.";
+#ifndef NDEBUG
+        std::fprintf(stderr, "%s\n", msg.c_str());
+        std::abort();
+#else
+        throw std::runtime_error(msg);
+#endif
+    }
+}
 
 // SP1 - RAII 의미론 컴파일 타임 검증. glDeleteShader 이중 호출 위험 차단.
 static_assert(!std::is_copy_constructible_v<SJH::Shader>,
@@ -38,7 +62,7 @@ namespace SJH
         // private 생성자도 클래스 자신의 static 멤버에서는 호출 가능 - 팩토리 패턴의 핵심
         auto shader = std::unique_ptr<Shader>(new Shader());
         if (!shader->TryLoadFile(filename, shader_type))
-            return nullptr;
+            FailFastShader(filename);   // F-2 - silent nullptr 대신 hard-fail.
         return shader;
     }
 
@@ -55,7 +79,7 @@ namespace SJH
 
         // 인라인 소스라 파일 경로 tag 없음 - 진단은 빈 tag 로 호출 (default 메시지).
         if (!Diagnostics::GLObjectLog::CheckShaderCompile(shader->mShaderAddr, ""))
-            return nullptr;
+            FailFastShader("<inline source>");   // F-2 - silent nullptr 대신 hard-fail.
         return shader;
     }
 
