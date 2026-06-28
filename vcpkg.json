@@ -12,7 +12,8 @@
         "stb",
         "catch2",
         "nlohmann-json",
-        "imgui"
+        "imgui",
+        { "name": "opencv4", "default-features": false, "features": ["png"] }
     ],
     "overrides": [
         { "name": "box2d", "version": "2.4.1" },
