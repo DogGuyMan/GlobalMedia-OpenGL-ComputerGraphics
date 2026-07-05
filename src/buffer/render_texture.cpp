@@ -1,6 +1,6 @@
 /**
- * @file framebuffer.cpp
- * @brief Framebuffer factory/Init 변형/소멸자/Bind/Resize 구현.
+ * @file render_texture.cpp
+ * @brief RenderTexture factory/Init 변형/소멸자/Bind/Resize 구현.
  *
  * @details
  *  ### 책임
@@ -17,37 +17,37 @@
  *  ### 비-책임
  *  - [X] 텍스처 소멸 - @c mColorAttachment/@c mDepthAttachment 는 @c shared_ptr, 소멸은 마지막 holder 책임.
  */
-#include "framebuffer.h"
+#include "render_texture.h"
 #include <spdlog/spdlog.h>
 
 namespace SJH
 {
 
-    FramebufferUPtr Framebuffer::Create(const TexturePtr colorAttachment)
+    RenderTextureUPtr RenderTexture::Create(const TexturePtr colorAttachment)
     {
-        auto framebuffer = FramebufferUPtr(new Framebuffer());
+        auto framebuffer = RenderTextureUPtr(new RenderTexture());
         if (!framebuffer->InitWithColorAttachment(colorAttachment))
             return nullptr;
         return framebuffer;
     }
 
-    FramebufferUPtr Framebuffer::Create(int width, int height)
+    RenderTextureUPtr RenderTexture::Create(int width, int height)
     {
-        auto framebuffer = FramebufferUPtr(new Framebuffer());
+        auto framebuffer = RenderTextureUPtr(new RenderTexture());
         if (!framebuffer->InitWithSize(width, height))
             return nullptr;
         return framebuffer;
     }
 
-    FramebufferUPtr Framebuffer::CreateWithDepthTexture(int width, int height)
+    RenderTextureUPtr RenderTexture::CreateWithDepthTexture(int width, int height)
     {
-        auto framebuffer = FramebufferUPtr(new Framebuffer());
+        auto framebuffer = RenderTextureUPtr(new RenderTexture());
         if (!framebuffer->InitWithSizeAndDepthTexture(width, height))
             return nullptr;
         return framebuffer;
     }
 
-    Framebuffer::~Framebuffer()
+    RenderTexture::~RenderTexture()
     {
         if (mRBODepthStencilBuffer)
         {
@@ -59,12 +59,12 @@ namespace SJH
         }
     }
 
-    void Framebuffer::BindToDefault()
+    void RenderTexture::BindToDefault()
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    void Framebuffer::Bind()
+    void RenderTexture::Bind()
     {
         // RenderTarget contract - glBindFramebuffer + glViewport. SP4 멀티패스에서
         // DeviceContext::BeginFrame(target&) 이 default backbuffer 와 FBO 둘 다 동일 코드로 처리.
@@ -72,7 +72,7 @@ namespace SJH
         glViewport(0, 0, GetWidth(), GetHeight());
     }
 
-    void Framebuffer::Resize(int width, int height)
+    void RenderTexture::Resize(int width, int height)
     {
         // color 어태치먼트 - 같은 텍스처 핸들로 in-place 재할당 (Texture::Resize).
         if (mColorAttachment)
@@ -96,23 +96,23 @@ namespace SJH
         glBindFramebuffer(GL_FRAMEBUFFER, mFBOFramebuffer);
         auto result = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (result != GL_FRAMEBUFFER_COMPLETE)
-            spdlog::error("Framebuffer::Resize 실패 {}x{}: {}", width, height, result);
+            spdlog::error("RenderTexture::Resize 실패 {}x{}: {}", width, height, result);
         BindToDefault();
     }
 
-    int Framebuffer::GetWidth() const {
+    int RenderTexture::GetWidth() const {
 	if (mColorAttachment)
 		return mColorAttachment->GetWidth();
 	return 0;
     }
 
-    int Framebuffer::GetHeight() const {
+    int RenderTexture::GetHeight() const {
 	if (mColorAttachment)
 		return mColorAttachment->GetHeight();
 	return 0;
     }
 
-    bool Framebuffer::InitWithColorAttachment(const TexturePtr colorAttachment)
+    bool RenderTexture::InitWithColorAttachment(const TexturePtr colorAttachment)
     {
         mColorAttachment = colorAttachment;
         glGenFramebuffers(1, &mFBOFramebuffer);
@@ -144,26 +144,26 @@ namespace SJH
         return true;
     }
 
-    bool Framebuffer::InitWithSize(int width, int height)
+    bool RenderTexture::InitWithSize(int width, int height)
     {
         // 내부 RGBA8 텍스처 생성 - Texture::Create(w,h,format) 가 TextureUPtr 반환 ->
         // shared_ptr 로 transfer (unique->shared move 변환). 이후 mColorAttachment 공유 소유.
         auto textureU = Texture::Create(width, height, GL_RGBA);
         if (!textureU)
         {
-            spdlog::error("Framebuffer::Create(w,h): 내부 텍스처 생성 실패 - {}x{}", width, height);
+            spdlog::error("RenderTexture::Create(w,h): 내부 텍스처 생성 실패 - {}x{}", width, height);
             return false;
         }
         return InitWithColorAttachment(TexturePtr(std::move(textureU)));
     }
 
-    bool Framebuffer::InitWithSizeAndDepthTexture(int width, int height)
+    bool RenderTexture::InitWithSizeAndDepthTexture(int width, int height)
     {
         // 색 RGBA8 텍스처 (기존 3-arg) - GL_COLOR_ATTACHMENT0.
         auto colorU = Texture::Create(width, height, GL_RGBA);
         if (!colorU)
         {
-            spdlog::error("Framebuffer::CreateWithDepthTexture: color 텍스처 생성 실패 - {}x{}", width, height);
+            spdlog::error("RenderTexture::CreateWithDepthTexture: color 텍스처 생성 실패 - {}x{}", width, height);
             return false;
         }
         mColorAttachment = TexturePtr(std::move(colorU));
@@ -173,7 +173,7 @@ namespace SJH
                                       GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8);
         if (!depthU)
         {
-            spdlog::error("Framebuffer::CreateWithDepthTexture: depth 텍스처 생성 실패 - {}x{}", width, height);
+            spdlog::error("RenderTexture::CreateWithDepthTexture: depth 텍스처 생성 실패 - {}x{}", width, height);
             return false;
         }
         mDepthAttachment = TexturePtr(std::move(depthU));
@@ -189,7 +189,7 @@ namespace SJH
         auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (status != GL_FRAMEBUFFER_COMPLETE)
         {
-            spdlog::error("Framebuffer::CreateWithDepthTexture: incomplete - {}", status);
+            spdlog::error("RenderTexture::CreateWithDepthTexture: incomplete - {}", status);
             return false;
         }
 

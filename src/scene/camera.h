@@ -140,7 +140,7 @@ namespace SJH::Scene
 		// -- SP4 multi-pass -----------------------------------------------------
 		/// @brief 렌더 대상 지정 - Unity @c Camera.targetTexture 정통. 의존 역전 - @c RenderTarget 추상.
 		/// @details nullptr = default backbuffer. @c SceneRenderer 가 BeginFrame 시 자동 사용.
-		///          @c Framebuffer(FBO) / @c DefaultRenderTarget / 미래 ShadowMap/MRT 등 모두 수용.
+		///          @c RenderTexture(FBO) / @c DefaultRenderTarget / 미래 ShadowMap/MRT 등 모두 수용.
 		/// @param rt 비소유 포인터 - owner 는 App/Chapter.
 		void SetTargetRenderTarget(RenderTarget *rt)
 		{

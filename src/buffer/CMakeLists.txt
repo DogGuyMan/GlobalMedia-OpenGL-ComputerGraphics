@@ -1,6 +1,6 @@
 add_library(sjhopengl_buffer STATIC
     buffer.cpp
-    framebuffer.cpp
+    render_texture.cpp
     render_target.cpp           # 2026-06-11 E4 — RenderTarget/DefaultRenderTarget (render 에서 이주). vtable home TU.
 )
 add_library(SJH::buffer ALIAS sjhopengl_buffer)
@@ -11,11 +11,11 @@ target_include_directories(sjhopengl_buffer
 )
 
 # 2026-06-11 E4 — RenderTarget 이 buffer 로 이주해 SJH::render 역의존 제거 (buffer -> render 절단).
-# framebuffer.h 는 이제 같은 모듈의 render_target.h 만 참조.
+# render_texture.h 는 이제 같은 모듈의 render_target.h 만 참조.
 target_link_libraries(sjhopengl_buffer
     PUBLIC  SJH::common
             SJH::program
-            SJH::texture              # 2026-06-11 E3 — framebuffer.h : TexturePtr / Texture (rr 에서 texture 하위추출)
+            SJH::texture              # 2026-06-11 E3 — render_texture.h : TexturePtr / Texture (rr 에서 texture 하위추출)
             project_deps
     PRIVATE SJH::diagnostics
 )

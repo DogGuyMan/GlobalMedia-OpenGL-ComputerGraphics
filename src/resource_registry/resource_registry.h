@@ -1,11 +1,11 @@
 /**
  * @file resource_registry.h
- * @brief Texture / Material / Model / Program / Mesh / Framebuffer / UniformAtlas / Sound / Effect
+ * @brief Texture / Material / Model / Program / Mesh / RenderTexture / UniformAtlas / Sound / Effect
  *        자원의 lifecycle 중앙 관리 - 이름 키 캐시 + 일괄 해제 + 싱글톤 접근.
  *
  * @details
  *  ### 책임
- *  - 9종 자원(Texture/Material/Model/Program/Mesh/Framebuffer/UniformAtlas/Sound/Effect)을
+ *  - 9종 자원(Texture/Material/Model/Program/Mesh/RenderTexture/UniformAtlas/Sound/Effect)을
  *    *논리 이름 키* 로 캐시하고, 매니저 소멸 시 일괄 해제.
  *  - M5(2026-05-26) 부터 @c game_deps PUBLIC link - @c SJH::engine 우산으로 FMOD/Effekseer 자동 합류.
  *
@@ -29,7 +29,7 @@
 #ifndef __SJH_RESOURCE_REGISTRY_H__
 #define __SJH_RESOURCE_REGISTRY_H__
 
-#include "buffer/framebuffer.h"
+#include "buffer/render_texture.h"
 #include "common/common.h"
 #include "effect.h"
 #include "texture/image.h"
@@ -124,13 +124,13 @@ namespace SJH
 		/// @brief @p key 로 캐시된 Mesh *조회* (생성 안 함). 없으면 nullptr.
 		Mesh *FindMesh(const std::string &key);
 
-		/// @brief @p key 로 Framebuffer (FBO) 를 *생성*하고 캐시. 이미 있으면 실패(nullptr).
-		/// @details SP-RTRegistry - 옛 `Framebuffer::Create()` 직접 호출 흐름의 위탁 패턴.
+		/// @brief @p key 로 RenderTexture (FBO) 를 *생성*하고 캐시. 이미 있으면 실패(nullptr).
+		/// @details SP-RTRegistry - 옛 `RenderTexture::Create()` 직접 호출 흐름의 위탁 패턴.
 		///   `DefaultRenderTarget` (window backbuffer) 은 *Resource 가 아니라 Application 책임* - 본 매니저 대상 아님.
-		Framebuffer *CreateFramebuffer(const std::string &key, int width, int height);
+		RenderTexture *CreateRenderTexture(const std::string &key, int width, int height);
 
-		/// @brief @p key 로 캐시된 Framebuffer *조회* (생성 안 함). 없으면 nullptr.
-		Framebuffer *FindFramebuffer(const std::string &key);
+		/// @brief @p key 로 캐시된 RenderTexture *조회* (생성 안 함). 없으면 nullptr.
+		RenderTexture *FindRenderTexture(const std::string &key);
 
 		/// @brief PNG 로드 + grid 명시까지 한 호출로 UniformAtlas 를 *생성*하고 @p key 로 캐시.
 		/// @details
@@ -181,7 +181,7 @@ namespace SJH
 		std::unordered_map<std::string, ModelUPtr> mModels;
 		std::unordered_map<std::string, ProgramUPtr> mPrograms;
 		std::unordered_map<std::string, MeshUPtr> mMeshes;
-		std::unordered_map<std::string, FramebufferUPtr> mFramebuffers;
+		std::unordered_map<std::string, RenderTextureUPtr> mRenderTextures;
 		std::unordered_map<std::string, Sprite::UniformAtlasUPtr> mAtlas;
 		std::unordered_map<std::string, SoundUPtr> mSounds;     // M5
 		std::unordered_map<std::string, EffectUPtr> mEffects;   // M5

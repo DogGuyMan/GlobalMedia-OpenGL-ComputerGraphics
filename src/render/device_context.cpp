@@ -252,7 +252,7 @@ namespace SJH
 		BindTarget(target);
 		// depth/stencil 버퍼를 비우려면 write mask 가 열려 있어야 한다 - 직전 패스(Transparent/Outline)가
 		// glDepthMask(false)/glStencilMask(0x00) 로 닫았을 수 있으므로 clear 전 명시 복원 (구 RestoreDefaults 역할).
-		// Stencil 도 함께 clear - Framebuffer 가 DEPTH24_STENCIL8 라 함께 사용 가정.
+		// Stencil 도 함께 clear - RenderTexture 가 DEPTH24_STENCIL8 라 함께 사용 가정.
 		glDepthMask(GL_TRUE);
 		glStencilMask(0xFFu);
 		glClearStencil(0);

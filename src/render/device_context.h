@@ -124,7 +124,7 @@ namespace SJH
 		void BeginFrame(RenderTarget &target);
 
 		// SP-RTOwnership - DefaultRenderTarget(window backbuffer) lifetime owner 는 Application.
-		// Framebuffer 는 ResourceRegistry::CreateFramebuffer 로 위탁.
+		// RenderTexture 는 ResourceRegistry::CreateRenderTexture 로 위탁.
 
 		// -- 싱글톤 - 복사/이동 금지 ------------------------------------------
 		DeviceContext(const DeviceContext &) = delete;

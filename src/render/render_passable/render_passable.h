@@ -10,8 +10,8 @@
  *    Pass(IPassable) != Queue - Queue 는 한 Pass *내부* 분류 단위.
  *
  *  ### 계약 (D2)
- *  - @c Draw(rec, before) - rec=GL facade, before=직전 Pass 결과 텍스처(체이닝용, 미사용 시 nullptr).
- *  - @c GetPassResult() - 이 Pass 의 출력 텍스처(다음 Pass 의 before 로 연결). 없으면 nullptr.
+ *  - @c Draw(rec, before_frame_buffer_texture) - rec=GL facade, before_frame_buffer_texture=직전 Pass 결과 텍스처(체이닝용, 미사용 시 nullptr).
+ *  - @c GetPassResult() - 이 Pass 의 출력 텍스처(다음 Pass 의 before_frame_buffer_texture 로 연결). 없으면 nullptr.
  *  - @c BeforeIndex - 입력으로 삼을 선행 Pass 인덱스(-1=없음). PassIterator 가 해석.
  *
  *  ### 비-책임
@@ -51,10 +51,10 @@ namespace SJH
 
 		/// @brief 매 프레임 호출 - GL facade 와 선행 Pass 결과 텍스처를 받아 자기 출력을 그린다.
 		/// @param rec    GL 파이프라인 facade (DeviceContext 싱글톤).
-		/// @param before 직전(BeforeIndex) Pass 의 결과 텍스처. 없으면 nullptr.
-		virtual void Draw(DeviceContext &rec, const Texture *before) = 0;
+		/// @param before_frame_buffer_texture 직전(BeforeIndex) Pass 의 결과 텍스처. 없으면 nullptr.
+		virtual void Draw(DeviceContext &rec, const Texture *before_frame_buffer_texture) = 0;
 
-		/// @brief 이 Pass 의 출력 텍스처 - 다음 Pass 의 @p before 입력으로 연결 (D6). 없으면 nullptr.
+		/// @brief 이 Pass 의 출력 텍스처 - 다음 Pass 의 @p before_frame_buffer_texture 입력으로 연결 (D6). 없으면 nullptr.
 		virtual const Texture *GetPassResult() const = 0;
 
 		/// @brief Window resize broadcast - 내부 FBO 크기 sync 용. 기본 no-op.

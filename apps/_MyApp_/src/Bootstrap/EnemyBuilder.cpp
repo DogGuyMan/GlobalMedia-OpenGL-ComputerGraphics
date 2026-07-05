@@ -17,7 +17,7 @@
  *       적 "hit" 은 헬퍼 기본 SpriteHitFlash 를 Parallel(flash + Damaged 사운드)로 덮어쓴다 -
  *       화면 비네팅은 피해자가 적이라 제외(Player 만 비네팅).
  */
-#include <GL/gl3w.h> // 최상단 - resource_registry.h->framebuffer.h->...->gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 최상단 - resource_registry.h->render_texture.h->...->gl3w.h 보다 먼저.
 
 #include "Bootstrap/EnemyBuilder.h"
 

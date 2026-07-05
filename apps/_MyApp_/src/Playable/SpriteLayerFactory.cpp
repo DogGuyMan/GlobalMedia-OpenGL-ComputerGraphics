@@ -10,10 +10,10 @@
  *  4. @c target.AddComponent<SpriteRenderer>(atlas) - flipX / QueueOffset 적용.
  *  5. @c t.ColCount > 1 이면 @c SpriteSequencePlayable(loop=true).Play() 자동 기동.
  *
- * @note gl3w.h 를 최상단에 include 하는 이유: resource_registry.h -> framebuffer.h 경유
+ * @note gl3w.h 를 최상단에 include 하는 이유: resource_registry.h -> render_texture.h 경유
  *       간접 포함되기 전에 먼저 포함해야 GL 심볼 중복 정의를 피할 수 있다.
  */
-#include <GL/gl3w.h> // 최상단 - resource_registry.h -> framebuffer.h -> ... -> gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 최상단 - resource_registry.h -> render_texture.h -> ... -> gl3w.h 보다 먼저.
 
 #include "Playable/SpriteLayerFactory.h"
 

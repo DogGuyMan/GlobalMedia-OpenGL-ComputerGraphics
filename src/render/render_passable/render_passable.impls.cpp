@@ -21,7 +21,7 @@
 #include "render/device_context.h"
 #include "render/mesh_renderer.h"
 #include "buffer/render_target.h"
-#include "buffer/framebuffer.h"
+#include "buffer/render_texture.h"
 #include "material/material.h"
 #include "scene/light.h"
 #include "scene/actor.h"
@@ -50,7 +50,7 @@ namespace SJH
 	// ! {
 	// ! }
 
-	// ! void ScreenQuadStage::SetSources(std::vector<const Framebuffer *> sources)
+	// ! void ScreenQuadStage::SetSources(std::vector<const RenderTexture *> sources)
 	// ! {
 	// ! 	mSources = std::move(sources);
 	// ! }
@@ -90,11 +90,11 @@ namespace SJH
 
 	// ! 	for (std::size_t i = 0; i < mSources.size(); ++i)
 	// ! 	{
-	// ! 		const Framebuffer *fb = mSources[i];
-	// ! 		assert(fb != nullptr && "ScreenQuadStage: null Framebuffer source");
+	// ! 		const RenderTexture *fb = mSources[i];
+	// ! 		assert(fb != nullptr && "ScreenQuadStage: null RenderTexture source");
 
 	// ! 		const auto &tex = fb->GetColorAttachment();
-	// ! 		assert(tex && "ScreenQuadStage: Framebuffer has no color attachment");
+	// ! 		assert(tex && "ScreenQuadStage: RenderTexture has no color attachment");
 
 	// ! 		// ! sampler 컨벤션: `uScene` (SP4 migrate_demo / Unity _MainTex 정통).
 	// ! 		rc.BindTexture(0, tex->GetTextureID());
@@ -223,8 +223,8 @@ namespace SJH
 	{
 		if (!mCamera)
 			return nullptr;
-		// 카메라 RT 가 Framebuffer 면 그 color attachment 가 이 Pass 의 출력(D6). backbuffer 면 nullptr.
-		auto *fb = dynamic_cast<Framebuffer *>(mCamera->GetTargetRenderTarget());
+		// 카메라 RT 가 RenderTexture 면 그 color attachment 가 이 Pass 의 출력(D6). backbuffer 면 nullptr.
+		auto *fb = dynamic_cast<RenderTexture *>(mCamera->GetTargetRenderTarget());
 		return fb ? fb->GetColorAttachment().get() : nullptr;
 	}
 
@@ -257,7 +257,7 @@ namespace SJH
 		if (!mCamera)
 			return nullptr;
 		// 공유 sceneFB 의 color attachment(D6). background-first 라 WorldPass 와 같은 RT 를 가리킨다.
-		auto *fb = dynamic_cast<Framebuffer *>(mCamera->GetTargetRenderTarget());
+		auto *fb = dynamic_cast<RenderTexture *>(mCamera->GetTargetRenderTarget());
 		return fb ? fb->GetColorAttachment().get() : nullptr;
 	}
 

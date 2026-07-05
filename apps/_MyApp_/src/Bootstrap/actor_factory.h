@@ -5,7 +5,7 @@
  * @details
  *  ### 거주지 (2026-06-11 E2 사이클 해소로 scene -> render 이주)
  *  @c CreateSkyboxActor 는 @c MeshRenderer(render) 조립, @c CreateScreenCameraActor 는
- *  @c Framebuffer(buffer) 인자를 받는다 - 둘 다 scene 보다 상위(render) 자원에 결합하므로
+ *  @c RenderTexture(buffer) 인자를 받는다 - 둘 다 scene 보다 상위(render) 자원에 결합하므로
  *  render 모듈에 거주시켜 scene -> render 역의존을 끊었다. 네임스페이스는 @c SJH::Scene 유지(D7) -
  *  MeshRenderer 가 "render 파일 + Scene 네임스페이스" 인 기존 선례와 동일.
  *  (render 무관한 Camera/Light 팩토리는 @c scene/compound_actor.h 잔존.)
@@ -23,7 +23,7 @@
 
 namespace SJH
 {
-	class Framebuffer;
+	class RenderTexture;
 	class Mesh;
 	class Material;
 }
@@ -43,7 +43,7 @@ namespace SJH::Scene
 	std::unique_ptr<Actor> CreateScreenCameraActor(
 	    std::string name,
 	    float aspect,
-	    Framebuffer* sceneFB);
+	    RenderTexture* sceneFB);
 
 	/// @brief Skybox Actor 생성 - @c Mesh + 큰 @c scale + @c MeshRenderer.
 	/// @details 카메라 추적은 *셰이더* 측(vert shader view matrix translation 제거)으로 자동 처리.

@@ -1,6 +1,6 @@
 /**
- * @file framebuffer.h
- * @brief GL 프레임버퍼 객체(FBO) RAII 래퍼 - 색상 텍스처 어태치먼트 + 깊이/스텐실 저장소.
+ * @file render_texture.h
+ * @brief 샘플 가능한 색상 텍스처를 가진 오프스크린 렌더 타깃 (FBO RAII 래퍼) - 색상 텍스처 어태치먼트 + 깊이/스텐실 저장소.
  *
  * @details
  *  ### 책임
@@ -14,13 +14,13 @@
  *  - @c BindToDefault 정적 메서드 - 기본 프레임버퍼(스크린, FBO 0) 로 복귀.
  *
  *  ### 비-책임
- *  - [X] 색상 텍스처 *단독 소유* - @c TexturePtr 는 @c shared_ptr. Framebuffer 소멸 후에도 텍스처 유효.
+ *  - [X] 색상 텍스처 *단독 소유* - @c TexturePtr 는 @c shared_ptr. RenderTexture 소멸 후에도 텍스처 유효.
  *  - [X] 포스트프로세스 셰이더 구동 - @c Context::Render 가 담당.
  *  - [X] 기본 프레임버퍼(backbuffer) 관리 - @c Application 책임. @c ResourceRegistry 대상 아님.
  */
 
-#ifndef __SJH_FRAMEBUFFER_H__
-#define __SJH_FRAMEBUFFER_H__
+#ifndef __SJH_RENDER_TEXTURE_H__
+#define __SJH_RENDER_TEXTURE_H__
 
 #include "common/common.h"
 #include "buffer/render_target.h"
@@ -29,9 +29,9 @@
 
 namespace SJH
 {
-    CLASS_PTR(Framebuffer);
+    CLASS_PTR(RenderTexture);
     /**
-     * @brief GL 프레임버퍼 객체(FBO) RAII 래퍼 - @c RenderTarget 인터페이스 구현.
+     * @brief 샘플 가능한 색상 텍스처를 가진 오프스크린 렌더 타깃 (FBO RAII 래퍼) - @c RenderTarget 인터페이스 구현.
      * @details
      *  색상 어태치먼트는 외부 @c Texture 를 공유 소유(@c shared_ptr)로 받거나 내부 생성해
      *  @c GL_COLOR_ATTACHMENT0 에 연결. 깊이/스텐실은 RBO 또는 텍스처로 attach.
@@ -43,15 +43,15 @@ namespace SJH
      *  | @c Create(int,int)        | 내부 RGBA8    | RBO (불투명)   | SP4 멀티패스 일반 케이스        |
      *  | @c CreateWithDepthTexture | 내부 RGBA8    | 내부 depth tex | 셰이더가 depth sampler 로 읽을 때|
      */
-    class Framebuffer : public RenderTarget
+    class RenderTexture : public RenderTarget
     {
     public:
         /**
          * @brief FBO 를 생성하고 @p colorAttachment 텍스처를 색상 어태치먼트로 연결.
-         * @param colorAttachment 색상 버퍼로 쓸 텍스처 (@c shared_ptr - Framebuffer 와 공유 소유).
-         * @return 생성 성공 시 @c FramebufferUPtr, 실패 시 @c nullptr.
+         * @param colorAttachment 색상 버퍼로 쓸 텍스처 (@c shared_ptr - RenderTexture 와 공유 소유).
+         * @return 생성 성공 시 @c RenderTextureUPtr, 실패 시 @c nullptr.
          */
-        static FramebufferUPtr Create(const TexturePtr colorAttachment);
+        static RenderTextureUPtr Create(const TexturePtr colorAttachment);
 
         /**
          * @brief 내부 RGBA8 텍스처 + 깊이/스텐실 RBO 를 자동 생성하는 factory.
@@ -59,9 +59,9 @@ namespace SJH
          *          내부 텍스처는 @c Texture::Create(w, h, GL_RGBA) 로 생성되므로 RAII 보장.
          * @param width   FBO 색상 버퍼 너비 (픽셀).
          * @param height  FBO 색상 버퍼 높이 (픽셀).
-         * @return 생성 성공 시 @c FramebufferUPtr, 실패 시 @c nullptr.
+         * @return 생성 성공 시 @c RenderTextureUPtr, 실패 시 @c nullptr.
          */
-        static FramebufferUPtr Create(int width, int height);
+        static RenderTextureUPtr Create(int width, int height);
 
         /**
          * @brief 내부 RGBA8 색 텍스처 + depth-stencil *텍스처* 를 생성하는 factory.
@@ -69,15 +69,15 @@ namespace SJH
          *          @c GL_DEPTH24_STENCIL8 사용 - depth 샘플링 + stencil(Outline) 동시 보존.
          * @param width   FBO 색상/깊이 버퍼 너비 (픽셀).
          * @param height  FBO 색상/깊이 버퍼 높이 (픽셀).
-         * @return 성공 시 @c FramebufferUPtr, 실패 시 @c nullptr.
+         * @return 성공 시 @c RenderTextureUPtr, 실패 시 @c nullptr.
          */
-        static FramebufferUPtr CreateWithDepthTexture(int width, int height);
+        static RenderTextureUPtr CreateWithDepthTexture(int width, int height);
 
         /// @brief 기본 프레임버퍼(스크린) 로 바인딩 복귀 (@c glBindFramebuffer(GL_FRAMEBUFFER, 0)).
         static void BindToDefault();
 
         /// @brief FBO + 렌더버퍼 GL 자원 해제.
-        ~Framebuffer() override;
+        ~RenderTexture() override;
 
         // -- RenderTarget 인터페이스 구현 ------------------------------------------
         /// @brief 이 FBO 를 현재 프레임버퍼로 바인딩 + @c glViewport 를 color attachment 크기로 설정.
@@ -114,7 +114,7 @@ namespace SJH
         void Resize(int width, int height);
 
     private:
-        Framebuffer() = default;
+        RenderTexture() = default;
         bool InitWithColorAttachment(const TexturePtr colorAttachment);
         bool InitWithSize(int width, int height);
         bool InitWithSizeAndDepthTexture(int width, int height);
@@ -125,4 +125,4 @@ namespace SJH
         TexturePtr mDepthAttachment;         ///< depth-stencil 텍스처 (텍스처 모드). RBO 모드면 nullptr.
     };
 }
-#endif // __SJH_FRAMEBUFFER_H__
+#endif // __SJH_RENDER_TEXTURE_H__

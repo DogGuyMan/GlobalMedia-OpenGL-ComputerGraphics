@@ -16,7 +16,7 @@
  *
  * @note 익명 namespace 의 Init Wire 헬퍼는 본 번역 단위 전용 (외부 노출 없음).
  */
-#include <GL/gl3w.h> // 반드시 최상단 - resource_registry.h->framebuffer.h->render_target.h->gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 반드시 최상단 - resource_registry.h->render_texture.h->render_target.h->gl3w.h 보다 먼저.
 
 #include "Entity/Player/PlayerActor.h"
 #include "Entity/Player/PlayerEntity.h"

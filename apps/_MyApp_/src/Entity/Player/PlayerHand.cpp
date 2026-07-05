@@ -25,7 +25,7 @@
 // 않도록, *모든 include 이전* 에 NONE 선언.
 #define GLFW_INCLUDE_NONE
 
-#include <GL/gl3w.h> // 반드시 최상단 - resource_registry.h->framebuffer.h->render_target.h->gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 반드시 최상단 - resource_registry.h->render_texture.h->render_target.h->gl3w.h 보다 먼저.
 
 #include "Entity/Player/PlayerHand.h"
 

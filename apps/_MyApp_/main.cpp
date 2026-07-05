@@ -120,7 +120,7 @@ namespace TopdownShooter
 			// T1 core -- 렌더 타깃 + 시스템 초기화 + 오디오 워밍업.
 			sched.Task(Bootstrap::EInitTask::Core).Gl().Does([&] {
 				mDefaultTarget = std::make_unique<SJH::DefaultRenderTarget>(mFbInfo.Width, mFbInfo.Height);
-				mSceneFB = SJH::Framebuffer::CreateWithDepthTexture(mFbInfo.Width, mFbInfo.Height);
+				mSceneFB = SJH::RenderTexture::CreateWithDepthTexture(mFbInfo.Width, mFbInfo.Height);
 
 				TopdownShooter::GameSystems::Get().Init();
 				Bootstrap::WarmupAudio(GameSystems::Get().Audio());
@@ -181,7 +181,7 @@ namespace TopdownShooter
 					mat->SetProgram(prog);
 					for (const auto &[name, value] : c.InitFloats) // D-6 data-driven float 초기값.
 						mat->Properties.Floats[name] = value;
-					mPostFXFBs.push_back(SJH::Framebuffer::Create(mFbInfo.Width, mFbInfo.Height)); // 중간 FBO(color sampler).
+					mPostFXFBs.push_back(SJH::RenderTexture::Create(mFbInfo.Width, mFbInfo.Height)); // 중간 FBO(color sampler).
 				}
 
 				// 특수 초기값(vec3/int - InitFloats 밖) - 효과 머티리얼을 키로 조회해 set.
@@ -614,8 +614,8 @@ namespace TopdownShooter
 		SJH::Material *mGrayscaleMatPtr = nullptr;  ///< grayscale_vignetting 공유 Material (HpGrayscalePostFX 와 SSOT 공유, 소유=ResourceRegistry). // ! 모듈화 대상 (PostFX 머티리얼 = 파이프라인 자원)
 		SJH::Material *mPresentMatPtr = nullptr;    ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry). // ! 모듈화 대상 (present 머티리얼 = 파이프라인 자원)
 
-		SJH::FramebufferUPtr mSceneFB; // ! 모듈화 대상 (씬 렌더 FBO + depth(fog) = 파이프라인 중간 출력)
-		std::vector<SJH::FramebufferUPtr> mPostFXFBs; ///< 효과별 중간 FBO (POSTFX_PROGRAM_CONFIGS 와 1:1, 소유). resize 동기. // ! 모듈화 대상 (PostFX 중간 FBO = 파이프라인 자원)
+		SJH::RenderTextureUPtr mSceneFB; // ! 모듈화 대상 (씬 렌더 FBO + depth(fog) = 파이프라인 중간 출력)
+		std::vector<SJH::RenderTextureUPtr> mPostFXFBs; ///< 효과별 중간 FBO (POSTFX_PROGRAM_CONFIGS 와 1:1, 소유). resize 동기. // ! 모듈화 대상 (PostFX 중간 FBO = 파이프라인 자원)
 
 		// ImGui
 		ImGuiContext *mImGuiCtx = nullptr; // ! 모듈화 대상 (ImGui 컨텍스트 = UI 레이어)

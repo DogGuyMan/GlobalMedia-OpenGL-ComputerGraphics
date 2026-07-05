@@ -27,7 +27,7 @@
 #include <glm/glm.hpp>
 
 namespace SJH::Scene { class Actor; class Camera; }
-namespace SJH { class RenderTarget; class Framebuffer; class Mesh; class Material; class Program; class Texture; class DeviceContext; }
+namespace SJH { class RenderTarget; class RenderTexture; class Mesh; class Material; class Program; class Texture; class DeviceContext; }
 
 namespace SJH
 {
@@ -123,7 +123,7 @@ namespace SJH
         /// @param output 결과 FBO(비소유). nullptr 이면 backbuffer 합성(present).
         /// @param quad   풀스크린 blit 용 screen quad mesh(비소유).
         /// @param key    PassIterator::Find 조회 키(효과명, 예: "grayscale_vignetting"). 토글/디버그 식별용.
-        PostFxPass(Material *effect, Framebuffer *output, Mesh *quad, std::string key)
+        PostFxPass(Material *effect, RenderTexture *output, Mesh *quad, std::string key)
             : mEffect(effect), mOutput(output), mQuad(quad), mKey(std::move(key)) {}
 
         /// @brief before -> output blit. output=nullptr 이면 backbuffer present.
@@ -140,7 +140,7 @@ namespace SJH
 
       private:
         Material     *mEffect     = nullptr; ///< 효과 머티리얼(비소유).
-        Framebuffer  *mOutput     = nullptr; ///< 결과 FBO(비소유). nullptr=backbuffer present.
+        RenderTexture  *mOutput     = nullptr; ///< 결과 FBO(비소유). nullptr=backbuffer present.
         Mesh         *mQuad       = nullptr; ///< 풀스크린 blit mesh(비소유).
         RenderTarget *mBackbuffer = nullptr; ///< present 시 출력 backbuffer(비소유, main 매 프레임 주입).
         std::string   mKey;                  ///< PassIterator::Find 조회 키(효과명).

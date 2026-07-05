@@ -33,7 +33,7 @@ namespace SJH::Scene { class Camera; }
 namespace SJH
 {
 	class DeviceContext;
-	class Framebuffer;
+	class RenderTexture;
 	class Material;
 	class Mesh;
 

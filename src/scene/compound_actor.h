@@ -57,7 +57,7 @@ namespace SJH::Scene
         float nearZ = 0.1f,
         float farZ = 100.0f);
 
-    // -- Skybox / ScreenCamera 는 render 결합(MeshRenderer/Framebuffer)이라 2026-06-11 E2 로
+    // -- Skybox / ScreenCamera 는 render 결합(MeshRenderer/RenderTexture)이라 2026-06-11 E2 로
     //    render/actor_factory.h 로 이주. (CreateSkyboxActor / CreateScreenCameraActor)
 
     // -- Lights -------------------------------------------------------------

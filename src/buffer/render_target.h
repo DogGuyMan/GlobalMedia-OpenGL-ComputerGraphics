@@ -4,7 +4,7 @@
  *
  * @details
  *  ### 거주지 (2026-06-11 E4 사이클 해소로 render -> buffer 이주)
- *  주 구현인 @c Framebuffer (buffer 모듈) 가 @c RenderTarget 을 상속하므로 인터페이스를 buffer 에
+ *  주 구현인 @c RenderTexture (buffer 모듈) 가 @c RenderTarget 을 상속하므로 인터페이스를 buffer 에
  *  동거시켜 buffer -> render 역의존을 끊었다. @c device_context.h (render) 는 이제 buffer 를 PUBLIC 의존.
  *
  *  ### 책임
@@ -12,7 +12,7 @@
  *  - @c DefaultRenderTarget - window backbuffer(FBO 0) 구현체.
  *
  *  ### 비-책임
- *  - [X] FBO 생성/소멸 - @c Framebuffer (ResourceRegistry) 가 담당.
+ *  - [X] FBO 생성/소멸 - @c RenderTexture (ResourceRegistry) 가 담당.
  *  - [X] DeviceContext 상태 관리 - @c RenderTarget::Bind() 는 @c glBindFramebuffer + @c glViewport 만.
  *
  *  ### 미래 구체 후보 (LearnOpenGL / SuperBible 자연 다음 단계)
@@ -34,10 +34,10 @@
  *
  *  ### Owner 분담 (SP-RTOwnership)
  *  - @c DefaultRenderTarget - **Application** 이 보유 (DX11 SwapChain 정통)
- *  - @c Framebuffer (FBO) - **ResourceRegistry** 가 보유 (Unity RTHandleSystem 정통)
+ *  - @c RenderTexture (FBO) - **ResourceRegistry** 가 보유 (Unity RTHandleSystem 정통)
  *  - @c DeviceContext 는 *보유 없음* - @c BindTarget(RenderTarget&) 으로 명령만 발행
  *
- * @note @c Framebuffer 는 @c RenderTarget 을 상속한다 (@c class @c Framebuffer @c : @c public @c RenderTarget).
+ * @note @c RenderTexture 는 @c RenderTarget 을 상속한다 (@c class @c RenderTexture @c : @c public @c RenderTarget).
  */
 #ifndef __SJH_RENDER_TARGET_H__
 #define __SJH_RENDER_TARGET_H__

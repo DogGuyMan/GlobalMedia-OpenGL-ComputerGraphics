@@ -16,7 +16,7 @@
  *       @c VfxInstance.cpp 는 @c VFXSystem.h(-> @c EffekseerRendererGL) 를 끌어와
  *       @c PFNGL* 재정의 충돌 유발 가능. 파사드는 @c VFXSystem* 를 포인터로만 다뤄 완전형 불필요.
  */
-#include <GL/gl3w.h> // 반드시 최상단 - resource_registry.h->framebuffer.h->gl3w.h 보다 먼저.
+#include <GL/gl3w.h> // 반드시 최상단 - resource_registry.h->render_texture.h->gl3w.h 보다 먼저.
 
 // VFX 단발 스폰 파사드 정의 (선언은 Spawns/VfxInstance.h 의 TopdownShooter::VFX namespace).
 // - VfxInstance.cpp 와 분리한 이유: 파사드는 resource_registry.h(->gl3w) 만 필요하고,

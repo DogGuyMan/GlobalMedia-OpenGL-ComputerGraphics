@@ -25,7 +25,7 @@
 #include "material/pass.h"
 #include "object/mesh.h"
 #include "program/program.h"
-#include "buffer/framebuffer.h"
+#include "buffer/render_texture.h"
 #include "scene/camera.h"
 #include <algorithm>
 

@@ -178,27 +178,27 @@ namespace SJH
 		return (it != mMeshes.end()) ? it->second.get() : nullptr;
 	}
 
-	Framebuffer *ResourceRegistry::CreateFramebuffer(const std::string &key, int width, int height)
+	RenderTexture *ResourceRegistry::CreateRenderTexture(const std::string &key, int width, int height)
 	{
-		if (mFramebuffers.find(key) != mFramebuffers.end())
+		if (mRenderTextures.find(key) != mRenderTextures.end())
 		{
-			spdlog::warn("CreateFramebuffer: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
+			spdlog::warn("CreateRenderTexture: 키 '{}' 가 이미 존재 - Find 를 먼저 호출하라", key);
 			return nullptr;
 		}
-		auto fb = Framebuffer::Create(width, height);
+		auto fb = RenderTexture::Create(width, height);
 		if (fb == nullptr)
 		{
-			spdlog::error("CreateFramebuffer: FBO 생성 실패 - key '{}', {}x{}", key, width, height);
+			spdlog::error("CreateRenderTexture: FBO 생성 실패 - key '{}', {}x{}", key, width, height);
 			return nullptr;
 		}
-		auto insertedIt = mFramebuffers.emplace(key, std::move(fb)).first;
+		auto insertedIt = mRenderTextures.emplace(key, std::move(fb)).first;
 		return insertedIt->second.get();
 	}
 
-	Framebuffer *ResourceRegistry::FindFramebuffer(const std::string &key)
+	RenderTexture *ResourceRegistry::FindRenderTexture(const std::string &key)
 	{
-		auto it = mFramebuffers.find(key);
-		return (it != mFramebuffers.end()) ? it->second.get() : nullptr;
+		auto it = mRenderTextures.find(key);
+		return (it != mRenderTextures.end()) ? it->second.get() : nullptr;
 	}
 
 	Sprite::UniformAtlas *ResourceRegistry::CreateUniformAtlas(const std::string &key,
@@ -312,7 +312,7 @@ namespace SJH
 		mModels.clear();
 		mPrograms.clear();
 		mMeshes.clear();
-		mFramebuffers.clear();
+		mRenderTextures.clear();
 		mAtlas.clear();
 		mSounds.clear();    // M5 - Sound dtor 가 FMOD::Sound::release() 호출
 		mEffects.clear();   // M5 - EffectRef shared_ptr 자동 정리

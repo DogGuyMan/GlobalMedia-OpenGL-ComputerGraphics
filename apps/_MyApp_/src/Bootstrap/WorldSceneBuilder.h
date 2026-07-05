@@ -29,7 +29,7 @@
 namespace SJH
 {
 	class MouseInput;
-	class Framebuffer;
+	class RenderTexture;
 	class Material;
 	class IRenderable;
 }
@@ -47,9 +47,9 @@ namespace TopdownShooter::Bootstrap
 	 */
 	struct WorldSceneDeps
 	{
-		float             aspect  = 0.0f;   ///< Framebuffer 폭/높이 비율 (main 이 GetFramebufferInfo 로 계산, GLFW 의존 격리).
+		float             aspect  = 0.0f;   ///< RenderTexture 폭/높이 비율 (main 이 GetFramebufferInfo 로 계산, GLFW 의존 격리).
 		SJH::MouseInput  *mouse   = nullptr; ///< WorldCamera @c ActorFolower 에 주입할 마우스 입력.
-		SJH::Framebuffer *sceneFB = nullptr; ///< WorldCamera @c SetTargetRenderTarget 대상 씬 Framebuffer.
+		SJH::RenderTexture *sceneFB = nullptr; ///< WorldCamera @c SetTargetRenderTarget 대상 씬 RenderTexture.
 	};
 
 	/**

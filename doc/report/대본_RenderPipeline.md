@@ -1,3 +1,4 @@
+
 <!-- # 렌더 파이프라인 보고서 — MultiPass · PostProcessing · 외부 모듈 통합
 
 > 대상 코드: `src/render/` (엔진 코어) + `apps/_MyApp_/` (실행/통합). 모든 참조는 `파일:줄` 형식.

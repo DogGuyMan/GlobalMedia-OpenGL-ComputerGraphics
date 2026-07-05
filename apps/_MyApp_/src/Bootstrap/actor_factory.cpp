@@ -8,7 +8,7 @@
  *  - @c CreateSkyboxActor - 큰 scale Mesh + MeshRenderer 조립.
  *
  *  ### 거주지 (2026-06-24 apps client 이주 - scene->render 사이클 회피)
- *  두 팩토리는 MeshRenderer(render)/Framebuffer(buffer) 상위 자원에 결합 - 엔진 모듈에 두면
+ *  두 팩토리는 MeshRenderer(render)/RenderTexture(buffer) 상위 자원에 결합 - 엔진 모듈에 두면
  *  scene->render 역의존이 생기므로 apps client(Bootstrap)에 거주시켜 엔진 단방향을 유지한다.
  *  Camera 조립은 scene 의 @c CreateCameraActor(compound_actor.h) 를 재사용한다.
  *
@@ -23,7 +23,7 @@
 #include "render/mesh_renderer.h"  // SJH::Scene::MeshRenderer (render 헤더에 있지만 Scene namespace)
 #include "object/mesh.h"           // SJH::Mesh 완전 타입
 #include "material/material.h"     // SJH::Material 완전 타입
-#include "buffer/framebuffer.h"    // SJH::Framebuffer 완전 타입 (SetTargetRenderTarget 인자)
+#include "buffer/render_texture.h"    // SJH::RenderTexture 완전 타입 (SetTargetRenderTarget 인자)
 #include <memory>
 #include <string>
 #include <utility>
@@ -34,7 +34,7 @@ namespace SJH::Scene
     std::unique_ptr<Actor> CreateScreenCameraActor(
         std::string name,
         float aspect,
-        Framebuffer* sceneFB)
+        RenderTexture* sceneFB)
     {
         // 기존 main.cpp::CreateAndRegisterScreenCamera 22줄 이주.
         auto screenCamActor = CreateCameraActor(std::move(name), 45.0f, aspect, -1.0f, 1.0f);
