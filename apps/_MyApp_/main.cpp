@@ -253,8 +253,8 @@ namespace TopdownShooter
 					if (!mat || !fbo)
 						continue; // 셰이더 로드 실패 placeholder - skip(체인은 lastResult 가 재연결).
 					auto fx = std::make_unique<SJH::PostFxPass>(mat, fbo, mScreenQuadMeshPtr, name);
-					if (name == Playable::PASS_INVERT || name == Playable::PASS_BLURRING || name == Playable::PASS_SOBEL)
-						fx->Enabled = false; // 기본 비활성.
+					if (name == Playable::PASS_INVERT || name == Playable::PASS_BLURRING || name == Playable::PASS_SOBEL || name == Playable::PASS_DEPTH_DEBUG)
+						fx->Enabled = false; // 기본 비활성 (depth_debug = Phase1 학습용, F1 로 켬).
 					mPassIterator.Add(std::move(fx));
 				}
 
@@ -658,6 +658,9 @@ namespace TopdownShooter
 			if (!fogMat || !mSceneFB || !mSceneFB->GetDepthAttachment())
 				return;
 			fogMat->Properties.Textures[UNI_FOG_DEPTH] = {mSceneFB->GetDepthAttachment().get(), 1}; // unit 1 (uScene=0).
+			// Phase1 학습 - depth_debug 패스도 동일 sceneFB depth 텍스처(unit1) 바인딩. (fog 미생성이면 위 return 으로 skip)
+			if (auto *ddMat = SJH::ResourceRegistry::Get().FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_DEPTH_DEBUG))
+				ddMat->Properties.Textures["uDepth"] = {mSceneFB->GetDepthAttachment().get(), 1};
 		}
 
 		// Pause 버튼(PauseButtonLayer) 콜백 — 현재 State 기준 CombatPlay↔Pause 토글.

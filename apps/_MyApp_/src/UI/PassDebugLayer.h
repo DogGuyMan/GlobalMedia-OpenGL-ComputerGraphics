@@ -126,6 +126,13 @@ namespace TopdownShooter::UI
 				ImGui::SliderFloat("vignette",  &props.Floats["uVignetteAmount"], 0.0f, 1.0f);
 				ImGui::ColorEdit3 ("vig color", &props.Vec3s["uVignetteColor"][0]);
 			}
+			else if (key == Playable::PASS_DEPTH_DEBUG)
+			{
+				// Phase1 학습 - linearize 0<->1 토글로 raw(비선형) vs 선형화 비교. near/far 는 카메라와 맞춰 튜닝.
+				ImGui::SliderFloat("linearize", &props.Floats["uLinearize"], 0.0f, 1.0f);
+				ImGui::SliderFloat("near",      &props.Floats["uNear"],      0.01f, 5.0f);
+				ImGui::SliderFloat("far",       &props.Floats["uFar"],       10.0f, 500.0f);
+			}
 		}
 
 		SJH::PassIterator *mIter         = nullptr; ///< 열거/조회 대상 (비소유).

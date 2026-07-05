@@ -119,6 +119,11 @@ sjh_compile_slang(_FOG_VS   ${FOG_SLANG} vsMain vertex   glsl glsl_410 ${_slang_
 sjh_compile_slang(_FOG_FS   ${FOG_SLANG} fsMain fragment glsl glsl_410 ${_slang_gen_dir}/postprocess/fog.fs)
 sjh_reflect_slang(_FOG_REFL ${FOG_SLANG} fsMain fragment ${_slang_gen_dir}/postprocess/fog.refl.json)
 
+set(DEPTH_DEBUG_SLANG ${CMAKE_CURRENT_SOURCE_DIR}/depth_debug.slang)   # Phase1 학습 - 깊이 흑백 시각화(depth sampler + float3 UBO)
+sjh_compile_slang(_DEPTH_DEBUG_VS   ${DEPTH_DEBUG_SLANG} vsMain vertex   glsl glsl_410 ${_slang_gen_dir}/postprocess/depth_debug.vs)
+sjh_compile_slang(_DEPTH_DEBUG_FS   ${DEPTH_DEBUG_SLANG} fsMain fragment glsl glsl_410 ${_slang_gen_dir}/postprocess/depth_debug.fs)
+sjh_reflect_slang(_DEPTH_DEBUG_REFL ${DEPTH_DEBUG_SLANG} fsMain fragment ${_slang_gen_dir}/postprocess/depth_debug.refl.json)
+
 # === overlay 타겟 - 매 빌드 실행으로 셰이더-only 변경 시에도 복사 보장 ===
 # custom target 은 매 빌드 실행되므로 셰이더만 바뀌어(=${CHAPTER_NAME} relink 없이) 도 복사 보장.
 #   (POST_BUILD overlay 는 target relink 시에만 실행돼 셰이더-only 변경 시 stale 산출을 남겼다 - 2026-06-21 fix).
@@ -140,6 +145,7 @@ add_custom_target(${CHAPTER_NAME}_shaders ALL
             ${_SOBEL_VS} ${_SOBEL_FS} ${_SOBEL_REFL}
             ${_BLOOM_VS} ${_BLOOM_FS} ${_BLOOM_REFL}
             ${_FOG_VS} ${_FOG_FS} ${_FOG_REFL}
+            ${_DEPTH_DEBUG_VS} ${_DEPTH_DEBUG_FS} ${_DEPTH_DEBUG_REFL}
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${_slang_gen_dir} ${_app_binary_dir}/resources/shaders
     COMMENT "${CHAPTER_NAME} Slang 셰이더 생성 + resources/shaders overlay")
