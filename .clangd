@@ -1,0 +1,8 @@
+# clangd 설정 — compile_commands.json 위치를 알려줘 거짓 진단 캐스케이드 해소.
+# 비표준 빌드 디렉터리(build_ninja/)는 clangd 자동탐색(<상위>/build/) 대상이 아니므로
+# 명시적으로 물려준다. IDE 인덱싱 전용 — 빌드/런타임에는 영향 0.
+# ⚠ 크로스플랫폼: build_ninja 는 macOS/Linux(ninja) 프리셋 산출물. Windows(MSVC)는
+#   build_msvc/ 를 쓰므로 .vscode/settings.json 의
+#   "clangd.arguments": ["--compile-commands-dir=${workspaceFolder}/build_msvc"] 로 각자 대응.
+CompileFlags:
+  CompilationDatabase: build_ninja

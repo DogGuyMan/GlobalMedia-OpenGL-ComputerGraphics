@@ -85,7 +85,7 @@ apps/*/resources/banks/
 
 ########### VS CODE ############
 .vscode
-.clangd
+# .clangd 는 공유 대상 (build_ninja CDB 배선 - clangd 거짓 진단 캐스케이드 해소). Windows(build_msvc)는 .vscode 로컬 대응.
 *.code-workspace
 .history
 
