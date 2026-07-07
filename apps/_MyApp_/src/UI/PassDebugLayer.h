@@ -29,15 +29,16 @@
 #ifndef __MYAPP_UI_PASS_DEBUG_LAYER_H__
 #define __MYAPP_UI_PASS_DEBUG_LAYER_H__
 
+#include "Playable/Constants.h" // PASS_* 효과명
 #include "UI/IImGuiLayer.h"
-#include "render/pass_iterator.h"                    // PassIterator::Keys / Find
-#include "render/render_passable/render_passable.h"  // IPassable::Enabled
-#include "material/material.h"                        // SJH::Material::Properties
-#include "material/material_property_block.h"         // MaterialPropertyBlock (위젯 헬퍼 인자)
-#include "resource_registry/resource_registry.h"      // FindSharedMaterial("mat_pass_<key>")
-#include "Playable/Constants.h"                       // PASS_* 효과명
+#include "material/material.h"                      // SJH::Material::Properties
+#include "material/material_property_block.h"       // MaterialPropertyBlock (위젯 헬퍼 인자)
+#include "render/pass_iterator.h"                   // PassIterator::Keys / Find
+#include "render/render_passable/render_passable.h" // IPassable::Enabled
+#include "resource_registry/resource_registry.h"    // FindSharedMaterial("mat_pass_<key>")
 
 #include <imgui.h>
+#include <spdlog/spdlog.h> // [Task 2.2 진단] SetPass 전후 상태 로깅
 #include <string>
 
 namespace TopdownShooter::UI
@@ -48,9 +49,11 @@ namespace TopdownShooter::UI
 	  public:
 		/// @param iter         열거/조회 대상 PassIterator (비소유). nullptr 시 OnBuildUI no-op.
 		/// @param grayscaleMat grayscale 공유 Material (비소유, 선택). nullptr 이면 강도 표시 생략.
-		PassDebugLayer(SJH::PassIterator *iter, SJH::Material *grayscaleMat)
-		    : mIter(iter), mGrayscaleMat(grayscaleMat)
+		PassDebugLayer(SJH::PassIterator *iter)
+		    : mIter(iter)
 		{
+			auto &reg = SJH::ResourceRegistry::Get();
+			mGrayscaleMat = reg.FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_GRAYSCALE_VIGNETTING);
 		}
 
 		void OnBuildUI() override
@@ -81,19 +84,63 @@ namespace TopdownShooter::UI
 				ImGui::PopID();
 			}
 
+			// ! 학습전용 코드
+			// !	[ Phase Task 2.2] 학습 전용이므로 필요없으면 삭제하면 되는 대상
+			// stage_wall 은 lazy 조회 - 씬에 아직/전혀 없으면 nullptr 이라 매 프레임 조회 + null 가드 (위 mat_pass 와 동일 패턴).
+			static int queueChoice = 1;
+			if (SJH::Material *wallMatPtr = reg.FindSharedMaterial("stage_wall"))
+			{
+				bool isChanged = false;
+				isChanged |= ImGui::RadioButton("Hard cut (AlphaTest)", &queueChoice, 0);
+				isChanged |= ImGui::RadioButton("Soft blend (Transparent)", &queueChoice, 1);
+				isChanged |= ImGui::RadioButton("Soft + DepthWrite (Q6)", &queueChoice, 2);
+				if (isChanged)
+				{
+					SJH::Pass::RenderQueue queue =
+					    (queueChoice == 0)   ? SJH::Pass::RenderQueue::AlphaTest
+					    : (queueChoice == 1) ? SJH::Pass::RenderQueue::Transparent
+					                         : SJH::Pass::RenderQueue::TransparentDepthWrite;
+					wallMatPtr->SetPass(queue);
+					// [Task 2.2 진단] SetPass 직후 상태 로깅 - 공유 template vs 벽 인스턴스(실제 렌더 대상) 비교.
+					//   가설: 벽은 stage_wall 을 clone 한 인스턴스(stage_wall_Wall*)로 렌더되므로, 공유 SetPass 가
+					//   인스턴스 mState 를 안 바꿔 항상 Transparent(blend on) 로 보인다. -> 아래 Blend 값으로 확인.
+					auto dumpMat = [](const char *label, SJH::Material *matPtr) {
+						if (matPtr == nullptr)
+						{
+							spdlog::warn("[PassDebug] {} = <null>", label);
+							return;
+						}
+						const auto &state = matPtr->GetRenderStateBlock();
+						spdlog::info("[PassDebug] {:<22} ptr={} pass={} Blend={} DepthWrite={}",
+						             label, static_cast<const void *>(matPtr),
+						             static_cast<int>(matPtr->GetPass()), state.BlendEnable, state.DepthWrite);
+					};
+					spdlog::info("[PassDebug] ===== queueChoice={} -> SetPass(shared stage_wall) =====", queueChoice);
+					dumpMat("shared stage_wall", wallMatPtr);
+					dumpMat("inst WallTop", reg.FindMaterialInstance("stage_wall_WallTop"));
+					dumpMat("inst WallBottom", reg.FindMaterialInstance("stage_wall_WallBottom"));
+					dumpMat("inst WallLeft", reg.FindMaterialInstance("stage_wall_WallLeft"));
+					dumpMat("inst WallRight", reg.FindMaterialInstance("stage_wall_WallRight"));
+				}
+			}
+
 			// grayscale 강도 read-only - HP(HpGrayscalePostFX) 가 구동하므로 여기선 관찰만.
 			if (mGrayscaleMat)
 			{
 				ImGui::Separator();
 				const auto &floats = mGrayscaleMat->Properties.Floats;
-				const auto  it     = floats.find("uGrayscaleAmount");
+				const auto it = floats.find("uGrayscaleAmount");
 				const float amount = (it != floats.end()) ? it->second : -1.0f;
 				ImGui::Text("uGrayscaleAmount = %.3f (HP-driven)", amount); // 1=color, 0=gray.
 			}
+
 			ImGui::End();
 		}
 
-		ImGuiLayerKind GetKind() const override { return ImGuiLayerKind::Editor; }
+		ImGuiLayerKind GetKind() const override
+		{
+			return ImGuiLayerKind::Editor;
+		}
 
 	  private:
 		/// @brief 패스 이름별 전용 파라미터 위젯 빌드 - 구 PostFXDebugLayer 분기 이식.
@@ -109,34 +156,34 @@ namespace TopdownShooter::UI
 			else if (key == Playable::PASS_FOG)
 			{
 				ImGui::SliderFloat("density", &props.Floats["uFogDensity"], 0.0f, 0.5f);
-				ImGui::SliderFloat("start",   &props.Floats["uFogStart"],   0.0f, 1.0f);
-				ImGui::SliderFloat("end",     &props.Floats["uFogEnd"],     0.0f, 1.0f);
-				ImGui::ColorEdit3("color",    &props.Vec3s["uFogColor"][0]);
-				ImGui::SliderInt("mode",      &props.Ints["uFogMode"], 0, 2); // 0=Linear, 1=Exp, 2=Exp2
+				ImGui::SliderFloat("start", &props.Floats["uFogStart"], 0.0f, 1.0f);
+				ImGui::SliderFloat("end", &props.Floats["uFogEnd"], 0.0f, 1.0f);
+				ImGui::ColorEdit3("color", &props.Vec3s["uFogColor"][0]);
+				ImGui::SliderInt("mode", &props.Ints["uFogMode"], 0, 2); // 0=Linear, 1=Exp, 2=Exp2
 			}
 			else if (key == Playable::PASS_BLOOM)
 			{
 				ImGui::SliderFloat("threshold", &props.Floats["uBloomThreshold"], 0.0f, 1.5f);
-				ImGui::SliderFloat("spread",    &props.Floats["uBloomSpread"],    0.1f, 5.0f);
+				ImGui::SliderFloat("spread", &props.Floats["uBloomSpread"], 0.1f, 5.0f);
 				ImGui::SliderFloat("intensity", &props.Floats["uBloomIntensity"], 0.0f, 4.0f);
 			}
 			else if (key == Playable::PASS_GRAYSCALE_VIGNETTING)
 			{
 				// grayscale 강도는 HP 구동 - 여기선 vignette(색+강도)만 편집.
-				ImGui::SliderFloat("vignette",  &props.Floats["uVignetteAmount"], 0.0f, 1.0f);
-				ImGui::ColorEdit3 ("vig color", &props.Vec3s["uVignetteColor"][0]);
+				ImGui::SliderFloat("vignette", &props.Floats["uVignetteAmount"], 0.0f, 1.0f);
+				ImGui::ColorEdit3("vig color", &props.Vec3s["uVignetteColor"][0]);
 			}
 			else if (key == Playable::PASS_DEPTH_DEBUG)
 			{
 				// Phase1 학습 - linearize 0<->1 토글로 raw(비선형) vs 선형화 비교. near/far 는 카메라와 맞춰 튜닝.
 				ImGui::SliderFloat("linearize", &props.Floats["uLinearize"], 0.0f, 1.0f);
-				ImGui::SliderFloat("near",      &props.Floats["uNear"],      0.01f, 5.0f);
-				ImGui::SliderFloat("far",       &props.Floats["uFar"],       10.0f, 500.0f);
+				ImGui::SliderFloat("near", &props.Floats["uNear"], 0.01f, 5.0f);
+				ImGui::SliderFloat("far", &props.Floats["uFar"], 10.0f, 500.0f);
 			}
 		}
 
-		SJH::PassIterator *mIter         = nullptr; ///< 열거/조회 대상 (비소유).
-		SJH::Material     *mGrayscaleMat = nullptr; ///< grayscale 공유 Material (비소유, 선택 - read-only 표시용).
+		SJH::PassIterator *mIter = nullptr;     ///< 열거/조회 대상 (비소유).
+		SJH::Material *mGrayscaleMat = nullptr; ///< grayscale 공유 Material (비소유, 선택 - read-only 표시용).
 	};
 } // namespace TopdownShooter::UI
 

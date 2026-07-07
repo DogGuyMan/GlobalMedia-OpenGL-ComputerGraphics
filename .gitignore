@@ -8,6 +8,7 @@ vcpkg_installed/
 doc/html/
 doc/latex/
 docs/
+*log.*
 
 ###########
 *workspace

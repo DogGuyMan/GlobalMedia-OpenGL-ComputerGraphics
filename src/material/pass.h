@@ -59,6 +59,8 @@ namespace SJH::Pass
 		AlphaTest = 2450,        ///< discard 기반 - depth test/write on, blend off. 현재 sprite 전용 (face culling 비활성).
 		Skybox = 2500,           ///< depth write off, DepthFunc=LEQUAL, CullMode=FRONT (큐브 안쪽에서 봄). Queue 2500.
 		Transparent = 3000,      ///< 반투명 alpha-blend - depth test on, write off, blend on, back-to-front sort.
+		TransparentDepthWrite = 3001, ///< [학습 전용 - Task 2.2 Q6] Transparent 와 동일하되 DepthWrite=on.
+		                              ///<   반투명이 depth 를 기록하면 뒤 반투명이 depth test 탈락 관찰용. 정상 씬 사용 금지.
 		OutlineVisible = 4000,   ///< Stencil-masked outline - DepthFunc=LEQUAL (Opaque 에 가려질 수 있음, 자연스러운 윤곽선).
 		OutlineXRay = 4001,      ///< Stencil-masked outline - DepthFunc=GREATER (벽 뒤에 가려진 부분만 - Apex/Overwatch 적 표시 정통).
 		Screen = 5000,           ///< ScreenQuad/PostFX blit - NDC 풀스크린 quad. depth test/write off, CullMode=0, blend off(첫 소스 replace). 모든 world/outline 패스 후 최종 합성. (D-RS-5 state-as-data - 구 DeviceContext::SetDepthTest(false) 하드코딩 대체.)
@@ -229,6 +231,17 @@ namespace SJH::Pass
 			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ 0, // * cull off - 양면 그리기
 			    /*BlendEnable*/ true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
 			    /*QueueLayer*/ QueueOf(RenderQueue::Transparent)};
+
+		case RenderQueue::TransparentDepthWrite:
+			// [학습 전용 - Task 2.2 Q6] Transparent 와 완전히 동일하되 *DepthWrite=true* 하나만 다름.
+			//  > 반투명이 depth buffer 에 z 를 기록 -> 뒤(더 먼) 반투명 fragment 가 depth test 에서 탈락 = 사라짐.
+			//  > Transparent(DepthWrite=off, 뒤가 비침) 와 비교 관찰용. blend on 은 유지라 앞면은 여전히 반투명.
+			//  > 정상 씬에는 쓰지 말 것 - 반투명 상호 가림 버그가 바로 이것.
+			return RenderStateBlock{
+			    /*DepthTest*/ true, /*DepthWrite*/ true, // * DepthWrite ON - Q6 관찰 핵심 (Transparent 와의 유일한 차이)
+			    /*DepthFunc*/ GL_LEQUAL, /*CullMode*/ 0,
+			    /*BlendEnable*/ true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+			    /*QueueLayer*/ QueueOf(RenderQueue::TransparentDepthWrite)};
 
 		case RenderQueue::OutlineVisible: {
 			// Outline 정통 (LearnOpenGL Stencil testing - *outline draw pass*):

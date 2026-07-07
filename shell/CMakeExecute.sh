@@ -56,7 +56,8 @@ if [ "$LOGGING_TYPE" = "leaks" ]; then
     fi
 else
     echo "---------일반 실행 ($EXEC_BASENAME)---------"
-    "./$EXEC_BASENAME"
+    "./$EXEC_BASENAME" 2>&1 | tee "$ROOT_DIR/log.txt"
+    echo "✓ 실행 로그 저장: $ROOT_DIR/log.txt"
 fi
 
 popd > /dev/null

@@ -60,9 +60,12 @@ VSOut vsMain(VSIn input)
 [shader("fragment")]
 float4 fsMain(VSOut input) : SV_Target
 {
-    float4 color = emissive.Sample(input.uv);
-    // 투명도는 alpha 채널 - RGB 휘도가 아니라 alpha 로 컷오프 (밝은 RGB 의 투명 픽셀 제거).
-    if (color.a < 0.1)
+    float4 texel = emissive.Sample(input.uv);
+    // ! [Task 2.2 데모] bw 그라디언트 텍스처의 휘도(Rec.601)를 알파로 승격 - black=투명(0) .. white=불투명(1).
+    // !   discard(하드컷) / blend(페이드) / +DepthWrite 세 모드 차이를 알파 그라디언트로 뚜렷하게 관찰하기 위함.
+    // !   (구: color.a 컷오프 - 알파 채널 없는 그라디언트 텍스처에선 무효라 휘도 기반으로 전환.)
+    float alpha = dot(texel.rgb, float3(0.299, 0.587, 0.114)) * uMaterial.tintColor.a;
+    if (alpha < 0.1)
         discard;
-    return color * uMaterial.tintColor;
+    return float4(texel.rgb * uMaterial.tintColor.rgb, alpha);
 }

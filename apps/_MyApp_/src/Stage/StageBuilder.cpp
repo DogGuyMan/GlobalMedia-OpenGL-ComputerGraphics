@@ -13,8 +13,8 @@
  *
  *  ### 함정 / 계약
  *  - @c gl3w.h 는 반드시 최상단 include - EffekseerRendererGL(시스템 gl3.h) 와 충돌 회피.
- *  - 벽 Material 은 공유 인스턴스(@c wallMat) 에서 벽별 MaterialInstance 를 파생해 uvScale 을 독립 override.
- *    공유 Material 직접 수정 시 모든 벽에 영향.
+ *  - 벽 4개는 공유 Material(@c wallMat, "stage_wall") 을 *직접* 사용 (4벽 uvScale 동일이라 인스턴스 불필요).
+ *    공유 Material 수정 시 전 벽에 반영 - PassDebugLayer 가 이 성질로 벽 Pass 를 일괄 토글.
  *  - Orbit VFX 는 @c ResourceRegistry 에 @c "orbital_background" Effect 등록 여부에만 의존 - 없으면 no-op.
  */
 #include <GL/gl3w.h> // 반드시 최상단 - GameSystems.h->VFXSystem.h->EffekseerRendererGL(시스템 gl3.h) <-> resource_registry.h->gl3w.h 충돌 회피.
@@ -50,22 +50,35 @@ namespace TopdownShooter::Stage
 	{
 		// -- ResourceRegistry key 상수 - "stage_" prefix 로 Stage 도메인 영역 명시 --
 
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kPlaneKey = "stage_plane";            ///< Plane mesh 등록 key (공유, 벽 시각화용).
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kWallMatKey = "stage_wall";           ///< 반투명 벽 공유 Material key.
 
 		// 반투명(Transparent) 벽 - PoliceTape 를 emissive 로 출력하는 unlit 셰이더.
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kTransparentProgKey = "stage_transparent";  ///< 반투명 벽 Program key.
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kTransparentVS = "resources/shaders/transparent.vs"; ///< 반투명 벽 VS 경로.
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kTransparentFS = "resources/shaders/transparent.fs"; ///< 반투명 벽 FS 경로.
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kWallTexKey = "stage_police_tape";    ///< PoliceTape 텍스처 key.
-		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png"; ///< PoliceTape 텍스처 경로.
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
+		// constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png"; ///< PoliceTape 텍스처 경로.
+		constexpr const char *kWallTexPath = "resources/texture/bwgradation1216.png"; ///< PoliceTape 텍스처 경로.
 
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kPcbKey = "stage_pcb";                ///< PCB 모델 key.
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kPcbModelPath = "resources/model/pcb.fbx"; ///< PCB 모델 경로.
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kPhongAlbedoProgKey = "stage_phong_albedo"; ///< PCB 용 Phong+알베도 Program key.
 		// Phase 2.5 (S7) - slang phong UBO 셰이더로 전환 (구 phong_tex.vs / phong_albedo.fs loose 판 대체).
 		//   phong.slang -> phong.{vs,fs} (LightBlock UBO + MaterialBlock.baseColor.rgb=albedo). 값은 UBO 경로(loose 없음).
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kPhongAlbedoVS = "resources/shaders/phong.vs"; ///< slang phong VS (LightBlock UBO).
+		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kPhongAlbedoFS = "resources/shaders/phong.fs"; ///< slang phong FS (albedo 기반).
 
 		/// @brief PCB 모델용 Phong 알베도 Program 을 idempotent 하게 등록/조회.
@@ -116,7 +129,7 @@ namespace TopdownShooter::Stage
 		/// @brief 반투명 벽 공유 Material 을 idempotent 하게 등록/조회.
 		/// @details
 		///   Transparent Pass(blend on, depthWrite off, cull off 양면) + emissive sampler(unit 0) 에
-		///   PoliceTape 바인딩. uvScale / uScrollSpeed 는 공유 기본값 - 벽별 MaterialInstance 가 override.
+		///   PoliceTape 바인딩. uvScale 은 CreateStageActor 가 arena/wallH 로 설정(전 벽 공유), uScrollSpeed 는 여기 기본값.
 		/// @param reg 자원 레지스트리.
 		/// @return 공유 @c SJH::Material 포인터.
 		SJH::Material *EnsureWallMaterial(SJH::ResourceRegistry &reg)
@@ -130,7 +143,7 @@ namespace TopdownShooter::Stage
 			// emissive sampler(unit 0) 에 PoliceTape 텍스처 - 라이팅 무관 자체발광.
 			SJH::Uniforms::SetTexture(*mat, "emissive", EnsureWallTexture(reg), 0);
 			SJH::Uniforms::SetVec4(*mat, "tintColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-			// 기본 타일링 - 벽마다 길이 비율이 달라 실제 값은 인스턴스가 override.
+			// 기본 타일링(placeholder) - 실제 값은 CreateStageActor 가 arena/wallH 로 설정(전 벽 공유).
 			SJH::Uniforms::SetVec2(*mat, "uvScale", glm::vec2(1.0f, 1.0f));
 			// U 방향 시간 스크롤 속도(tile/sec) - VS 가 uTime 과 곱해 PoliceTape 가 흐름.
 			SJH::Uniforms::SetFloat(*mat, "uScrollSpeed", 0.3f);
@@ -193,6 +206,15 @@ namespace TopdownShooter::Stage
 		// 벽 하나를 생성/배치하는 팩토리 - (name, center, yRot) 만으로 통합.
 		//   half(물리 박스)는 yRot 에서 자동 도출: 0/180 -> 가로(arena,wallH), 90/270 -> 세로(wallH,arena).
 		//   시각 quad 는 항상 (arena*2, 1, 1) 에 yRot 만큼 Y축 회전 -> 세로 PoliceTape 펜스.
+
+		// 벽 4개 모두 동일 타일링 -> 공유 wallMat 직접 사용 (인스턴스 clone 불필요).
+		//   과거: 벽별 MaterialInstance 로 uvScale 독립 override 했으나 4벽 값이 동일해 중복이었음.
+		//   공유로 전환 -> PassDebugLayer 가 shared SetPass 로 전 벽을 한 번에 토글 가능.
+		const float tile = wallH * 2.0f;
+		SJH::Uniforms::SetVec2(*wallMat, "uvScale", glm::vec2(arena * 2.0f / tile, wallH * 2.0f / tile));
+		// uTime 은 공유 wallMat 에 한 번만 구동 (MaterialTime 은 값 세팅이라 하나로 충분 - 4중 부착 불필요).
+		stage->AddComponent<Components::MaterialTime>(wallMat);
+
 		auto spawnWall = [&](const char *name, glm::vec2 center, float yRot) {
 			const bool horizontal = (static_cast<int>(yRot) % 180) == 0;
 			const glm::vec2 half = horizontal ? glm::vec2(arena, wallH) : glm::vec2(wallH, arena);
@@ -202,18 +224,8 @@ namespace TopdownShooter::Stage
 			tr.EulerRot = glm::vec3(0.0f, yRot, 0.0f);
 			tr.Scale = glm::vec3(arena * 2.0f, 1.0f, 1.0f);
 
-			const std::string matKey = std::string(kWallMatKey) + "_" + name;
-			SJH::Material *wallInst = reg.FindMaterialInstance(matKey);
-			if (wallInst == nullptr)
-			{
-				wallInst = reg.CreateMaterialInstanceFrom(matKey, wallMat);
-				const float tile = wallH * 2.0f;
-				SJH::Uniforms::SetVec2(*wallInst, "uvScale",
-				                       glm::vec2(arena * 2.0f / tile, wallH * 2.0f / tile));
-			}
-			actor->AddComponent<SJH::Scene::MeshRenderer>(plane, wallInst);
-			// 시간 공급 - VS 의 uTime 을 누적 dt 로 갱신해 PoliceTape U 스크롤 구동.
-			actor->AddComponent<Components::MaterialTime>(wallInst);
+			// 시각 Material = 공유 wallMat 직접 주입 (인스턴스 없음). shared SetPass 가 전 벽에 반영.
+			actor->AddComponent<SJH::Scene::MeshRenderer>(plane, wallMat);
 			stage->AddChild(std::move(actor));
 		};
 		spawnWall("WallTop", glm::vec2(0.0f, +arena), 180.0f);

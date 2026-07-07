@@ -191,6 +191,11 @@ namespace TopdownShooter
 					fogMat->Properties.Ints["uFogMode"] = Playable::FOG_MODE;
 				}
 				// grayscale 공유 Material - HpGrayscalePostFX SSOT + PassDebugLayer read-only 표시용 캡처.
+				// ! 리펙토링 대상 -> Playable::VIGNETTE_COLOR를 왜 명시적으로 넣는것이지? 
+				// 	! 쉐이더 자체에서 값을 빨간색으로 고정시키면 될 것 같고, 이 쉐이더는 당연히 확장성은 Slang으로 처리하기 때문에
+				//	! 추후 비네팅 함수를 외부로 분리하고, 오직 HPGrayScale의 구체 쉐이더 클래스만 구체화 하는식으로 해결할 수 있고,
+				//	! 아래의 코드가 굳이 필요하지 않아보인다.
+				// 	! 이와 비슷한 위의 Fog 또한 그렇다.
 				mGrayscaleMatPtr = reg.FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_GRAYSCALE_VIGNETTING);
 				if (mGrayscaleMatPtr)
 					mGrayscaleMatPtr->Properties.Vec3s["uVignetteColor"] = Playable::VIGNETTE_COLOR; // vec3 초기값(InitFloats 밖).
@@ -298,7 +303,7 @@ namespace TopdownShooter
 				// 포인터만 주입(매 프레임 OnBuildUI 가 lazy 조회). grayscale 강도 관찰용 공유 Material 도 주입.
 				// capture G1 에서 일시 비활성화를 위해 raw 포인터 캡처 (소유 = 스택).
 				{
-					auto dbg = std::make_unique<UI::PassDebugLayer>(&mPassIterator, mGrayscaleMatPtr);
+					auto dbg = std::make_unique<UI::PassDebugLayer>(&mPassIterator);
 					mPassDebugLayerPtr = dbg.get();
 					mImGuiStack.Push(std::move(dbg));
 				}
@@ -455,6 +460,9 @@ namespace TopdownShooter
 
 			// GU1 capture 모드 -- 180 프레임 도달 시 3 변형 렌더+캡처 후 종료.
 			// 변형 순서: G1(전체, PassDebugLayer 제외) -> G2(ImGui 제외) -> G3(Skybox+PostFX+ScreenQuad 만).
+			// ! 리팩토링 대상. #DEFINE으로 처리해야 하는것이 아닌가?
+			// 	! 그리고 애초에 Main.cpp 책임이 되서는 안된다.
+			//	! Diagnostics에 옮기는게 맞지 않을까? 아니면 통째로 Test에 넣는것이 맞을지도
 			if (mCaptureMode)
 			{
 				if (mCaptureFrame == 180)
