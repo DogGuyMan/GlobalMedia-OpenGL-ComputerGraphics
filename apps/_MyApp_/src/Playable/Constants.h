@@ -150,7 +150,9 @@ namespace TopdownShooter::Playable
 	constexpr const char *PASS_INVERT = "invert";
 	constexpr const char *PASS_BLURRING = "blurring";
 	constexpr const char *PASS_SOBEL = "sobel";
+#ifdef MENTAL_MODEL_PHASE_1
 	constexpr const char *PASS_DEPTH_DEBUG = "depth_debug"; // Phase1 학습 - 깊이 버퍼 흑백 시각화(F1 토글, 기본 비활성)
+#endif
 
 	// -- PostFX 파이프라인 구성 (PostFXConstants.h 통합 2026-06-20) --
 	/**
@@ -198,7 +200,9 @@ namespace TopdownShooter::Playable
 	    {PASS_INVERT, "./resources/shaders/postprocess/invert.vs", "./resources/shaders/postprocess/invert.fs", {}},
 	    {PASS_BLURRING, "./resources/shaders/postprocess/blurring.vs", "./resources/shaders/postprocess/blurring.fs", {}},
 	    {PASS_SOBEL, "./resources/shaders/postprocess/sobel.vs", "./resources/shaders/postprocess/sobel.fs", {}},
+#ifdef MENTAL_MODEL_PHASE_1
 	    {PASS_DEPTH_DEBUG, "./resources/shaders/postprocess/depth_debug.vs", "./resources/shaders/postprocess/depth_debug.fs", {{"uNear", 0.1f}, {"uFar", 100.0f}, {"uLinearize", 1.0f}}}, // Phase1 학습 - 깊이 흑백(uLinearize 0=raw/1=선형화). uDepth 는 RebindFogUniforms 가 바인딩.
+#endif
 	};
 
 	/// @brief fog 셰이더 @c uFogColor vec3 초기값 -- RGB (20, 36, 10) 어두운 녹색 안개.

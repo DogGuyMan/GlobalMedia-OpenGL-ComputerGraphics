@@ -48,6 +48,11 @@ target_link_libraries(${CHAPTER_NAME} PRIVATE
     # imgui::imgui (v1.53 코어) 는 game_deps 경유. GLFW 백엔드만 위 IMGUI_SRC 로 vendoring.
 )
 
+# 학습용 코드 토글 (멘탈모델 커리큘럼 docs/비어버린멘탈모델/) — 정의 시 PassDebugLayer 등의
+#   학습 전용 블록(라디오 토글 / 진단 로그)이 컴파일된다. 학습 종료 후 이 정의만 지우면
+#   학습 코드가 빌드에서 빠진다 (코드 삭제 불필요, 주석 처리 대체 — #ifdef MENTAL_MODEL_PHASE_2 로 가드).
+target_compile_definitions(${CHAPTER_NAME} PRIVATE MENTAL_MODEL_PHASE_1 MENTAL_MODEL_PHASE_2)
+
 if(MSVC)
     target_compile_definitions(${CHAPTER_NAME} PRIVATE WIN32 _WINDOWS)
     target_link_options(${CHAPTER_NAME} PRIVATE

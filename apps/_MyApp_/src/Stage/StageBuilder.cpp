@@ -65,8 +65,8 @@ namespace TopdownShooter::Stage
 		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kWallTexKey = "stage_police_tape";    ///< PoliceTape 텍스처 key.
 		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
-		// constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png"; ///< PoliceTape 텍스처 경로.
-		constexpr const char *kWallTexPath = "resources/texture/bwgradation1216.png"; ///< PoliceTape 텍스처 경로.
+		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png"; ///< PoliceTape 텍스처 경로.
+		// constexpr const char *kWallTexPath = "resources/texture/bwgradation1216.png"; ///< PoliceTape 텍스처 경로.
 
 		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kPcbKey = "stage_pcb";                ///< PCB 모델 key.

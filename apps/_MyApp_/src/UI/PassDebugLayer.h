@@ -38,8 +38,10 @@
 #include "resource_registry/resource_registry.h"    // FindSharedMaterial("mat_pass_<key>")
 
 #include <imgui.h>
-#include <spdlog/spdlog.h> // [Task 2.2 진단] SetPass 전후 상태 로깅
 #include <string>
+#ifdef MENTAL_MODEL_PHASE_2
+#include <spdlog/spdlog.h> // [Task 2.2 진단, 학습전용] SetPass 전후 상태 로깅
+#endif
 
 namespace TopdownShooter::UI
 {
@@ -84,8 +86,9 @@ namespace TopdownShooter::UI
 				ImGui::PopID();
 			}
 
-			// ! 학습전용 코드
-			// !	[ Phase Task 2.2] 학습 전용이므로 필요없으면 삭제하면 되는 대상
+#ifdef MENTAL_MODEL_PHASE_2
+			// ! 학습전용 코드 (#ifdef MENTAL_MODEL_PHASE_2 가드 — CMake target_compile_definitions 로 토글)
+			// !	[ Phase Task 2.2] 학습 전용이므로 필요없으면 CMake 의 MENTAL_MODEL_PHASE_2 정의만 제거
 			// stage_wall 은 lazy 조회 - 씬에 아직/전혀 없으면 nullptr 이라 매 프레임 조회 + null 가드 (위 mat_pass 와 동일 패턴).
 			static int queueChoice = 1;
 			if (SJH::Material *wallMatPtr = reg.FindSharedMaterial("stage_wall"))
@@ -123,6 +126,7 @@ namespace TopdownShooter::UI
 					dumpMat("inst WallRight", reg.FindMaterialInstance("stage_wall_WallRight"));
 				}
 			}
+#endif // MENTAL_MODEL_PHASE_2
 
 			// grayscale 강도 read-only - HP(HpGrayscalePostFX) 가 구동하므로 여기선 관찰만.
 			if (mGrayscaleMat)
@@ -173,6 +177,7 @@ namespace TopdownShooter::UI
 				ImGui::SliderFloat("vignette", &props.Floats["uVignetteAmount"], 0.0f, 1.0f);
 				ImGui::ColorEdit3("vig color", &props.Vec3s["uVignetteColor"][0]);
 			}
+#ifdef MENTAL_MODEL_PHASE_1
 			else if (key == Playable::PASS_DEPTH_DEBUG)
 			{
 				// Phase1 학습 - linearize 0<->1 토글로 raw(비선형) vs 선형화 비교. near/far 는 카메라와 맞춰 튜닝.
@@ -180,6 +185,7 @@ namespace TopdownShooter::UI
 				ImGui::SliderFloat("near", &props.Floats["uNear"], 0.01f, 5.0f);
 				ImGui::SliderFloat("far", &props.Floats["uFar"], 10.0f, 500.0f);
 			}
+#endif
 		}
 
 		SJH::PassIterator *mIter = nullptr;     ///< 열거/조회 대상 (비소유).
