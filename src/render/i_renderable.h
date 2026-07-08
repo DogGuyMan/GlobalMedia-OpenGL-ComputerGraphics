@@ -14,6 +14,13 @@ namespace SJH
 	  public:
 		virtual void Render(DeviceContext &rec, const Scene::Camera &cam) const = 0;
 		virtual int  QueueLayer() const = 0;
+
+		/// @brief 순수 material RenderQueue (QueueOffset 미포함) - 골든 per-queue 필터/분류용.
+		/// @details QueueLayer() = RenderQueue() + DrawOrder() 관계. 필터는 이 순수값으로 해야
+		///          음수 DrawOrder 레이어(플레이어 -1/-2/-3)가 인접 큐로 새지 않는다.
+		virtual int  RenderQueue() const = 0;
+		/// @brief actor 내부 painter 층(= MeshRenderer::QueueOffset). RenderQueue 와 분리 노출.
+		virtual int  DrawOrder() const = 0;
 	};
 }
 #endif

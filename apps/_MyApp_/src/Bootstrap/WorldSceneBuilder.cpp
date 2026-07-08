@@ -158,9 +158,14 @@ namespace TopdownShooter::Bootstrap
 		WorldSceneResult result;
 		result.WorldCamera = BuildWorldCamera(deps);
 		BuildLighting();
-		auto *skyboxRenderer  = BuildSkybox();
-		result.SkyboxRenderer = skyboxRenderer;
-		result.SkyboxMat      = skyboxRenderer ? skyboxRenderer->Material : nullptr;
+
+		// !! 사보타지 테스팅 (BuildWorldScene)
+		{
+			auto *skyboxRenderer  = BuildSkybox();
+			result.SkyboxRenderer = skyboxRenderer;
+			result.SkyboxMat      = skyboxRenderer ? skyboxRenderer->Material : nullptr;
+		}
+
 		return result;
 	}
 }

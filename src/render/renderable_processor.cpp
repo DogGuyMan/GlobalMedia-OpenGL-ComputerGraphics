@@ -69,6 +69,8 @@ namespace SJH
 		// ROP 는 여기서만 적용 (잎은 ROP 미호출 - 역할 분리 D7).
 		for (const auto &e : mWorld)
 		{
+			if (e.renderQueue < mQueueMin || e.renderQueue >= mQueueMax)
+				continue; // 순수 RenderQueue 필터 밖 - 캡처 격리 (기본 전범위 무영향, DrawOrder offset 무관).
 			rc.ApplyRenderStateBlock(e.r->GetRenderStateBlock());
 			e.r->Render(rc, cam);
 		}

@@ -87,6 +87,16 @@ namespace SJH::Scene
 			return Material ? Pass::QueueOf(Material->GetPass(), QueueOffset) : QueueOffset;
 		}
 
+		/// @brief 순수 material RenderQueue(offset 미포함) - 필터/분류용. Material null 이면 Opaque.
+		int RenderQueue() const override
+		{
+			return Material ? static_cast<int>(Material->GetPass())
+			                : static_cast<int>(Pass::RenderQueue::Opaque);
+		}
+
+		/// @brief painter 층 offset 노출 (RenderQueue 와 분리 - Sort tiebreak 리팩토링 대비).
+		int DrawOrder() const override { return QueueOffset; }
+
 		/// @brief 잎 자가발행 draw - DeviceContext + Camera 로 mesh+material 을 GL 에 전송.
 		/// @details dormant(미호출) - RenderableProcessor::Process 가 소비하는 건 다음 Task.
 		void Render(DeviceContext &rec, const Camera &cam) const override;

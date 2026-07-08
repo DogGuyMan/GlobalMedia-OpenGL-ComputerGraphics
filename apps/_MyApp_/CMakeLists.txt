@@ -20,13 +20,8 @@ set(UI_SRC
     src/UI/UiBootstrap.cpp
 )
 
-# 골든 이미지 캡처 헬퍼 (STB_IMAGE_WRITE_IMPLEMENTATION 포함 — 이 TU 전용).
-set(CAPTURE_SRC
-    src/Capture/golden_capture.cpp
-)
-
-# 실행파일
-add_executable(${CHAPTER_NAME} main.cpp ${IMGUI_SRC} ${UI_SRC} ${CAPTURE_SRC})
+# 실행파일 (골든 캡처는 SJH::Diagnostics frame_capture/pass_capture 로 이관 - CAPTURE_SRC 제거).
+add_executable(${CHAPTER_NAME} main.cpp ${IMGUI_SRC} ${UI_SRC})
 
 target_include_directories(${CHAPTER_NAME} PRIVATE
     ${CMAKE_CURRENT_DIR}

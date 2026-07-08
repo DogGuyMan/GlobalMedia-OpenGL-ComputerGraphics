@@ -26,6 +26,7 @@
 #define __SJH_MESH_PASS_PROCESSOR_H__
 
 #include "render/i_renderable.h"
+#include <climits>
 #include <cstddef>
 #include <vector>
 
@@ -53,7 +54,7 @@ namespace SJH
 		/// @param viewDepth view-space z (카메라 전방 음수 - 정렬 시 부호 주의).
 		void Submit(const IRenderable *r, float viewDepth)
 		{
-			mWorld.push_back({r, r->QueueLayer(), viewDepth});
+			mWorld.push_back({r, r->QueueLayer(), r->RenderQueue(), viewDepth});
 		}
 
 		/// @brief 큐를 비움 (프레임 시작 시 호출).
@@ -74,16 +75,28 @@ namespace SJH
 		/// @param cam 이번 패스 Camera (MeshRenderer::Render 가 view/proj 도출).
 		void Process(DeviceContext &rc, const Scene::Camera &cam);
 
+		/// @brief World draw 를 순수 RenderQueue [min,max) 로 제한(디버그/골든 캡처용). 기본 전범위(무영향).
+		/// @details queueLayer(=base+offset) 가 아니라 RenderQueue(순수)로 필터 - 음수 DrawOrder 가 인접 큐로 안 샘.
+		void SetQueueFilter(int minQueue, int maxQueue)
+		{
+			mQueueMin = minQueue;
+			mQueueMax = maxQueue;
+		}
+
 	  private:
 		/// @brief World 항목 - IRenderable 포인터 + 정렬 키.
 		struct WorldEntry
 		{
 			const IRenderable *r;
-			int   queueLayer;
+			int   queueLayer;  ///< 정렬 키 = RenderQueue + DrawOrder(offset). Sort 우선순위용.
+			int   renderQueue; ///< 순수 material 큐(offset 미포함) - per-queue 필터용(음수 offset 누수 방지).
 			float depth;
 		};
 
 		std::vector<WorldEntry>  mWorld; ///< World flat IRenderable 큐.
+
+		int mQueueMin = INT_MIN; ///< World 큐 필터 하한 [min,max) - 캡처 격리용(기본 무영향).
+		int mQueueMax = INT_MAX; ///< 상한.
 	};
 }
 

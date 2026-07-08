@@ -25,6 +25,7 @@
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_templated.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <sstream>
@@ -212,21 +213,36 @@ inline MatchesGoldenMatcher MatchesGolden()
 	return MatchesGoldenMatcher{};
 }
 
+/// REF_DIR 의 golden_*.png 를 전수 수집(확장자 제외 stem). 정렬로 케이스 순서 결정적.
+/// 새 골든 추가 = 비교코드 무변경(파일만 커밋하면 자동 포함).
+std::vector<std::string> GoldenNames()
+{
+	std::vector<std::string> names;
+	for (const auto &e : fs::directory_iterator(SJH_GOLDEN_REF_DIR))
+	{
+		const std::string stem = e.path().stem().string();
+		if (e.path().extension() == ".png" && stem.rfind("golden_", 0) == 0)
+			names.push_back(stem);
+	}
+	std::sort(names.begin(), names.end());
+	return names;
+}
+
 } // namespace
 
-// === 케이스 3종 =============================================================
+// === glob 전수 비교 (데이터주도) ============================================
+// REF_DIR 의 golden_*.png 를 모두 캡처본과 비교. 골든 추가 시 이 파일 무변경.
 
-TEST_CASE("golden_full 이 커밋 골든과 일치", "[golden]")
+TEST_CASE("골든 전수 비교(glob)", "[golden]")
 {
-	REQUIRE_THAT(std::string("golden_full"), MatchesGolden());
-}
-
-TEST_CASE("golden_no_imgui 이 커밋 골든과 일치", "[golden]")
-{
-	REQUIRE_THAT(std::string("golden_no_imgui"), MatchesGolden());
-}
-
-TEST_CASE("golden_skybox 이 커밋 골든과 일치", "[golden]")
-{
-	REQUIRE_THAT(std::string("golden_skybox"), MatchesGolden());
+	const std::vector<std::string> names = GoldenNames();
+	// ref dir 가 비면 게이트가 유명무실 - 최소 baseline 3장은 있어야 함.
+	REQUIRE(names.size() >= 3);
+	for (const auto &name : names)
+	{
+		DYNAMIC_SECTION("golden: " << name)
+		{
+			REQUIRE_THAT(name, MatchesGolden());
+		}
+	}
 }

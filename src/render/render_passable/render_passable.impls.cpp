@@ -228,6 +228,11 @@ namespace SJH
 		return fb ? fb->GetColorAttachment().get() : nullptr;
 	}
 
+	void WorldPass::SetQueueFilter(int minQueue, int maxQueue)
+	{
+		mProc.SetQueueFilter(minQueue, maxQueue);
+	}
+
 	// ===================================================================================
 	//  SkyboxPass - background-first skybox 합성 (구 WorldPass queue-2500 skybox 분리, Task 3.2)
 	// ===================================================================================

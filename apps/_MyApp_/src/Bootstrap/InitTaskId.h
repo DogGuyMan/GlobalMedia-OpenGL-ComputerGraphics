@@ -25,7 +25,7 @@ namespace TopdownShooter::Bootstrap
 		ScreenPipeline,  ///< phase2: DefaultPipeline + ScreenCamera + PostFX.
 		VfxUi,           ///< phase2: VFX 이펙트(orbital 포함) 로드 + 게임 UI. World 보다 먼저.
 		World,           ///< phase2: WorldScene + 스테이지 액터(orbital FindEffect) + 플레이어.
-		Stages,          ///< phase2: stages 컬렉션 조립.
+		Pass,          	 ///< phase2: Pass 컬렉션 조립.
 		Enter,           ///< phase3: Director.Enter.
 		Fsm,             ///< phase3: GameContext + Stage FSM.
 	};
@@ -39,7 +39,7 @@ namespace TopdownShooter::Bootstrap
 		case EInitTask::ScreenPipeline: return "ScreenPipeline";
 		case EInitTask::VfxUi:          return "VfxUi";
 		case EInitTask::World:          return "World";
-		case EInitTask::Stages:         return "Stages";
+		case EInitTask::Pass:         return "Pass";
 		case EInitTask::Enter:          return "Enter";
 		case EInitTask::Fsm:            return "Fsm";
 		}

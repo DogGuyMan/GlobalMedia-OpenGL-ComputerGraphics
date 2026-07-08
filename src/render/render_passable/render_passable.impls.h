@@ -66,6 +66,9 @@ namespace SJH
         /// @return *this - fluent Builder(생성 직후 설정+포인터 캡처 체이닝용). 프로젝트 Setter 컨벤션(Material::SetPass 등).
         WorldPass &SetClearsTarget(bool v) { mClearsTarget = v; return *this; }
 
+        /// @brief World draw 를 queueLayer [min,max) 로 제한 - mProc 에 전달(골든 캡처 격리용, 기본 무영향).
+        void SetQueueFilter(int minQueue, int maxQueue);
+
       private:
         /// @brief Actor 트리 DFS - 활성 + 가시(cullingMask) 노드의 MeshRenderer 만 Submit(IRenderable*).
         void CollectFromActor(const Scene::Actor &actor, const glm::mat4 &viewMat, uint64_t cullingMask);

@@ -60,8 +60,10 @@
 #include "scene/camera.h"
 #include "scene/scene.h"
 
-#include "Capture/golden_capture.h"
+#include "diagnostics/frame_capture.h"
+#include "diagnostics/pass_capture.h"
 
+#include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -215,7 +217,11 @@ namespace TopdownShooter
 			sched.Task(Bootstrap::EInitTask::World).Needs({Bootstrap::EInitTask::VfxUi}).Gl().Does([&] { // vfxUi 가 TEST_EFFECTS(orbital_background) 를 선행 로드 -> 스테이지 FindEffect 의존
 				auto worldScene = Bootstrap::BuildWorldScene({mFbInfo.Aspect, &mMouse, mSceneFB.get()});
 				mCamera = worldScene.WorldCamera;
-				mSkyboxMat = worldScene.SkyboxMat;
+				
+				// !! 사보타지 테스팅 (BuildWorldScene) 
+				{
+					mSkyboxMat = worldScene.SkyboxMat;
+				}
 				mSkyboxRenderer = worldScene.SkyboxRenderer;
 
 				dir.Root().AddChild(std::move(TopdownShooter::Stage::CreateStageActor({&phys.World(), &reg})));
@@ -224,7 +230,7 @@ namespace TopdownShooter
 				VFX::SetSpawnContext(mFxRoot, &vfxs);
 				WorldText::SetSpawnContext(mFxRoot, manager.WorldText().GetFont());
 
-				reg.CreateEffect(vfxs.GetManager(), VFX::MUZZLE_EFFECT.key, VFX::MUZZLE_EFFECT.path);
+				// reg.CreateEffect(vfxs.GetManager(), VFX::MUZZLE_EFFECT.key, VFX::MUZZLE_EFFECT.path);
 
 				auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
 				mSpriteActor = player.SpriteActor;
@@ -236,7 +242,7 @@ namespace TopdownShooter
 
 			// T4 stages -- PassIterator 가 모든 Pass 를 소유. 코스 순서대로 Add(std::move).
 			//   [Skybox -> World -> Particle -> Grayscale(present) -> ImGui]. 비소유 관찰 포인터는 move 전에 캡처.
-			sched.Task(Bootstrap::EInitTask::Stages).Needs({Bootstrap::EInitTask::ScreenPipeline, Bootstrap::EInitTask::World}).Cpu().Does([&] {
+			sched.Task(Bootstrap::EInitTask::Pass).Needs({Bootstrap::EInitTask::ScreenPipeline, Bootstrap::EInitTask::World}).Cpu().Does([&] {
 				// 1) Skybox - background-first (sceneFB clear+skybox 책임).
 				mPassIterator.Add(std::make_unique<SJH::SkyboxPass>(mSkyboxRenderer, mCamera));
 
@@ -463,10 +469,8 @@ namespace TopdownShooter
 			mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
 
 			// GU1 capture 모드 -- 180 프레임 도달 시 3 변형 렌더+캡처 후 종료.
-			// 변형 순서: G1(전체, PassDebugLayer 제외) -> G2(ImGui 제외) -> G3(Skybox+PostFX+ScreenQuad 만).
-			// ! 리팩토링 대상. #DEFINE으로 처리해야 하는것이 아닌가?
-			// 	! 그리고 애초에 Main.cpp 책임이 되서는 안된다.
-			//	! Diagnostics에 옮기는게 맞지 않을까? 아니면 통째로 Test에 넣는것이 맞을지도
+			// 골든 캡처: readback+orchestration 은 SJH::Diagnostics(frame_capture/pass_capture) 로 이관됨.
+			//   앱은 트리거(env)+고정-dt drive + 변형 LIST 구성만 담당(render 루프 wiring).
 			if (mCaptureMode)
 			{
 				if (mCaptureFrame == 180)
@@ -475,57 +479,75 @@ namespace TopdownShooter
 					const std::string outDir = "test/golden";
 					std::filesystem::create_directories(outDir);
 
-					// --- G1: 전체 파이프라인 (PassDebugLayer 만 제외, 다른 ImGui 유지) ---
-					// PassDebugLayer(Editor kind) 를 일시 비활성화 후 ImGui 프레임을 재빌드+실행하여 캡처.
+					// G1(전체): ImGui 프레임 재빌드(PassDebugLayer 만 제외)가 필요해 별도 처리.
 					if (mPassDebugLayerPtr)
 						mPassDebugLayerPtr->Enabled = false;
 					ImGui_ImplGlfwGL3_NewFrame();
 					mImGuiStack.RenderAll(mShowEditor);
 					mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
+					SJH::Diagnostics::CaptureBackbufferToPng(outDir + "/golden_full.png", fbW, fbH);
 					if (mPassDebugLayerPtr)
 						mPassDebugLayerPtr->Enabled = true;
-					const bool okG1 = TopdownShooter::Capture::CaptureBackbufferToPng(
-					    outDir + "/golden_full.png", fbW, fbH);
-					spdlog::info("[GoldenCapture] G1 {}", okG1 ? "OK" : "FAIL");
 
-					// --- G2: ImGui 제외 (Skybox/World/Particle/PostFX/present 만) ---
-					// DebugPassIndex 를 ImGuiPass 직전 인덱스로 설정해 ImGuiPass 를 건너뜀.
-					// Keys() 마지막 = "ImGui" -> Keys().size()-2 = ImGuiPass 직전 인덱스.
+					// 나머지 변형은 데이터주도 runner. Keys() 마지막="ImGui" -> size()-2 = ImGui 직전(present 까지).
+					const int presentStop = static_cast<int>(mPassIterator.Keys().size()) - 2;
+					std::vector<SJH::Diagnostics::CaptureVariant> variants = {
+					    // G2: ImGui 제외 (Skybox/World/Particle/PostFX/present 만).
+					    {"golden_no_imgui", {}, presentStop, INT_MIN, INT_MAX,
+					     SJH::Diagnostics::CaptureVariant::Backbuffer},
+					    // G3: World/Particle 제외 (Skybox/PostFX/present 만).
+					    {"golden_skybox", {{"World", false}, {"Particle", false}}, presentStop, INT_MIN,
+					     INT_MAX, SJH::Diagnostics::CaptureVariant::Backbuffer},
+					};
+
+					// GG-A: PostFX 누적 골든. 스테이지 0..N-1 enable, 나머지 postfx off (기본 off 라 명시).
+					//   N=1 gamma / N=2 +sharpening / ... / N=8 +sobel. 순서 의존 효과 관찰(depth_debug 제외).
+					static const char *kPostFx[] = {
+					    Playable::PASS_GAMMA, Playable::PASS_SHARPENING, Playable::PASS_BLOOM,
+					    Playable::PASS_FOG, Playable::PASS_GRAYSCALE_VIGNETTING, Playable::PASS_INVERT,
+					    Playable::PASS_BLURRING, Playable::PASS_SOBEL};
+					constexpr int kPostFxN = 8;
+					for (int n = 1; n <= kPostFxN; ++n)
 					{
-						const int stopAt = static_cast<int>(mPassIterator.Keys().size()) - 2;
-						mPassIterator.DebugPassIndex = stopAt;
-						mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
-						mPassIterator.DebugPassIndex = -1;
+						SJH::Diagnostics::CaptureVariant v;
+						v.outName = "golden_postfx_" + std::to_string(n) + "_" + kPostFx[n - 1];
+						for (int i = 0; i < kPostFxN; ++i)
+							v.passOverride.emplace_back(kPostFx[i], i < n); // 0..n-1 enable, 나머지 off
+						v.stopAtPass = presentStop; // present 까지, ImGui 제외
+						v.target = SJH::Diagnostics::CaptureVariant::Backbuffer;
+						variants.push_back(std::move(v));
 					}
-					const bool okG2 = TopdownShooter::Capture::CaptureBackbufferToPng(
-					    outDir + "/golden_no_imgui.png", fbW, fbH);
-					spdlog::info("[GoldenCapture] G2 {}", okG2 ? "OK" : "FAIL");
 
-					// --- G3: Skybox+PostFX+present 만 (World/Particle/ImGui 제외) ---
-					// WorldPass 와 ParticlePass 를 일시 비활성화 후 Execute, 복원.
-					// DebugPassIndex = present 인덱스(Keys().size()-2) 로 ImGui 까지 스킵.
+					// GG-B: World RenderQueue별 raw FBO 골든(D1 - PostFX 전). WorldFbo 대상 = mSceneFB.
+					//   ★ 필터는 순수 RenderQueue(material 의도)로 한다 - queueLayer(=base+DrawOrder offset)
+					//     는 음수 DrawOrder(플레이어 레이어 -1/-2/-3 -> 2449/2448/2447)가 인접 큐로 새서
+					//     부적합. IRenderable::RenderQueue() 가 순수값(AlphaTest=2450) 반환 -> 전 레이어 포집.
+					//   SkyboxPass 유지(mSceneFB clear + 배경), Particle 제외(큐 격리). Skybox 는 별도 패스라
+					//     WorldPass 큐 비어 제외. Title 엔 불릿 없어 Opaque 는 배경만(향후 CombatPlay 대비).
+					const struct
 					{
-						auto *worldPass = mPassIterator.Find("World");
-						auto *particlePass = mPassIterator.Find("Particle");
-						if (worldPass)
-							worldPass->Enabled = false;
-						if (particlePass)
-							particlePass->Enabled = false;
-						const int stopAt = static_cast<int>(mPassIterator.Keys().size()) - 2;
-						mPassIterator.DebugPassIndex = stopAt;
-						mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
-						mPassIterator.DebugPassIndex = -1;
-						if (worldPass)
-							worldPass->Enabled = true;
-						if (particlePass)
-							particlePass->Enabled = true;
+						const char *name;
+						int         lo, hi;
+					} kWorldQueue[] = {
+					    {"golden_world_opaque", 2000, 2001},      // 순수 Opaque (Title: 불릿 없음 -> 배경만)
+					    {"golden_world_alphatest", 2450, 2451},   // 순수 AlphaTest (플레이어 전 레이어, offset 무관)
+					    {"golden_world_transparent", 3000, 3002}, // Transparent(3000) + TransparentDepthWrite(3001)
+					};
+					for (const auto &wq : kWorldQueue)
+					{
+						SJH::Diagnostics::CaptureVariant v;
+						v.outName = wq.name;
+						v.passOverride.emplace_back("Particle", false); // 파티클 제외 (큐 격리)
+						v.worldQueueMin = wq.lo;
+						v.worldQueueMax = wq.hi; // [lo, hi) 대역 - QueueOffset 포함
+						v.target = SJH::Diagnostics::CaptureVariant::WorldFbo; // mSceneFB (PostFX 전)
+						variants.push_back(std::move(v));
 					}
-					const bool okG3 = TopdownShooter::Capture::CaptureBackbufferToPng(
-					    outDir + "/golden_skybox.png", fbW, fbH);
-					spdlog::info("[GoldenCapture] G3 {}", okG3 ? "OK" : "FAIL");
+					SJH::Diagnostics::RunCaptureVariants(mPassIterator, SJH::DeviceContext::Get(),
+					                                     *mDefaultTarget, mSceneFB.get(), mWorldPassPtr,
+					                                     variants, outDir, fbW, fbH);
 
-					// glfwSetWindowShouldClose 로 sb7 run 루프 정상 종료.
-					// GLFW_TRUE 는 3.2+ 이후 정의 -- sb7 내장 GLFW 3.0.4 는 1 로 대체.
+					// glfwSetWindowShouldClose 로 sb7 run 루프 정상 종료 (GLFW 3.0.4 는 GLFW_TRUE 대신 1).
 					glfwSetWindowShouldClose(window, 1);
 				}
 				++mCaptureFrame;
