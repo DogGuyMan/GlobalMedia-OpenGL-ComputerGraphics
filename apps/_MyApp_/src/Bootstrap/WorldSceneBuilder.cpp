@@ -35,8 +35,12 @@
 #include "scene/compound_actor.h"
 #include "Bootstrap/actor_factory.h"  // CreateSkyboxActor (2026-06-24 apps client 이주)
 #include "render/mesh_renderer.h"  // SJH::Scene::MeshRenderer - BuildSkybox 반환 타입
+#include "object/model.h"            // SJH::Model (BuildPcbModel: GetMaterialCount/GetMaterial)
+#include "program/program.h"         // SJH::Program (PCB phong 프로그램)
+#include "Bootstrap/model_spawner.h" // SJH::Scene::ModelSpawner::SpawnEntities (PCB RenderUnit 펼침)
 #include "scene/scene.h"
 
+#include <memory>
 #include <glm/glm.hpp>
 
 namespace TopdownShooter::Bootstrap
@@ -151,6 +155,52 @@ namespace TopdownShooter::Bootstrap
 			auto *skyboxActor = dir.Root().AddChild(SJH::Scene::CreateSkyboxActor("MatrixSkybox", skyboxMesh, skyboxMat, 50.0f));
 			return skyboxActor->GetComponent<SJH::Scene::MeshRenderer>();
 		}
+
+		// -- PCB 장식 3D 모델 (Phong lit, 물리 무관) - StageBuilder 물리아레나에서 이관 --------
+		/// @brief PCB 3D 모델을 Phong 알베도 셰이더로 조립해 @c Director::Root() 에 추가한다.
+		/// @details 자원(모델/Phong program)은 idempotent(find-or-create) 등록. model.cpp 가 저장한
+		///          material.albedo(Vec3) 를 MaterialBlock.baseColor(Vec4) 로 승격 - slang phong UBO 입력.
+		///          @c ModelSpawner 로 모델의 RenderUnit 을 자식 Actor 로 펼친다. 물리 무관이라 환경 요소.
+		void BuildPcbModel()
+		{
+			auto &reg = SJH::ResourceRegistry::Get();
+			auto &dir = SJH::Scene::Director::Get();
+
+			// 자원 등록 (idempotent - 이미 있으면 Find 재사용). 키는 continuity 위해 "stage_" 유지.
+			SJH::Model *pcbModel = reg.FindModel("stage_pcb");
+			if (!pcbModel)
+				pcbModel = reg.CreateModel("stage_pcb", "resources/model/pcb.fbx");
+
+			SJH::Program *pcbProg = reg.FindProgram("stage_phong_albedo");
+			if (!pcbProg)
+				pcbProg = reg.CreateProgram("stage_phong_albedo",
+				                            "resources/shaders/phong.vs",
+				                            "resources/shaders/phong.fs");
+
+			// slang phong UBO 셰이더 주입 + albedo(Vec3) -> baseColor(Vec4) 승격 (idempotent).
+			for (int i = 0; i < pcbModel->GetMaterialCount(); ++i)
+			{
+				if (SJH::Material *mat = pcbModel->GetMaterial(i))
+				{
+					if (mat->GetProgram() == nullptr)
+						mat->SetProgram(pcbProg);
+					const auto albedoIt = mat->Properties.Vec3s.find("material.albedo");
+					const glm::vec3 albedo = (albedoIt != mat->Properties.Vec3s.end())
+					                             ? albedoIt->second
+					                             : glm::vec3(0.8f, 0.8f, 0.8f);
+					mat->Properties.Vec4s["baseColor"] = glm::vec4(albedo[0], albedo[1], albedo[2], 1.0f);
+				}
+			}
+
+			// PCB Actor - Transform + ModelSpawner 로 RenderUnit 자식 펼침. Root 직속(환경 요소).
+			auto pcbActor = std::make_unique<SJH::Scene::Actor>("PcbActor");
+			pcbActor->GetTransform().SetTransformWithVectors(
+			    glm::vec3(0.0, -1.75, 0.0),
+			    glm::vec3(90.0, 0.0, 0),
+			    glm::vec3(0.75, 0.75, 0.75));
+			SJH::Scene::ModelSpawner::SpawnEntities(*pcbActor, *pcbModel);
+			dir.Root().AddChild(std::move(pcbActor));
+		}
 	} // namespace
 
 	WorldSceneResult BuildWorldScene(const WorldSceneDeps &deps)
@@ -159,12 +209,11 @@ namespace TopdownShooter::Bootstrap
 		result.WorldCamera = BuildWorldCamera(deps);
 		BuildLighting();
 
-		// !! 사보타지 테스팅 (BuildWorldScene)
-		{
-			auto *skyboxRenderer  = BuildSkybox();
-			result.SkyboxRenderer = skyboxRenderer;
-			result.SkyboxMat      = skyboxRenderer ? skyboxRenderer->Material : nullptr;
-		}
+		auto *skyboxRenderer  = BuildSkybox();
+		result.SkyboxRenderer = skyboxRenderer;
+		result.SkyboxMat      = skyboxRenderer ? skyboxRenderer->Material : nullptr;
+
+		BuildPcbModel(); // PCB 장식 모델 (물리 무관 - StageBuilder 에서 이관).
 
 		return result;
 	}

@@ -4,8 +4,8 @@
  *
  * @details
  *  ### 책임
- *  - @c StageConfig 를 받아 물리 벽 4개 + PCB 모델 + Orbit VFX + @c StageState Component 를
- *    자식/컴포넌트로 조립한 Stage @c Actor 를 생성/반환.
+ *  - @c StageConfig 를 받아 물리 벽 4개 + Orbit VFX + @c StageState Component 를
+ *    자식/컴포넌트로 조립한 Stage @c Actor 를 생성/반환 (PCB 장식은 WorldSceneBuilder 로 이관).
  *  - 필요한 공유 자원(Mesh / Program / Texture / Material / Model)을 @c cfg.registry 에
  *    idempotent 하게 등록(이미 있으면 @c Find 재사용).
  *
@@ -33,8 +33,8 @@ namespace TopdownShooter::Stage
 {
     /// @brief Stage Actor 생성 - walls + pickups + StageState Component 가 child/component 로 매단 일반 Actor 반환.
     /// @details
-    ///   - plane mesh / wallMat / pickupMat / simple.vs/fs Program / pcb model 은 cfg.registry 에 자동 등록
-    ///     (key: "stage_plane" / "stage_wall" / "stage_pickup" / "stage_solid_plane" / "stage_pcb").
+    ///   - plane mesh / wallMat / transparent Program 은 cfg.registry 에 자동 등록
+    ///     (key: "stage_plane" / "stage_wall" / "stage_transparent"). PCB 자원은 WorldSceneBuilder 소관.
     ///   - 같은 key 가 이미 있으면 Find 로 재사용 (idempotent).
     ///   - cfg.world 또는 cfg.registry 가 nullptr 이면 assert.
     /// @param cfg StageConfig - world + registry 필수.

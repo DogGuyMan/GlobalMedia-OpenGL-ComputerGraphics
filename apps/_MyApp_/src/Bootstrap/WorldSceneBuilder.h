@@ -7,7 +7,8 @@
  *  - Perspective WorldCamera Actor 생성 + @c ActorFolower 부착 + @c SceneFB 연결.
  *  - DirLight Actor 생성 + Ambient/Diffuse/Specular 설정.
  *  - Matrix Skybox Actor 생성 (프로그램/텍스처/머티리얼/메시 조립) + @c SkyboxMat 반환.
- *  - 세 Actor 모두 @c Director::Root().AddChild 까지 수행 (Pure factory - caller 추가 wiring 불필요).
+ *  - PCB 장식 3D 모델(Phong lit, 물리 무관) 조립 - @c BuildPcbModel (StageBuilder 물리아레나에서 이관).
+ *  - 모든 Actor 를 @c Director::Root().AddChild 까지 수행 (Pure factory - caller 추가 wiring 불필요).
  *
  *  ### 비-책임
  *  - [X] 플레이어/적/UI/파티클 조립 - @c PlayerBuilder / EnemyBuilder 등 담당.
@@ -69,7 +70,8 @@ namespace TopdownShooter::Bootstrap
 	 *  1. @c BuildWorldCamera : Perspective Camera Actor + @c ActorFolower + sceneFB 연결.
 	 *  2. @c BuildLighting : DirLight Actor (Ambient/Diffuse/Specular 설정).
 	 *  3. @c BuildSkybox : Matrix Skybox 프로그램/텍스처/머티리얼/메시 조립 + Actor 등록.
-	 *  세 Actor 모두 내부에서 @c Root().AddChild 하므로 caller 는 추가 wiring 이 불필요하다.
+	 *  4. @c BuildPcbModel : PCB 장식 3D 모델(Phong lit, 물리 무관) 조립 + Actor 등록.
+	 *  모든 Actor 가 내부에서 @c Root().AddChild 하므로 caller 는 추가 wiring 이 불필요하다.
 	 * @param deps 비싱글턴 외부 의존 (@c WorldSceneDeps 참조).
 	 * @return 생성된 @c WorldSceneResult (WorldCamera + SkyboxMat).
 	 */

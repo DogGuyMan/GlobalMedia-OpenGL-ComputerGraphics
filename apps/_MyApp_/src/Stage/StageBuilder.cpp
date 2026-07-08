@@ -4,12 +4,12 @@
  *
  * @details
  *  ### 조립 순서
- *  1. 익명 네임스페이스 내 @c Ensure* 헬퍼로 공유 자원(Plane/Program/Texture/Material/Model)을
+ *  1. 익명 네임스페이스 내 @c Ensure* 헬퍼로 공유 자원(Plane/Program/Texture/Material)을
  *     @c ResourceRegistry 에 idempotent 등록.
  *  2. Stage @c Actor + @c StageState @c Component 생성.
  *  3. 벽 4개(상하좌우) - lambda @c spawnWall 로 @c wall_factory + @c MeshRenderer + @c MaterialTime 조합.
- *  4. PCB 모델 @c Actor 생성 - @c ModelSpawner::SpawnEntities 로 RenderUnit 자식 펼침.
- *  5. Orbit 배경 VFX - @c EffekseerPlayable loop 설정 후 Play.
+ *  4. Orbit 배경 VFX - @c EffekseerPlayable loop 설정 후 Play.
+ *     (PCB 장식 모델은 WorldSceneBuilder 로 이관 - 물리 무관 환경 요소.)
  *
  *  ### 함정 / 계약
  *  - @c gl3w.h 는 반드시 최상단 include - EffekseerRendererGL(시스템 gl3.h) 와 충돌 회피.
@@ -35,9 +35,7 @@
 #include "resource_registry/resource_registry.h"
 #include "texture/texture.h"
 #include "scene/actor.h"
-#include "Bootstrap/model_spawner.h"
 
-#include <assimp/defs.h>
 #include <box2d/box2d.h>
 #include <cassert>
 #include <string>
@@ -67,29 +65,6 @@ namespace TopdownShooter::Stage
 		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
 		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png"; ///< PoliceTape 텍스처 경로.
 		// constexpr const char *kWallTexPath = "resources/texture/bwgradation1216.png"; ///< PoliceTape 텍스처 경로.
-
-		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
-		constexpr const char *kPcbKey = "stage_pcb";                ///< PCB 모델 key.
-		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
-		constexpr const char *kPcbModelPath = "resources/model/pcb.fbx"; ///< PCB 모델 경로.
-		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
-		constexpr const char *kPhongAlbedoProgKey = "stage_phong_albedo"; ///< PCB 용 Phong+알베도 Program key.
-		// Phase 2.5 (S7) - slang phong UBO 셰이더로 전환 (구 phong_tex.vs / phong_albedo.fs loose 판 대체).
-		//   phong.slang -> phong.{vs,fs} (LightBlock UBO + MaterialBlock.baseColor.rgb=albedo). 값은 UBO 경로(loose 없음).
-		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
-		constexpr const char *kPhongAlbedoVS = "resources/shaders/phong.vs"; ///< slang phong VS (LightBlock UBO).
-		// ! 이 내용들의 Constant는 적절한 위치로 Static 접근이 가능하게 하는게 좋지 않나?
-		constexpr const char *kPhongAlbedoFS = "resources/shaders/phong.fs"; ///< slang phong FS (albedo 기반).
-
-		/// @brief PCB 모델용 Phong 알베도 Program 을 idempotent 하게 등록/조회.
-		/// @param reg 자원 레지스트리.
-		/// @return 등록된(또는 기존) @c SJH::Program 포인터.
-		SJH::Program *EnsurePhongAlbedoProgram(SJH::ResourceRegistry &reg)
-		{
-			if (auto *existing = reg.FindProgram(kPhongAlbedoProgKey))
-				return existing;
-			return reg.CreateProgram(kPhongAlbedoProgKey, kPhongAlbedoVS, kPhongAlbedoFS);
-		}
 
 		/// @brief 벽 시각화용 Plane mesh 를 idempotent 하게 등록/조회.
 		/// @param reg 자원 레지스트리.
@@ -150,15 +125,6 @@ namespace TopdownShooter::Stage
 			return mat;
 		}
 
-		/// @brief PCB 3D 모델을 idempotent 하게 등록/조회.
-		/// @param reg 자원 레지스트리.
-		/// @return 등록된(또는 기존) @c SJH::Model 포인터.
-		SJH::Model *EnsurePcbModel(SJH::ResourceRegistry &reg)
-		{
-			if (auto *existing = reg.FindModel(kPcbKey))
-				return existing;
-			return reg.CreateModel(kPcbKey, kPcbModelPath);
-		}
 	} // namespace
 	/// @endcond
 
@@ -172,28 +138,6 @@ namespace TopdownShooter::Stage
 		// 1) 공유 자원 등록 - idempotent (이미 있으면 Find 로 재사용)
 		SJH::Mesh *plane = EnsurePlane(reg);
 		SJH::Material *wallMat = EnsureWallMaterial(reg); // Transparent + PoliceTape(emissive)
-
-		// PCB 모델 자원 등록 및 캐싱
-		SJH::Model *pcbModel = EnsurePcbModel(reg);
-
-		// PCB 머티리얼에 slang phong UBO 셰이더 주입 (Phase 2.5 S7).
-		//   model.cpp 가 저장한 material.albedo(Vec3) 를 MaterialBlock.baseColor(Vec4) 로 승격 -
-		//   phong.slang 이 baseColor.rgb 를 albedo 로 사용 (mesh_pass useUbo 분기가 UpdateUniformBlock).
-		SJH::Program *pcbProg = EnsurePhongAlbedoProgram(reg);
-		for (int i = 0; i < pcbModel->GetMaterialCount(); ++i)
-		{
-			if (SJH::Material *mat = pcbModel->GetMaterial(i))
-			{
-				if (mat->GetProgram() == nullptr)
-					mat->SetProgram(pcbProg);
-				// albedo(Vec3) -> baseColor(Vec4) 승격 (idempotent). UBO MaterialBlock 의 입력.
-				const auto albedoIt = mat->Properties.Vec3s.find("material.albedo");
-				const glm::vec3 albedo = (albedoIt != mat->Properties.Vec3s.end())
-				                               ? albedoIt->second
-				                               : glm::vec3(0.8f, 0.8f, 0.8f);
-				mat->Properties.Vec4s["baseColor"] = glm::vec4(albedo[0], albedo[1], albedo[2], 1.0f);
-			}
-		}
 
 		// 2) Stage Actor + StageState Component
 		auto stage = std::make_unique<SJH::Scene::Actor>("MainStage");
@@ -232,17 +176,6 @@ namespace TopdownShooter::Stage
 		spawnWall("WallBottom", glm::vec2(0.0f, -arena), 0.0f);
 		spawnWall("WallLeft", glm::vec2(-arena, 0.0f), 270.0f);
 		spawnWall("WallRight", glm::vec2(+arena, 0.0f), 90.0f);
-
-		// 4) PCB 모델 Actor 추가
-		auto pcbActor = std::make_unique<SJH::Scene::Actor>("PcbActor");
-		pcbActor->GetTransform().SetTransformWithVectors(
-		    glm::vec3(0.0, -1.75, 0.0),
-		    glm::vec3(90.0, 0.0, 0),
-		    glm::vec3(0.75, 0.75, 0.75));
-
-		// ModelSpawner 유틸리티를 사용해 모델의 모든 RenderUnit을 자식 Actor로 펼침
-		SJH::Scene::ModelSpawner::SpawnEntities(*pcbActor, *pcbModel);
-		stage->AddChild(std::move(pcbActor));
 
 		// 5) Orbit 배경 VFX - 아레나 중심(0,0,0)에 orbital_background.efk 상시 루프 (회전은 .efk 내장).
 		//    Effect 미등록(startup Warmup 전/실패)이면 no-op. EffekseerPlayable 의 isLoop 재-Play 로 무한 지속.
