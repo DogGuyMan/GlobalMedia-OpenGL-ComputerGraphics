@@ -1,5 +1,5 @@
 add_library(myapp_stage STATIC
-    StageBuilder.cpp
+    # StageBuilder.cpp 는 WorldSceneBuilder(Bootstrap) 로 흡수됨 (2026-07-08 - 씬그래프 Actor 조립 일원화).
     Components/PickupTriggerLogger.cpp
     WaveController.cpp
 )

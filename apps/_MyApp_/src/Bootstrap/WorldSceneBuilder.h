@@ -7,7 +7,9 @@
  *  - Perspective WorldCamera Actor 생성 + @c ActorFolower 부착 + @c SceneFB 연결.
  *  - DirLight Actor 생성 + Ambient/Diffuse/Specular 설정.
  *  - Matrix Skybox Actor 생성 (프로그램/텍스처/머티리얼/메시 조립) + @c SkyboxMat 반환.
- *  - PCB 장식 3D 모델(Phong lit, 물리 무관) 조립 - @c BuildPcbModel (StageBuilder 물리아레나에서 이관).
+ *  - PCB 장식 3D 모델(Phong lit, 물리 무관) 조립 - @c BuildPcbModel.
+ *  - 물리 아레나 스테이지 조립 - @c BuildStage (물리 벽 4개 + @c StageState + Orbit 배경 VFX).
+ *    구 @c StageBuilder::CreateStageActor 를 흡수 (씬그래프 Actor 초기화+부착이라는 점에서 동일 관심사).
  *  - 모든 Actor 를 @c Director::Root().AddChild 까지 수행 (Pure factory - caller 추가 wiring 불필요).
  *
  *  ### 비-책임
@@ -27,6 +29,7 @@
 #define __TOPDOWNSHOOTER_BOOTSTRAP_WORLD_SCENE_BUILDER_H__
 
 // fwd - 포인터/참조만 노출 (헤더 의존 격리).
+class b2World; // 물리 아레나 벽 조립용 (BuildStage) - heavy box2d include 회피.
 namespace SJH
 {
 	class MouseInput;
@@ -51,6 +54,7 @@ namespace TopdownShooter::Bootstrap
 		float             aspect  = 0.0f;   ///< RenderTexture 폭/높이 비율 (main 이 GetFramebufferInfo 로 계산, GLFW 의존 격리).
 		SJH::MouseInput  *mouse   = nullptr; ///< WorldCamera @c ActorFolower 에 주입할 마우스 입력.
 		SJH::RenderTexture *sceneFB = nullptr; ///< WorldCamera @c SetTargetRenderTarget 대상 씬 RenderTexture.
+		b2World           *physicsWorld = nullptr; ///< 물리 아레나 벽(@c BuildStage) 조립용 b2World (비소유). nullptr 이면 스테이지 스킵.
 	};
 
 	/**
@@ -71,6 +75,8 @@ namespace TopdownShooter::Bootstrap
 	 *  2. @c BuildLighting : DirLight Actor (Ambient/Diffuse/Specular 설정).
 	 *  3. @c BuildSkybox : Matrix Skybox 프로그램/텍스처/머티리얼/메시 조립 + Actor 등록.
 	 *  4. @c BuildPcbModel : PCB 장식 3D 모델(Phong lit, 물리 무관) 조립 + Actor 등록.
+	 *  5. @c BuildStage : 물리 아레나(벽 4개 + @c StageState + Orbit VFX) 조립 + MainStage Actor 등록.
+	 *     (@p deps.physicsWorld 가 nullptr 이면 스킵.)
 	 *  모든 Actor 가 내부에서 @c Root().AddChild 하므로 caller 는 추가 wiring 이 불필요하다.
 	 * @param deps 비싱글턴 외부 의존 (@c WorldSceneDeps 참조).
 	 * @return 생성된 @c WorldSceneResult (WorldCamera + SkyboxMat).

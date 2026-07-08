@@ -40,6 +40,17 @@
 #include "Bootstrap/model_spawner.h" // SJH::Scene::ModelSpawner::SpawnEntities (PCB RenderUnit 펼침)
 #include "scene/scene.h"
 
+// -- BuildStage (구 StageBuilder 흡수) 의존 --------------------------------------
+#include "material/material_uniforms.h"          // SJH::Uniforms::Set* (벽 머티리얼)
+#include "Stage/Constants.h"                      // ARENA_HALF_EXTENT / WALL_THICKNESS
+#include "Stage/Stage.h"                          // EStageStatus
+#include "Stage/Components/StageStateComponent.h" // Stage::Components::StageState
+#include "Stage/Components/MaterialTimeComponent.h" // Stage::Components::MaterialTime
+#include "Stage/Factories/wall_factory.h"         // Stage::Factories::CreateWallActor (inline)
+#include "GameSystems.h"                          // GameSystems::Get().VFX() (Orbit VFX)
+#include "VFX/EffekseerPlayable.h"                // VFX::EffekseerPlayable (Orbit loop)
+
+#include <box2d/box2d.h>
 #include <memory>
 #include <glm/glm.hpp>
 
@@ -201,6 +212,124 @@ namespace TopdownShooter::Bootstrap
 			SJH::Scene::ModelSpawner::SpawnEntities(*pcbActor, *pcbModel);
 			dir.Root().AddChild(std::move(pcbActor));
 		}
+
+		// -- 물리 아레나 스테이지 (구 StageBuilder::CreateStageActor 흡수) ------------------
+		//    벽 4개(물리 바디 + PoliceTape 반투명 시각) + StageState + Orbit 배경 VFX.
+		//    자원 키는 "stage_" prefix 유지 (외부 참조 continuity + 골든 무회귀).
+
+		// ResourceRegistry key 상수.
+		constexpr const char *kPlaneKey = "stage_plane";           ///< Plane mesh 등록 key (벽 시각화).
+		constexpr const char *kWallMatKey = "stage_wall";          ///< 반투명 벽 공유 Material key.
+		constexpr const char *kTransparentProgKey = "stage_transparent"; ///< 반투명 벽 Program key.
+		constexpr const char *kTransparentVS = "resources/shaders/transparent.vs"; ///< 반투명 벽 VS.
+		constexpr const char *kTransparentFS = "resources/shaders/transparent.fs"; ///< 반투명 벽 FS.
+		constexpr const char *kWallTexKey = "stage_police_tape";   ///< PoliceTape 텍스처 key.
+		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png"; ///< PoliceTape 경로.
+
+		/// @brief 벽 시각화용 Plane mesh 를 idempotent 하게 등록/조회.
+		SJH::Mesh *EnsurePlane(SJH::ResourceRegistry &reg)
+		{
+			if (auto *existing = reg.FindMesh(kPlaneKey))
+				return existing;
+			return reg.RegisterMesh(kPlaneKey, SJH::Mesh::CreatePlane());
+		}
+
+		/// @brief 반투명 벽 unlit Program 을 idempotent 하게 등록/조회.
+		SJH::Program *EnsureTransparentProgram(SJH::ResourceRegistry &reg)
+		{
+			if (auto *existing = reg.FindProgram(kTransparentProgKey))
+				return existing;
+			return reg.CreateProgram(kTransparentProgKey, kTransparentVS, kTransparentFS);
+		}
+
+		/// @brief PoliceTape 텍스처를 idempotent 하게 등록/조회. GL_REPEAT wrap 포함.
+		SJH::Texture *EnsureWallTexture(SJH::ResourceRegistry &reg)
+		{
+			if (auto *existing = reg.FindTexture(kWallTexKey))
+				return existing;
+			auto *tex = reg.CreateTexture(kWallTexKey, SJH::Image::Load(kWallTexKey, kWallTexPath).get());
+			// uvScale 타일링이 1 을 넘어도 끝에서 고착되지 않고 반복되도록 REPEAT.
+			tex->Bind();
+			tex->SetWrap(SJH::WrapMode::Repeat, SJH::WrapMode::Repeat);
+			return tex;
+		}
+
+		/// @brief 반투명 벽 공유 Material 을 idempotent 하게 등록/조회.
+		/// @details Transparent Pass(blend on, depthWrite off, cull off 양면) + emissive(unit 0) PoliceTape.
+		///          uvScale 은 BuildStage 가 arena/wallH 로 설정(전 벽 공유), uScrollSpeed 는 여기 기본값.
+		SJH::Material *EnsureWallMaterial(SJH::ResourceRegistry &reg)
+		{
+			if (auto *existing = reg.FindSharedMaterial(kWallMatKey))
+				return existing;
+			auto *mat = reg.CreateSharedMaterial(kWallMatKey);
+			mat->SetProgram(EnsureTransparentProgram(reg));
+			mat->SetPass(SJH::Pass::RenderQueue::Transparent);
+			SJH::Uniforms::SetTexture(*mat, "emissive", EnsureWallTexture(reg), 0);
+			SJH::Uniforms::SetVec4(*mat, "tintColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+			SJH::Uniforms::SetVec2(*mat, "uvScale", glm::vec2(1.0f, 1.0f)); // placeholder - BuildStage 재설정.
+			SJH::Uniforms::SetFloat(*mat, "uScrollSpeed", 0.3f);
+			return mat;
+		}
+
+		/// @brief 물리 아레나 스테이지(벽 4개 + StageState + Orbit VFX)를 조립해 @c Root() 에 추가.
+		/// @param world 물리 벽 바디 생성용 b2World (비소유).
+		/// @details 구 @c StageBuilder::CreateStageActor 와 동작 동일 - 값(arena/wallH/startStatus)은
+		///          @c Stage::Constants 기본값(구 StageConfig 기본). 렌더 무회귀(골든 bit-동일) 대상.
+		void BuildStage(b2World &world)
+		{
+			auto &reg = SJH::ResourceRegistry::Get();
+			auto &dir = SJH::Scene::Director::Get();
+
+			// 1) 공유 자원 등록 - idempotent.
+			SJH::Mesh *plane = EnsurePlane(reg);
+			SJH::Material *wallMat = EnsureWallMaterial(reg); // Transparent + PoliceTape(emissive)
+
+			// 2) Stage Actor + StageState Component (기본 시작 상태 = Title).
+			auto stage = std::make_unique<SJH::Scene::Actor>("MainStage");
+			auto *stageState = stage->AddComponent<Stage::Components::StageState>();
+			stageState->SetCurrent(Stage::EStageStatus::Title);
+
+			// 3) 벽 4개 - arena 안쪽 둘레. PoliceTape 반투명 띠로 시각화.
+			const float arena = Stage::ARENA_HALF_EXTENT;
+			const float wallH = Stage::WALL_THICKNESS;
+
+			// 벽 4개 모두 동일 타일링 -> 공유 wallMat 직접 사용 (인스턴스 clone 불필요).
+			const float tile = wallH * 2.0f;
+			SJH::Uniforms::SetVec2(*wallMat, "uvScale", glm::vec2(arena * 2.0f / tile, wallH * 2.0f / tile));
+			// uTime 은 공유 wallMat 에 한 번만 구동 (MaterialTime 은 값 세팅이라 하나로 충분).
+			stage->AddComponent<Stage::Components::MaterialTime>(wallMat);
+
+			auto spawnWall = [&](const char *name, glm::vec2 center, float yRot) {
+				const bool horizontal = (static_cast<int>(yRot) % 180) == 0;
+				const glm::vec2 half = horizontal ? glm::vec2(arena, wallH) : glm::vec2(wallH, arena);
+
+				auto actor = Stage::Factories::CreateWallActor(name, world, center, half);
+				auto &tr = actor->GetTransform();
+				tr.EulerRot = glm::vec3(0.0f, yRot, 0.0f);
+				tr.Scale = glm::vec3(arena * 2.0f, 1.0f, 1.0f);
+
+				actor->AddComponent<SJH::Scene::MeshRenderer>(plane, wallMat);
+				stage->AddChild(std::move(actor));
+			};
+			spawnWall("WallTop", glm::vec2(0.0f, +arena), 180.0f);
+			spawnWall("WallBottom", glm::vec2(0.0f, -arena), 0.0f);
+			spawnWall("WallLeft", glm::vec2(-arena, 0.0f), 270.0f);
+			spawnWall("WallRight", glm::vec2(+arena, 0.0f), 90.0f);
+
+			// 4) Orbit 배경 VFX - 아레나 중심(0,0,0)에 orbital_background.efk 상시 루프.
+			//    Effect 미등록(Warmup 전/실패)이면 no-op. isLoop 재-Play 로 무한 지속.
+			if (SJH::Effect *orbitEffect = reg.FindEffect("orbital_background"))
+			{
+				auto  orbitActor = std::make_unique<SJH::Scene::Actor>("OrbitVfx");
+				auto *pl         = orbitActor->AddComponent<VFX::EffekseerPlayable>(
+				    GameSystems::Get().VFX().GetManager(), orbitEffect, glm::vec3(0.0f), VFX::TrackPolicy::Static);
+				pl->SetIsLoop(true);
+				pl->Play();
+				stage->AddChild(std::move(orbitActor));
+			}
+
+			dir.Root().AddChild(std::move(stage));
+		}
 	} // namespace
 
 	WorldSceneResult BuildWorldScene(const WorldSceneDeps &deps)
@@ -214,6 +343,9 @@ namespace TopdownShooter::Bootstrap
 		result.SkyboxMat      = skyboxRenderer ? skyboxRenderer->Material : nullptr;
 
 		BuildPcbModel(); // PCB 장식 모델 (물리 무관 - StageBuilder 에서 이관).
+
+		if (deps.physicsWorld)
+			BuildStage(*deps.physicsWorld); // 물리 아레나(벽4+StageState+Orbit VFX) - 구 StageBuilder 흡수.
 
 		return result;
 	}

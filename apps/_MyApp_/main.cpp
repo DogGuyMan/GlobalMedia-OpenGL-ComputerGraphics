@@ -39,7 +39,6 @@
 #include "Stage/Components/GameContextComponent.h"
 #include "Stage/Constants.h"
 #include "Stage/Stage.h"
-#include "Stage/StageBuilder.h"
 #include "Stage/State/StageState.Impl.h"
 #include "Stage/State/StageStateMachine.h"
 #include "Stage/WaveController.h"
@@ -215,7 +214,8 @@ namespace TopdownShooter
 			// T3 world -- WorldScene(camera/light/skybox) + 스테이지 액터 + FxRoot + spawn 컨텍스트
 			//             + muzzle 이펙트 + 플레이어 + 웨이브 컨트롤러.
 			sched.Task(Bootstrap::EInitTask::World).Needs({Bootstrap::EInitTask::VfxUi}).Gl().Does([&] { // vfxUi 가 TEST_EFFECTS(orbital_background) 를 선행 로드 -> 스테이지 FindEffect 의존
-				auto worldScene = Bootstrap::BuildWorldScene({mFbInfo.Aspect, &mMouse, mSceneFB.get()});
+				// BuildWorldScene 이 카메라/광/스카이박스/PCB + 물리 아레나 스테이지(구 StageBuilder)까지 조립.
+				auto worldScene = Bootstrap::BuildWorldScene({mFbInfo.Aspect, &mMouse, mSceneFB.get(), &phys.World()});
 				mCamera = worldScene.WorldCamera;
 				
 				// !! 사보타지 테스팅 (BuildWorldScene) 
@@ -224,7 +224,6 @@ namespace TopdownShooter
 				}
 				mSkyboxRenderer = worldScene.SkyboxRenderer;
 
-				dir.Root().AddChild(std::move(TopdownShooter::Stage::CreateStageActor({&phys.World(), &reg})));
 
 				mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>(ACTOR_FX_ROOT));
 				VFX::SetSpawnContext(mFxRoot, &vfxs);
