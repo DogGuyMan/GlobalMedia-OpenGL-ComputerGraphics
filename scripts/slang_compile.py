@@ -111,6 +111,24 @@ def normalize_array_initializers(text):
     return array_init_re.sub(r"\1\2\1[](\3)", text)
 
 
+def normalize_struct_initializers(text):
+    """Slang 의 구조체 brace-초기화(GLSL 420)를 GLSL 구조체 생성자 호출로 변환.
+
+    Slang 은 entry-point 로 조립된 struct 값을 일반 함수(예: import 된 공유 VS 헬퍼)에
+    값 전달할 때 'VSIn_0 _S1 = { input_aPos_0, input_aUV_0 };' (brace-init, GLSL 420 =
+    ARB_shading_language_420pack) 를 낸다. macOS OpenGL 4.1(GLSL 410) 코어는 brace-init
+    미지원 -> 런타임 컴파일 거부 -> program=null (postfx_common 공유 VS 도입 시 최초 발현 -
+    이전엔 어떤 셰이더도 entry-point 파라미터 전체를 다른 함수에 값 전달하지 않았음).
+    구조체는 배열과 달리 'TypeName(원소, ...)' 생성자 호출이 GLSL 코어 전 버전에서 유효하므로
+    'Type name = { a, b };' -> 'Type name = Type(a, b);' 로 치환.
+    (배열 brace-init 은 normalize_array_initializers 가 먼저 처리 - 그 결과물엔 '[' 이 남아
+    이 정규식(이름 뒤 공백만 허용)과 겹치지 않는다. 초기화 원소는 flat - 중첩 brace 없음 가정.)
+    """
+    struct_init_re = re.compile(
+        r"\b([A-Za-z_]\w*)\s+([A-Za-z_]\w*)\s*=\s*\{([^{}]*)\}\s*;")
+    return struct_init_re.sub(r"\1 \2 = \1(\3);", text)
+
+
 def post_process_glsl_410(text, stage):
     """slangc 의 GLSL 출력을 macOS OpenGL 4.1 (GLSL 410) 호환으로 변환."""
     # 1) version
@@ -125,6 +143,8 @@ def post_process_glsl_410(text, stage):
     text = normalize_sampler_names(text)
     # 6) 배열 brace-init(GLSL 420) -> 배열 생성자(GLSL 410) (sharpening/sobel 런타임 거부 해소)
     text = normalize_array_initializers(text)
+    # 7) 구조체 brace-init(GLSL 420) -> 구조체 생성자 호출(GLSL 410) (postfx_common 공유 VS 함정)
+    text = normalize_struct_initializers(text)
     return text
 
 
