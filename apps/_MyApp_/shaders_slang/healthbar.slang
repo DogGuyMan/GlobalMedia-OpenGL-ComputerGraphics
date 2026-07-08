@@ -8,6 +8,8 @@
 //   cameraRight_world = (view->world)·(+x) = inverse-rotation·x = transpose(uView)·(1,0,0,0).
 //   (orthonormal view 라 R^-1 = R^T. w=0 방향이라 translation 무영향.) mul 은 phong 에서 검증된 경로.
 
+import billboard_common;
+
 struct FrameBlock
 {
     float4x4 uView;
@@ -49,14 +51,14 @@ struct VSOut
 [shader("vertex")]
 VSOut vsMain(VSIn input)
 {
-    // 카메라 right/up (world) - transpose(view)·축 (inverse-rotation, w=0 방향).
-    float3 cameraRight = mul(transpose(uFrame.uView), float4(1.0, 0.0, 0.0, 0.0)).xyz;
-    float3 cameraUp    = mul(transpose(uFrame.uView), float4(0.0, 1.0, 0.0, 0.0)).xyz;
+    // 카메라 right/up (world) - billboard_common 공유 추출.
+    float3 cameraRight, cameraUp;
+    ExtractCameraAxes(uFrame.uView, cameraRight, cameraUp);
 
-    // uModel 에서 center + size 추출 (mul 기반 - 원소 인덱싱 회피).
-    float3 center = mul(uDraw.uModel, float4(0.0, 0.0, 0.0, 1.0)).xyz;
-    float  sx     = length(mul(uDraw.uModel, float4(1.0, 0.0, 0.0, 0.0)).xyz);  // Scale.x -> 바 가로폭
-    float  sy     = length(mul(uDraw.uModel, float4(0.0, 1.0, 0.0, 0.0)).xyz);  // Scale.y -> 바 세로높이
+    // uModel 에서 center + size - billboard_common 공유 추출.
+    float3 center = ExtractModelCenter(uDraw.uModel);  // Scale.x -> 바 가로폭, Scale.y -> 바 세로높이
+    float  sx     = ExtractModelAxisScale(uDraw.uModel, float4(1.0, 0.0, 0.0, 0.0));
+    float  sy     = ExtractModelAxisScale(uDraw.uModel, float4(0.0, 1.0, 0.0, 0.0));
 
     // 머리 위 앵커: 화면상 cameraUp 방향 오프셋 (카메라각 독립).
     float3 anchor   = center + cameraUp * uMaterial.uHeadOffset;
