@@ -6,6 +6,8 @@
 // 빌보드 카메라축 = transpose+mul (원소 인덱싱 컨벤션 회피, healthbar/transparent 와 동일 검증 경로).
 // 생성물: billboard_atlas.vs/.fs + billboard_atlas.refl.json. Slang: mix->lerp, fract 없음, step/sin 동일.
 
+import billboard_common;
+
 struct FrameBlock
 {
     float4x4 uView;
@@ -52,14 +54,14 @@ struct VSOut
 [shader("vertex")]
 VSOut vsMain(VSIn input)
 {
-    // 카메라 right/up (world) - transpose(view)·축 (회전 전용, w=0 방향).
-    float3 cameraRight = mul(transpose(uFrame.uView), float4(1.0, 0.0, 0.0, 0.0)).xyz;
-    float3 cameraUp    = mul(transpose(uFrame.uView), float4(0.0, 1.0, 0.0, 0.0)).xyz;
+    // 카메라 right/up (world) - billboard_common 공유 추출.
+    float3 cameraRight, cameraUp;
+    ExtractCameraAxes(uFrame.uView, cameraRight, cameraUp);
 
-    // uModel 에서 center + size (mul 기반 - 원소 인덱싱 회피).
-    float3 center = mul(uDraw.uModel, float4(0.0, 0.0, 0.0, 1.0)).xyz;
-    float  sx     = length(mul(uDraw.uModel, float4(1.0, 0.0, 0.0, 0.0)).xyz);
-    float  sy     = length(mul(uDraw.uModel, float4(0.0, 1.0, 0.0, 0.0)).xyz);
+    // uModel 에서 center + size - billboard_common 공유 추출.
+    float3 center = ExtractModelCenter(uDraw.uModel);
+    float  sx     = ExtractModelAxisScale(uDraw.uModel, float4(1.0, 0.0, 0.0, 0.0));
+    float  sy     = ExtractModelAxisScale(uDraw.uModel, float4(0.0, 1.0, 0.0, 0.0));
 
     // flip 선반영 후 roll(카메라 정면축) 2D 회전.
     float2 p  = float2(input.aPos.x * uMaterial.uFlipX, input.aPos.y);
