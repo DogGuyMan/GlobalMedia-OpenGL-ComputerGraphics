@@ -2,6 +2,8 @@
 // postfx bloom (bright-pass + 9x9 가우시안 + additive) - 자립 NDC VS + FS.
 // MaterialBlock{uBloomThreshold/uBloomSpread/uBloomIntensity} + uScene. 생성물: postprocess/bloom.{vs,fs}.
 
+import postfx_common;
+
 struct MaterialBlock
 {
     float uBloomThreshold;  // 이 휘도 이상만 bloom
@@ -12,25 +14,10 @@ ConstantBuffer<MaterialBlock> uMaterial;
 
 Sampler2D uScene;
 
-struct VSIn
-{
-    [[vk::location(0)]] float3 aPos : POSITION;
-    [[vk::location(2)]] float2 aUV  : TEXCOORD0;
-};
-
-struct VSOut
-{
-    float4 pos : SV_Position;
-    float2 uv  : TEXCOORD0;
-};
-
 [shader("vertex")]
 VSOut vsMain(VSIn input)
 {
-    VSOut output;
-    output.pos = float4(input.aPos, 1.0);
-    output.uv  = input.aUV;
-    return output;
+    return ComputeScreenQuadVSOut(input);
 }
 
 float GaussianWeight(float2 offset, float falloff)

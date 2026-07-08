@@ -4,6 +4,8 @@
 // NDC->view 복원: uInverseProjection * ndc (perspective divide). uFogMode 0=Linear/1=Exp/2=Exp2.
 // uInverseProjection 은 per-frame(WorldCamera proj 역행렬) -> Slice 0 매-draw 업로드. mix->lerp.
 
+import postfx_common;
+
 struct MaterialBlock
 {
     float4x4 uInverseProjection;  // inverse(WorldCamera projection) - NDC->view 복원
@@ -18,25 +20,10 @@ ConstantBuffer<MaterialBlock> uMaterial;
 Sampler2D uScene;   // 직전 패스 출력 (색)
 Sampler2D uDepth;   // sceneFB depth (.r = 정규화 depth)
 
-struct VSIn
-{
-    [[vk::location(0)]] float3 aPos : POSITION;
-    [[vk::location(2)]] float2 aUV  : TEXCOORD0;
-};
-
-struct VSOut
-{
-    float4 pos : SV_Position;
-    float2 uv  : TEXCOORD0;
-};
-
 [shader("vertex")]
 VSOut vsMain(VSIn input)
 {
-    VSOut output;
-    output.pos = float4(input.aPos, 1.0);
-    output.uv  = input.aUV;
-    return output;
+    return ComputeScreenQuadVSOut(input);
 }
 
 // glsl-fog 레퍼런스 (dist = view-space 유클리디안 거리).

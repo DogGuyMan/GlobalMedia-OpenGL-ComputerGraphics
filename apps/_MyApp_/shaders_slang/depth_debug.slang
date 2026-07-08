@@ -5,6 +5,8 @@
 // 생성물: postprocess/depth_debug.{vs,fs}. fog.slang 을 극단 단순화한 형태.
 // uLinearize 0 = raw(비선형, 온통 흰색) / 1 = 선형화(near~far 고른 회색).
 
+import postfx_common;
+
 struct MaterialBlock
 {
     float uNear;       // 카메라 near 평면 (view 거리). WorldCamera 값과 맞추면 정확.
@@ -16,25 +18,10 @@ ConstantBuffer<MaterialBlock> uMaterial;
 Sampler2D uScene;   // 직전 패스 출력(색) - 여기선 미사용. 체인 계약상 unit0 유지(fog 대칭).
 Sampler2D uDepth;   // sceneFB depth 텍스처 (.r = 0~1 정규화 depth). unit1.
 
-struct VSIn
-{
-    [[vk::location(0)]] float3 aPos : POSITION;
-    [[vk::location(2)]] float2 aUV  : TEXCOORD0;
-};
-
-struct VSOut
-{
-    float4 pos : SV_Position;
-    float2 uv  : TEXCOORD0;
-};
-
 [shader("vertex")]
 VSOut vsMain(VSIn input)
 {
-    VSOut output;
-    output.pos = float4(input.aPos, 1.0);   // 이미 NDC 풀스크린 쿼드
-    output.uv  = input.aUV;
-    return output;
+    return ComputeScreenQuadVSOut(input);
 }
 
 [shader("fragment")]

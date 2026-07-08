@@ -4,6 +4,8 @@
 //   런타임 string 키로 Properties.Floats 에 기록 -> Slice 0 일반 이름매칭 업로드가 자동 처리(특수코드 0).
 // uVignetteColor(vec3)는 startup/ImGui 가 Properties.Vec3s 로 set -> 동일 일반 업로드.
 
+import postfx_common;
+
 struct MaterialBlock
 {
     float  uGrayscaleAmount;  // 1=원본, 0=무채색 (HP ratio 런타임 구동)
@@ -14,25 +16,10 @@ ConstantBuffer<MaterialBlock> uMaterial;
 
 Sampler2D uScene;
 
-struct VSIn
-{
-    [[vk::location(0)]] float3 aPos : POSITION;
-    [[vk::location(2)]] float2 aUV  : TEXCOORD0;
-};
-
-struct VSOut
-{
-    float4 pos : SV_Position;
-    float2 uv  : TEXCOORD0;
-};
-
 [shader("vertex")]
 VSOut vsMain(VSIn input)
 {
-    VSOut output;
-    output.pos = float4(input.aPos, 1.0);
-    output.uv  = input.aUV;
-    return output;
+    return ComputeScreenQuadVSOut(input);
 }
 
 [shader("fragment")]

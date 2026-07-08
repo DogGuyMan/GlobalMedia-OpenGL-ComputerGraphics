@@ -1,27 +1,14 @@
 // apps/_MyApp_/shaders_slang/sharpening.slang
 // postfx 라플라시안 샤프닝 (3x3 커널) - 자립 NDC VS + FS. uScene 만. 생성물: postprocess/sharpening.{vs,fs}.
 
+import postfx_common;
+
 Sampler2D uScene;
-
-struct VSIn
-{
-    [[vk::location(0)]] float3 aPos : POSITION;
-    [[vk::location(2)]] float2 aUV  : TEXCOORD0;
-};
-
-struct VSOut
-{
-    float4 pos : SV_Position;
-    float2 uv  : TEXCOORD0;
-};
 
 [shader("vertex")]
 VSOut vsMain(VSIn input)
 {
-    VSOut output;
-    output.pos = float4(input.aPos, 1.0);
-    output.uv  = input.aUV;
-    return output;
+    return ComputeScreenQuadVSOut(input);
 }
 
 [shader("fragment")]
