@@ -19,40 +19,43 @@
  */
 #include <GL/gl3w.h> // GL_REPEAT / GL_LINEAR (skybox 텍스처). 반드시 다른 GL 헤더보다 먼저.
 
-#include "Bootstrap/WorldSceneBuilder.h"
-
 #include "InputHandler/ActorFolower.h"
-
+#include "Bootstrap/WorldSceneBuilder.h"
+#include "Bootstrap/Constants.h"     // ARENA_HALF_EXTENT / WALL_THICKNESS (Stage 에서 이관)
+#include "Bootstrap/actor_factory.h" // CreateSkyboxActor (2026-06-24 apps client 이주)
+#include "Bootstrap/model_spawner.h" // SJH::Scene::ModelSpawner::SpawnEntities (PCB RenderUnit 펼침)
+#include "Physics/PhysicsComponent.Imp.h"
+#include "Physics/PhysicsLayer.h"
 #include "material/material.h"
+#include "material/material_uniforms.h" // SJH::Uniforms::Set* (벽 머티리얼)
 #include "material/pass.h"
-#include "scene/light.h"
 #include "object/mesh.h"
-#include "texture/image.h"
+#include "object/model.h"         // SJH::Model (BuildPcbModel: GetMaterialCount/GetMaterial)
+#include "program/program.h"      // SJH::Program (PCB phong 프로그램)
+#include "render/mesh_renderer.h" // SJH::Scene::MeshRenderer - BuildSkybox 반환 타입
 #include "resource_registry/resource_registry.h"
-#include "texture/texture.h"
 #include "scene/actor.h"
 #include "scene/camera.h"
 #include "scene/compound_actor.h"
-#include "Bootstrap/actor_factory.h"  // CreateSkyboxActor (2026-06-24 apps client 이주)
-#include "render/mesh_renderer.h"  // SJH::Scene::MeshRenderer - BuildSkybox 반환 타입
-#include "object/model.h"            // SJH::Model (BuildPcbModel: GetMaterialCount/GetMaterial)
-#include "program/program.h"         // SJH::Program (PCB phong 프로그램)
-#include "Bootstrap/model_spawner.h" // SJH::Scene::ModelSpawner::SpawnEntities (PCB RenderUnit 펼침)
+#include "scene/light.h"
 #include "scene/scene.h"
+#include "texture/image.h"
+#include "texture/texture.h"
 
 // -- BuildStage (구 StageBuilder 흡수) 의존 --------------------------------------
-#include "material/material_uniforms.h"          // SJH::Uniforms::Set* (벽 머티리얼)
-#include "Stage/Constants.h"                      // ARENA_HALF_EXTENT / WALL_THICKNESS
-#include "Stage/Stage.h"                          // EStageStatus
-#include "Stage/Components/StageStateComponent.h" // Stage::Components::StageState
-#include "Stage/Components/MaterialTimeComponent.h" // Stage::Components::MaterialTime
-#include "Stage/Factories/wall_factory.h"         // Stage::Factories::CreateWallActor (inline)
-#include "GameSystems.h"                          // GameSystems::Get().VFX() (Orbit VFX)
-#include "VFX/EffekseerPlayable.h"                // VFX::EffekseerPlayable (Orbit loop)
+// #include "Stage/Constants.h"                      // ARENA_HALF_EXTENT / WALL_THICKNESS
+// #include "Stage/Stage.h"                          // EStageStatus
+// #include "Stage/Components/StageStateComponent.h" // Stage::Components::StageState
+// #include "Stage/Components/MaterialTimeComponent.h" // Stage::Components::MaterialTime
+// #include "Stage/Factories/wall_factory.h"         // Stage::Factories::CreateWallActor (inline)
+#include "GameSystems.h"           // GameSystems::Get().VFX() (Orbit VFX)
+#include "VFX/EffekseerPlayable.h" // VFX::EffekseerPlayable (Orbit loop)
 
 #include <box2d/box2d.h>
-#include <memory>
 #include <glm/glm.hpp>
+#include <memory>
+#include <string>
+
 
 namespace TopdownShooter::Bootstrap
 {
@@ -106,10 +109,10 @@ namespace TopdownShooter::Bootstrap
 			auto &dir = SJH::Scene::Director::Get();
 
 			auto lightActor = SJH::Scene::CreateDirLightActor("MainDirLight",
-			    glm::vec3(-0.4f, -1.0f, -0.5f));
+			                                                  glm::vec3(-0.4f, -1.0f, -0.5f));
 			auto *light = lightActor->GetComponent<SJH::DirLight>();
-			light->Ambient  = glm::vec3(0.3f, 0.3f, 0.3f);
-			light->Diffuse  = glm::vec3(0.9f, 0.9f, 0.85f);
+			light->Ambient = glm::vec3(0.3f, 0.3f, 0.3f);
+			light->Diffuse = glm::vec3(0.9f, 0.9f, 0.85f);
 			light->Specular = glm::vec3(0.5f, 0.5f, 0.5f);
 			dir.Root().AddChild(std::move(lightActor));
 		}
@@ -218,13 +221,31 @@ namespace TopdownShooter::Bootstrap
 		//    자원 키는 "stage_" prefix 유지 (외부 참조 continuity + 골든 무회귀).
 
 		// ResourceRegistry key 상수.
-		constexpr const char *kPlaneKey = "stage_plane";           ///< Plane mesh 등록 key (벽 시각화).
-		constexpr const char *kWallMatKey = "stage_wall";          ///< 반투명 벽 공유 Material key.
-		constexpr const char *kTransparentProgKey = "stage_transparent"; ///< 반투명 벽 Program key.
+		constexpr const char *kPlaneKey = "stage_plane";                           ///< Plane mesh 등록 key (벽 시각화).
+		constexpr const char *kWallMatKey = "stage_wall";                          ///< 반투명 벽 공유 Material key.
+		constexpr const char *kTransparentProgKey = "stage_transparent";           ///< 반투명 벽 Program key.
 		constexpr const char *kTransparentVS = "resources/shaders/transparent.vs"; ///< 반투명 벽 VS.
 		constexpr const char *kTransparentFS = "resources/shaders/transparent.fs"; ///< 반투명 벽 FS.
-		constexpr const char *kWallTexKey = "stage_police_tape";   ///< PoliceTape 텍스처 key.
-		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png"; ///< PoliceTape 경로.
+		constexpr const char *kWallTexKey = "stage_police_tape";                   ///< PoliceTape 텍스처 key.
+		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png";   ///< PoliceTape 경로.
+
+		inline std::unique_ptr<SJH::Scene::Actor> CreateWallActor(
+		    std::string name, b2World &world, glm::vec2 center, glm::vec2 half)
+		{
+			auto actor = std::make_unique<SJH::Scene::Actor>(std::move(name));
+
+			TopdownShooter::Physics::Components::BodyConfig bc;
+			bc.world = &world;
+			bc.bodyType = b2_staticBody; // 정적 벽 - 추락/이동 없음
+			bc.startPosition = center;
+			bc.isSensor = false; // solid - Unity isTrigger OFF
+			bc.categoryBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::PhysicsLayer::Wall);
+			bc.maskBits = TopdownShooter::Physics::ToBits(TopdownShooter::Physics::WallMask);
+			// half = half-extents -> BoxBody 는 size(full)*0.5 로 SetAsBox 하므로 half*2 전달(절반크기 보존).
+			actor->AddComponent<TopdownShooter::Physics::Components::BoxBody>(bc, glm::vec2(half[0] * 2.0f, half[1] * 2.0f));
+
+			return actor;
+		}
 
 		/// @brief 벽 시각화용 Plane mesh 를 idempotent 하게 등록/조회.
 		SJH::Mesh *EnsurePlane(SJH::ResourceRegistry &reg)
@@ -275,7 +296,7 @@ namespace TopdownShooter::Bootstrap
 		/// @param world 물리 벽 바디 생성용 b2World (비소유).
 		/// @details 구 @c StageBuilder::CreateStageActor 와 동작 동일 - 값(arena/wallH/startStatus)은
 		///          @c Stage::Constants 기본값(구 StageConfig 기본). 렌더 무회귀(골든 bit-동일) 대상.
-		void BuildStage(b2World &world)
+		SJH::Scene::Actor* BuildStage(b2World &world)
 		{
 			auto &reg = SJH::ResourceRegistry::Get();
 			auto &dir = SJH::Scene::Director::Get();
@@ -286,24 +307,23 @@ namespace TopdownShooter::Bootstrap
 
 			// 2) Stage Actor + StageState Component (기본 시작 상태 = Title).
 			auto stage = std::make_unique<SJH::Scene::Actor>("MainStage");
-			auto *stageState = stage->AddComponent<Stage::Components::StageState>();
-			stageState->SetCurrent(Stage::EStageStatus::Title);
 
 			// 3) 벽 4개 - arena 안쪽 둘레. PoliceTape 반투명 띠로 시각화.
-			const float arena = Stage::ARENA_HALF_EXTENT;
-			const float wallH = Stage::WALL_THICKNESS;
+			const float arena = Bootstrap::ARENA_HALF_EXTENT;
+			const float wallH = Bootstrap::WALL_THICKNESS;
 
 			// 벽 4개 모두 동일 타일링 -> 공유 wallMat 직접 사용 (인스턴스 clone 불필요).
 			const float tile = wallH * 2.0f;
 			SJH::Uniforms::SetVec2(*wallMat, "uvScale", glm::vec2(arena * 2.0f / tile, wallH * 2.0f / tile));
 			// uTime 은 공유 wallMat 에 한 번만 구동 (MaterialTime 은 값 세팅이라 하나로 충분).
-			stage->AddComponent<Stage::Components::MaterialTime>(wallMat);
+			// 아무래도 마테리얼 타임이 아니라. 그냥 Wall
+			// !! stage->AddComponent<Stage::Components::MaterialTime>(wallMat);
 
 			auto spawnWall = [&](const char *name, glm::vec2 center, float yRot) {
 				const bool horizontal = (static_cast<int>(yRot) % 180) == 0;
 				const glm::vec2 half = horizontal ? glm::vec2(arena, wallH) : glm::vec2(wallH, arena);
 
-				auto actor = Stage::Factories::CreateWallActor(name, world, center, half);
+				auto actor = CreateWallActor(name, world, center, half);
 				auto &tr = actor->GetTransform();
 				tr.EulerRot = glm::vec3(0.0f, yRot, 0.0f);
 				tr.Scale = glm::vec3(arena * 2.0f, 1.0f, 1.0f);
@@ -320,15 +340,15 @@ namespace TopdownShooter::Bootstrap
 			//    Effect 미등록(Warmup 전/실패)이면 no-op. isLoop 재-Play 로 무한 지속.
 			if (SJH::Effect *orbitEffect = reg.FindEffect("orbital_background"))
 			{
-				auto  orbitActor = std::make_unique<SJH::Scene::Actor>("OrbitVfx");
-				auto *pl         = orbitActor->AddComponent<VFX::EffekseerPlayable>(
+				auto orbitActor = std::make_unique<SJH::Scene::Actor>("OrbitVfx");
+				auto *pl = orbitActor->AddComponent<VFX::EffekseerPlayable>(
 				    GameSystems::Get().VFX().GetManager(), orbitEffect, glm::vec3(0.0f), VFX::TrackPolicy::Static);
 				pl->SetIsLoop(true);
 				pl->Play();
 				stage->AddChild(std::move(orbitActor));
 			}
 
-			dir.Root().AddChild(std::move(stage));
+			return dir.Root().AddChild(std::move(stage));
 		}
 	} // namespace
 
@@ -338,15 +358,15 @@ namespace TopdownShooter::Bootstrap
 		result.WorldCamera = BuildWorldCamera(deps);
 		BuildLighting();
 
-		auto *skyboxRenderer  = BuildSkybox();
+		auto *skyboxRenderer = BuildSkybox();
 		result.SkyboxRenderer = skyboxRenderer;
-		result.SkyboxMat      = skyboxRenderer ? skyboxRenderer->Material : nullptr;
+		result.SkyboxMat = skyboxRenderer ? skyboxRenderer->Material : nullptr;
 
 		BuildPcbModel(); // PCB 장식 모델 (물리 무관 - StageBuilder 에서 이관).
 
 		if (deps.physicsWorld)
-			BuildStage(*deps.physicsWorld); // 물리 아레나(벽4+StageState+Orbit VFX) - 구 StageBuilder 흡수.
+			result.StageActor = BuildStage(*deps.physicsWorld); // 물리 아레나(벽4+StageState+Orbit VFX) - 구 StageBuilder 흡수.
 
 		return result;
 	}
-}
+} // namespace TopdownShooter::Bootstrap

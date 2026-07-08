@@ -21,6 +21,11 @@ namespace TopdownShooter::Bootstrap
 	constexpr float PLAYER_DECAL_Y       = -0.5f;    ///< Player 발밑 그림자 데칼 Y 높이 (바닥 z-fight 회피).
 	constexpr float ENEMY_DECAL_Y        = -0.5f;    ///< Enemy 발밑 그림자 데칼 Y 높이 (바닥 z-fight 회피).
 	constexpr float DECAL_CIRCLE_Y_DELTA = 0.01f;    ///< 피격원이 그림자보다 약간 위에 오도록 더하는 Y 델타.
+
+	// 아레나/벽 - StageConfig 기본값 (main.cpp WaveController arenaHalfExtent 와 단일화).
+	constexpr float ARENA_HALF_EXTENT = 10.0f; ///< 아레나 벽 안쪽 절반 크기(월드 단위). @c StageConfig 기본값.
+	constexpr float WALL_THICKNESS    = 0.5f;  ///< 물리 벽 두께(반-크기). @c StageConfig 기본값.
+
 } // namespace TopdownShooter::Bootstrap
 
 #endif //_TOPDOWNSHOOTER_BOOTSTRAP_CONSTANTS__

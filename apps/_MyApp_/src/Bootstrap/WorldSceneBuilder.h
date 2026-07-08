@@ -28,7 +28,7 @@
 #ifndef __TOPDOWNSHOOTER_BOOTSTRAP_WORLD_SCENE_BUILDER_H__
 #define __TOPDOWNSHOOTER_BOOTSTRAP_WORLD_SCENE_BUILDER_H__
 
-// fwd - 포인터/참조만 노출 (헤더 의존 격리).
+#include "scene/actor.h"
 class b2World; // 물리 아레나 벽 조립용 (BuildStage) - heavy box2d include 회피.
 namespace SJH
 {
@@ -66,6 +66,7 @@ namespace TopdownShooter::Bootstrap
 		SJH::Scene::Camera *WorldCamera    = nullptr; ///< 생성된 WorldCamera 포인터 (main -> mCamera, PlayerBuilder deps 주입).
 		SJH::Material      *SkyboxMat      = nullptr; ///< Matrix Skybox 머티리얼 (main -> mSkyboxMat, render() 에서 매 프레임 u_time 갱신).
 		SJH::IRenderable   *SkyboxRenderer = nullptr; ///< Matrix Skybox MeshRenderer(IRenderable) - SkyboxPass 가 그릴 대상.
+		SJH::Scene::Actor  *StageActor 	   = nullptr;
 	};
 
 	/**

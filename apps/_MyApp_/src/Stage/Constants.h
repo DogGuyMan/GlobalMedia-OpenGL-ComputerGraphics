@@ -29,10 +29,6 @@ namespace TopdownShooter::Stage
 	constexpr float WAVE_SPEED_PER_WAVE = 0.3f; ///< 웨이브당 이동속도 증가량.
 	constexpr int   WAVE_CONTACT_DAMAGE = 10;   ///< 접촉 데미지 - 전 웨이브 동일(일정).
 
-	// 아레나/벽 - StageConfig 기본값 (main.cpp WaveController arenaHalfExtent 와 단일화).
-	constexpr float ARENA_HALF_EXTENT = 10.0f; ///< 아레나 벽 안쪽 절반 크기(월드 단위). @c StageConfig 기본값.
-	constexpr float WALL_THICKNESS    = 0.5f;  ///< 물리 벽 두께(반-크기). @c StageConfig 기본값.
-
 	// -- Scene actor 이름 (생성 <-> FindChild 단일 출처) --
 	constexpr const char *ACTOR_GAME_CONTEXT = "GameContext"; ///< main 생성 <-> StageState GetCtx FindChild.
 	constexpr const char *ACTOR_WAVE_SPAWNER = "WaveSpawner"; ///< main 생성 + FindChild (웨이브 와이어링).

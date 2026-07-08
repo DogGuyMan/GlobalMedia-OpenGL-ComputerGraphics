@@ -22,9 +22,9 @@ namespace TopdownShooter::Bootstrap
 	enum class EInitTask
 	{
 		Core,            ///< phase1: 렌더타깃 + 시스템 init + 오디오 워밍업.
-		ScreenPipeline,  ///< phase2: DefaultPipeline + ScreenCamera + PostFX.
 		VfxUi,           ///< phase2: VFX 이펙트(orbital 포함) 로드 + 게임 UI. World 보다 먼저.
 		World,           ///< phase2: WorldScene + 스테이지 액터(orbital FindEffect) + 플레이어.
+		ScreenPipeline,  ///< phase2: DefaultPipeline + ScreenCamera + PostFX.
 		Pass,          	 ///< phase2: Pass 컬렉션 조립.
 		Enter,           ///< phase3: Director.Enter.
 		Fsm,             ///< phase3: GameContext + Stage FSM.

@@ -36,6 +36,8 @@
 #include "Audio/FmodStudioPlayable.h"
 #include "Bootstrap/actor_factory.h"
 #include "Entity/Components/LifeComponents.h"
+#include "Stage/Components/StageStateComponent.h"
+#include "Bootstrap/Constants.h"
 #include "Stage/Components/GameContextComponent.h"
 #include "Stage/Constants.h"
 #include "Stage/Stage.h"
@@ -223,6 +225,9 @@ namespace TopdownShooter
 					mSkyboxMat = worldScene.SkyboxMat;
 				}
 				mSkyboxRenderer = worldScene.SkyboxRenderer;
+				mStage = worldScene.StageActor;
+				auto *stageState = mStage->AddComponent<Stage::Components::StageState>();
+				stageState->SetCurrent(Stage::EStageStatus::Title);
 
 
 				mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>(ACTOR_FX_ROOT));
@@ -235,7 +240,7 @@ namespace TopdownShooter
 				mSpriteActor = player.SpriteActor;
 
 				auto *waveSpawner = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>(Stage::ACTOR_WAVE_SPAWNER));
-				waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, Stage::ARENA_HALF_EXTENT);
+				waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, Bootstrap::ARENA_HALF_EXTENT);
 				return mCamera != nullptr && mSpriteActor != nullptr;
 			});
 
@@ -662,6 +667,7 @@ namespace TopdownShooter
 		SJH::IRenderable *mSkyboxRenderer = nullptr; ///< skybox MeshRenderer(IRenderable) - SkyboxPass 주입용(비소유). // ! 모듈화 대상 (SkyboxPass 주입 대상 = 파이프라인)
 		SJH::Scene::Actor *mSpriteActor = nullptr; // ! 모듈화 대상 (플레이어 = 씬 상태)
 		SJH::Scene::Actor *mFxRoot = nullptr; // 단발 시퀀스 전용 부모 (sweep 대상) // ! 모듈화 대상 (FX 부모 = 씬 상태)
+		SJH::Scene::Actor *mStage = nullptr;
 		SJH::Scene::Camera *mCamera = nullptr; // ! 모듈화 대상 (world 카메라 = 렌더 입력)
 		SJH::Scene::Camera *mScreenCamera = nullptr; // ! 모듈화 대상 (화면 카메라 = 렌더 입력)
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard; // ! 모듈화 대상 (입력 = 게임루프)
