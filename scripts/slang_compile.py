@@ -41,6 +41,16 @@ import subprocess
 import sys
 
 
+def import_include_args(parent):
+    """모듈 서브디렉토리(<parent>/modules)가 있으면 slangc -I 인자로 추가.
+
+    import 전용 모듈(.slang)을 modules/ 로 분리한 뒤에도 concrete 셰이더의
+    'import postfx_common;' 이 해석되도록 include path 를 넓힌다. 없으면 빈 리스트.
+    """
+    modules_dir = os.path.join(parent, "modules")
+    return ["-I", modules_dir] if os.path.isdir(modules_dir) else []
+
+
 # ===== post-process (GLSL 410 호환) ==========================================
 
 def normalize_varyings(text, stage):
@@ -187,9 +197,11 @@ def write_depfile(depfile_path, target_path, dependency_paths):
 
 
 def collect_sibling_slang_files(input_path):
-    """입력 .slang 의 형제 .slang 들 (import 후보) - depfile/DEPENDS 용."""
+    """입력 .slang 의 형제 + modules/ 하위 .slang (import 후보) - depfile/DEPENDS 용."""
     parent = os.path.dirname(os.path.abspath(input_path))
-    return sorted(glob.glob(os.path.join(parent, "*.slang")))
+    files = glob.glob(os.path.join(parent, "*.slang"))
+    files += glob.glob(os.path.join(parent, "modules", "*.slang"))
+    return sorted(files)
 
 
 # ===== main 파이프라인 =======================================================
@@ -216,6 +228,7 @@ def compile_glsl(args):
     ]
     if args.profile:
         slangc_args += ["-profile", args.profile]
+    slangc_args[1:1] = import_include_args(parent)
 
     rc = run_slangc(args.slangc, slangc_args, "slang:glsl410")
     if rc != 0:
@@ -256,6 +269,7 @@ def compile_wgsl(args):
     ]
     if args.profile:
         slangc_args += ["-profile", args.profile]
+    slangc_args[1:1] = import_include_args(parent)
 
     rc = run_slangc(args.slangc, slangc_args, "slang:wgsl")
     if rc != 0:
@@ -280,6 +294,8 @@ def emit_reflection(args):
         "-reflection-json", args.reflection_out,
         "-o", args.reflection_out + ".ignore.glsl",
     ]
+    slangc_args[1:1] = import_include_args(parent)
+
     rc = run_slangc(args.slangc, slangc_args, "slang:refl")
     if rc != 0:
         return rc

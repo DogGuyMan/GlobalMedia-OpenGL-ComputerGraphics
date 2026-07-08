@@ -5,6 +5,7 @@
 // uVignetteColor(vec3)는 startup/ImGui 가 Properties.Vec3s 로 set -> 동일 일반 업로드.
 
 import postfx_common;
+import image_processing;
 
 struct MaterialBlock
 {
@@ -28,7 +29,7 @@ float4 fsMain(VSOut input) : SV_Target
     float3 finalColor = uScene.Sample(input.uv).rgb;
 
     // 1. GrayScale - Rec.709 휘도 후 mix.
-    float  luminance = dot(finalColor, float3(0.299, 0.587, 0.114));
+    float  luminance = Luminance(finalColor);
     float3 grayColor = float3(luminance, luminance, luminance);
     finalColor = lerp(grayColor, finalColor, uMaterial.uGrayscaleAmount);
 

@@ -3,6 +3,7 @@
 // MaterialBlock{uBloomThreshold/uBloomSpread/uBloomIntensity} + uScene. 생성물: postprocess/bloom.{vs,fs}.
 
 import postfx_common;
+import image_processing;
 
 struct MaterialBlock
 {
@@ -20,17 +21,10 @@ VSOut vsMain(VSIn input)
     return ComputeScreenQuadVSOut(input);
 }
 
-float GaussianWeight(float2 offset, float falloff)
-{
-    return exp(-dot(offset, offset) * falloff);
-}
-
 [shader("fragment")]
 float4 fsMain(VSOut input) : SV_Target
 {
-    uint texW, texH;
-    uScene.GetDimensions(texW, texH);
-    float2 texel = 1.0 / float2(texW, texH);
+    float2 texel = TexelSize(uScene);
 
     const float falloff = 0.125;   // sigma = 2 텍셀
     float3 bloom     = float3(0.0, 0.0, 0.0);
@@ -43,7 +37,7 @@ float4 fsMain(VSOut input) : SV_Target
             float  weight = GaussianWeight(cell, falloff);
             float2 off    = cell * texel * uMaterial.uBloomSpread;
             float3 samp   = uScene.Sample(input.uv + off).rgb;
-            float  lum    = dot(samp, float3(0.299, 0.587, 0.114));
+            float  lum    = Luminance(samp);
             bloom     += samp * step(uMaterial.uBloomThreshold, lum) * weight;
             weightSum += weight;
         }

@@ -2,6 +2,7 @@
 // postfx Sobel 엣지 검출 (휘도 기반) - 자립 NDC VS + FS. uScene 만. 생성물: postprocess/sobel.{vs,fs}.
 
 import postfx_common;
+import image_processing;
 
 Sampler2D uScene;
 
@@ -14,15 +15,15 @@ VSOut vsMain(VSIn input)
 [shader("fragment")]
 float4 fsMain(VSOut input) : SV_Target
 {
-    uint texW, texH;
-    uScene.GetDimensions(texW, texH);
-    float2 texel = 1.0 / float2(texW, texH);
+    float2 texel = TexelSize(uScene);
 
-    float2 offsets[9] = {
-        float2(-texel.x,  texel.y), float2(0.0,  texel.y), float2(texel.x,  texel.y),
-        float2(-texel.x,  0.0),     float2(0.0,  0.0),     float2(texel.x,  0.0),
-        float2(-texel.x, -texel.y), float2(0.0, -texel.y), float2(texel.x, -texel.y)
-    };
+    float3 c[9];
+    Sample3x3(uScene, input.uv, texel, c);
+
+    float l[9];
+    for (int i = 0; i < 9; ++i)
+        l[i] = Luminance(c[i]);
+
     float sobelX[9] = {
         -1.0, 0.0, 1.0,
         -2.0, 0.0, 2.0,
@@ -34,20 +35,8 @@ float4 fsMain(VSOut input) : SV_Target
          1.0,  2.0,  1.0
     };
 
-    float lum[9];
-    for (int i = 0; i < 9; ++i)
-    {
-        float3 rgb = uScene.Sample(input.uv + offsets[i]).rgb;
-        lum[i] = dot(rgb, float3(0.299, 0.587, 0.114));
-    }
-
-    float gx = 0.0;
-    float gy = 0.0;
-    for (int i = 0; i < 9; ++i)
-    {
-        gx += lum[i] * sobelX[i];
-        gy += lum[i] * sobelY[i];
-    }
+    float gx = Dot9(l, sobelX);
+    float gy = Dot9(l, sobelY);
 
     float edge = sqrt(gx * gx + gy * gy);
     edge = clamp(edge, 0.0, 1.0);
