@@ -7,6 +7,7 @@
 // 생성물: billboard_atlas.vs/.fs + billboard_atlas.refl.json. Slang: mix->lerp, fract 없음, step/sin 동일.
 
 import billboard_common;
+import texture_atlas;
 
 struct FrameBlock
 {
@@ -72,7 +73,7 @@ VSOut vsMain(VSIn input)
     float3 worldPos = center + cameraRight * rp.x * sx + cameraUp * rp.y * sy;
 
     VSOut output;
-    output.uv  = uMaterial.uUvRect.xy + input.aTexCoord * uMaterial.uUvRect.zw;
+    output.uv  = AtlasSubUV(input.aTexCoord, uMaterial.uUvRect);
     output.pos = mul(uFrame.uProj, mul(uFrame.uView, float4(worldPos, 1.0)));
     return output;
 }
