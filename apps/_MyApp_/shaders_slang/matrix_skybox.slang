@@ -7,6 +7,8 @@
 // 샘플러 chars/noise_tex 는 loose (이름 = Properties.Textures 키). 생성물: matrix_skybox.vs/.fs + .refl.json.
 // Slang 변환: GLSL atan(y,x)->atan2, fract->frac, mod->fmod(피연산자 비음수라 동치), mix 없음.
 
+import texture_atlas;
+
 struct FrameBlock
 {
     float4x4 uView;
@@ -72,18 +74,20 @@ float4 fsMain(VSOut input) : SV_Target
     float3 dir     = normalize(input.dir);
     float2 base_uv = getSphericalUV(dir);
 
-    // 글자 격자 셀 분해
-    float2 grid_uv = base_uv * float2(COLS, ROWS);
-    float2 cellId  = floor(grid_uv);
-    float2 inCell  = frac(grid_uv);
+    // 글자 격자 셀 분해 - texture_atlas 공유.
+    float2 cellId, inCell;
+    AtlasCell(base_uv, float2(COLS, ROWS), cellId, inCell);
 
     // 디지트 선택 - 셀당 한 번 샘플 (셀 내부 일정).
     float g = noise_tex.Sample(cellId / float2(COLS, ROWS) * NOISE_SCALE + NOISE_OFFSET).g;
     float d = fmod(floor(g * CHAR_CNT) + floor(uMaterial.u_time * 5.0), CHAR_CNT);
 
-    // 아틀라스 정확 매핑 - d 번째 64px 글자칸.
+    // 아틀라스 정확 매핑 - d 번째 64px 글자칸. gapped strip 은 픽셀 단위로 합성(texture_atlas 적용) 후
+    // 마지막에 /ATLAS_W 정규화 - 원본이 (합 후 나눗셈) 한 번만 수행하던 연산 순서를 그대로 보존(bit-exact).
+    // (rect.xy/zw 를 미리 /ATLAS_W 해서 넘기면 나눗셈이 add 이전으로 재결합되어 FP 재현성이 깨짐.)
     float  cellLeftPx = GAP + d * (CHAR_W + GAP);
-    float2 char_uv = float2((cellLeftPx + inCell.x * CHAR_W) / ATLAS_W, inCell.y);
+    float2 charPx     = AtlasSubUV(inCell, float4(cellLeftPx, 0.0, CHAR_W, 1.0));
+    float2 char_uv    = float2(charPx.x / ATLAS_W, charPx.y);
 
     // 내리는 비 - 세로 그레디언트 + 노이즈 왜곡.
     float distortion = noise_tex.Sample(float2(cellId.x / COLS, 0.0) * NOISE_SCALE + NOISE_OFFSET).g;
