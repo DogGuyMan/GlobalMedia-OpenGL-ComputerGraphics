@@ -43,6 +43,7 @@ namespace TopdownShooter
 	//   render() 가 ungated 로 mAudio.Update 를 직접 호출(FMOD Studio update = 비동기 명령 큐 처리).
 	void GameSystems::Update(float dt)
 	{
+		mGameTime += dt; // 게임 클럭 누적 - CombatPlay 에서만 호출되므로 Title/Pause/GameOver freeze(스크롤 머티리얼 소스).
 		mVFX.Update(dt);
 		mPhysics.Step(dt);
 	}

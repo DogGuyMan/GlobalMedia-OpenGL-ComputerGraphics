@@ -452,6 +452,13 @@ namespace TopdownShooter
 			if (mSkyboxMat)
 				mSkyboxMat->Properties.Floats[UNI_SKYBOX_TIME] = static_cast<float>(effectiveTime);
 
+			// 경고 벽(warning_wall) 시간(uTime) 동기화 — U 스크롤. ★ 소스 = GameSystems 게임 클럭
+			//   (CombatPlay tick 동안만 누적, Title/Pause/GameOver freeze). 월클럭 effectiveTime 을 쓰면
+			//   게임 freeze(Title/Pause) 중에도 벽이 스크롤하는 버그 -> 게임 클럭으로 freeze 존중.
+			//   "stage_wall" = WorldSceneBuilder kWallMatKey. 미존재 시(스테이지 미빌드) nullptr-safe skip.
+			if (auto *wallMat = SJH::ResourceRegistry::Get().FindSharedMaterial("stage_wall"))
+				wallMat->Properties.Floats["uTime"] = TopdownShooter::GameSystems::Get().GameTime();
+
 			// fog — WorldCamera projection 역행렬 송신 (Properties.Mat4s 자동 송신, D4).
 			// Camera 의 닫힌 해 inverse (cofactor 일반 inverse 폐기 — perspective/ortho 분기 자체 처리).
 			if (auto *fogMat = FindFogMaterial(); fogMat && mCamera)

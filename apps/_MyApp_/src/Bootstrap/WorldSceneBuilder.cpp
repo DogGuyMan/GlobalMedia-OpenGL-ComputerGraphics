@@ -223,9 +223,9 @@ namespace TopdownShooter::Bootstrap
 		// ResourceRegistry key 상수.
 		constexpr const char *kPlaneKey = "stage_plane";                           ///< Plane mesh 등록 key (벽 시각화).
 		constexpr const char *kWallMatKey = "stage_wall";                          ///< 반투명 벽 공유 Material key.
-		constexpr const char *kTransparentProgKey = "stage_transparent";           ///< 반투명 벽 Program key.
-		constexpr const char *kTransparentVS = "resources/shaders/transparent.vs"; ///< 반투명 벽 VS.
-		constexpr const char *kTransparentFS = "resources/shaders/transparent.fs"; ///< 반투명 벽 FS.
+		constexpr const char *kWarningWallProgKey = "stage_warning_wall";              ///< 경고 벽(시간 U-스크롤) Program key.
+		constexpr const char *kWarningWallVS = "resources/shaders/warning_wall.vs";     ///< 경고 벽 VS (uvScale 타일링 + uTime U-스크롤).
+		constexpr const char *kWarningWallFS = "resources/shaders/warning_wall.fs";     ///< 경고 벽 FS (emissive * tint + alpha discard).
 		constexpr const char *kWallTexKey = "stage_police_tape";                   ///< PoliceTape 텍스처 key.
 		constexpr const char *kWallTexPath = "resources/texture/PoliceTape.png";   ///< PoliceTape 경로.
 
@@ -255,12 +255,12 @@ namespace TopdownShooter::Bootstrap
 			return reg.RegisterMesh(kPlaneKey, SJH::Mesh::CreatePlane());
 		}
 
-		/// @brief 반투명 벽 unlit Program 을 idempotent 하게 등록/조회.
-		SJH::Program *EnsureTransparentProgram(SJH::ResourceRegistry &reg)
+		/// @brief 경고 벽(시간 U-스크롤) unlit Program 을 idempotent 하게 등록/조회.
+		SJH::Program *EnsureWarningWallProgram(SJH::ResourceRegistry &reg)
 		{
-			if (auto *existing = reg.FindProgram(kTransparentProgKey))
+			if (auto *existing = reg.FindProgram(kWarningWallProgKey))
 				return existing;
-			return reg.CreateProgram(kTransparentProgKey, kTransparentVS, kTransparentFS);
+			return reg.CreateProgram(kWarningWallProgKey, kWarningWallVS, kWarningWallFS);
 		}
 
 		/// @brief PoliceTape 텍스처를 idempotent 하게 등록/조회. GL_REPEAT wrap 포함.
@@ -283,7 +283,7 @@ namespace TopdownShooter::Bootstrap
 			if (auto *existing = reg.FindSharedMaterial(kWallMatKey))
 				return existing;
 			auto *mat = reg.CreateSharedMaterial(kWallMatKey);
-			mat->SetProgram(EnsureTransparentProgram(reg));
+			mat->SetProgram(EnsureWarningWallProgram(reg));
 			mat->SetPass(SJH::Pass::RenderQueue::Transparent);
 			SJH::Uniforms::SetTexture(*mat, "emissive", EnsureWallTexture(reg), 0);
 			SJH::Uniforms::SetVec4(*mat, "tintColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));

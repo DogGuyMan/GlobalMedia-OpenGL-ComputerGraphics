@@ -72,6 +72,13 @@ namespace TopdownShooter
 		/// @return 보유 중인 @c Text::WorldTextSystem 레퍼런스.
 		Text::WorldTextSystem   &WorldText() { return mWorldText; }   // <- 추가
 
+		/// @brief 게임 클럭(초) - @c Update(dt) 가 호출될 때만 누적.
+		/// @details @c Update 는 CombatPlayState 에서만 호출되므로 Title/Pause/GameOver 동안 freeze.
+		///          월클럭(main effectiveTime)과 달리 게임 freeze 를 존중 - 스크롤 머티리얼
+		///          (warning_wall @c uTime) 등 게임플레이 애니메이션의 시간 소스.
+		/// @return 게임 시작 후 누적된 시뮬레이션 시간(초).
+		float GameTime() const { return mGameTime; }
+
 		GameSystems(const GameSystems &)            = delete;
 		GameSystems &operator=(const GameSystems &) = delete;
 		GameSystems(GameSystems &&)                 = delete;
@@ -85,6 +92,7 @@ namespace TopdownShooter
 		VFX::VFXSystem          mVFX;              ///< VFX 시스템 - Effekseer 파티클 매니저.
 		Physics::PhysicsSystem  mPhysics;          ///< 물리 시스템 - Box2D world.
 		Text::WorldTextSystem   mWorldText;   // <- 추가  ///< 월드 텍스트 시스템 - BMFont 보유.
+		float                   mGameTime = 0.0f; ///< 게임 클럭(초) - Update(dt) 누적. CombatPlay 에서만 전진(freeze 존중).
 	};
 }
 

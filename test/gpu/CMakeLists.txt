@@ -42,7 +42,8 @@ set(_gpu_shaders
     simple
     simple_texture
     sobel
-    transparent)
+    transparent
+    warning_wall)
 
 set(_gpu_shader_outputs "")
 foreach(_name ${_gpu_shaders})

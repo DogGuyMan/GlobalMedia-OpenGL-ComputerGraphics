@@ -55,6 +55,13 @@ sjh_compile_slang(_TRANSPARENT_VS   ${TRANSPARENT_SLANG} vsMain vertex   glsl gl
 sjh_compile_slang(_TRANSPARENT_FS   ${TRANSPARENT_SLANG} fsMain fragment glsl glsl_410 ${_slang_gen_dir}/transparent.fs)
 sjh_reflect_slang(_TRANSPARENT_REFL ${TRANSPARENT_SLANG} fsMain fragment ${_slang_gen_dir}/transparent.refl.json)
 
+# === warning_wall.slang (transparent 기반 - 시간 U-스크롤 경고 벽, MaterialBlock: tintColor/uvScale/uTime/uScrollSpeed) ===
+# WallMat 이 사용 (WorldSceneBuilder EnsureWarningWallProgram). uTime 은 main.cpp 렌더루프가 매 프레임 주입.
+set(WARNING_WALL_SLANG ${CMAKE_CURRENT_SOURCE_DIR}/warning_wall.slang)
+sjh_compile_slang(_WARNING_WALL_VS   ${WARNING_WALL_SLANG} vsMain vertex   glsl glsl_410 ${_slang_gen_dir}/warning_wall.vs)
+sjh_compile_slang(_WARNING_WALL_FS   ${WARNING_WALL_SLANG} fsMain fragment glsl glsl_410 ${_slang_gen_dir}/warning_wall.fs)
+sjh_reflect_slang(_WARNING_WALL_REFL ${WARNING_WALL_SLANG} fsMain fragment ${_slang_gen_dir}/warning_wall.refl.json)
+
 # === healthbar.slang (Phase 3 Slice - 머리 위 빌보드 체력바, MaterialBlock 6멤버, 텍스처 없음) ===
 # 기존 hand-written healthbar.{vs,fs} 대체 (소스 GLSL 삭제됨). 빌보드 카메라축 = transpose+mul.
 set(HEALTHBAR_SLANG ${CMAKE_CURRENT_SOURCE_DIR}/healthbar.slang)
@@ -134,6 +141,7 @@ add_custom_target(${CHAPTER_NAME}_shaders ALL
             ${_SIMPLE_TEXTURE_VS} ${_SIMPLE_TEXTURE_FS} ${_SIMPLE_TEXTURE_REFL}
             ${_PASSTHROUGH_VS} ${_PASSTHROUGH_FS}
             ${_TRANSPARENT_VS} ${_TRANSPARENT_FS} ${_TRANSPARENT_REFL}
+            ${_WARNING_WALL_VS} ${_WARNING_WALL_FS} ${_WARNING_WALL_REFL}
             ${_HEALTHBAR_VS} ${_HEALTHBAR_FS} ${_HEALTHBAR_REFL}
             ${_MATRIX_SKYBOX_VS} ${_MATRIX_SKYBOX_FS} ${_MATRIX_SKYBOX_REFL}
             ${_BILLBOARD_ATLAS_VS} ${_BILLBOARD_ATLAS_FS} ${_BILLBOARD_ATLAS_REFL}
