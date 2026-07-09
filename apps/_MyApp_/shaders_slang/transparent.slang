@@ -11,7 +11,7 @@ struct DrawBlock
 };
 ConstantBuffer<DrawBlock> uDraw;
 
-// std140: tintColor @0(16) / uvScale @16(8) / uTime @24(4) / uScrollSpeed @28(4) - 총 32.
+// std140: tintColor @0(16) / uvScale @16(8) / uvOffset @16(8) - 총 32.
 struct MaterialBlock
 {
 	float4 tintColor; // 곱 틴트 (머티리얼 기본 white)
