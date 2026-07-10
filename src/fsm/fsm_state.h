@@ -16,7 +16,7 @@
  *  - [X] `TOwner` lifetime 관리 - 호출자(StateMachine) 가 비소유 포인터로 전달.
  *
  * @note Stage 4 (TTransit template parameter 폐기) - 전이 그래프 정보를 각 State 객체에 응집.
- *       정본 spec: `docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md`
+ *       정본 spec: `doc/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md`
  */
 
 #ifndef __SJH_FSM_FSM_STATE_H__

@@ -1,23 +1,28 @@
 ########### macOS ###########
 .DS_Store
 
+########### Claude Code ###########
+.claude/settings.local.json
+.claude/skills/
+
 ########### vcpkg local files ###########
 vcpkg_installed/
 
 ########### Doxygen ###########
-doc/html/
-doc/latex/
-docs/
-*log.*
-
-###########
-*workspace
-*_workspace
+doxygen/html/
+doxygen/latex/
 
 ###########  FILES  ############
+*.[Ii]gnore.*
+*.[Ii]gnore
 *.pptx
 *.zip
 installer/
+*workspace
+*_workspace
+doc/report
+.husky
+evals
 
 ########### FOLDERS ############
 build_project/

@@ -219,11 +219,7 @@ namespace TopdownShooter
 				// BuildWorldScene 이 카메라/광/스카이박스/PCB + 물리 아레나 스테이지(구 StageBuilder)까지 조립.
 				auto worldScene = Bootstrap::BuildWorldScene({mFbInfo.Aspect, &mMouse, mSceneFB.get(), &phys.World()});
 				mCamera = worldScene.WorldCamera;
-				
-				// !! 사보타지 테스팅 (BuildWorldScene) 
-				{
-					mSkyboxMat = worldScene.SkyboxMat;
-				}
+				mSkyboxMat = worldScene.SkyboxMat;
 				mSkyboxRenderer = worldScene.SkyboxRenderer;
 				mStage = worldScene.StageActor;
 				auto *stageState = mStage->AddComponent<Stage::Components::StageState>();

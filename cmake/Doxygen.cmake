@@ -10,11 +10,11 @@ function(sjhopengl_setup_doxygen)
     endif()
 
     set(DOXYGEN_INPUT_DIR  "${PROJECT_SOURCE_DIR}/src")
-    set(DOXYGEN_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/doc")
-    set(DOXYGEN_PAGES_DIR  "${PROJECT_SOURCE_DIR}/doc/pages")
+    set(DOXYGEN_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/doxygen")
+    set(DOXYGEN_PAGES_DIR  "${PROJECT_SOURCE_DIR}/doxygen/pages")
 
     configure_file(
-        "${PROJECT_SOURCE_DIR}/doc/Doxyfile.in"
+        "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
         "${PROJECT_BINARY_DIR}/Doxyfile"
         @ONLY
     )

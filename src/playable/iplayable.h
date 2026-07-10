@@ -17,7 +17,7 @@
  *
  * @note concrete 구현체는 @c PlayableBase 를 상속하고 @c OnUpdate / @c OnPlay / @c OnStop
  *       hook 만 override 한다. @c IPlayable* 핸들이 필요한 경우에만 이 인터페이스 직접 참조.
- *       정본 spec: @c docs/superpowers/specs/2026-05-26-playable-component-interface-design.md
+ *       정본 spec: @c doc/superpowers/specs/2026-05-26-playable-component-interface-design.md
  */
 #ifndef __SJH_PLAYABLE_IPLAYABLE_H__
 #define __SJH_PLAYABLE_IPLAYABLE_H__

@@ -1,0 +1,31 @@
+name: Docs Validation
+
+on:
+  pull_request:
+  push:
+    branches: ['**']
+
+jobs:
+  audit-docs:
+    name: audit_docs.py broken-path gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 하드 게이트 — broken>0 이면 job 실패. scope = 2026-07-10 Wave 3 정화 완료 전역
+      # (.claude 는 skills/ 제외를 위해 명시 나열 — 전역 Skill 사본의 예시 경로는 교육 자료라 감사 대상 아님.
+      #  doc/handoffs 는 의도적 예시 broken 경로를 포함하므로 영구 제외.)
+      - name: Run audit_docs.py (hard gate — non-zero exit fails the job)
+        run: >-
+          python3 scripts/audit_docs.py --scope
+          .claude/CLAUDE.md .claude/architecture.md .claude/agents .claude/commands
+          doc/design/EngineDesign.md doc/handoffs/2026-05-10-window11-env-handoff.md doc/testplan/Graphics-Testing-Prompt.md
+          ARCHITECTURE.md
+          src/CLAUDE.md test/CLAUDE.md apps/_MyApp_/CLAUDE.md
+          cmake/CLAUDE.md scripts/CLAUDE.md vcpkg-overlay-ports/CLAUDE.md doc/CLAUDE.md
+          doc/superpowers/plans doc/superpowers/specs
+
+      - name: Run score_cpp.py (informational — full category snapshot)
+        if: always()
+        continue-on-error: true
+        run: python3 doc/report/score_cpp.py . --markdown

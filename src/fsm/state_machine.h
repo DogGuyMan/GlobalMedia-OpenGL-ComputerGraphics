@@ -21,7 +21,7 @@
  *            적용 시점은 `Update` 경계의 `ApplyPending()` - `OnUpdate` 도중 재진입 없음.
  *
  * @note Stage 4 (TTransit template parameter 폐기) - 전이 그래프를 State 에 응집.
- *       정본 spec: `docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md`
+ *       정본 spec: `doc/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md`
  */
 
 #ifndef __SJH_FSM_STATE_MACHINE_H__

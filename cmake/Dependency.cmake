@@ -1,5 +1,5 @@
 # ______ 프로젝트 의존성 관리 ______
-# lib/{macos,windows}/ 는 shell/BuildExternLibs.{sh,bat} 로 사전 빌드 필요
+# lib/{macos,windows}/ 는 `python3 scripts/dev.py extern` 로 사전 빌드 필요
 # project_deps PUBLIC 타겟으로 집약하여 앱 타겟에 PRIVATE 링크
 
 # vcpkg toolchain 은 CMAKE_FIND_FRAMEWORK 를 LAST 로 설정한다(프레임워크보다 vcpkg 라이브러리 우선).

@@ -1,7 +1,7 @@
 // SJH 엔진 모듈 의존 그래프 - 현재 상태 (2026-06-19, HEAD=cadf80b)
 // 10 mutual 사이클 -> 0 절단 완료 후. 유일하게 남은 사이클 = render -> rr -> sprite -> render (사전 존재 3-사이클).
 //
-// 디노이즈 규칙 (doc/pages/00-mainpage.md 기존 그래프와 동일):
+// 디노이즈 규칙 (doxygen/pages/00-mainpage.md 기존 그래프와 동일):
 //   - common / diagnostics / input : static / macro / free-func 접근뿐 -> 분리 박스, 의존 엣지 생략.
 //   - "-> program" free-function 전용(Uniforms::Set*) 호출 : #include 없으므로 자동 제외.
 //   - dead shim common/layer.h -> scene/layer.h : 아무도 include 안 함 -> 그래프에서 제외 (정리 후보).

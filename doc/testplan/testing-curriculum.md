@@ -491,5 +491,5 @@ return text.str();              // ← 분기 B: "" (테스트 3) 또는 내용 
 - [.claude/architecture.md](../.claude/architecture.md) — 모듈 디자인, namespace, Try* 컨벤션
 - [.claude/build-system.md](../.claude/build-system.md) — CMake 빌드 시스템 상세
 - [.claude/MEMORY.md](../.claude/MEMORY.md) — 프로젝트 인덱스
-- [Catch2 v3 docs](https://github.com/catchorg/Catch2/blob/devel/docs/Readme.md) — 매크로 레퍼런스
+- [Catch2 v3 docs](https://github.com/catchorg/Catch2/blob/devel/doc/Readme.md) — 매크로 레퍼런스
 - [stb_image_write usage](https://github.com/nothings/stb/blob/master/stb_image_write.h) — PNG 출력 API

@@ -1,0 +1,376 @@
+{
+  "meta": {
+    "repo": "GlobalMedia-OpenGL-ComputerGraphics",
+    "path": "/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics",
+    "scored_at": "2026-07-10",
+    "git_branch": "refactor/pcb-to-worldscene",
+    "rubric_version": "v2-100pt",
+    "modules_total": 3,
+    "context_files_total": 44,
+    "large_files_300plus": 69
+  },
+  "total": 13,
+  "grade": "AI-Hostile",
+  "grade_color": "red",
+  "categories": {
+    "A": {
+      "name": "AI Navigation & Coverage",
+      "score": 0,
+      "max": 15,
+      "evidence": {
+        "core_modules": 3,
+        "covered_modules": 0,
+        "coverage_ratio": 0.0,
+        "root_claude": null
+      },
+      "sub_scores": {},
+      "findings": [
+        "context 미보유 핵심 module 3개: extern, resources, scripts",
+        "root CLAUDE.md 부재 — 진입점 브리핑 없음"
+      ]
+    },
+    "B": {
+      "name": "Context Document Quality",
+      "score": 6,
+      "max": 20,
+      "evidence": {
+        "context_files": 44,
+        "max_lines": 493,
+        "min_lines": 3
+      },
+      "sub_scores": {
+        "B1_Conciseness": 2,
+        "B2_QuickCommands": 0,
+        "B3_KeyFiles": 1,
+        "B4_NonObvious": 1,
+        "B5_CrossRefs": 2
+      },
+      "findings": [
+        "conciseness 초과(>100 lines) context 16건: extern/Effekseer/README.md (103), extern/Effekseer/Dev/Cpp/3rdParty/imgui_markdown/README.md (185), extern/Effekseer/Dev/Cpp/3rdParty/imgui-node-editor/docs/README.md (145), extern/Effekseer/Dev/Cpp/3rdParty/easy_profiler/README.md (327)",
+        "bash 코드블록이 부족 — quick command 보강 필요",
+        "핵심 파일 경로 인용 부족 — 3-5개 명시 권장",
+        "Why/Note/Gotcha 같은 hidden rule 마커 부족",
+        "관련 module / context 간 cross-link 부족"
+      ]
+    },
+    "C": {
+      "name": "Tribal Knowledge Externalization",
+      "score": 0,
+      "max": 20,
+      "evidence": {
+        "memory_md": false,
+        "adr": false,
+        "modules_total": 3,
+        "q1_owns": 0,
+        "q2_patterns": 0,
+        "q3_nonobvious": 0,
+        "q4_deps": 0
+      },
+      "sub_scores": {
+        "C_Q1_Owns": 0,
+        "C_Q2_Patterns": 0,
+        "C_Q3_NonObvious": 0,
+        "C_Q4_Dependencies": 0,
+        "C_Q5_TribalStore": 0
+      },
+      "findings": [
+        "MEMORY.md / ADR / docs/decisions 부재 — tribal knowledge 외부화 store 없음",
+        "Cross-module dependencies 섹션이 절반 이상 module에서 누락",
+        "Common modification patterns 섹션 누락"
+      ]
+    },
+    "D": {
+      "name": "Cross-Module Dependency Mapping",
+      "score": 2,
+      "max": 15,
+      "evidence": {
+        "architecture_doc": false,
+        "mermaid_diagrams": false,
+        "context_with_deps_section": 5,
+        "monorepo_workspace": false
+      },
+      "sub_scores": {},
+      "findings": [
+        "ARCHITECTURE.md / dependency map 부재",
+        "mermaid 다이어그램 없음 — 시각적 의존도 표현 부재"
+      ]
+    },
+    "E": {
+      "name": "Verification & Quality Gates",
+      "score": 3,
+      "max": 15,
+      "evidence": {
+        "ref_total": 70,
+        "ref_broken": 49,
+        "codeowners": false,
+        "pr_template": false,
+        "ci_workflows": true,
+        "husky": false,
+        "evals_dir": false
+      },
+      "sub_scores": {
+        "E1_RefAccuracy": 2,
+        "E2_CriticReview": 0,
+        "E3_TaskValidation": 1,
+        "E4_PromptTests": 0
+      },
+      "findings": [
+        "hallucinated path 49건 (총 70 참조 중) — 예: doc/superpowers/plans/2026-05-24-M2-prompts/README.md: claude/CLAUDE.md, doc/superpowers/plans/2026-05-24-M2-prompts/README.md: ./2026-05-24-M2-fsm-player-follow.md, extern/Effekseer/Dev/Cpp/3rdParty/imgui_markdown/README.md: com/about.html, extern/Effekseer/Dev/Cpp/3rdParty/imgui/misc/freetype/README.md: org/freetype2/docs/reference/ft2-base_interface.html",
+        "CODEOWNERS / PR template 없음 — independent critic infra 부재",
+        "agent eval / prompt test 디렉터리 없음 — AI 회귀 catch 없음"
+      ]
+    },
+    "F": {
+      "name": "Freshness & Self-Maintenance",
+      "score": 2,
+      "max": 10,
+      "evidence": {
+        "drifted_modules": 0,
+        "measurable_modules": 0,
+        "drift_ratio": 0.0,
+        "ctx_validation_workflow": true,
+        "hook_validates_paths": false
+      },
+      "sub_scores": {},
+      "findings": [
+        "pre-commit / pre-push hook에 path 검증 없음"
+      ]
+    },
+    "G": {
+      "name": "Agent Performance Outcomes",
+      "score": 0,
+      "max": 5,
+      "evidence": {
+        "eval_dirs": [],
+        "metric_files": [],
+        "telemetry_hint": false
+      },
+      "sub_scores": {},
+      "findings": [
+        "agent eval / benchmark 디렉터리·결과 파일 부재 — 성능 측정 인프라 없음",
+        "AI usage telemetry 단서 없음 (session log / OpenTelemetry)"
+      ]
+    }
+  },
+  "insights": [
+    "총점 13/100 · 등급 AI-Hostile",
+    "가장 낮은 카테고리: A AI Navigation & Coverage 0/15",
+    "가장 낮은 카테고리: C Tribal Knowledge Externalization 0/20",
+    "⚠️  context에 hallucinated path 49건 — Meta 기준으로는 0이어야 함"
+  ],
+  "actions": [
+    {
+      "title": "context의 hallucinated path 49건 수정 (referential trust)",
+      "category": "E",
+      "effort": "S",
+      "effort_hours": 0.5,
+      "impact": "agent의 잘못된 path-following 방지 — stale = worse than missing",
+      "impact_score": 10,
+      "priority": 20.0
+    },
+    {
+      "title": "3개 핵심 module에 CLAUDE.md 신설 (extern, resources, scripts)",
+      "category": "A",
+      "effort": "S",
+      "effort_hours": 1.5,
+      "impact": "task당 ~3 min × ~5 task/일 절감 → 모듈 1개당 주 1-2 hr 회수",
+      "impact_score": 9,
+      "priority": 6.0
+    },
+    {
+      "title": "과도한 CLAUDE.md를 25-35 lines로 압축 (compass-not-encyclopedia)",
+      "category": "B",
+      "effort": "M",
+      "effort_hours": 2.0,
+      "impact": "agent context 로드 시간 단축 + 핵심 정보 가시성 ↑",
+      "impact_score": 7,
+      "priority": 3.5
+    },
+    {
+      "title": "ARCHITECTURE.md 또는 mermaid dependency 다이어그램 추가",
+      "category": "D",
+      "effort": "M",
+      "effort_hours": 2.5,
+      "impact": "cross-module ripple 추적 → 변경 영향 분석 시간 절반",
+      "impact_score": 7,
+      "priority": 2.8
+    },
+    {
+      "title": "MEMORY.md 또는 docs/adr/ 도입으로 tribal knowledge 외부화",
+      "category": "C",
+      "effort": "M",
+      "effort_hours": 3.0,
+      "impact": "senior 의존 의사결정 외부화 → 신규 agent run 시 오류 ↓",
+      "impact_score": 8,
+      "priority": 2.6666666666666665
+    },
+    {
+      "title": "evals/ 디렉터리 + 대표 task pass-rate 측정 도입",
+      "category": "G",
+      "effort": "L",
+      "effort_hours": 6.0,
+      "impact": "AI 회귀 측정 가능 — 개선 ROI 자체를 정량화",
+      "impact_score": 6,
+      "priority": 1.0
+    },
+    {
+      "title": "god file 31개 분할 (>500 lines): resources/installer/macos/FMOD Programmers API/api/core/inc/fmod.cs (4067), resources/installer/windows/fmodstudioapi20234win-installer/api/core/inc/fmod.cs (4067), extern/Effekseer/Dev/Editor/EffekseerCoreGUI/swig/EffekseerNativePINVOKE.cs (2626)",
+      "category": "B",
+      "effort": "L",
+      "effort_hours": 77.5,
+      "impact": "파일당 ~5K-10K token 절감 + 편집 정확도 ↑",
+      "impact_score": 6,
+      "priority": 0.07741935483870968
+    }
+  ],
+  "extras": {
+    "modules": [
+      {
+        "path": "/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/extern",
+        "rel": "extern",
+        "code_files": 379,
+        "has_context": false,
+        "context_file": null,
+        "context_kind": ""
+      },
+      {
+        "path": "/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/resources",
+        "rel": "resources",
+        "code_files": 10,
+        "has_context": false,
+        "context_file": null,
+        "context_kind": ""
+      },
+      {
+        "path": "/Users/escatrgot/DevelopProjects/SSU/GlobalMedia-OpenGL-ComputerGraphics/scripts",
+        "rel": "scripts",
+        "code_files": 12,
+        "has_context": false,
+        "context_file": null,
+        "context_kind": ""
+      }
+    ],
+    "large_files": [
+      {
+        "path": "resources/installer/macos/FMOD Programmers API/api/core/inc/fmod.cs",
+        "lines": 4067
+      },
+      {
+        "path": "resources/installer/windows/fmodstudioapi20234win-installer/api/core/inc/fmod.cs",
+        "lines": 4067
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCoreGUI/swig/EffekseerNativePINVOKE.cs",
+        "lines": 2626
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCoreGUI/GUI/Dock/FCurves.cs",
+        "lines": 2478
+      },
+      {
+        "path": "resources/installer/macos/FMOD Programmers API/api/studio/inc/fmod_studio.cs",
+        "lines": 2250
+      },
+      {
+        "path": "resources/installer/windows/fmodstudioapi20234win-installer/api/studio/inc/fmod_studio.cs",
+        "lines": 2250
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Data/IO.cs",
+        "lines": 1967
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Core.cs",
+        "lines": 1802
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCoreGUI/swig/GUIManager.cs",
+        "lines": 1692
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Data/RendererCommonValues.cs",
+        "lines": 1312
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Data/Value/FCurve.cs",
+        "lines": 1224
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Data/RendererValues.cs",
+        "lines": 1082
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Binary/Exporter.cs",
+        "lines": 1072
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCoreGUI/GUI/Manager.cs",
+        "lines": 1029
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Data/Define.cs",
+        "lines": 955
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCoreGUI/GUI/Viewer.cs",
+        "lines": 934
+      },
+      {
+        "path": "resources/installer/macos/FMOD Programmers API/api/core/inc/fmod_dsp.cs",
+        "lines": 933
+      },
+      {
+        "path": "resources/installer/windows/fmodstudioapi20234win-installer/api/core/inc/fmod_dsp.cs",
+        "lines": 933
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCoreGUI/GUI/Component/ParameterList.cs",
+        "lines": 898
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Utl/MaterialInformation.cs",
+        "lines": 867
+      },
+      {
+        "path": "extern/Effekseer/Dev/Cpp/3rdParty/LLGI/thirdparty/SPIRV-Cross/test_shaders.py",
+        "lines": 854
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Utils/ProjectVersionUpdater.cs",
+        "lines": 851
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/Effekseer/GUI/Dock/NodeTreeView.cs",
+        "lines": 812
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCoreGUI/GUI/Dock/FileBrowser.cs",
+        "lines": 762
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/InternalScript/SSAGenerator.cs",
+        "lines": 722
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Data/AdvancedRenderCommonValues.cs",
+        "lines": 588
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/IO/EfkPkg.cs",
+        "lines": 585
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCoreGUI/GUI/Commands.cs",
+        "lines": 582
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/Effekseer/GUI/Dock/Recorder.cs",
+        "lines": 556
+      },
+      {
+        "path": "extern/Effekseer/Dev/Editor/EffekseerCore/Binary/RendererValues.cs",
+        "lines": 543
+      }
+    ]
+  }
+}

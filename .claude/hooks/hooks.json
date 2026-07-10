@@ -1,0 +1,80 @@
+{
+  "_comment": "Claude Code hooks 설정. A 논문 §7의 chmod·격리 패턴을 시스템 레벨에서 강제한다. 본 저장소(OpenGL-ComputerGraphics) 의 실체에 맞춤: test/golden/ (단수), build_ninja/ (프리셋 기반), .worktrees/ (격리).",
+  "_warning": "Claude Code의 hooks 스키마는 빠르게 진화한다. 최신 공식 문서(code.claude.com/doc)와 비교 후 적용할 것.",
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "_comment": "render-architect / render-test-debug / render-quality-gate / render-pm는 코드 수정 권한이 없어야 한다. Edit/Write 시도를 차단.",
+        "matcher": {
+          "tool_name": ["Edit", "Write"],
+          "subagent_name": ["render-architect", "render-test-debug", "render-quality-gate", "render-pm"]
+        },
+        "command": "echo 'BLOCKED: Read-only agents cannot use Edit/Write (.claude/Graphics-Testing-Prompt.md §C)' >&2 && exit 1"
+      },
+      {
+        "_comment": "test/golden/ 디렉터리는 어떤 에이전트도 쓰기 금지. render-refactorer라도 차단. 디렉토리 미존재 시 본 룰은 no-op.",
+        "matcher": {
+          "tool_name": ["Edit", "Write"],
+          "path_pattern": "test/golden/**"
+        },
+        "command": "echo 'BLOCKED: test/golden/ is read-only (see .claude/Graphics-Testing-Prompt.md §B).' >&2 && exit 1"
+      },
+      {
+        "_comment": "위험한 git 명령 차단",
+        "matcher": {
+          "tool_name": "Bash",
+          "command_pattern": "git push --force|git reset --hard origin|rm -rf"
+        },
+        "command": "echo 'BLOCKED: Dangerous git/fs command. Manual intervention required.' >&2 && exit 1"
+      }
+    ],
+
+    "PostToolUse": [
+      {
+        "_comment": "C++ 파일 수정 후 자동 clang-format. .clang-format (Microsoft, Tab=4) 적용.",
+        "matcher": {
+          "tool_name": ["Edit", "Write"],
+          "path_pattern": "**/*.{cpp,h,hpp,cc}"
+        },
+        "command": "clang-format -i \"$CLAUDE_TOOL_PATH\" 2>/dev/null || true"
+      },
+      {
+        "_comment": "render-refactorer 변경 후 자동 빌드 시도. 프리셋 기반 (ninja). 빌드 깨지면 즉시 알림. 타겟명은 디렉토리에서 추론하기 어려우니 전체 빌드.",
+        "matcher": {
+          "tool_name": ["Edit", "Write"],
+          "subagent_name": "render-refactorer"
+        },
+        "command": "cmake --build --preset ninja 2>/tmp/build_err.log || (echo 'BUILD FAILED — see /tmp/build_err.log' >&2 && cat /tmp/build_err.log >&2)"
+      }
+    ],
+
+    "SubagentStart": [
+      {
+        "_comment": "render-refactorer 시작 시 worktree 격리. test/golden/ 존재 시 read-only 강제.",
+        "matcher": {
+          "subagent_name": "render-refactorer"
+        },
+        "command": "[ -d test/golden ] && chmod -R a-w test/golden/ 2>/dev/null; echo 'render-refactorer started in isolated mode' >&2"
+      }
+    ],
+
+    "SubagentStop": [
+      {
+        "_comment": "render-refactorer 종료 시 chmod 복구 (다른 에이전트가 골든 캡처 시 필요).",
+        "matcher": {
+          "subagent_name": "render-refactorer"
+        },
+        "command": "[ -d test/golden ] && chmod -R u+w test/golden/ 2>/dev/null; echo 'render-refactorer ended, golden writable for capture' >&2"
+      }
+    ],
+
+    "Stop": [
+      {
+        "_comment": "전체 세션 종료 시 누적 비용 보고. .claude/Graphics-Testing-Prompt.md §E의 hard cap 강제.",
+        "matcher": {},
+        "command": "echo 'Session ended. Check $CLAUDE_SESSION_COST against $10 cap (.claude/Graphics-Testing-Prompt.md §E)' >&2"
+      }
+    ]
+  }
+}

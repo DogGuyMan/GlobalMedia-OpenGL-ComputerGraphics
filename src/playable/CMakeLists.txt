@@ -1,5 +1,5 @@
 # SJH::playable — IPlayable + PlayableBase + Composite (Sequence/Parallel)
-# spec docs/superpowers/specs/2026-05-26-playable-component-interface-design.md
+# spec doc/superpowers/specs/2026-05-26-playable-component-interface-design.md
 add_library(sjh_playable STATIC
     playable_base.cpp
     composite_playable.cpp

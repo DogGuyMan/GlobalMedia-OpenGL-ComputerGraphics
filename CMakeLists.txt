@@ -50,7 +50,7 @@ endif()
 
 # ______ 문서 (Doxygen) ______
 # `doxygen` 커스텀 타겟 등록. 빌드: cmake --build build_ninja --target doxygen
-# 출력: doc/html/index.html (메인페이지 = doc/pages/00-mainpage.md)
+# 출력: doc/html/index.html (메인페이지 = doxygen/pages/00-mainpage.md)
 if(SJH_OPENGL_BUILD_DOCS)
     sjhopengl_setup_doxygen()
 endif()

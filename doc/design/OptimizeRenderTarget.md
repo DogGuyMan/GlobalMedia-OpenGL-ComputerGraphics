@@ -1,7 +1,9 @@
 # RenderTarget 최적화 — 세션 논의 정리
 
+> ⚠ 시점 문서 (archival) — 코드 경로는 작성 당시 기준. 소멸/이동 경로는 `<세그먼트>` placeholder 표기.
+
 > **작성일**: 2026-05-24
-> **시작점**: [apps/migrate_demo/main.cpp:281](../../apps/migrate_demo/main.cpp#L281) 의 `mDefaultTarget = std::make_unique<DefaultRenderTarget>(w, h)` 재생성 패턴 검토
+> **시작점**: [<apps>/migrate_demo/main.cpp:281](../../<apps>/migrate_demo/main.cpp#L281) 의 `mDefaultTarget = std::make_unique<DefaultRenderTarget>(w, h)` 재생성 패턴 검토
 > **진행 결과**: `apps/tweeny_demo` 의 SceneRenderer 마이그레이션 (Phase 0~4) 완료
 > **미해결**: 3 개 Future SP 후보 — SP-RenderStage / SP-FramebufferResize / SP-PerRendererProperties
 
@@ -34,11 +36,11 @@ RenderTarget × IRenderStage  =  자유 조합 (덧셈)
 
 ### ① DefaultRenderTarget 재생성 vs 재활용
 
-**제기**: [apps/migrate_demo/main.cpp:281](../../apps/migrate_demo/main.cpp#L281) — 매 resize 마다 `unique_ptr` 교체.
+**제기**: [<apps>/migrate_demo/main.cpp:281](../../<apps>/migrate_demo/main.cpp#L281) — 매 resize 마다 `unique_ptr` 교체.
 
 **관찰**:
 - `DefaultRenderTarget` 은 `int mWidth, mHeight` 2 개 + FBO 0 wrapper 뿐. 실제 GL 자원 0 → 재생성 비용 0.
-- 하지만 *raw pointer 보유자* (예: [src/scene/camera.h:82-86](../../src/scene/camera.h#L82-L86) 의 `Framebuffer*`) 입장에선 rewire 코드가 강제됨 ([migrate_demo:294-304](../../apps/migrate_demo/main.cpp#L294-L304)).
+- 하지만 *raw pointer 보유자* (예: [src/scene/camera.h:82-86](../../src/scene/camera.h#L82-L86) 의 `Framebuffer*`) 입장에선 rewire 코드가 강제됨 ([migrate_demo:294-304](../../<apps>/migrate_demo/main.cpp#L294-L304)).
 - `glTexStorage2D` immutable storage 사용 시 재생성이 강제.
 
 **결정**:
@@ -115,7 +117,7 @@ RT 와 Pass 는 *직교 축*. RT 에 ImGui 책임 박으면 N×M 조합 폭발 (
 
 **2 질문**:
 - Q1: Camera 없이 `mDefaultTarget` 사용 가능? → **YES** (DefaultRT 는 Camera 무관).
-- Q2: SceneRenderer 가 RenderTarget 강한 의존? → 시그니처상 ✅, 하지만 **Camera 우회 overload 존재** ([src/render/scene_renderer.h:36-38](../../src/render/scene_renderer.h#L36-L38)):
+- Q2: SceneRenderer 가 RenderTarget 강한 의존? → 시그니처상 ✅, 하지만 **Camera 우회 overload 존재** ([<src>/render/scene_renderer.h:36-38](../../<src>/render/scene_renderer.h#L36-L38)):
   ```cpp
   /// @brief 명시 view/proj — 단위 테스트 + 디버그용 (CameraComponent 우회).
   void Render(RenderTarget& defaultTarget,
@@ -141,7 +143,7 @@ RT 와 Pass 는 *직교 축*. RT 에 ImGui 책임 박으면 N×M 조합 폭발 (
 **사용자가 더 좋은 해결**: **엔진 자체 확장** — 3 레이어 일관 추가:
 - [src/material/material_property_block.h:49](../../src/material/material_property_block.h#L49) — `std::unordered_map<std::string, glm::vec2> Vec2s;`
 - [src/material/material_uniforms.cpp:20-23](../../src/material/material_uniforms.cpp#L20-L23) — `SetVec2(Material&, ...)` store-only setter
-- [src/render/property_block_setter.cpp:45-50](../../src/render/property_block_setter.cpp#L45-L50) — `GL_FLOAT_VEC2` dispatch (Cache outer + Block inner)
+- [<src>/render/property_block_setter.cpp:45-50](../../<src>/render/property_block_setter.cpp#L45-L50) — `GL_FLOAT_VEC2` dispatch (Cache outer + Block inner)
 
 **결과**: tweeny_demo 셰이더 그대로 유지 가능. *Unity 정통 typed map dispatch 패턴* 의 빈 칸 메움.
 
@@ -190,7 +192,7 @@ render() 에서는 단일 `step(dtMs)` + `if (progress() >= 1.0f) seek(0)` 로 �
 - ping-pong 의미가 *데이터 (tween 구조)* 로 표현.
 - 대칭 easing (`*InOut`) 한정으로 시각 동등. Asymmetric easing 은 미세 차이 가능.
 
-**상태**: ✅ **구현 완료** ([apps/tweeny_demo/main.cpp:90-96](../../apps/tweeny_demo/main.cpp#L90-L96)).
+**상태**: ✅ **구현 완료** ([<apps>/tweeny_demo/main.cpp:90-96](../../<apps>/tweeny_demo/main.cpp#L90-L96)).
 
 ---
 
@@ -203,7 +205,7 @@ render() 에서는 단일 `step(dtMs)` + `if (progress() >= 1.0f) seek(0)` 로 �
 row.y = (1.0f - t) * kRowTopY + t * kRowBottomY;
 ```
 
-**상태**: ✅ **적용 완료** ([apps/tweeny_demo/main.cpp:127](../../apps/tweeny_demo/main.cpp#L127)).
+**상태**: ✅ **적용 완료** ([<apps>/tweeny_demo/main.cpp:127](../../<apps>/tweeny_demo/main.cpp#L127)).
 
 ---
 
@@ -215,7 +217,7 @@ row.y = (1.0f - t) * kRowTopY + t * kRowBottomY;
 
 **해결**: `key` 변수 (`"tweeny_row_" + name`) 로 교체 + template 키도 `"tweeny_template"` 으로 prefix 분리.
 
-**상태**: ✅ **수정 완료** ([apps/tweeny_demo/main.cpp:130](../../apps/tweeny_demo/main.cpp#L130)).
+**상태**: ✅ **수정 완료** ([<apps>/tweeny_demo/main.cpp:130](../../<apps>/tweeny_demo/main.cpp#L130)).
 
 ---
 
@@ -242,7 +244,7 @@ row.y = (1.0f - t) * kRowTopY + t * kRowBottomY;
 
 ### Phase 0 — 깨진 빌드 복구
 - `mCameraComponenetRPtr` (미선언 멤버) / `SetTargetFramebuffer()` (인자 누락) 두 컴파일 에러 제거.
-- 미사용 `mSceneFB` 멤버 + 관련 include 3 종 (`scene/actor.h`, `scene/scene.h`, `buffer/framebuffer.h`) 정리.
+- 미사용 `mSceneFB` 멤버 + 관련 include 3 종 (`scene/actor.h`, `scene/scene.h`, `<buffer>/framebuffer.h`) 정리.
 - `onResize` 를 *최소형* 으로 (Retina HiDPI 변환 + `mDefaultTarget` 갱신만).
 - **검증**: 빌드 OK + 시각 기존 동일.
 
@@ -286,7 +288,7 @@ row.y = (1.0f - t) * kRowTopY + t * kRowBottomY;
 ### SP-RenderStage 의 예상 산출
 
 ```cpp
-// src/render/render_stage.h (가칭)
+// <src>/render/render_stage.h (가칭)
 namespace SJH
 {
     class IRenderStage {
@@ -312,7 +314,7 @@ for (auto& s : mStages) s->Render(*mDefaultTarget);
 ### SP-FramebufferResize 의 예상 산출
 
 ```cpp
-// src/buffer/framebuffer.h 확장
+// src/<buffer>/framebuffer.h 확장
 class Framebuffer : public RenderTarget {
 public:
     bool Resize(int w, int h);   // FBO 핸들 + Texture shared_ptr 동일성 유지
@@ -353,10 +355,10 @@ public:
 ## 5. 참고
 
 ### 관련 파일
-- 시작점: [apps/migrate_demo/main.cpp](../../apps/migrate_demo/main.cpp) — RenderTarget 재생성 패턴 (rewire 루프 포함)
-- 실증 구현: [apps/tweeny_demo/main.cpp](../../apps/tweeny_demo/main.cpp) — 옵션 A 마이그레이션 완료
-- 엔진 확장: [src/material/material_property_block.h](../../src/material/material_property_block.h), [src/material/material_uniforms.cpp](../../src/material/material_uniforms.cpp), [src/render/property_block_setter.cpp](../../src/render/property_block_setter.cpp) — Vec2 추가
-- 추상 위치: [src/render/scene_renderer.h](../../src/render/scene_renderer.h), [src/render/render_target.h](../../src/render/render_target.h), [src/render/mesh_renderer.h](../../src/render/mesh_renderer.h)
+- 시작점: [<apps>/migrate_demo/main.cpp](../../<apps>/migrate_demo/main.cpp) — RenderTarget 재생성 패턴 (rewire 루프 포함)
+- 실증 구현: [<apps>/tweeny_demo/main.cpp](../../<apps>/tweeny_demo/main.cpp) — 옵션 A 마이그레이션 완료
+- 엔진 확장: [src/material/material_property_block.h](../../src/material/material_property_block.h), [src/material/material_uniforms.cpp](../../src/material/material_uniforms.cpp), [<src>/render/property_block_setter.cpp](../../<src>/render/property_block_setter.cpp) — Vec2 추가
+- 추상 위치: [<src>/render/scene_renderer.h](../../<src>/render/scene_renderer.h), [<src>/render/render_target.h](../../<src>/render/render_target.h), [src/render/mesh_renderer.h](../../src/render/mesh_renderer.h)
 
 ### 관련 결정 문서
 - [.claude/architecture.md §11.2](../../.claude/architecture.md) — lifetime ownership 분리 (Material 비소유 관찰자)
@@ -365,7 +367,7 @@ public:
 - [.claude/architecture.md §11.6](../../.claude/architecture.md) — Retina HiDPI 패턴 (sb7 우회)
 - [.claude/architecture-design-agent.md §3](../../.claude/architecture-design-agent.md) — 4-phase chain (SP 진입 시 따를 워크플로우)
 - [doc/EngineAPI.md](../EngineAPI.md) — 현재 코어 API 레퍼런스
-- [.claude/EngineDesign.md](../../.claude/EngineDesign.md) — SP4 (RenderTarget/PostFX) 미착수 상태
+- [doc/design/EngineDesign.md](../../doc/design/EngineDesign.md) — SP4 (RenderTarget/PostFX) 미착수 상태
 
 ### 정통 매핑 (외부 엔진)
 

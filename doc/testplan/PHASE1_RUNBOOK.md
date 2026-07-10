@@ -136,7 +136,7 @@ git commit -m "chore(golden): add baseline for <pass_name>"
 
 ### 명세 작성
 
-GitHub issue 또는 `docs/refactor_specs/<pass_name>.md`:
+GitHub issue 또는 `doc/refactor_specs/<pass_name>.md`:
 
 ```markdown
 # Refactor Spec: <pass_name>
@@ -198,13 +198,13 @@ grep "weighted median" /tmp/flip_results/*.csv | sort
 grep "mutation score" /tmp/quality_gate_*.json
 ```
 
-필요시 `CLAUDE.md` §B.1 또는 `docs/METRICS.md` 임계값 조정.
+필요시 `CLAUDE.md` §B.1 또는 `doc/METRICS.md` 임계값 조정.
 
 ---
 
 ## Day 5 (금) — 회고 + 시스템 프롬프트 미세 조정
 
-### `docs/AGENTS_GUIDE.md` §3의 6가지 질문에 답하기
+### `doc/AGENTS_GUIDE.md` §3의 6가지 질문에 답하기
 
 각 에이전트 출력 로그를 검토:
 - `~/.claude/projects/<your_project>/conversations/`
@@ -237,7 +237,7 @@ Day 1에서 제외했던 약간 더 복잡한 패스 1개에 적용. 예: post-p
 - [ ] FLIP 임계값이 캘리브레이션됐다 (현재 게임에 맞게)
 - [ ] Mutation Score가 60% 이상 달성된 경험이 있다
 - [ ] iteration budget 소진 케이스가 < 30%
-- [ ] `docs/AGENTS_GUIDE.md` §3 6가지 질문에 답을 작성했다
+- [ ] `doc/AGENTS_GUIDE.md` §3 6가지 질문에 답을 작성했다
 
 ---
 
@@ -266,7 +266,7 @@ A §6.3의 oscillation. 즉시 사람 escalate. 명세 모호성 의심:
 
 ## Phase 1 끝나면 outputs
 
-`docs/phase1_results.md`에 작성:
+`doc/phase1_results.md`에 작성:
 - 시도한 리팩토링 N개
 - PASS / WARN / REVERT 비율
 - 평균 비용 / 시간

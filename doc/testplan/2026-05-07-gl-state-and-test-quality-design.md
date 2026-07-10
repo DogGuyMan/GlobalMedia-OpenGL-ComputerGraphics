@@ -1,6 +1,6 @@
 # GL State Introspection + Test Quality Monitoring — Design Spec
 
-> **Date**: 2026-05-07 (재작성: 2026-05-09 — `docs/superpowers/specs/` 위치 소실 후 `doc/testplan/`로 이동)
+> **Date**: 2026-05-07 (재작성: 2026-05-09 — `doc/superpowers/specs/` 위치 소실 후 `doc/testplan/`로 이동)
 > **Author**: brainstorming session (Claude Code + 사용자)
 > **Status**: Approved, awaiting implementation
 > **Branch**: `newenv`

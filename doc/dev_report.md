@@ -469,7 +469,7 @@ Box2D 2.4.1의 `b2Filter::categoryBits`/`maskBits`는 `uint16_t`이지만, 미�
 
 ### 산출물
 
-- 변경 모듈/영역: `src/fsm/` (신설), `src/render/` (IRenderStage/DrawCommand/SceneRenderer/Camera), `src/scene/` (Layer/Actor), `src/sprite/` (SpriteAnimator/UniformAtlas), `apps/_MyApp_/src/Physics/` (신설), `apps/_MyApp_/src/Entity/` (PlayerActor/PlayerEntity/Movement), `test/` (test_fsm 신설, 기존 5개 수정), `docs/superpowers/specs/` (FSM 설계 정본)
+- 변경 모듈/영역: `src/fsm/` (신설), `src/render/` (IRenderStage/DrawCommand/SceneRenderer/Camera), `src/scene/` (Layer/Actor), `src/sprite/` (SpriteAnimator/UniformAtlas), `apps/_MyApp_/src/Physics/` (신설), `apps/_MyApp_/src/Entity/` (PlayerActor/PlayerEntity/Movement), `test/` (test_fsm 신설, 기존 5개 수정), `doc/superpowers/specs/` (FSM 설계 정본)
 - 커밋 43건 (주요: `2d2bc25` feat(fsm): SJH::fsm 코어 모듈 신설 / `5ab0db2` feat(fsm): ObjectStateMachine + IFsmState 추가 / `041fa36` refactor(fsm): TTransit 제거 + GetTransitFlag 기반 그래프 정보 응집 / `2057e0e` feat(_MyApp_): M3 Box2D v2.4.1 물리 통합 / `64d62ab` refactor: PhysicsBodyComponent → Components::Physics base + BoxBody/CircleBody / `89a741c` feat(render): SJH::IRenderStage 추상 신설 / `52796c0` feat(scene): SJH::Scene::Layer enum class 신설 / `2c0a7e2` feat(_MyApp_): M2 P2 정착 + M4 도메인 선행)
 
 ---
@@ -811,7 +811,7 @@ Effekseer 텍스처 참조 누락은 `Effect::Create` 가 조용히 `nullptr` �
 
 **Doxygen 문서 시스템 도입**
 
-`cmake/Doxygen.cmake` + `doc/Doxyfile.in` 을 신설하고 루트 `CMakeLists.txt` 에 `SJH_OPENGL_BUILD_DOCS` 옵션 및 `doxygen` 커스텀 타겟을 wiring 하였다. `.github/workflows/docs.yml` 에서 `game/main` push 시 Ubuntu 러너에서 Doxygen + Graphviz 로 HTML 을 생성하고 GitHub Pages 로 자동 배포하는 파이프라인을 구성하였다(`d1269cd`).
+`cmake/Doxygen.cmake` + `doc/Doxyfile.in` 을 신설하고 루트 `CMakeLists.txt` 에 `SJH_OPENGL_BUILD_DOCS` 옵션 및 `doxygen` 커스텀 타겟을 wiring 하였다. `.github/workflows/doc.yml` 에서 `game/main` push 시 Ubuntu 러너에서 Doxygen + Graphviz 로 HTML 을 생성하고 GitHub Pages 로 자동 배포하는 파이프라인을 구성하였다(`d1269cd`).
 
 ### 리팩토링
 
@@ -849,7 +849,7 @@ Tweeny 의 `step(int32_t ms)` / `step(float ratio)` 혼동 함정을 피하기 �
 
 ### 산출물
 
-- 변경 모듈/영역: `src/text/` (신설 — `BitmapFont`, `TextRenderer`), `src/CMakeLists.txt` (16→17 모듈), `apps/_MyApp_/src/Text/` (신설 — `WorldTextSystem`), `apps/_MyApp_/src/Spawns/WorldTextInstance.cpp/.h`, `cmake/Doxygen.cmake`, `.github/workflows/docs.yml`, `apps/_MyApp_/src/Entity/Player/PlayerActor.cpp` (팩토리 분해), Physics 팩토리 다수 (`wall_factory.h` 등 BodyConfig 패턴)
+- 변경 모듈/영역: `src/text/` (신설 — `BitmapFont`, `TextRenderer`), `src/CMakeLists.txt` (16→17 모듈), `apps/_MyApp_/src/Text/` (신설 — `WorldTextSystem`), `apps/_MyApp_/src/Spawns/WorldTextInstance.cpp/.h`, `cmake/Doxygen.cmake`, `.github/workflows/doc.yml`, `apps/_MyApp_/src/Entity/Player/PlayerActor.cpp` (팩토리 분해), Physics 팩토리 다수 (`wall_factory.h` 등 BodyConfig 패턴)
 - 커밋 18건 (주요: `a843e1b` World Text Core SJH::text 모듈 + BitmapFont, `4925410` TextRenderer 글리프 child 조립, `db45df2` SJH::engine 16→17 모듈 편입, `889138c` WorldTextSystem + Manager 배선, `a28644f` SpawnWorldText 트윈 상승·페이드 + 자동 despawn, `d1269cd` Doxygen 문서 시스템 + GitHub Pages 배포)
 
 ---

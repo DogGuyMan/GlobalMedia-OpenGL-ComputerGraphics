@@ -1,0 +1,26 @@
+{
+  "total": 13,
+  "by_trigger_type": {
+    "T1": 9,
+    "T2": 1,
+    "T3": 0,
+    "T4": 3
+  },
+  "trigger_type_ratio": {
+    "T1": 0.6923076923076923,
+    "T2": 0.07692307692307693,
+    "T3": 0.0,
+    "T4": 0.23076923076923078
+  },
+  "trigger_type_ratio_note": "13건 내부 proxy 비율 — 세션 전체 base rate 아님(전체 세션 수 미추적)",
+  "turns_estimate": {
+    "average": null,
+    "sample_size": 0,
+    "note": "원본에 턴수 기록 없어 대부분 null. 표본 0이면 average=null"
+  },
+  "by_severity": {
+    "상": 7,
+    "중": 4,
+    "null(등급없음)": 2
+  }
+}

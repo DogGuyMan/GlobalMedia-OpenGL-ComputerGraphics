@@ -812,7 +812,7 @@ void   Texture::SetWrap  (GLuint s, GLuint t) const;
 
 ### 3.13 `SJH::sprite` *(M1 추가)*
 
-2D 스프라이트 atlas + 빌보드 렌더링 + sprite frame 시퀀스 (Playable 통합). spec [`2026-05-24-topdown-shooter-design.md`](../docs/superpowers/specs/2026-05-24-topdown-shooter-design.md) §1.4 + IPlayable spec §3.4 정착. ※ spec §1.6 의 `SJH::sprite_sequence` 별도 모듈 안 되고 본 모듈 안에 통합 (sprite_sequence_playable + sprite_frame_clip).
+2D 스프라이트 atlas + 빌보드 렌더링 + sprite frame 시퀀스 (Playable 통합). spec [`2026-05-24-topdown-shooter-design.md`](../doc/superpowers/specs/2026-05-24-topdown-shooter-design.md) §1.4 + IPlayable spec §3.4 정착. ※ spec §1.6 의 `SJH::sprite_sequence` 별도 모듈 안 되고 본 모듈 안에 통합 (sprite_sequence_playable + sprite_frame_clip).
 
 #### `UniformAtlas` ([uniform_atlas.h](../src/sprite/uniform_atlas.h)) — N×M 등간격 atlas Fluent Builder
 ```cpp
@@ -911,7 +911,7 @@ seq->PlayClip(static_cast<int>(EPlayerClip::Attack));   // elapsed_ 리셋 + onC
 
 ### 3.14 `SJH::fsm` *(M2 추가)*
 
-상태머신 추상 — Stage 4 정착 (TTransit template parameter 폐기, 그래프 응집). 4 엔진 정통 흡수 (Unity StateMachine / Unreal AnimGraph / Godot State / Cocos2d FiniteStateMachine). 정본 spec [`2026-05-25-fsm-object-state-machine-design.md`](../docs/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md).
+상태머신 추상 — Stage 4 정착 (TTransit template parameter 폐기, 그래프 응집). 4 엔진 정통 흡수 (Unity StateMachine / Unreal AnimGraph / Godot State / Cocos2d FiniteStateMachine). 정본 spec [`2026-05-25-fsm-object-state-machine-design.md`](../doc/superpowers/specs/2026-05-25-fsm-object-state-machine-design.md).
 
 #### `IFsmState<TOwner>` ([fsm_state.h](../src/fsm/fsm_state.h)) — State Entity (DDD)
 ```cpp
@@ -974,7 +974,7 @@ fsm->RegisterState(std::make_unique<IdleState>());
 
 ### 3.15 `SJH::playable` *(M3.5 추가)*
 
-시간축 추상화 — Unity Playable + DOTween Sequence 정통. Client 우선 4-method (Play/Pause/Stop/GetIsLoop) + 2급 IsFinished. 정본 spec [`2026-05-26-playable-component-interface-design.md`](../docs/superpowers/specs/2026-05-26-playable-component-interface-design.md) (7 결정).
+시간축 추상화 — Unity Playable + DOTween Sequence 정통. Client 우선 4-method (Play/Pause/Stop/GetIsLoop) + 2급 IsFinished. 정본 spec [`2026-05-26-playable-component-interface-design.md`](../doc/superpowers/specs/2026-05-26-playable-component-interface-design.md) (7 결정).
 
 #### `IPlayable` pure interface ([iplayable.h](../src/playable/iplayable.h)) — 저장소 `I*` 컨벤션 준수
 ```cpp
@@ -1581,7 +1581,7 @@ cmake --build --preset msvc-2022 --target <chapter>
 
 > **범위**: `apps/_MyApp_/src/` (코어 `src/` 아님 — *클라이언트* 게임 코드). 다른 AI 에이전트/개발자 인수인계용.
 > **반영**: 2026-06-03 *Entity Accessor-facade* + *Physics body 컴포넌트화* + *적 넉백(Impulse/Carrier)* 리팩토링.
-> 정본 spec: [`docs/superpowers/specs/2026-06-03-entity-accessor-facade-design.md`](../docs/superpowers/specs/2026-06-03-entity-accessor-facade-design.md) (gitignore 로컬).
+> 정본 spec: [`doc/superpowers/specs/2026-06-03-entity-accessor-facade-design.md`](../doc/superpowers/specs/2026-06-03-entity-accessor-facade-design.md) (gitignore 로컬).
 
 ### 7.0 좌표계 (필독 — 모든 물리/이동 버그의 근원)
 

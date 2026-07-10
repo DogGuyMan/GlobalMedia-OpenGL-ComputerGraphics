@@ -9,7 +9,7 @@
  *  서브시스템 레벨 *양방향 사이클*(C1~C4)이 생긴다. 인터페이스를 @c Entity/ 밖 의존-제로 위치
  *  (@c Contracts/)로 빼면 소비처는 @c Contracts/ 만 의존 -> Entity 역의존 소멸(DIP).
  *  네임스페이스는 @c TopdownShooter::Entity 불변(호출처 코드 무변경, include 경로만 변경).
- *  설계 정본: docs/superpowers/plans/2026-06-11-client-cycle-c1-c4-dip-plan.md
+ *  설계 정본: doc/superpowers/plans/2026-06-11-client-cycle-c1-c4-dip-plan.md
  *
  *  ### 책임
  *  - 게임플레이 능력을 잘게 나눈 순수 가상 인터페이스 선언:

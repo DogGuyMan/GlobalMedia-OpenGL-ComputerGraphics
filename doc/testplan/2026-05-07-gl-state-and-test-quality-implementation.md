@@ -1,6 +1,6 @@
 # GL State Introspection + Test Quality Monitoring — Implementation Plan
 
-> **재작성: 2026-05-09** — 이전 위치(`docs/superpowers/plans/`) 소실 후 `doc/testplan/`로 이동. 경로 참조 갱신.
+> **재작성: 2026-05-09** — 이전 위치(`doc/superpowers/plans/`) 소실 후 `doc/testplan/`로 이동. 경로 참조 갱신.
 
 > **For human implementer (사용자)**: 본 프로젝트의 auto memory `phase-implementation-mode` 정책에 따라 사용자가 직접 코드를 작성합니다. 본 plan의 코드 블록은 *TDD red phase 테스트*는 정확한 그대로 사용 가능, *구현 코드*는 컨벤션 가이드라인이며 변형 가능합니다. 매 task 끝 commit 단계는 **사용자 명시 요청 시에만** 수행 — 그 외엔 stage만.
 

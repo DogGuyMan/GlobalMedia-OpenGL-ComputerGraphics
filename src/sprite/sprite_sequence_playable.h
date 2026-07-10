@@ -26,7 +26,7 @@
  *  seq->PlayClip(2);
  *  @endcode
  *
- * @note spec 정본: @c docs/superpowers/specs/2026-05-26-playable-component-interface-design.md sec.1.6.
+ * @note spec 정본: @c doc/superpowers/specs/2026-05-26-playable-component-interface-design.md sec.1.6.
  */
 
 #ifndef __SJH_SPRITE_SEQUENCE_SPRITE_SEQUENCE_PLAYABLE_H__

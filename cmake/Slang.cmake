@@ -1,6 +1,6 @@
 # cmake/Slang.cmake
 # Slang 을 tool-only 로 통합 (find_program + add_custom_command). 라이브러리 링크 안 함.
-# 정본 spec: docs/superpowers/specs/2026-06-20-slang-shader-migration-design.md
+# 정본 spec: doc/superpowers/specs/2026-06-20-slang-shader-migration-design.md
 #
 # 책임 분담 (2026-06-21 재배치):
 #   - 본 파일      : slangc/python3 발견 + 함수 시그니처 + ninja 의존성 그래프 통합만.
@@ -50,7 +50,7 @@ else()
     message(WARNING
         "slangc not found — Slang 셰이더 컴파일을 건너뜁니다 (기존 GLSL 사용). "
         "활성화하려면 Slang 설치 후 SLANG_ROOT 설정 또는 slangc 를 PATH 에 추가. "
-        "참고 spec: docs/superpowers/specs/2026-06-20-slang-shader-migration-design.md")
+        "참고 spec: doc/superpowers/specs/2026-06-20-slang-shader-migration-design.md")
 endif()
 
 # sjh_compile_slang(<out_var> <input.slang> <entry> <stage> <slang_target> <profile> <out_file>)

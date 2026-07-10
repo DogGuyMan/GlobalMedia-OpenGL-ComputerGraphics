@@ -1,5 +1,5 @@
 // Reference Render Pipeline — Class & Dependency Diagram (v2)
-// 대상: docs/superpowers/plans/2026-06-22-reference-render-pipeline.md + RenderingSystemRefactorReserch.md §7
+// 대상: doc/superpowers/plans/2026-06-22-reference-render-pipeline.md + RenderingSystemRefactorReserch.md §7
 // 렌더: dot -Tsvg refrender-class-dependency.dot -o refrender-class-dependency.svg
 //
 // 배치 규칙 (의존 레이어링):

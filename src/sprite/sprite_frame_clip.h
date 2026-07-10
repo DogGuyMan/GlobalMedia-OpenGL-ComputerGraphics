@@ -11,7 +11,7 @@
  *  - [X] loop 여부 - @c PlayableBase::mIsLoop 가 흡수 (spec sec.1 결정 2; @c SpriteFrameClip 에 loop 필드 추가 금지).
  *  - [X] 재생 상태(elapsed, paused, finished) - @c PlayableBase 보유.
  *
- * @note spec 정본: @c docs/superpowers/specs/2026-05-26-playable-component-interface-design.md sec.1 결정 2, sec.5.
+ * @note spec 정본: @c doc/superpowers/specs/2026-05-26-playable-component-interface-design.md sec.1 결정 2, sec.5.
  */
 
 #ifndef __SJH_SPRITE_SEQUENCE_SPRITE_FRAME_CLIP_H__

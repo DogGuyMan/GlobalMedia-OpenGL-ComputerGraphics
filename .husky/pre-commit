@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# pre-commit — 스테이징된 마크다운 문서의 경로 참조를 scripts/audit_docs.py 로 검증.
+# 활성화: `git config core.hooksPath .husky` (1회, 로컬 git config — 리포별 설정이며 팀원 각자 실행 필요).
+set -uo pipefail
+
+staged_md=$(git diff --cached --name-only --diff-filter=ACM -- '*.md')
+if [ -z "$staged_md" ]; then
+  exit 0
+fi
+
+# shellcheck disable=SC2086
+python3 scripts/audit_docs.py --scope $staged_md
+status=$?
+
+if [ "$status" -ne 0 ]; then
+  echo "" >&2
+  echo "BLOCKED: 스테이징된 문서에 존재하지 않는 경로 참조가 있다 (scripts/audit_docs.py)." >&2
+  echo "위 액션 리스트를 확인해 경로를 고치거나, 예시/placeholder 표기(<>)로 전환한 뒤 다시 커밋할 것." >&2
+  exit 1
+fi
+exit 0

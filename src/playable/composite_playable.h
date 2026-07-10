@@ -21,7 +21,7 @@
  *  concrete child 가 @c PlayableBase 가 아닌 순수 @c IPlayable 구현체일 경우 cast 실패 -
  *  해당 child 는 Update 없이 상태만 조회됨 (현재 코드베이스 내 해당 사례 없음).
  *
- * @note 정본 spec: @c docs/superpowers/specs/2026-05-26-playable-component-interface-design.md sec.1 결정 #4/4-bis
+ * @note 정본 spec: @c doc/superpowers/specs/2026-05-26-playable-component-interface-design.md sec.1 결정 #4/4-bis
  */
 #ifndef __SJH_PLAYABLE_COMPOSITE_PLAYABLE_H__
 #define __SJH_PLAYABLE_COMPOSITE_PLAYABLE_H__

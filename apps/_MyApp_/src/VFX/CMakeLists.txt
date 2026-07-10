@@ -1,5 +1,5 @@
 # MyApp::VFX — Effekseer leaf Playable. game_deps 의존, Client 거주.
-# spec docs/superpowers/specs/2026-05-26-playable-component-interface-design.md §6.2
+# spec doc/superpowers/specs/2026-05-26-playable-component-interface-design.md §6.2
 # handoff doc/design/2026-05-26-M5-handoff.md T2
 #
 # ※ 본 모듈은 M5 *스켈레톤* — 새 Agent 가 brainstorming 후 채울 것.

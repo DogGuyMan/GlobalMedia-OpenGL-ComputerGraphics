@@ -5,7 +5,7 @@
 > `doc/Box2DAPI.md` · `doc/FMODAPI.md` 와 동일 성격의 *실사용 API 레퍼런스*.
 
 **버전: Effekseer 1.7.3.0** (`extern/Effekseer`, `include/Effekseer.h` + `include/EffekseerRendererGL.h`).
-심화 시그니처는 [Context7 `/effekseer/effekseer`](https://github.com/effekseer/effekseer/blob/master/docs/Help_Cpp/18x/Guide_Cpp_En.md) (공식 C++ Guide) 로 교차 검증함.
+심화 시그니처는 [Context7 `/effekseer/effekseer`](https://github.com/effekseer/effekseer/blob/master/doc/Help_Cpp/18x/Guide_Cpp_En.md) (공식 C++ Guide) 로 교차 검증함.
 
 발췌 출처 (이 노트의 모든 코드):
 - [apps/effekseer_demo/demo1/main.cpp](../apps/effekseer_demo/demo1/main.cpp) — 저수준 직접 사용 (Manager/Renderer 를 `main.cpp` 가 직접 보유). *교과서적 1 파일 데모.*
@@ -301,6 +301,6 @@ void VFXSystem::Shutdown() {
 ---
 
 ### 관련 문서
-- 설계/마일스톤: [docs/superpowers/specs/2026-05-26-m5-leaf-playables-design.md](../docs/superpowers/specs/2026-05-26-m5-leaf-playables-design.md) (M5 leaf Playable), [doc/topdown-shooter-progress.md](topdown-shooter-progress.md)
+- 설계/마일스톤: [doc/superpowers/specs/2026-05-26-m5-leaf-playables-design.md](../doc/superpowers/specs/2026-05-26-m5-leaf-playables-design.md) (M5 leaf Playable), [doc/topdown-shooter-progress.md](topdown-shooter-progress.md)
 - 동류 API 노트: [doc/Box2DAPI.md](Box2DAPI.md) · [doc/FMODAPI.md](FMODAPI.md) · [doc/EngineAPI.md](EngineAPI.md)
 - 의존성 등록(POST_BUILD dll copy 등): `cmake/Dependency.cmake` 의 `game_deps`, [doc/FMOD_Setup.md](FMOD_Setup.md) (FMOD 기준이나 패턴 동일)

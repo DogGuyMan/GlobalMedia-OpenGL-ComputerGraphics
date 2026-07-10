@@ -1,4 +1,4 @@
-# SJH::timer — 게임플레이 타이머 (header-only, spec docs/.../2026-06-01-timer-module-design.md)
+# SJH::timer — 게임플레이 타이머 (header-only, spec doc/.../2026-06-01-timer-module-design.md)
 add_library(sjh_timer INTERFACE)
 add_library(SJH::timer ALIAS sjh_timer)
 

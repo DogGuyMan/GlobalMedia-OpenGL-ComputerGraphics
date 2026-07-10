@@ -1,5 +1,5 @@
 // WebEditor 마스터 데이터 기반 - 예상 데이터 흐름 시퀀스 다이어그램
-// spec: docs/superpowers/specs/2026-06-19-webeditor-master-data-foundation-design.md
+// spec: doc/superpowers/specs/2026-06-19-webeditor-master-data-foundation-design.md
 // 렌더: dot -Tpng -O 2026-06-19-webeditor-dataflow-sequence.dot
 //       dot -Tsvg -O 2026-06-19-webeditor-dataflow-sequence.dot
 //

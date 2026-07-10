@@ -1,5 +1,5 @@
 # SJH::sprite — 등간격 N×M atlas + SpriteRenderer (게임 무관 sprite 데이터)
-# spec docs/superpowers/specs/2026-05-24-topdown-shooter-design.md §1.4
+# spec doc/superpowers/specs/2026-05-24-topdown-shooter-design.md §1.4
 add_library(sjh_sprite STATIC
     uniform_atlas.cpp
     sprite_component.cpp

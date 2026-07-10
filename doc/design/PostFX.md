@@ -1,5 +1,7 @@
 # PostFX — Ordered Pass List 설계 지침
 
+> ⚠ 시점 문서 (archival) — 코드 경로는 작성 당시 기준. 소멸/이동 경로는 `<세그먼트>` placeholder 표기.
+
 > **상태**: 디자인 노트 (구현 전).
 > **작성일**: 2026-05-27.
 > **대상 독자**: 본 프로젝트 PostFX 리팩토링을 진행할 AI 에이전트 / 개발자.
@@ -10,13 +12,13 @@
 
 ## 1. 배경 — 현재 PostFX 표현의 문제
 
-[apps/migrate_demo/main.cpp](../../apps/migrate_demo/main.cpp) 의 PostFX 5-pass 체인이 다음과 같이 표현되어 있다:
+[<apps>/migrate_demo/main.cpp](../../<apps>/migrate_demo/main.cpp) 의 PostFX 5-pass 체인이 다음과 같이 표현되어 있다:
 
 ```
 PostFX 한 단계 = Camera 1 + Layer 1 + Quad Actor 1 + Material 1 + Framebuffer 1
 ```
 
-5 단계를 직렬화하려고 [src/scene/camera.h:41](../../src/scene/camera.h#L41) `Camera::Depth` 를 *체인 단계 인덱스* (1, 2, 3, 4, 5) 로 재활용. [src/render/scene_renderer.cpp:34](../../src/render/scene_renderer.cpp#L34) 가 `a->Depth < b->Depth` 로 정렬해 순차 렌더.
+5 단계를 직렬화하려고 [src/scene/camera.h:41](../../src/scene/camera.h#L41) `Camera::Depth` 를 *체인 단계 인덱스* (1, 2, 3, 4, 5) 로 재활용. [<src>/render/scene_renderer.cpp:34](../../<src>/render/scene_renderer.cpp#L34) 가 `a->Depth < b->Depth` 로 정렬해 순차 렌더.
 
 ### 문제점
 
@@ -142,15 +144,15 @@ uiCam->Depth     = 100;  // UI overlay — 마지막
 
 | 파일 | 변경 |
 |---|---|
-| [src/render/scene_renderer.h](../../src/render/scene_renderer.h) | `SetPostFXChain` / `ClearPostFXChain` / `mPostFXChain` 추가. `Render()` 내부 카메라 loop 종료 후 `RunPostFXChain()` 호출 |
-| `src/render/postfx_pass.h` (신규) | `PostFXPass` struct + `PostFXStage` enum |
-| [apps/migrate_demo/main.cpp](../../apps/migrate_demo/main.cpp) | `BuildPostFXChain` 이 *Camera Actor 5 개* 대신 *`std::vector<PostFXPass>` 1 개* 빌드. `sceneCam->Depth = 0` 만 남기고 PostFX 카메라 5 개 + LAYER_POSTFX_* 5 개 + quad Actor 5 개 *전부 삭제* |
-| `apps/migrate_demo/scene/postfx_chain.h` | 헬퍼 (선택) — 기본 5 단계 체인 빌더 free function |
+| [<src>/render/scene_renderer.h](../../<src>/render/scene_renderer.h) | `SetPostFXChain` / `ClearPostFXChain` / `mPostFXChain` 추가. `Render()` 내부 카메라 loop 종료 후 `RunPostFXChain()` 호출 |
+| `<src>/render/postfx_pass.h` (신규) | `PostFXPass` struct + `PostFXStage` enum |
+| [<apps>/migrate_demo/main.cpp](../../<apps>/migrate_demo/main.cpp) | `BuildPostFXChain` 이 *Camera Actor 5 개* 대신 *`std::vector<PostFXPass>` 1 개* 빌드. `sceneCam->Depth = 0` 만 남기고 PostFX 카메라 5 개 + LAYER_POSTFX_* 5 개 + quad Actor 5 개 *전부 삭제* |
+| `<apps>/migrate_demo/scene/postfx_chain.h` | 헬퍼 (선택) — 기본 5 단계 체인 빌더 free function |
 
 ### 4.2 단계별 작업
 
 1. **Stage A — 자료구조 도입**
-   - `src/render/postfx_pass.h` 추가, `SJH::PostFXPass` 정의.
+   - `<src>/render/postfx_pass.h` 추가, `SJH::PostFXPass` 정의.
    - `SceneRenderer` 에 `mPostFXChain` 멤버 + setter/clear 만 추가 (`RunPostFXChain` 은 stub).
    - 기존 PostFX-as-Camera 경로는 *유지* — 빌드 깨지지 않음.
 
@@ -209,7 +211,7 @@ uiCam->Depth     = 100;  // UI overlay — 마지막
 
 ### 6.4 골든 이미지 임계값
 
-PostFX 결과는 GPU vendor 별 미세 차이 (특히 blur kernel) 가능. [.claude/Graphics-Testing-Prompt.md](../../.claude/Graphics-Testing-Prompt.md) 의 FLIP threshold 기준 적용. 첫 도입 시 PostFX off 케이스부터 골든 캡쳐.
+PostFX 결과는 GPU vendor 별 미세 차이 (특히 blur kernel) 가능. [doc/testplan/Graphics-Testing-Prompt.md](../../doc/testplan/Graphics-Testing-Prompt.md) 의 FLIP threshold 기준 적용. 첫 도입 시 PostFX off 케이스부터 골든 캡쳐.
 
 ---
 
@@ -224,7 +226,7 @@ PostFX 결과는 GPU vendor 별 미세 차이 (특히 blur kernel) 가능. [.cla
   - `camera_depth_postfx_misuse` — Camera.Depth 의 PostFX 재활용 금기.
   - `vao_ebo_thirdparty_corruption` — ScreenQuadStage 매 프레임 ebo->Bind() 재핀 (PostFX quad 에도 동일 적용).
 - **선행 결정 문서**:
-  - [`doc/design/2026-05-26-render-refactor-session.md`](2026-05-26-render-refactor-session.md) — render refactor 세션 메모.
+  - [`<doc>/design/2026-05-26-render-refactor-session.md`](2026-05-26-render-refactor-session.md) — render refactor 세션 메모.
   - [`doc/EngineAPI.md`](../EngineAPI.md) §3.10 — 현 SceneRenderer 동작.
 
 ---

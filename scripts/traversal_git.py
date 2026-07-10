@@ -119,7 +119,7 @@ def bucket_of(path: str) -> str:
     if path.startswith("src/"):
         seg = path.split("/")
         return f"src/{seg[1]}" if len(seg) > 1 else "src"
-    if path.startswith(("doc/", "docs/")):
+    if path.startswith(("doc/", "doc/")):
         return "문서"
     if path.startswith(("include/", "lib/", "extern/")):
         return "벤더/deps"

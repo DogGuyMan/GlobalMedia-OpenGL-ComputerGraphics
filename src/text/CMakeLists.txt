@@ -1,5 +1,5 @@
 # SJH::text — BMFont 비트맵 폰트 + 월드 텍스트 렌더 (게임 무관)
-# spec docs/superpowers/specs/2026-06-02-world-text-renderer-design.md
+# spec doc/superpowers/specs/2026-06-02-world-text-renderer-design.md
 add_library(sjh_text STATIC
     bitmap_font.cpp
     text_renderer.cpp      # <- 추가 (T2)
