@@ -6,7 +6,7 @@
 > **작성일**: 2026-05-27.
 > **대상 독자**: 본 프로젝트 PostFX 리팩토링을 진행할 AI 에이전트 / 개발자.
 > **선행 메모리**: [`camera_depth_postfx_misuse`](../../.claude/projects/...) — Camera.Depth 의 PostFX 재활용이 잘못된 이유.
-> **관련 문서**: [`doc/EngineAPI.md`](../EngineAPI.md) §3.9 (Camera) / §3.10 (SceneRenderer) / §4.4 (Camera 모드).
+> **관련 문서**: [`doc/api/EngineAPI.md`](../api/EngineAPI.md) §3.9 (Camera) / §3.10 (SceneRenderer) / §4.4 (Camera 모드).
 
 ---
 
@@ -227,7 +227,7 @@ PostFX 결과는 GPU vendor 별 미세 차이 (특히 blur kernel) 가능. [doc/
   - `vao_ebo_thirdparty_corruption` — ScreenQuadStage 매 프레임 ebo->Bind() 재핀 (PostFX quad 에도 동일 적용).
 - **선행 결정 문서**:
   - [`<doc>/design/2026-05-26-render-refactor-session.md`](2026-05-26-render-refactor-session.md) — render refactor 세션 메모.
-  - [`doc/EngineAPI.md`](../EngineAPI.md) §3.10 — 현 SceneRenderer 동작.
+  - [`doc/api/EngineAPI.md`](../api/EngineAPI.md) §3.10 — 현 SceneRenderer 동작.
 
 ---
 

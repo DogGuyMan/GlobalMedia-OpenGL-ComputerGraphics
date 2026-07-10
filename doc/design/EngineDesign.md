@@ -10,10 +10,10 @@
 > **독자** 본인 (학습 노트 + 다음 작업 우선순위 결정용)
 >
 > **갱신 안내 (2026-05-22)**: 본 문서는 SP1 (Shader/Program 통합) ~ SP-Pass 진행 *전* 의 스냅샷이다. 현재 엔진은 12 모듈 (`SJH::<module>`) + INTERFACE 우산 (`SJH::engine`) + Actor/Component + SceneRenderer + Pass 컨벤션으로 진화. 최신 상태는 다음 문서를 참고:
-> - [`doc/EngineAPI.md`](../EngineAPI.md) — 현재 코어 API 레퍼런스
+> - [`doc/api/EngineAPI.md`](../api/EngineAPI.md) — 현재 코어 API 레퍼런스
 > - [`.claude/architecture.md`](../../.claude/architecture.md) — 모듈 패턴 + §11.5 진실의 원천 단일화 (Pass.Kind) + §11.6 Retina HiDPI
 > - [`.claude/architecture-design-agent.md`](../../.claude/architecture-design-agent.md) §12 — 13 가지 암묵적 합의 (SP-Pass 까지 누적)
-> - [`doc/EngineAPI.md`](../EngineAPI.md) §4.7~§4.8 — Pass 컨벤션 + Retina/Resize 호환
+> - [`doc/api/EngineAPI.md`](../api/EngineAPI.md) §4.7~§4.8 — Pass 컨벤션 + Retina/Resize 호환
 >
 > 본 문서의 §5 로드맵은 P0/P1 항목 중 상당수가 이미 완료됨 (게임루프, SceneGraph, ResourceManager, Component 모델). 학습 노트로만 보존.
 

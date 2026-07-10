@@ -133,5 +133,5 @@
 ## 관련 노트
 
 - `src/render/device_context.h` — DeviceContext 클래스 선언
-- `doc/EngineAPI.md` §3.10 `SJH::render` 모듈
+- `doc/api/EngineAPI.md` §3.10 `SJH::render` 모듈
 - `.claude/architecture.md` §11 — 동작/데이터 분리 패턴

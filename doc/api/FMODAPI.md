@@ -9,7 +9,7 @@
   *(공백기간 갱신 2026-06-03 — Context7 `/websites/fmod_2_03` 교차검증.)*
 
 설치/CMake 통합은 [doc/FMOD_Setup.md](FMOD_Setup.md), 엔진 자원 보유(`SJH::ResourceRegistry`)는
-[doc/EngineAPI.md](EngineAPI.md) 참조.
+[doc/api/EngineAPI.md](api/EngineAPI.md) 참조.
 
 ---
 

@@ -366,7 +366,7 @@ public:
 - [.claude/architecture.md §11.5](../../.claude/architecture.md) — 진실의 원천 단일화 (Pass.Kind)
 - [.claude/architecture.md §11.6](../../.claude/architecture.md) — Retina HiDPI 패턴 (sb7 우회)
 - [.claude/architecture-design-agent.md §3](../../.claude/architecture-design-agent.md) — 4-phase chain (SP 진입 시 따를 워크플로우)
-- [doc/EngineAPI.md](../EngineAPI.md) — 현재 코어 API 레퍼런스
+- [doc/api/EngineAPI.md](../api/EngineAPI.md) — 현재 코어 API 레퍼런스
 - [doc/design/EngineDesign.md](../../doc/design/EngineDesign.md) — SP4 (RenderTarget/PostFX) 미착수 상태
 
 ### 정통 매핑 (외부 엔진)
