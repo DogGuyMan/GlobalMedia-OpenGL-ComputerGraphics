@@ -3,7 +3,17 @@
 
 ########### Claude Code ###########
 .claude/settings.local.json
-.claude/skills/
+# 스킬 사본은 기본 미추적 (SSOT = ~/.claude/skills, 동기화 = scripts/dev.py copy-skills)
+.claude/skills/*
+# 설계 규율 4종만 추적 예외 (2026-07-11 사용자 결정 — 클론/CI에서도 규율 가시화)
+!.claude/skills/design-decision-discipline/
+!.claude/skills/design-decision-discipline/**
+!.claude/skills/confidence-and-sourcing/
+!.claude/skills/confidence-and-sourcing/**
+!.claude/skills/code-design-review-lenses/
+!.claude/skills/code-design-review-lenses/**
+!.claude/skills/architecture-design-workflow/
+!.claude/skills/architecture-design-workflow/**
 
 ########### vcpkg local files ###########
 vcpkg_installed/
