@@ -31,7 +31,6 @@
 #include "Spawns/OneShotSweeper.h"
 #include "Spawns/VfxInstance.h"
 #include "Spawns/WorldTextInstance.h"
-#include "UI/VfxSpawnLayer.h"
 
 #include "Audio/FmodStudioPlayable.h"
 #include "Bootstrap/actor_factory.h"
@@ -144,13 +143,16 @@ namespace TopdownShooter
 
 			Bootstrap::InitScheduler sched;
 
-			// T2 screenPipeline -- DefaultPipeline + ScreenCamera + PostFX 체인 + fog/vignette + 레지스트리.
-			sched.Task(Bootstrap::EInitTask::ScreenPipeline).Gl().Does([&] {
+			// T renderPipeline -- 스크린 자원(PostFX 체인/present/ScreenCamera) + 전체 Pass 컬렉션 조립.
+			//   구 ScreenPipeline(T2) + Pass(T4) 병합. World 뒤(카메라/스카이박스 참조). 단일 람다 내부
+			//   순서: 스크린 자원 생성 -> PassIterator Add(std::move). 비소유 관찰 포인터는 move 전 캡처.
+			sched.Task(Bootstrap::EInitTask::RenderPipeline).Needs({Bootstrap::EInitTask::World}).Gl().Does([&] {
+				// ===== (구 ScreenPipeline) 스크린 자원 생성 =====
 				// 풀스크린 blit 용 screen quad mesh (PostFxPass 가 비소유 참조 - 소유=rr).
 				mScreenQuadMeshPtr = reg.RegisterMesh("mesh_screen_quad", SJH::Mesh::CreateScreenQuad());
 				if (!mScreenQuadMeshPtr)
 				{
-					spdlog::error("[ScreenPipeline] screen quad Mesh 등록 실패");
+					spdlog::error("[RenderPipeline] screen quad Mesh 등록 실패");
 					return false;
 				}
 
@@ -161,7 +163,7 @@ namespace TopdownShooter
 				    Playable::PASSTHOURH_PROGRAM_CONFIG.FragFile);
 				if (!ptProg)
 				{
-					spdlog::error("[ScreenPipeline] passthrough 셰이더 로드 실패");
+					spdlog::error("[RenderPipeline] passthrough 셰이더 로드 실패");
 					return false;
 				}
 				mPresentMatPtr = reg.CreateSharedMaterial("mat_pass_present");
@@ -176,7 +178,7 @@ namespace TopdownShooter
 					auto *prog = reg.CreateProgram(c.Name, c.VertFile, c.FragFile);
 					if (!prog)
 					{
-						spdlog::error("[ScreenPipeline] PostFX 셰이더 로드 실패: {}", c.FragFile);
+						spdlog::error("[RenderPipeline] PostFX 셰이더 로드 실패: {}", c.FragFile);
 						mPostFXFBs.push_back(nullptr); // configs 인덱스 정합(placeholder).
 						continue;
 					}
@@ -210,39 +212,8 @@ namespace TopdownShooter
 				mScreenCamera = screenCamActor->GetComponent<SJH::Scene::Camera>();
 				dir.Root().AddChild(std::move(screenCamActor));
 
-				return true;
-			});
-
-			// T3 world -- WorldScene(camera/light/skybox) + 스테이지 액터 + FxRoot + spawn 컨텍스트
-			//             + muzzle 이펙트 + 플레이어 + 웨이브 컨트롤러.
-			sched.Task(Bootstrap::EInitTask::World).Needs({Bootstrap::EInitTask::VfxUi}).Gl().Does([&] { // vfxUi 가 TEST_EFFECTS(orbital_background) 를 선행 로드 -> 스테이지 FindEffect 의존
-				// BuildWorldScene 이 카메라/광/스카이박스/PCB + 물리 아레나 스테이지(구 StageBuilder)까지 조립.
-				auto worldScene = Bootstrap::BuildWorldScene({mFbInfo.Aspect, &mMouse, mSceneFB.get(), &phys.World()});
-				mCamera = worldScene.WorldCamera;
-				mSkyboxMat = worldScene.SkyboxMat;
-				mSkyboxRenderer = worldScene.SkyboxRenderer;
-				mStage = worldScene.StageActor;
-				auto *stageState = mStage->AddComponent<Stage::Components::StageState>();
-				stageState->SetCurrent(Stage::EStageStatus::Title);
-
-
-				mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>(ACTOR_FX_ROOT));
-				VFX::SetSpawnContext(mFxRoot, &vfxs);
-				WorldText::SetSpawnContext(mFxRoot, manager.WorldText().GetFont());
-
-				// reg.CreateEffect(vfxs.GetManager(), VFX::MUZZLE_EFFECT.key, VFX::MUZZLE_EFFECT.path);
-
-				auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
-				mSpriteActor = player.SpriteActor;
-
-				auto *waveSpawner = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>(Stage::ACTOR_WAVE_SPAWNER));
-				waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, Bootstrap::ARENA_HALF_EXTENT);
-				return mCamera != nullptr && mSpriteActor != nullptr;
-			});
-
-			// T4 stages -- PassIterator 가 모든 Pass 를 소유. 코스 순서대로 Add(std::move).
-			//   [Skybox -> World -> Particle -> Grayscale(present) -> ImGui]. 비소유 관찰 포인터는 move 전에 캡처.
-			sched.Task(Bootstrap::EInitTask::Pass).Needs({Bootstrap::EInitTask::ScreenPipeline, Bootstrap::EInitTask::World}).Cpu().Does([&] {
+				// ===== (구 Pass) PassIterator 조립 - 코스 순서대로 Add(std::move) =====
+				//   [Skybox -> World -> Particle -> PostFx(e0..eN) -> present -> ImGui]. 관찰 포인터는 move 전 캡처.
 				// 1) Skybox - background-first (sceneFB clear+skybox 책임).
 				mPassIterator.Add(std::make_unique<SJH::SkyboxPass>(mSkyboxRenderer, mCamera));
 
@@ -254,8 +225,8 @@ namespace TopdownShooter
 				// 3) Particle - sceneFB 에 Effekseer 합성 (worldCam RT).
 				mPassIterator.Add(std::make_unique<TopdownShooter::VFX::ParticlePass>(&GameSystems::Get().VFX(), mCamera));
 
-				// 4) PostFX 효과 체인 - 각 효과는 중간 FBO 에 그림(output=fbo). before=직전 활성 결과(PassIterator lastResult).
-				//    config 순서 = 체인 순서. invert/blurring/sobel 은 기본 비활성(Enabled=false, 동적 skip).
+				// 4) PostFX 효과 체인 - 각 효과는 중간 FBO 에 그림(output=fbo). config 순서 = 체인 순서.
+				//    invert/blurring/sobel 은 기본 비활성(Enabled=false, 동적 skip).
 				for (std::size_t i = 0; i < Playable::POSTFX_PROGRAM_CONFIGS.size(); ++i)
 				{
 					const std::string &name = Playable::POSTFX_PROGRAM_CONFIGS[i].Name;
@@ -283,35 +254,47 @@ namespace TopdownShooter
 				return true;
 			});
 
-			// T5 vfxUi -- VFX 테스트 이펙트 로드 + 게임 UI(PostFX 디버그) + VFX 소환 레이어.
-			sched.Task(Bootstrap::EInitTask::VfxUi).Needs({Bootstrap::EInitTask::ScreenPipeline}).Gl().Does([&] {
-				std::vector<UI::VfxSpawnLayer::Entry> vfxEntries;
+			// T world -- VFX 카탈로그 로드(orbital 포함) + WorldScene(camera/light/skybox/PCB/stage)
+			//            + FxRoot + spawn 컨텍스트 + 플레이어 + 웨이브 컨트롤러.
+			//   VFX 초기화 소유 -- BuildStage 의 FindEffect("orbital_background") 및 런타임 소비자(laser 등)
+			//   가 참조하는 이펙트를 이 태스크가 선행 로드 (구 VfxUi 에서 이관, World->VfxUi 사이클 제거).
+			sched.Task(Bootstrap::EInitTask::World).Gl().Does([&] {
+				// VFX 카탈로그 로드 -- BuildWorldScene(BuildStage->orbital) 및 UltimateLaser(laser) 등
+				//   FindEffect 소비자보다 반드시 선행. 실패는 개별 warn 후 계속(효과별 no-op 허용).
 				for (const auto &v : VFX::TEST_EFFECTS)
-				{
-					if (auto *eff = reg.CreateEffect(vfxs.GetManager(), v.key, v.path))
-					{
-						vfxEntries.push_back({v.key, eff});
-						std::string narrow;
-						for (const char16_t *p = v.path; *p; ++p)
-							narrow.push_back(static_cast<char>(*p));
-					}
-					else
-						spdlog::warn("[vfx-test] load failed: {}", v.key);
-				}
+					if (!reg.CreateEffect(vfxs.GetManager(), v.key, v.path))
+						spdlog::warn("[vfx] load failed: {}", v.key);
+				// BuildWorldScene 이 카메라/광/스카이박스/PCB + 물리 아레나 스테이지(구 StageBuilder)까지 조립.
+				auto worldScene = Bootstrap::BuildWorldScene({mFbInfo.Aspect, &mMouse, mSceneFB.get(), &phys.World()});
+				mCamera = worldScene.WorldCamera;
+				mSkyboxMat = worldScene.SkyboxMat;
+				mSkyboxRenderer = worldScene.SkyboxRenderer;
+				mStage = worldScene.StageActor;
+				auto *stageState = mStage->AddComponent<Stage::Components::StageState>();
+				stageState->SetCurrent(Stage::EStageStatus::Title);
 
-				// ! 제거 대상 std::vector<UI::PassDebugEntry> debugEntries;
-				// ! 제거 대상 for (std::size_t i = 0; i < Playable::POSTFX_PROGRAM_CONFIGS.size(); ++i)
-				// ! 제거 대상 if (i < mPassComponents.size())
-				// ! 제거 대상 debugEntries.push_back({Playable::POSTFX_PROGRAM_CONFIGS[i].Name, mPassComponents[i]});
+
+				mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>(ACTOR_FX_ROOT));
+				VFX::SetSpawnContext(mFxRoot, &vfxs);
+				WorldText::SetSpawnContext(mFxRoot, manager.WorldText().GetFont());
+
+				// reg.CreateEffect(vfxs.GetManager(), VFX::MUZZLE_EFFECT.key, VFX::MUZZLE_EFFECT.path);
+
+				auto player = Bootstrap::BuildPlayer({&mKeyboard, &mMouse, &phys.World(), mCamera});
+				mSpriteActor = player.SpriteActor;
+
+				auto *waveSpawner = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>(Stage::ACTOR_WAVE_SPAWNER));
+				waveSpawner->AddComponent<Stage::WaveController>(&phys.World(), waveSpawner, mSpriteActor, Bootstrap::ARENA_HALF_EXTENT);
+				return mCamera != nullptr && mSpriteActor != nullptr;
+			});
+
+			// T debugUi -- ImGui 컨텍스트 + 게임/디버그 UI 레이어(순수 UI, VFX 무관).
+			//   RenderPipeline 뒤 실행(Needs) -- PassDebugLayer 생성자가 mat_pass_grayscale_vignetting 을 조회하므로.
+			sched.Task(Bootstrap::EInitTask::DebugUi).Needs({Bootstrap::EInitTask::RenderPipeline}).Gl().Does([&] {
 				mImGuiCtx = UI::BuildGameUI({window, &reg, &mImGuiStack, [this] { TogglePause(); }});
 
-				auto layer = std::make_unique<UI::VfxSpawnLayer>(std::move(vfxEntries));
-				mVfxLayer = layer.get();
-				mImGuiStack.Push(std::move(layer));
-
-				// Pass 활성화 토글 디버그 패널(Editor kind, F1). mPassIterator 는 Stages task 에서 채워지므로
-				// 포인터만 주입(매 프레임 OnBuildUI 가 lazy 조회). grayscale 강도 관찰용 공유 Material 도 주입.
-				// capture G1 에서 일시 비활성화를 위해 raw 포인터 캡처 (소유 = 스택).
+				// Pass 활성화 토글 + PostFX 파라미터 디버그 패널(Editor kind, F1). mPassIterator 는 RenderPipeline 이
+				// 채우므로 포인터만 주입(매 프레임 OnBuildUI 가 lazy 조회). capture G1 일시 비활성화용 raw 캡처(소유=스택).
 				{
 					auto dbg = std::make_unique<UI::PassDebugLayer>(&mPassIterator);
 					mPassDebugLayerPtr = dbg.get();
@@ -661,7 +644,6 @@ namespace TopdownShooter
 		// ImGui
 		ImGuiContext *mImGuiCtx = nullptr; // ! 모듈화 대상 (ImGui 컨텍스트 = UI 레이어)
 		UI::ImGuiLayerStack mImGuiStack; // ! 모듈화 대상 (ImGui 레이어 스택 = UI)
-		UI::VfxSpawnLayer *mVfxLayer = nullptr;        // VFX 테스트 드롭다운 (비소유 — 스택이 소유) // ! 모듈화 대상 (VFX UI 레이어)
 		UI::IImGuiLayer *mPassDebugLayerPtr = nullptr; // PassDebugLayer raw 포인터 (비소유 — 스택이 소유). capture G1 일시 비활성화용. // ! 모듈화 대상 (디버그 UI + capture G1 토글 결합)
 		bool mShowEditor = true; // ! 모듈화 대상 (에디터 토글 상태 = UI/입력)
 
@@ -685,7 +667,7 @@ namespace TopdownShooter
 		//   golden capture 가 main 무침투로 이 파이프라인을 재사용하기 위한 모듈화 경계.
 		//   (capture 전용 mCaptureMode / mCaptureFrame 은 test/ 캡처 모듈로 별도 분리.)
 
-		// PostFX 공유 Material 단축 조회 — rr 의 mat_pass_<name> (ScreenPipeline 에서 생성한 것만 존재).
+		// PostFX 공유 Material 단축 조회 — rr 의 mat_pass_<name> (RenderPipeline 에서 생성한 것만 존재).
 		// fog 패스는 현재 미생성이라 nullptr 반환 → 호출부(uInverseProjection/uDepth 송신)는 자연 no-op.
 		SJH::Material *FindFogMaterial() // ! 모듈화 대상 (fog 머티리얼 조회 헬퍼 = 파이프라인 보조)
 		{

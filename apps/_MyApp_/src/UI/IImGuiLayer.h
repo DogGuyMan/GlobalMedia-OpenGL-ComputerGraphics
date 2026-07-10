@@ -27,7 +27,7 @@ namespace TopdownShooter::UI
 	};
 
 	/// @brief ImGui 위젯 한 묶음을 그리는 화면 레이어의 공통 인터페이스.
-	/// @details 구체 레이어(PauseButtonLayer / PostFXDebugLayer / StateOverlayLayer / VfxSpawnLayer)가
+	/// @details 구체 레이어(PauseButtonLayer / PostFXDebugLayer / StateOverlayLayer)가
 	///          상속하며, @c ImGuiLayerStack 이 등록된 레이어들을 순회하며 @c OnBuildUI 를 호출한다.
 	class IImGuiLayer
 	{

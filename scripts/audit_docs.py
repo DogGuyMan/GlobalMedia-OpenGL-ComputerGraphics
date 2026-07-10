@@ -99,8 +99,15 @@ def is_external_ref(ref):
 
 
 def _resolve_candidates(ref, doc_path, repo):
-    """score_cpp.py E1 과 동일한 4-후보 규약: repo-상대 / 문서-상대 / include/ / src/."""
-    return [repo / ref, doc_path.parent / ref, repo / "include" / ref, repo / "src" / ref]
+    """score_cpp.py E1 과 동일한 4-후보(repo-상대 / 문서-상대 / include/ / src/) +
+    apps/*/src/ (멀티앱 중첩 소스 레이아웃 — 앱별 코드가 최상위 src/ 가 아니라
+    apps/<앱이름>/src/ 아래 있으므로, 그 경로를 인용하는 문서가 오탐(false positive)되는
+    것을 막는다)."""
+    candidates = [repo / ref, doc_path.parent / ref, repo / "include" / ref, repo / "src" / ref]
+    apps_dir = repo / "apps"
+    if apps_dir.is_dir():
+        candidates.extend((app_src / ref) for app_src in sorted(apps_dir.glob("*/src")))
+    return candidates
 
 
 def resolve_ref(ref, doc_path, repo):

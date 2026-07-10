@@ -21,13 +21,12 @@ namespace TopdownShooter::Bootstrap
 	///          (등록 순서 대체). hard 순서는 InitScheduler 의 .Needs(...) 위상정렬이 담당.
 	enum class EInitTask
 	{
-		Core,            ///< phase1: 렌더타깃 + 시스템 init + 오디오 워밍업.
-		VfxUi,           ///< phase2: VFX 이펙트(orbital 포함) 로드 + 게임 UI. World 보다 먼저.
-		World,           ///< phase2: WorldScene + 스테이지 액터(orbital FindEffect) + 플레이어.
-		ScreenPipeline,  ///< phase2: DefaultPipeline + ScreenCamera + PostFX.
-		Pass,          	 ///< phase2: Pass 컬렉션 조립.
-		Enter,           ///< phase3: Director.Enter.
-		Fsm,             ///< phase3: GameContext + Stage FSM.
+		Core,          ///< phase1: 렌더타겟 + 시스템 init + 오디오 워밍업.
+		World,         ///< phase2: VFX 카탈로그 로드(orbital 포함) + WorldScene + 스테이지 + 플레이어 + 웨이브.
+		RenderPipeline,///< phase2: 스크린 자원(PostFX/present/ScreenCamera) + 전체 Pass 컬렉션 조립. World 뒤.
+		DebugUi,       ///< phase2: ImGui 컨텍스트 + 게임/디버그 UI 레이어(PauseButton, PassDebug). RenderPipeline 뒤.
+		Enter,         ///< phase3: Director.Enter.
+		Fsm,           ///< phase3: GameContext + Stage FSM.
 	};
 
 	/// @brief 진단/로그용 이름 (C++17 enum reflection 부재 -> 수동 매핑). 미지 값은 "?".
@@ -36,10 +35,9 @@ namespace TopdownShooter::Bootstrap
 		switch (id)
 		{
 		case EInitTask::Core:           return "Core";
-		case EInitTask::ScreenPipeline: return "ScreenPipeline";
-		case EInitTask::VfxUi:          return "VfxUi";
 		case EInitTask::World:          return "World";
-		case EInitTask::Pass:         return "Pass";
+		case EInitTask::RenderPipeline: return "RenderPipeline";
+		case EInitTask::DebugUi:        return "DebugUi";
 		case EInitTask::Enter:          return "Enter";
 		case EInitTask::Fsm:            return "Fsm";
 		}

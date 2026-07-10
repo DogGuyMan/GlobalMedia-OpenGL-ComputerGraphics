@@ -11,7 +11,7 @@
  *
  *  ### 비-책임
  *  - [X] ImGui 프레임 시작/종료(@c NewFrame/@c Render) - main 의 update/render 루프 책임.
- *  - [X] StateOverlayLayer / VfxSpawnLayer 등록 - 각 Stage FSM 또는 main 이 별도 등록.
+ *  - [X] StateOverlayLayer 등록 - 각 Stage FSM 또는 main 이 별도 등록.
  *  - [X] 레이어 lifetime 관리 - @c ImGuiLayerStack 이 unique_ptr 로 소유.
  *
  *  ### 정통 매핑
