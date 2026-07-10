@@ -27,7 +27,7 @@ jobs:
     name: Build Doxygen HTML
     runs-on: ubuntu-latest
     steps:
-      # INPUT 은 src/ + doxygen/pages/ (모두 체크인) — extern/ 서브모듈 불필요.
+      # INPUT 은 src/ + apps/_MyApp_/src/ + doxygen/pages/ (모두 체크인) — extern/ 서브모듈 불필요.
       - uses: actions/checkout@v4
 
       # Pages 를 워크플로에서 직접 활성화 + Source 를 'GitHub Actions' 로 설정.
@@ -58,7 +58,7 @@ jobs:
 
           sed \
             -e "s|@PROJECT_VERSION@|${PROJECT_VERSION}|g" \
-            -e "s|@DOXYGEN_INPUT_DIR@|${GITHUB_WORKSPACE}/src|g" \
+            -e "s|@DOXYGEN_INPUT_DIR@|${GITHUB_WORKSPACE}/src ${GITHUB_WORKSPACE}/apps/_MyApp_/src|g" \
             -e "s|@DOXYGEN_OUTPUT_DIR@|${GITHUB_WORKSPACE}/doxygen|g" \
             -e "s|@DOXYGEN_PAGES_DIR@|${GITHUB_WORKSPACE}/doxygen/pages|g" \
             doxygen/Doxyfile.in > build_ci/Doxyfile
@@ -75,7 +75,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: doc/html
+          path: doxygen/html
 
   deploy:
     name: Deploy to GitHub Pages

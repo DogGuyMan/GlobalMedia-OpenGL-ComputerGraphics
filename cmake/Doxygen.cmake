@@ -9,7 +9,7 @@ function(sjhopengl_setup_doxygen)
         return()
     endif()
 
-    set(DOXYGEN_INPUT_DIR  "${PROJECT_SOURCE_DIR}/src")
+    set(DOXYGEN_INPUT_DIR  "${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/apps/_MyApp_/src")
     set(DOXYGEN_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/doxygen")
     set(DOXYGEN_PAGES_DIR  "${PROJECT_SOURCE_DIR}/doxygen/pages")
 

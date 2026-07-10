@@ -8,7 +8,8 @@
 drift(낡음) 판정은 mtime 휴리스틱이라 사람 검토가 전제다 — 자동 마킹 금지, 후보 제시만.
 
 신뢰도 등급:
-  [Auto]      경로 존재 검증 — 결정론적. broken 이면 거의 확정 (단 compound 표기는 별도 트랙).
+  [Auto]      경로 존재 검증 — 결정론적. broken 이면 거의 확정
+              (단 compound 표기 / external(extern·fmod·include·build_ninja·.vscode) 경로는 별도 트랙).
   [Heuristic] drift SUPERSEDED 후보 — mtime 기반 추정. 판단 필요.
 
 사용:
@@ -17,7 +18,7 @@ drift(낡음) 판정은 mtime 휴리스틱이라 사람 검토가 전제다 — 
   python3 scripts/audit_docs.py --json /tmp/audit_report.json  # 구조화 전체 결과 저장
   python3 scripts/audit_docs.py --quiet                        # 콘솔 요약 억제 (액션 리스트만)
 
-종료 코드: 순수 broken(존재-실패, compound 제외) 1건 이상이면 1, 아니면 0.
+종료 코드: 순수 broken(존재-실패, compound·external 제외) 1건 이상이면 1, 아니면 0.
           (pre-commit/CI 게이트가 이 종료 코드를 재사용한다.)
 
 ※ doc/report/score_cpp.py 의 E1 검증 로직과 동일 규약을 자체 상수로 재정의한다.
@@ -40,6 +41,9 @@ IGNORE_DIRS = {
     "extern", "resources", "lib", "include", "doxygen", "html",
     "build_ninja", "build_ninja-release", "build_msvc", "build_extern",
     "skills_repo-main", "_workspace",
+    # fmod/ — FMOD 독점 SDK 헤더용 최상위 경로 표기(archival plan 문서, 이후 include/fmod/ 로 정착).
+    # 라이선스상 저장소에 커밋 불가라 fresh checkout 에선 영구 부재 — broken 판정 제외.
+    "fmod",
 }
 
 RE_PATH_REF = re.compile(
@@ -83,6 +87,15 @@ def extract_refs(text):
 def classify_ref(ref):
     """`Foo.h/.cpp` 복합 표기면 "compound", 아니면 "normal"."""
     return "compound" if RE_COMPOUND_REF.search(ref) else "normal"
+
+
+def is_external_ref(ref):
+    """참조 최상위 세그먼트가 IGNORE_DIRS 소속이면 True.
+    서브모듈 미체크아웃(extern/) · 독점 SDK 미설치(fmod/, include/) · 빌드 산출물 미생성(build_ninja/)
+    · 로컬 IDE 설정(.vscode/) 등 — "정상적인 fresh checkout" 조차 만족 못 시키는 경로라
+    broken 판정에서 제외한다 (문서 오류가 아니라 환경 의존적 부재)."""
+    first = ref.split("/", 1)[0]
+    return first in IGNORE_DIRS
 
 
 def _resolve_candidates(ref, doc_path, repo):
@@ -150,15 +163,18 @@ def audit_document(doc_path, repo):
             "refs_total": 0,
             "refs_broken": [],
             "refs_skipped_compound": [],
+            "refs_skipped_external": [],
             "drift_candidate": None,
             "read_error": str(e),
         }
 
     refs = sorted(extract_refs(text))
-    broken, skipped_compound, valid = [], [], []
+    broken, skipped_compound, skipped_external, valid = [], [], [], []
     for ref in refs:
         if classify_ref(ref) == "compound":
             skipped_compound.append({"ref": ref, "confidence": "Auto"})
+        elif is_external_ref(ref):
+            skipped_external.append({"ref": ref, "confidence": "Auto"})
         elif resolve_ref(ref, doc_path, repo):
             valid.append(ref)
         else:
@@ -169,6 +185,7 @@ def audit_document(doc_path, repo):
         "refs_total": len(refs),
         "refs_broken": broken,
         "refs_skipped_compound": skipped_compound,
+        "refs_skipped_external": skipped_external,
         "drift_candidate": compute_drift(doc_path, valid, repo),
     }
 
@@ -183,6 +200,7 @@ def run_audit(scope, repo):
             "total_refs": sum(d["refs_total"] for d in documents),
             "total_broken": sum(len(d["refs_broken"]) for d in documents),
             "total_skipped_compound": sum(len(d["refs_skipped_compound"]) for d in documents),
+            "total_skipped_external": sum(len(d["refs_skipped_external"]) for d in documents),
             "drift_candidates": sum(1 for d in documents if d["drift_candidate"]),
         },
     }
@@ -200,6 +218,7 @@ def print_console_summary(report):
     print(f"  참조 수 (dedupe)   : {s['total_refs']}")
     print(f"  broken [Auto]      : {s['total_broken']}")
     print(f"  compound 스킵 [Auto]: {s['total_skipped_compound']}  (Foo.h/.cpp 류 — 존재 검증 불가 표기)")
+    print(f"  external 스킵 [Auto]: {s['total_skipped_external']}  (extern/fmod/include/build_ninja/.vscode 등 — 환경 의존적 부재)")
     print(f"  drift 후보 [Heuristic]: {s['drift_candidates']}  (SUPERSEDED 후보 제시만 — 마킹은 사람 몫)")
     for d in report["documents"]:
         dc = d["drift_candidate"]

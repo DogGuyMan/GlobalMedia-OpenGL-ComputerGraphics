@@ -11,7 +11,7 @@
 ```bash
 # 이 디렉토리 파일들은 직접 실행 대상이 아니다 — 루트 CMakeLists.txt 가 include() 함
 # 문서화 타겟만 별도 호출 가능:
-cmake --build build_ninja --target doxygen   # doc/html/ 아래 index.html 생성 (빌드 산출물)
+cmake --build build_ninja --target doxygen   # doxygen/html/ 아래 index.html 생성 (빌드 산출물)
 
 # Slang 셰이더 재컴파일은 매 빌드 시 COMMAND 로 자동 실행됨 (수동 트리거 불필요)
 ```

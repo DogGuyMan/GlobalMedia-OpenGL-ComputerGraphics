@@ -60,7 +60,7 @@
 | 6 | Box2D | **v2.4.1** (`extern/box2d` 사전 빌드, `lib/{macos,windows}/`). 가이드의 v3 핸들 API (`b2BodyId`, `b2DefaultBodyDef`) 는 v2 포인터 API 로 번역 (§4) |
 | 7 | Effekseer | **1.7.3.0** (`extern/Effekseer` + 사전 빌드 lib). 가이드 §5 코드 거의 그대로 |
 | 8 | Tweeny | **`.gitmodules` extern + `<include>/tweeny.h` 헤더 체크인** (`tweeny` INTERFACE 타겟). v3.2.0 |
-| 9 | FMOD | `game_deps` 자동 합류 (memory `fmod_game_deps_auto_join.md`), POST_BUILD copy 의무. `doc/FMOD_Setup.md` 참조 |
+| 9 | FMOD | `game_deps` 자동 합류 (memory `fmod_game_deps_auto_join.md`), POST_BUILD copy 의무. `doc/api/FMOD_Setup.md` 참조 |
 | 10 | 수학 | **vmath** (sb7 vendored). GLM 미체크인. `vmath::radians(int)` 함정 주의 (memory `vmath_radians_int_trap.md`) |
 | 11 | GL 로더 | **gl3w** (sb7 vendored). glad 미체크인 |
 | 12 | stb | **`stb_image` 만 사용**. `stb_rect_pack` 도입 **취소** (2026-05-24 정정 — PackedAtlas 폐기, 등간격 N×M 그리드만). `STB_IMAGE_IMPLEMENTATION` 정의 책임은 **`SJH::resource_registry`** 모듈 (`image.cpp`) 단일 위치 (2026-05-24 정정 — `SJH::sprite/uniform_atlas.cpp` 는 `SJH::Image::Load` + `SJH::Texture::CreateTexture` 위임으로 stb 직접 호출 0). 데모 main.cpp 는 정의 안 함 |
@@ -1241,7 +1241,7 @@ void TweenSystem::Update(SJH::scene::Scene& scene, float dtSeconds) {
 
 ## §8 음향 — FMOD Core/Studio
 
-본 저장소는 [`doc/FMOD_Setup.md`](../../FMOD_Setup.md) 가 이미 FMOD 설치 + Dependency.cmake 등록 + POST_BUILD copy 명세를 보유. 본 spec 은 *게임 측 사용 패턴* 만 추가.
+본 저장소는 [`doc/api/FMOD_Setup.md`](../../api/FMOD_Setup.md) 가 이미 FMOD 설치 + Dependency.cmake 등록 + POST_BUILD copy 명세를 보유. 본 spec 은 *게임 측 사용 패턴* 만 추가.
 
 ### 8.1 AudioSystem (Core API, C 함수 사용)
 
@@ -1662,7 +1662,7 @@ apps/_MyApp_/                         # 결정 #16 — 재활성
 ### B.5 stb_image 정의 책임 — `SJH::src/texture/image.cpp` 단일 owner (2026-05-24 재정정)
 `STB_IMAGE_IMPLEMENTATION` 는 **`src/texture/image.cpp` 단 한 곳** (2026-05-24 정정 — 원래 이 파일이 owner 였음). `SJH::sprite/uniform_atlas.cpp` 는 `SJH::Image::Load` + `SJH::Texture::CreateTexture` 위임이라 stb 직접 호출 0 — 중복 정의 위험 자동 회피. ~~`STB_RECT_PACK_IMPLEMENTATION`~~ 도입 취소 (PackedAtlas 폐기). 데모 main.cpp 는 정의 *금지* — 정의하면 multiple definition 링크 에러. SJH::resource_registry 를 link 안 하는 데모가 stb_image 를 자체 쓰려면 그 데모 main.cpp 가 정의 — 단 **본 게임 데모는 항상 SJH::engine 우산 (resource_registry 포함) link 이라 직접 정의 절대 안 함**.
 
-### B.6 FMOD POST_BUILD copy 누락 시 (memory `fmod_game_deps_auto_join.md` + `doc/FMOD_Setup.md`)
+### B.6 FMOD POST_BUILD copy 누락 시 (memory `fmod_game_deps_auto_join.md` + `doc/api/FMOD_Setup.md`)
 `game_deps` 링크 데모는 `$<TARGET_FILE:fmod>` (+ studio 있으면 `$<TARGET_FILE:fmodstudio>`) 를 실행 파일 옆으로 `copy_if_different` 의무. §1.4 의 CMakeLists.txt 패턴 그대로.
 
 ### B.7 Box2D v2 vs v3 코드 혼동
@@ -1720,7 +1720,7 @@ Composite 임의 깊이 허용 (사용자 결정 2026-05-24). 단 같은 Playabl
 |---|---|---|
 | §0.4 NFR | §0.3 | `Application/MainWindow` 클래스 가정 제거 (sb7::application 으로 대체) |
 | §1 CMake FetchContent | §1 사전 빌드 lib + .gitmodules | 결정 #1 |
-| §1.5 FMODImport.cmake | `doc/FMOD_Setup.md` 참조 | 본 저장소가 이미 game_deps 자동 합류 구현 |
+| §1.5 FMODImport.cmake | `doc/api/FMOD_Setup.md` 참조 | 본 저장소가 이미 game_deps 자동 합류 구현 |
 | §2.2 빌보드 셰이더 GLSL 330 | §2.2 GLSL 410 | 결정 #5 |
 | §2.4 atlas (GLM) | §2.4 (vmath) | 결정 #10 |
 | §3 EnTT registry/struct | §3 SJH::scene::Component 클래스 | 결정 #2 |
@@ -1730,7 +1730,7 @@ Composite 임의 깊이 허용 (사용자 결정 2026-05-24). 단 같은 Playabl
 | §5.3 GLFW 컨텍스트 힌트 직접 강제 | §2.1 sb7::init() override | sb7 가 흡수 |
 | §6 EnTT 결합 AnimationSystem | §6 SJH::scene + Component | 결정 #2 |
 | §7 Tweeny | §7 (동일 + step 함정 강조) | memory 일치 |
-| §8 FMOD Core | §8 + `doc/FMOD_Setup.md` | 본 저장소 명세 재활용 |
+| §8 FMOD Core | §8 + `doc/api/FMOD_Setup.md` | 본 저장소 명세 재활용 |
 | §9 Application::Update/Render | §9 main.cpp `render(double)` | 결정 #3, #17 |
 | 부록 A 디렉토리 | 부록 A `apps/_MyApp_/` | 결정 #4, #16 |
 | 부록 G ResourceManager | §12 SJH::resource_registry | 결정 #13 |

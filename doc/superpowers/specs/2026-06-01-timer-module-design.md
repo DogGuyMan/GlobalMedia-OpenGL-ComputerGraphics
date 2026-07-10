@@ -2,7 +2,7 @@
 
 - **날짜**: 2026-06-01
 - **대상**: `src/timer/` 신규 코어 모듈 (`SJH::timer`)
-- **레퍼런스**: `src/timer/timer.h` 주석의 C# `TimerComposite` + `Affector` / `SJH::fsm` (`StateMachine<TState,TOwner>`, `IFsmState<TOwner>`) / `doc/EngineAPI.md`
+- **레퍼런스**: `src/timer/timer.h` 주석의 C# `TimerComposite` + `Affector` / `SJH::fsm` (`StateMachine<TState,TOwner>`, `IFsmState<TOwner>`) / `doc/api/EngineAPI.md`
 
 ## 1. 배경 & 목적
 

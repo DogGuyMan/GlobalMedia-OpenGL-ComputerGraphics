@@ -29,7 +29,7 @@ ctest --test-dir build_ninja --output-on-failure
 - [`apps/_MyApp_/CLAUDE.md`](../apps/_MyApp_/CLAUDE.md) — 활성 데모(탑다운 슈터) 상세
 - [`src/CLAUDE.md`](../src/CLAUDE.md) — 18개 코어 모듈(`SJH::<module>` STATIC + `SJH::engine` 우산) 가이드
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md) — 모듈 의존 지도 + 역인덱스
-- [`doc/EngineAPI.md`](../doc/EngineAPI.md) — SJH 엔진 코어 API 레퍼런스(정본)
+- [`doc/api/EngineAPI.md`](../doc/api/EngineAPI.md) — SJH 엔진 코어 API 레퍼런스(정본)
 - [`doc/adr/README.md`](../doc/adr/README.md) — 결정 스토어 포인터
 
 ## Gotchas
@@ -42,6 +42,13 @@ ctest --test-dir build_ninja --output-on-failure
 ## Cross-module deps
 
 모듈별 상세는 각 `<module>/CLAUDE.md`(src/·apps/_MyApp_/·test/·cmake/·scripts/·vcpkg-overlay-ports/ 6종), 의존 그래프는 [`ARCHITECTURE.md`](../ARCHITECTURE.md), 결정 스토어는 [`doc/adr/README.md`](../doc/adr/README.md), 확장 전문(구 281줄 원문)은 [`doc/CLAUDE-extended.md`](../doc/CLAUDE-extended.md).
+
+## 설계 결정 가드레일
+
+- 구조 결정의 **확정 주체는 항상 사용자** — AI는 실측·옵션 비교표·추천까지 ("진행하세요" 류 단독 확정 금지). 확정 전 기록은 `[제안됨]`, 검증 후 `[검증됨 <커밋>]`.
+- 배치 결정 = 기존 소유자 grep 선행(design-decision-discipline §6.1), 모호하면 후보별 소유권 그래프(graphviz-class-diagram 결정 게이트). 신규 구조물 = 신고 4항(§2.5 + [`doc/templates/신규구조물신고서.md`](../doc/templates/신규구조물신고서.md)).
+- lock 결정 정본 = `doc/superpowers/specs/` D# — 새 제안은 정합표 선행, 상충은 "번복 제안" 분리(architecture-design-workflow).
+- 모든 설계 추천에 🔵실측/💭판단 라벨 + 등급별 행동(confidence-and-sourcing §1.5). 다축 제안은 축 분리 선언(§2.7 — 한 턴에 한 축).
 
 ## See also
 

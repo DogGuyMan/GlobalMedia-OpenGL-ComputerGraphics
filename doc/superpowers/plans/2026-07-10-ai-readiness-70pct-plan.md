@@ -83,7 +83,7 @@
 ### A+B+C — 모듈 CLAUDE.md 6장 (HO-0·2)
 - 템플릿 = **Five-Question 구조를 섹션으로 직접 사용** (C 자동채점 마커와 1:1 정합):
   `## Purpose (owns/configures)` / `## Quick commands`(bash fence — B2) / `## Key files`(3-5개 실경로 — B3) / `## Gotchas`(Why:/주의 마커 — B4·C-Q3) / `## Cross-module deps`(D 연동) / `## See also`(상대링크 — B5 + 결정 스토어 링크 — C-Q5). 각 장 30~80줄 (B1 밴드).
-- src/는 17 하위 모듈 1행 표 + 모듈별 상세는 기존 `.claude/architecture.md`·`doc/EngineAPI.md` 링크로 위임 (중복 서술 금지 — 기존 정본 존중).
+- src/는 17 하위 모듈 1행 표 + 모듈별 상세는 기존 `.claude/architecture.md`·`doc/api/EngineAPI.md` 링크로 위임 (중복 서술 금지 — 기존 정본 존중).
 - C-Q5: `doc/adr/README.md` 1장 — "이 레포의 결정 스토어 = `doc/superpowers/specs/`(LOCKED D# 관행) + 세션 메모리" 포인터 문서 (신규 체계 발명 금지, 기존 관행의 표준명 노출만).
 
 ### D — 의존 지도 (HO-3)

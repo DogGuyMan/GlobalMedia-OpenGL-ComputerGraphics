@@ -339,7 +339,7 @@ void AudioSystem::SetListener(const vmath::vec3 &pos, const vmath::vec3 &forward
     }
 }
 ```
-> FMOD 호출 시그니처는 `doc/FMODAPI.md` 와 기존 `AudioSystem.cpp` 의 include 패턴 준수.
+> FMOD 호출 시그니처는 `doc/api/FMODAPI.md` 와 기존 `AudioSystem.cpp` 의 include 패턴 준수.
 
 - [ ] **Step 3: FmodPlayable worldPos 확장**
 
@@ -1237,7 +1237,7 @@ git commit -m "docs(progress): M6 시퀀싱+사운드 완료 반영"
 1. `cmake --preset ninja` 재configure (CMake 파일 신규 — Spawns lib).
 2. **Task 1** 부터 순차. 각 Task 는 빌드 성공 + 실행 검증 + (사용자 승인) 커밋.
 3. 권장 실행 방식: **subagent-driven-development** (Task 당 fresh subagent + Task 간 리뷰).
-4. 막히면 우선 확인: `src/sprite/sprite_frame_clip.h`(clip 필드), `doc/FMODAPI.md`(3D 호출), `apps/_MyApp_/src/Stage/WaveController.{h,cpp}`(적 스폰 지점).
+4. 막히면 우선 확인: `src/sprite/sprite_frame_clip.h`(clip 필드), `doc/api/FMODAPI.md`(3D 호출), `apps/_MyApp_/src/Stage/WaveController.{h,cpp}`(적 스폰 지점).
 
 ---
 

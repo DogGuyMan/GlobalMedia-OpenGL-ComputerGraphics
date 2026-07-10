@@ -1,7 +1,7 @@
 # Doxyfile.in — Doxygen 설정 템플릿
 # cmake/Doxygen.cmake 의 configure_file() 로 다음 변수가 치환됩니다.
 #   @PROJECT_VERSION@     -> CMake project(... VERSION x.y.z) 버전
-#   @DOXYGEN_INPUT_DIR@   -> PROJECT_SOURCE_DIR/src        (엔진 코어 모듈)
+#   @DOXYGEN_INPUT_DIR@   -> PROJECT_SOURCE_DIR/src + apps/_MyApp_/src (엔진 코어 + 클라이언트)
 #   @DOXYGEN_PAGES_DIR@   -> PROJECT_SOURCE_DIR/doxygen/pages  (\page 마크다운)
 #   @DOXYGEN_OUTPUT_DIR@  -> PROJECT_SOURCE_DIR/doxygen        (html/ 출력 루트)
 #
@@ -12,7 +12,7 @@ PROJECT_NAME           = "OpenGL-ComputerGraphics"
 PROJECT_NUMBER         = @PROJECT_VERSION@
 PROJECT_BRIEF          = "SJH 엔진 — Core/Client 분리 + Actor/Component 씬 그래프 + SceneRenderer (C++17 / CMake)"
 
-#  입출력 경로 — src/ 코어 모듈 + doxygen/pages/ 마크다운만 (apps/ 데모는 범위 외)
+#  입출력 경로 — src/ 코어 모듈 + apps/_MyApp_/src 클라이언트 + doxygen/pages/ 마크다운
 INPUT                  = @DOXYGEN_INPUT_DIR@ @DOXYGEN_PAGES_DIR@
 OUTPUT_DIRECTORY       = @DOXYGEN_OUTPUT_DIR@
 RECURSIVE              = YES

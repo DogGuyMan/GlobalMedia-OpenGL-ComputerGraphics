@@ -304,7 +304,7 @@ git commit -m "build(engine): 우산 SJH::engine 에 SJH::timer 합류 (16 모�
 
 - [ ] **Step 1: stub 참조 여부 확인**
 
-Run: `grep -rn "TopdownShooter::Timer\|src/Timer/timer.h\|\"Timer/timer.h\"" apps/ src/ || echo "no references"`
+Run: `grep -rn "TopdownShooter::Timer\|src/timer/timer.h\|\"timer/timer.h\"" apps/ src/ || echo "no references"`
 Expected: `no references` (구 stub `TopdownShooter::Timer`는 빈 클래스라 사용처 없음 예상).
 만약 참조가 나오면 해당 사용처를 `#include "timer/timer.h"` + `SJH::Timer::Timer`로 먼저 전환한 뒤 진행.
 

@@ -314,7 +314,7 @@ Effekseer 파티클 렌더를 SJH PostFX 체인 안으로 통합 — 현재 `app
 3. `doc/superpowers/specs/2026-05-27-sp-renderstage-camera-stage-design.md` (선행 SP — 완료 가정)
 4. `doc/design/PostFX.md` (ordered pass list 정통)
 5. `doc/handoffs/2026-05-27/2026-05-27-pass-component-2camera-session.md` (2-Camera 패턴)
-6. `doc/EngineAPI.md` §3.10 (SceneRenderer / IRenderStage)
+6. `doc/api/EngineAPI.md` §3.10 (SceneRenderer / IRenderStage)
 7. `apps/_MyApp_/src/VFX/VFXSystem.{h,cpp}` (현 Effekseer Manager/Renderer owner)
 8. `apps/_MyApp_/src/VFX/EffekseerPlayable.{h,cpp}` (trigger 추상)
 9. `apps/_MyApp_/main.cpp` (현 통합 상태 — 특히 VFX.Draw 위치)

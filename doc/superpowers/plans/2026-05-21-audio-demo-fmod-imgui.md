@@ -30,7 +30,7 @@
 **Reference (read-only):**
 - `<apps>/imguitest/main.cpp` — ImGui v1.53 init/shutdown 패턴
 - `apps/imguitest/CMakeLists.txt` — chapter CMakeLists 패턴
-- `doc/FMOD_Setup.md` §6 — POST_BUILD copy 패턴
+- `doc/api/FMOD_Setup.md` §6 — POST_BUILD copy 패턴
 - `cmake/Dependency.cmake` — fmod/fmodstudio 타겟 등록 위치
 
 ---
@@ -63,7 +63,7 @@ add_custom_command(TARGET ${CHAPTER_NAME} POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
         $<TARGET_FILE_DIR:${CHAPTER_NAME}>/resources)
 
-# FMOD 동적 라이브러리 — 실행 파일 옆으로 (doc/FMOD_Setup.md §6)
+# FMOD 동적 라이브러리 — 실행 파일 옆으로 (doc/api/FMOD_Setup.md §6)
 if(TARGET fmod)
     add_custom_command(TARGET ${CHAPTER_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -177,7 +177,7 @@ Expected: 3개 파일 (Master.bank, Master.strings.bank, Music.bank) 표시.
 `.gitignore` 의 FMOD 관련 줄(`include/fmod/` 근처) 다음에 한 줄 추가:
 
 ```
-# FMOD 샘플 bank — 라이선스상 재배포 제약 (doc/FMOD_Setup.md §7 와 동일 사유)
+# FMOD 샘플 bank — 라이선스상 재배포 제약 (doc/api/FMOD_Setup.md §7 와 동일 사유)
 apps/*/resources/banks/
 ```
 

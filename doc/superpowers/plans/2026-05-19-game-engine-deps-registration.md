@@ -697,9 +697,9 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 FMOD Core API 는 독점 SDK 라 서브모듈/등록 대상이 아니다. 설치 절차만 문서화한다.
 
 **Files:**
-- Create: `doc/FMOD_Setup.md`
+- Create: `doc/api/FMOD_Setup.md`
 
-- [ ] **Step 1: `doc/FMOD_Setup.md` 작성**
+- [ ] **Step 1: `doc/api/FMOD_Setup.md` 작성**
 
 ```markdown
 # FMOD Core API 설치 가이드
@@ -753,7 +753,7 @@ lib/windows/fmodL_vc.lib   fmodL.dll
 ## 5. Dependency.cmake 등록 (향후 작업 — 참고용 스텁)
 
 ```cmake
-# ====== FMOD Core API (수동 설치 — doc/FMOD_Setup.md 참조) ======
+# ====== FMOD Core API (수동 설치 — doc/api/FMOD_Setup.md 참조) ======
 if(EXISTS "${CMAKE_SOURCE_DIR}/include/fmod/fmod.h")
     add_library(fmod SHARED IMPORTED)
     if(WIN32)
@@ -766,7 +766,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/include/fmod/fmod.h")
     endif()
     target_link_libraries(game_deps INTERFACE fmod)
 else()
-    message(STATUS "FMOD 미설치 — 오디오 비활성. doc/FMOD_Setup.md 참조")
+    message(STATUS "FMOD 미설치 — 오디오 비활성. doc/api/FMOD_Setup.md 참조")
 endif()
 ```
 
@@ -790,13 +790,13 @@ add_custom_command(TARGET ${CHAPTER_NAME} POST_BUILD
 
 - [ ] **Step 2: 문서 존재 확인**
 
-Run: `ls doc/FMOD_Setup.md`
+Run: `ls doc/api/FMOD_Setup.md`
 Expected: 경로 출력.
 
 - [ ] **Step 3: 커밋**
 
 ```bash
-git add doc/FMOD_Setup.md
+git add doc/api/FMOD_Setup.md
 git commit -m "[doc] : FMOD Core API 설치 가이드 추가
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
@@ -817,7 +817,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```markdown
 - `extern/sb7code/` — SuperBible 7 원본 (Git 서브모듈, glfw3 + sb7 소스)
 - `extern/box2d` (v2.4.1) / `extern/Effekseer` / `extern/entt` / `extern/tweeny` / `extern/stb` — 게임/엔진 라이브러리 서브모듈. 버전 추적·재빌드 소스용이며, 빌드는 `lib/`·`include/` 체크인 산출물에 의존. 재빌드는 `shell/BuildExternLibs.{sh,bat}`.
-- `doc/FMOD_Setup.md` — FMOD Core API 수동 설치 가이드 (독점 SDK, 서브모듈 불가)
+- `doc/api/FMOD_Setup.md` — FMOD Core API 수동 설치 가이드 (독점 SDK, 서브모듈 불가)
 ```
 
 - [ ] **Step 2: `.claude/CLAUDE.md` — Dependency layer 섹션에 game_deps 설명 추가**

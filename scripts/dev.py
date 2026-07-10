@@ -724,6 +724,7 @@ GLOBAL_SKILLS = (
     "code-design-review-lenses",
     "confidence-and-sourcing",
     "design-decision-discipline",
+    "graphviz-class-diagram",
     "response-quality-calibration",
     "modular-build-discipline",
     "socratic-tutor",

@@ -54,4 +54,4 @@ cmake --build --preset ninja --target sjhopengl_render
 
 ## See also
 - [ARCHITECTURE.md](../ARCHITECTURE.md) (HO-3 생성 중) · [결정 스토어](../doc/adr/README.md)
-- [.claude/architecture.md](../.claude/architecture.md) · [doc/EngineAPI.md](../doc/EngineAPI.md)
+- [.claude/architecture.md](../.claude/architecture.md) · [doc/api/EngineAPI.md](../doc/api/EngineAPI.md)

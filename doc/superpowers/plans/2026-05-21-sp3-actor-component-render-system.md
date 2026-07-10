@@ -93,7 +93,7 @@ Expected: 출력 없음.
 
 ```bash
 git add cmake/Dependency.cmake .claude/CLAUDE.md
-git commit -m "[remove] : entt CMake/CLAUDE.md 잔재 정리 (SP3 prereq)
+git commit -m "[remove] : entt cmake/CLAUDE.md 잔재 정리 (SP3 prereq)
 
 extern/entt 와 include/entt 는 이미 파일 시스템에서 제거됨.
 남은 잔재만 정리:

@@ -23,7 +23,7 @@ jobs:
           ARCHITECTURE.md
           src/CLAUDE.md test/CLAUDE.md apps/_MyApp_/CLAUDE.md
           cmake/CLAUDE.md scripts/CLAUDE.md vcpkg-overlay-ports/CLAUDE.md doc/CLAUDE.md
-          doc/superpowers/plans doc/superpowers/specs
+          doc/superpowers/plans doc/superpowers/specs doc/templates
 
       - name: Run score_cpp.py (informational — full category snapshot)
         if: always()

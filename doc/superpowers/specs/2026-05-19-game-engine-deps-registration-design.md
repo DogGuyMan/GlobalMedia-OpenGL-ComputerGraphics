@@ -26,7 +26,7 @@ FMOD Core API 는 등록하지 않고 설치 가이드 문서만 작성한다.
 |---|---|
 | 통합 방식 | 서브모듈(`extern/`) + 사전 빌드 산출물 체크인 — sb7/glfw 패턴 |
 | 링크 구조 | 신규 `game_deps` INTERFACE 집계 타겟 (`project_deps` 와 대칭, 무변경) |
-| FMOD | 계획 제외 — `doc/FMOD_Setup.md` 가이드 문서만 작성 |
+| FMOD | 계획 제외 — `doc/api/FMOD_Setup.md` 가이드 문서만 작성 |
 | Box2D 버전 | v2.4.1 (C++ API) 태그 고정 |
 
 ## 라이브러리 분류
@@ -88,7 +88,7 @@ target_link_libraries(타겟 PRIVATE project_deps game_deps)
 - `build-extern-libs.yml` (macOS) — 신규 라이브러리 빌드 단계 추가
 - `build-msvc.yml` (Windows) — 신규 라이브러리 빌드 단계 추가
 
-## FMOD 설치 가이드 — `doc/FMOD_Setup.md` (한국어)
+## FMOD 설치 가이드 — `doc/api/FMOD_Setup.md` (한국어)
 
 빌드 통합은 미포함. 문서 내용:
 - FMOD Core API SDK 다운로드 (계정 필요, GitHub 서브모듈 불가 이유)
@@ -104,7 +104,7 @@ target_link_libraries(타겟 PRIVATE project_deps game_deps)
 
 - `extern/` 서브모듈 목록에 신규 5종 반영
 - Dependency layer 섹션에 `game_deps` 집계 타겟 설명 추가
-- Reference 섹션에 `doc/FMOD_Setup.md` 추가
+- Reference 섹션에 `doc/api/FMOD_Setup.md` 추가
 
 ## 검증 방법
 

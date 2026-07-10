@@ -48,7 +48,7 @@ apps/audio_demo/
 
 `.gitignore` 추가:
 ```
-# FMOD 샘플 bank — 라이선스상 재배포 제약 (doc/FMOD_Setup.md §7 와 동일 사유)
+# FMOD 샘플 bank — 라이선스상 재배포 제약 (doc/api/FMOD_Setup.md §7 와 동일 사유)
 apps/*/resources/banks/
 ```
 
@@ -205,7 +205,7 @@ add_custom_command(TARGET ${CHAPTER_NAME} POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/resources
         $<TARGET_FILE_DIR:${CHAPTER_NAME}>/resources)
 
-# FMOD 동적 라이브러리 — 실행 파일 옆으로 (doc/FMOD_Setup.md §6)
+# FMOD 동적 라이브러리 — 실행 파일 옆으로 (doc/api/FMOD_Setup.md §6)
 if(TARGET fmod)
     add_custom_command(TARGET ${CHAPTER_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
