@@ -1,10 +1,18 @@
 /*
- * render-multipass-seq.dot - 3-6 한 프레임 render() 호출 시퀀스 (시간순 플로우)
+ * render-multipass-seq.dot - "버그잡는게임" 한 프레임 render() 호출 시퀀스 (세로 배치)
+ *   (2026-07-12 갱신 - PassIterator.Execute 가 IPassable 들을 위->아래 순회. PostFX 는 효과 개수만큼 자가 루프.
+ *    프레임 준비 노드 + DeviceContext 노드 제거, GL 호출은 각 Pass 라벨에 인라인. 폭 축소.)
  *
- * Graphviz 는 시퀀스 전용이 아니므로, 시간순 세로 플로우 + 참여자 색으로 표현.
- *   회색=App/ImGui · 주황=stage · 파랑=SceneRenderer 코어 · 빨강=DeviceContext · 노랑=PostFX
+ * Graphviz 는 네이티브 sequence 가 없어 *세로 시간축 spine(위->아래) + 순번 라벨 에지* 로 호출 순서를 표현한다.
+ *   굵은 파랑 spine = PassIterator.Execute 의 Pass 순회(핵심 렌더 경로). GL 호출(BeginFrame/BindTarget/DrawIndexed 등)은
+ *   DeviceContext 노드 대신 각 Pass 노드 라벨 "GL:" 줄에 인라인 - 공유 facade 로 향하던 장거리 에지 제거.
+ *   WorldPass 헬퍼(LightUboUploader / RenderableProcessor / MeshRenderer)는 한 행에 횡단 배치.
+ *   PostFxPass 는 config 개수(N)만큼 인스턴스가 mPasses 에 있어 *자가 루프* 로 before->output 체이닝을 표현.
+ *   회색=App · 노랑=Pass · 초록=render 헬퍼.
  *
+ * 근거: apps/_MyApp_/main.cpp::render() + OnSceneSetup(PostFX config 루프 + present) + PassIterator.Execute.
  * 렌더: dot -Tsvg doc/diagrams/render-multipass-seq.dot -o doc/diagrams/render-multipass-seq.svg
+ *        dot -Tpng -Gdpi=140 doc/diagrams/render-multipass-seq.dot -o doc/diagrams/render-multipass-seq.png
  */
 digraph RenderMultiPassSeq
 {
@@ -12,41 +20,51 @@ digraph RenderMultiPassSeq
 	bgcolor = "white";
 	fontname = "Helvetica";
 	labelloc = "t";
-	fontsize = 16;
-	label = "3-6  한 프레임 render() 호출 시퀀스";
-	nodesep = 0.3;
-	ranksep = 0.45;
-	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 10];
-	edge [fontname = "Helvetica", fontsize = 9, arrowhead = vee, color = "#555555"];
+	fontsize = 15;
+	label = "버그잡는게임 - 한 프레임 render() 호출 시퀀스 (세로 배치 · PostFX 효과 개수 자가 루프, 2026-07-12)";
+	nodesep = 0.4;
+	ranksep = 0.55;
+	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 10, fillcolor = "#f7f7f7"];
+	edge [fontname = "Helvetica", fontsize = 9, arrowhead = vee];
 
-	p1 [label = "① ImGui.NewFrame", fillcolor = "#eeeeee"];
-	p2 [label = "② StageFSM.Update(dt)   (Director · Physics · Effekseer sim)", fillcolor = "#eeeeee"];
-	p3 [label = "③ ScreenQuadStage.SetSources(지난 프레임 out ?: sceneFB)", fillcolor = "#fff2e0"];
-	loop [label = "for stage in mStages:   stage.Render(backbuffer)", shape = hexagon, fillcolor = "#f5f5f5"];
+	// ================= 좌측 spine 참여자 (위->아래 시간순, GL 호출은 라벨에 인라인) =================
+	App      [label = "game_application::render(dt)", fillcolor = "#ffe0b2"];
+	PI       [label = "PassIterator.Execute(DeviceContext, backbuffer)\nfor pass in mPasses:  Enabled skip · before = 직전 활성 GetPassResult", fillcolor = "#fff2cc"];
+	Skybox   [label = "SkyboxPass.Draw(before=null)\nGL: BeginFrame(sceneFB) clear + skybox 잎 Render", fillcolor = "#fff2e0"];
+	World    [label = "WorldPass.Draw(before=skybox out)\nGL: BindTarget(sceneFB, no-clear)", fillcolor = "#fff2e0"];
+	Particle [label = "VFX::ParticlePass.Draw(before 통과)\nGL: BindTarget(sceneFB) + Effekseer Draw + InvalidateStateCache", fillcolor = "#fff2e0"];
+	PostFx   [label = "PostFxPass.Draw  (효과 체인 - mPasses 안 N개 인스턴스)\nGL: before -> mOutput FBO blit (screen quad)", fillcolor = "#fff2e0", penwidth = 2, color = "#c9a227"];
+	Present  [label = "PostFxPass.Draw  (present · output=null)\nGL: 마지막 활성 결과 -> backbuffer 합성", fillcolor = "#fff2e0"];
+	ImGuiP   [label = "UI::ImGuiPass.Draw  (종단)\nGL: InvalidateStateCache + ImGui::Render + InvalidateStateCache", fillcolor = "#fff2e0"];
 
-	s0 [label = "[0] CameraStage(worldCam).Render", fillcolor = "#fff2e0"];
-	r1 [label = "SceneRenderer.RenderWithCamera(worldCam)", fillcolor = "#d6e8ff"];
-	r2 [label = "DeviceContext.BeginFrame(sceneFB)  —  bind + clear", fillcolor = "#ffd6d6"];
-	r3 [label = "조명 수집 → LightUniformDispatcher.Dispatch\n(모든 Program · 패스당 1회)", fillcolor = "#d6e8ff"];
-	r4 [label = "CollectFromActor (DFS) → MeshPassProcessor.Submit", fillcolor = "#d6e8ff"];
-	r5 [label = "SortMultiStage   (불투명 front→back / 투명 back→front)", fillcolor = "#d6e8ff"];
-	r6 [label = "MeshPassProcessor.Process — program/material/state 전환마다:\nPropertyBlockSetter · PipelineStateSetter · DeviceContext.DrawIndexed", fillcolor = "#d6e8ff"];
+	// ================= WorldPass 헬퍼 3종 (횡단 배치 - 한 행) =================
+	Uploader [label = "LightUboUploader", fillcolor = "#c8e6c9"];
+	RP       [label = "RenderableProcessor", fillcolor = "#c8e6c9"];
+	Mesh     [label = "Scene::MeshRenderer (IRenderable 잎)\nGL: UseProgram + BindSamplers + DrawIndexed", fillcolor = "#c8e6c9"];
 
-	s1 [label = "[1] ParticleStage.Render", fillcolor = "#fff2e0"];
-	v1 [label = "DeviceContext.BindTarget(sceneFB, NoClear) → VFXSystem.Draw → Effekseer", fillcolor = "#ffd6d6"];
+	// ================= 좌측 spine (굵은 파랑 = Execute Pass 순회, 위->아래) =================
+	edge [color = "#1565c0", penwidth = 2.0];
+	App      -> PI       [label = "[1] 게임 로직(Fsm/Director) + uniform 준비 후 Execute", color = "#777777", penwidth = 1.0];
+	PI       -> Skybox   [label = "[2] stage 0"];
+	Skybox   -> World    [label = "[3] stage 1"];
+	World    -> Particle [label = "[5] stage 2"];
+	Particle -> PostFx   [label = "[6] stage 3..3+N-1"];
+	PostFx   -> Present  [label = "[7] stage 3+N"];
+	Present  -> ImGuiP   [label = "[8] stage 종단"];
 
-	s2 [label = "[2] CameraStage(screenCam).Render → SceneRenderer\nPassComponent PostFX 선형 체인 (fog → bloom → …)", fillcolor = "#fff9c4"];
+	// ================= PostFX 자가 루프 (순서 도는 효과 Pass 나열) =================
+	edge [color = "#c9a227", penwidth = 1.6, style = solid];
+	PostFx -> PostFx [label = "  효과 Pass 순서 (config 순, before->output 체이닝):\l  gamma -> sharpening -> bloom -> fog -> grayscale_vignetting\l  (invert / blurring / sobel : 기본 off - PassIterator skip)\l"];
 
-	s3 [label = "[3] ScreenQuadStage.Render\nDeviceContext.BindTarget(backbuffer) → blit (EBO 재핀)", fillcolor = "#fff2e0"];
-
-	e1 [label = "④ ImGuiLayerStack.RenderAll → ImGui.Render   (backbuffer 위 UI)", fillcolor = "#eeeeee"];
-
-	p1 -> p2 -> p3 -> loop;
-	loop -> s0 [label = "stage[0]"];
-	s0 -> r1 -> r2 -> r3 -> r4 -> r5 -> r6;
-	r6 -> s1 [label = "stage[1]"];
-	s1 -> v1;
-	v1 -> s2 [label = "stage[2]"];
-	s2 -> s3 [label = "stage[3]"];
-	s3 -> e1;
+	// ================= WorldPass -> 헬퍼 서브 흐름 (상->하) =================
+	//   World -> LightUboUploader(상)  /  World -> RenderableProcessor -> MeshRenderer(하).
+	//   Uploader -> RP 세로 연결 = WorldPass::Draw 내부 호출 순서(Update/BindTo 후 Collect/Process).
+	edge [color = "#2e7d32", penwidth = 1.2, style = solid, constraint = true];
+	World    -> Uploader [label = "[4.1] Update(lights) + BindTo(programs)  (공유 LightBlock UBO)"];
+	edge [color = "#2e7d32", penwidth = 1.2, style = solid, constraint = false];
+	World    -> RP       [label = "[4.2] CollectFromActor(DFS) -> Submit / Sort / Process"];
+	edge [color = "#9ccc9c", penwidth = 1.0, style = dashed, arrowhead = open, constraint = true];
+	Uploader -> RP       [label = "Draw 내부 순서 (상->하)"];
+	edge [color = "#6a1b9a", penwidth = 1.0, style = dashed, constraint = true];
+	RP -> Mesh [label = "[4.3] per draw: ApplyRenderStateBlock -> Render(rc, cam)"];
 }

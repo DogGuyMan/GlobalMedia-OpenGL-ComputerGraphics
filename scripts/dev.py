@@ -191,7 +191,7 @@ def cmd_run(args) -> int:
         return proc.returncode
 
     log(f"---------일반 실행 ({exec_basename})---------")
-    log_path = ROOT / "log.txt"
+    log_path = ROOT / "log.ignore.txt"
     rc = _tee_run([f"./{exec_basename}"], cwd=exec_dir, log_path=log_path)
     log(f"실행 로그 저장: {log_path}")
     return rc

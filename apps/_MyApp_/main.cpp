@@ -190,10 +190,11 @@ namespace TopdownShooter
 				}
 
 				// 특수 초기값(vec3/int - InitFloats 밖) - 효과 머티리얼을 키로 조회해 set.
-				if (auto *fogMat = reg.FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_FOG))
+				mFogMatPtr = reg.FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_FOG);
+				if (mFogMatPtr)
 				{
-					fogMat->Properties.Vec3s["uFogColor"] = Playable::FOG_COLOR;
-					fogMat->Properties.Ints["uFogMode"] = Playable::FOG_MODE;
+					mFogMatPtr->Properties.Vec3s["uFogColor"] = Playable::FOG_COLOR;
+					mFogMatPtr->Properties.Ints["uFogMode"] = Playable::FOG_MODE;
 				}
 				// grayscale 공유 Material - HpGrayscalePostFX SSOT + PassDebugLayer read-only 표시용 캡처.
 				// ! 리펙토링 대상 -> Playable::VIGNETTE_COLOR를 왜 명시적으로 넣는것이지? 
@@ -204,8 +205,9 @@ namespace TopdownShooter
 				mGrayscaleMatPtr = reg.FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_GRAYSCALE_VIGNETTING);
 				if (mGrayscaleMatPtr)
 					mGrayscaleMatPtr->Properties.Vec3s["uVignetteColor"] = Playable::VIGNETTE_COLOR; // vec3 초기값(InitFloats 밖).
+				
 
-				RebindFogUniforms(); // fog uDepth(unit1) = sceneFB depth 텍스처 바인딩.
+				RebindFogUniforms(mFogMatPtr); // fog uDepth(unit1) = sceneFB depth 텍스처 바인딩.
 
 				// 화면 카메라 (resize aspect 추적용 - present 자체는 PostFxPass 가 backbuffer 직접 bind).
 				auto screenCamActor = SJH::Scene::CreateScreenCameraActor(ACTOR_SCREEN_CAMERA, mFbInfo.Aspect, mSceneFB.get());
@@ -394,7 +396,7 @@ namespace TopdownShooter
 					mCamera->SetTargetRenderTarget(mSceneFB.get());
 				if (mScreenCamera)
 					mScreenCamera->SetTargetRenderTarget(mSceneFB.get());
-				RebindFogUniforms(); // resize 후 fog uDepth 방어 재바인딩 (in-place 라 no-op이나 의미 보존, D2).
+				RebindFogUniforms(mFogMatPtr); // resize 후 fog uDepth 방어 재바인딩 (in-place 라 no-op이나 의미 보존, D2).
 			}
 
 			// ImGui NewFrame 우선 — io.WantCaptureMouse/Keyboard 가 입력 디스패치에 영향.
@@ -440,8 +442,8 @@ namespace TopdownShooter
 
 			// fog — WorldCamera projection 역행렬 송신 (Properties.Mat4s 자동 송신, D4).
 			// Camera 의 닫힌 해 inverse (cofactor 일반 inverse 폐기 — perspective/ortho 분기 자체 처리).
-			if (auto *fogMat = FindFogMaterial(); fogMat && mCamera)
-				fogMat->Properties.Mat4s[UNI_FOG_INV_PROJ] =
+			if (mFogMatPtr && mCamera)
+				mFogMatPtr->Properties.Mat4s[UNI_FOG_INV_PROJ] =
 				    mCamera->GetInverseProjectionMatrix();
 
 			// worldCam 라이트 업로드 - WorldPass 자체 uploader 에 스냅샷 주입(3.1). (SceneRenderer screen 경로 폐기 - 3.5)
@@ -455,7 +457,6 @@ namespace TopdownShooter
 			mImGuiStack.RenderAll(mShowEditor);
 
 			// stages 실행 - PassIterator 가 before/GetPassResult 체이닝으로 순회(현재 BeforeIndex=-1 -> before=nullptr, 사전배선 사용).
-			// ! 제거 대상  [S ! kybox, World, Particle, PostFx(e0..eN), ScreenQuad, ImGuiPass]. ImGuiPass(종단)가 ImGui::Render.
 			mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
 
 			// GU1 capture 모드 -- 180 프레임 도달 시 3 변형 렌더+캡처 후 종료.
@@ -637,6 +638,7 @@ namespace TopdownShooter
 		SJH::Mesh *mScreenQuadMeshPtr = nullptr;    ///< PostFxPass blit 용 screen quad (비소유, 소유=ResourceRegistry). // ! 모듈화 대상 (PostFX blit mesh = 파이프라인 자원)
 		SJH::Material *mGrayscaleMatPtr = nullptr;  ///< grayscale_vignetting 공유 Material (HpGrayscalePostFX 와 SSOT 공유, 소유=ResourceRegistry). // ! 모듈화 대상 (PostFX 머티리얼 = 파이프라인 자원)
 		SJH::Material *mPresentMatPtr = nullptr;    ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry). // ! 모듈화 대상 (present 머티리얼 = 파이프라인 자원)
+		SJH::Material *mFogMatPtr = nullptr;    ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry). // ! 모듈화 대상 (present 머티리얼 = 파이프라인 자원)
 
 		SJH::RenderTextureUPtr mSceneFB; // ! 모듈화 대상 (씬 렌더 FBO + depth(fog) = 파이프라인 중간 출력)
 		std::vector<SJH::RenderTextureUPtr> mPostFXFBs; ///< 효과별 중간 FBO (POSTFX_PROGRAM_CONFIGS 와 1:1, 소유). resize 동기. // ! 모듈화 대상 (PostFX 중간 FBO = 파이프라인 자원)
@@ -667,21 +669,13 @@ namespace TopdownShooter
 		//   golden capture 가 main 무침투로 이 파이프라인을 재사용하기 위한 모듈화 경계.
 		//   (capture 전용 mCaptureMode / mCaptureFrame 은 test/ 캡처 모듈로 별도 분리.)
 
-		// PostFX 공유 Material 단축 조회 — rr 의 mat_pass_<name> (RenderPipeline 에서 생성한 것만 존재).
-		// fog 패스는 현재 미생성이라 nullptr 반환 → 호출부(uInverseProjection/uDepth 송신)는 자연 no-op.
-		SJH::Material *FindFogMaterial() // ! 모듈화 대상 (fog 머티리얼 조회 헬퍼 = 파이프라인 보조)
-		{
-			return SJH::ResourceRegistry::Get().FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_FOG);
-		}
-
 		// fog material 의 uDepth 를 현재 mSceneFB depth 텍스처(unit 1)로 (재)바인딩. fog 미생성 시 guard no-op.
 		// startup + resize 직후 호출 — sceneFB 재생성 시 dangling 방지 (D2).
-		void RebindFogUniforms() // ! 모듈화 대상 (fog uDepth 재바인딩 = 파이프라인 보조, resize 시 호출)
+		void RebindFogUniforms(SJH::Material* mFogMatPtr) // ! 모듈화 대상 (fog uDepth 재바인딩 = 파이프라인 보조, resize 시 호출)
 		{
-			auto *fogMat = FindFogMaterial();
-			if (!fogMat || !mSceneFB || !mSceneFB->GetDepthAttachment())
+			if (!mFogMatPtr || !mSceneFB || !mSceneFB->GetDepthAttachment())
 				return;
-			fogMat->Properties.Textures[UNI_FOG_DEPTH] = {mSceneFB->GetDepthAttachment().get(), 1}; // unit 1 (uScene=0).
+			mFogMatPtr->Properties.Textures[UNI_FOG_DEPTH] = {mSceneFB->GetDepthAttachment().get(), 1}; // unit 1 (uScene=0).
 #ifdef MENTAL_MODEL_PHASE_1
 			// Phase1 학습 - depth_debug 패스도 동일 sceneFB depth 텍스처(unit1) 바인딩. (fog 미생성이면 위 return 으로 skip)
 			if (auto *ddMat = SJH::ResourceRegistry::Get().FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_DEPTH_DEBUG))

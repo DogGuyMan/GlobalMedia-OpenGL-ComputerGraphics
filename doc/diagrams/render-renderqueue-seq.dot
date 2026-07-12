@@ -1,0 +1,92 @@
+/*
+ * render-renderqueue-seq.dot - "버그잡는게임" RenderQueue 동작 시퀀스 (WorldPass 내부 파이프라인)
+ *   (2026-07-12 작성 - PassKind -> QueueLayer -> Submit -> Sort -> per-queue GL state 흐름.)
+ *
+ * 목표/범위: 멀티패스 중 *World 패스 한 번* 안에서 RenderQueue 가 어떻게 draw 순서 + GL state 를
+ *   결정하는지. 진실의 원천 = Material::SetPass(RenderQueue) 한 값에서 (queue 정수 + 7 GL state) 파생.
+ *
+ * Graphviz 는 네이티브 sequence 가 없어 *시간순 세로 스테이지 + 순번 라벨* 로 표현한다.
+ *   초록=render 코어 스테이지 · 빨강=DeviceContext(GL) · 노랑=참조 데이터(enum/state 표) · 회색=진입/결과.
+ *
+ * 근거: src/material/pass.h(RenderQueue enum + QueueOf + IsTransparentQueue + DefaultRenderStateBlockOf),
+ *        src/render/mesh_renderer.h(QueueLayer/RenderQueue/DrawOrder), renderable_processor.cpp(Sort/Process),
+ *        render_passable.impls.cpp(WorldPass::Draw / CollectFromActor).
+ * 렌더: dot -Tsvg doc/diagrams/render-renderqueue-seq.dot -o doc/diagrams/render-renderqueue-seq.svg
+ *        dot -Tpng -Gdpi=140 doc/diagrams/render-renderqueue-seq.dot -o doc/diagrams/render-renderqueue-seq.png
+ */
+digraph RenderQueueSeq
+{
+	rankdir = TB;
+	bgcolor = "white";
+	fontname = "Helvetica";
+	labelloc = "t";
+	fontsize = 15;
+	label = "버그잡는게임 - RenderQueue 동작 시퀀스 (WorldPass: PassKind -> QueueLayer -> Sort -> per-queue GL state, 2026-07-12)";
+	nodesep = 0.4;
+	ranksep = 0.5;
+	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 10];
+	edge [fontname = "Helvetica", fontsize = 9, arrowhead = vee, color = "#555555"];
+
+	// ===================== 메인 스테이지 (세로 시간순) =====================
+	s1 [label = "[1] PassIterator.Execute -> WorldPass.Draw(rec, before)", fillcolor = "#eeeeee"];
+	s2 [label = "[2] WorldPass: mClearsTarget ? BeginFrame(sceneFB) : BindTarget\n(SkyboxPass 가 이미 clear+skybox 로 sceneFB 채웠으면 clear 스킵)", fillcolor = "#d5e8d4"];
+
+	loop [label = "[3] CollectFromActor(Root, viewMat, cullingMask) - DFS 순회", shape = hexagon, fillcolor = "#e2efda"];
+
+	s3 [label = "[3.1] Actor 게이트: IsActive && (cullingMask &amp; layer)\nMeshRenderer 조회 · Skybox PassKind 제외(SkyboxPass 담당)", fillcolor = "#d5e8d4"];
+	s4 [label = "[3.2] queueLayer = Pass::QueueOf(Material.GetPass(), QueueOffset)\n= RenderQueue(순수) + DrawOrder(offset)     |     depthZ = (view * model)[3][2]  (카메라 앞 = 음수)", fillcolor = "#d5e8d4"];
+	s5 [label = "[3.3] RenderableProcessor.Submit(mr, depthZ)\n-> WorldEntry{ IRenderable* r, queueLayer, renderQueue, depth } push_back", fillcolor = "#c8e6c9"];
+
+	s6 [label = "[4] RenderableProcessor.Sort()  -  std::stable_sort (결정성/무깜빡임)\n1차: queueLayer asc   ·   2차: IsTransparentQueue(q &gt;= 2500) ? depth asc(back-to-front) : depth desc(front-to-back)", fillcolor = "#c8e6c9"];
+
+	s7 [label = "[5] RenderableProcessor.Process(rc, cam)  -  rc.InvalidateStateCache() 후 정렬된 큐 순회", fillcolor = "#c8e6c9"];
+	s8 [label = "[5.1] renderQueue [min,max) 필터 밖이면 skip\n(순수 RenderQueue 로 필터 - 음수 DrawOrder 누수 방지. 골든 per-queue 캡처 격리, 기본 무영향)", fillcolor = "#d5e8d4"];
+	s9 [label = "[5.2] DeviceContext.ApplyRenderStateBlock( r->GetRenderStateBlock() )\ndirty-check 로 Depth/Cull/Blend/Stencil 전환 시에만 gl* 호출 (queue 가 결정한 상태)", fillcolor = "#ffd6d6"];
+	s10 [label = "[5.3] r->Render(rc, cam)  =  MeshRenderer 잎 자가발행\nUseProgram + Material.Properties.BindSamplers + DrawIndexed", fillcolor = "#ffd6d6"];
+
+	s11 [label = "[6] 결과 draw 순서 (예): Opaque 2000 (front->back) -> AlphaTest 2450 -> Transparent 3000 (back->front)\n같은 queue 안에서는 QueueOffset(DrawOrder) 이 미세 순서 결정 (Outline 후행 등)", fillcolor = "#eeeeee"];
+
+	s1 -> s2 -> loop;
+	loop -> s3 [label = "per Actor"];
+	s3 -> s4 -> s5;
+	s5 -> loop [label = "다음 노드 (DFS 계속)", style = dashed, constraint = false, color = "#999999"];
+	loop -> s6 [label = "수집 완료"];
+	s6 -> s7 -> s8 -> s9 -> s10;
+	s10 -> s7 [label = "다음 WorldEntry", style = dashed, constraint = false, color = "#999999"];
+	s7 -> s11 [label = "큐 소진", style = invis];
+	s10 -> s11 [style = invis];
+
+	// ===================== 참조 데이터 A: RenderQueue enum (Unity 정수) =====================
+	enumTable [shape = plaintext, label = <
+		<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="1" CELLPADDING="3" BGCOLOR="#fffde7">
+		<TR><TD ALIGN="LEFT" COLSPAN="2"><B>Pass::RenderQueue (underlying = Unity Render Queue 정수)</B></TD></TR>
+		<TR><TD ALIGN="LEFT">StencilMaskWrite</TD><TD ALIGN="RIGHT">1999</TD></TR>
+		<TR><TD ALIGN="LEFT">Opaque</TD><TD ALIGN="RIGHT">2000</TD></TR>
+		<TR><TD ALIGN="LEFT">AlphaTest (sprite)</TD><TD ALIGN="RIGHT">2450</TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#B85450">TRANSPARENT_THRESHOLD (경계)</FONT></TD><TD ALIGN="RIGHT"><FONT COLOR="#B85450">2500</FONT></TD></TR>
+		<TR><TD ALIGN="LEFT">Skybox (SkyboxPass)</TD><TD ALIGN="RIGHT">2500</TD></TR>
+		<TR><TD ALIGN="LEFT">Transparent</TD><TD ALIGN="RIGHT">3000</TD></TR>
+		<TR><TD ALIGN="LEFT">TransparentDepthWrite (학습)</TD><TD ALIGN="RIGHT">3001</TD></TR>
+		<TR><TD ALIGN="LEFT">OutlineVisible / OutlineXRay</TD><TD ALIGN="RIGHT">4000/4001</TD></TR>
+		<TR><TD ALIGN="LEFT">Screen (PostFX blit)</TD><TD ALIGN="RIGHT">5000</TD></TR>
+		<TR><TD ALIGN="LEFT" COLSPAN="2"><FONT POINT-SIZE="8">q &gt;= 2500 = back-to-front (알파 합성) / q &lt; 2500 = front-to-back (z-cull)</FONT></TD></TR>
+		</TABLE>>];
+
+	// ===================== 참조 데이터 B: per-queue RenderStateBlock (Material SSoT) =====================
+	stateTable [shape = plaintext, label = <
+		<TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#fffde7">
+		<TR><TD><B>Queue</B></TD><TD><B>DepthTest</B></TD><TD><B>DepthWrite</B></TD><TD><B>Blend</B></TD><TD><B>Cull</B></TD></TR>
+		<TR><TD ALIGN="LEFT">Opaque 2000</TD><TD>on</TD><TD>on</TD><TD>off</TD><TD>BACK</TD></TR>
+		<TR><TD ALIGN="LEFT">AlphaTest 2450</TD><TD>on</TD><TD>on</TD><TD>off</TD><TD>0 (양면)</TD></TR>
+		<TR><TD ALIGN="LEFT">Skybox 2500</TD><TD>LEQUAL</TD><TD>off</TD><TD>off</TD><TD>FRONT</TD></TR>
+		<TR><TD ALIGN="LEFT">Transparent 3000</TD><TD>on</TD><TD>off</TD><TD>on</TD><TD>0 (양면)</TD></TR>
+		<TR><TD ALIGN="LEFT">Outline 4000/1</TD><TD>LEQUAL/GREATER</TD><TD>off</TD><TD>off</TD><TD>BACK</TD></TR>
+		<TR><TD COLSPAN="5" ALIGN="LEFT"><FONT POINT-SIZE="8">Material.SetPass(RenderQueue) 한 값 = DefaultRenderStateBlockOf 로 7 GL state 일괄 결정 (진실의 원천 단일화)</FONT></TD></TR>
+		</TABLE>>];
+
+	// 참조 데이터를 파이프라인 옆에 정렬 (queue 도출 스테이지 옆 = enum, state 적용 스테이지 옆 = state 표).
+	{ rank = same; s4; enumTable; }
+	{ rank = same; s9; stateTable; }
+	s4 -> enumTable  [style = dashed, color = "#c9a227", arrowhead = none, label = "queue 정수 근거", fontcolor = "#c9a227"];
+	s9 -> stateTable [style = dashed, color = "#c9a227", arrowhead = none, label = "GL state 근거", fontcolor = "#c9a227"];
+}

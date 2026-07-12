@@ -1,0 +1,281 @@
+// =============================================================================
+//  2026-06-25-sprite-class.dot   (2026-06-25)
+//
+//  [목표/범위]  SJH::sprite 모듈(src/sprite/)의 클래스 + 모듈간 의존 다이어그램.
+//               in-scope = sprite 의 4 타입(UniformAtlas / SpriteRenderer /
+//               SpriteSequencePlayable / SpriteFrameClip) + 자유 함수 ComputeUVRect.
+//               cross-module = sprite 가 *의존하는* 타 모듈(scene/render/material/
+//               object/texture/playable + spdlog) 의 베이스/타입 (박스 + 이름만).
+//
+//  [간선 5종 요약]
+//   - 상속(is-a)      : 빈 삼각형 실선  navy   (class D : public Base)
+//   - 실현(implements): 빈 삼각형 점선  black  (간접 - 외부 베이스 경유라 본 도엔 미사용)
+//   - 포함(owns)      : 채운 다이아     purple (unique_ptr / by-value 멤버)
+//   - 집약(refs)      : 빈 다이아       blue   (T* / vector<T*> 비소유 멤버)
+//   - 의존(uses)      : 점선 화살표     gray   (메서드 인자/반환/creates/Get())
+//
+//  [3층 grounding 출처]  (foundation 모듈 = 자기 .cpp 가 의존 간선의 출처)
+//   - 헤더 .h            : 멤버 간선(포함/집약), 상속 (uniform_atlas.h / sprite_component.h /
+//                          sprite_sequence_playable.h / sprite_frame_clip.h)
+//   - 모듈 자체 .cpp     : 사용 간선 + 리터럴 (uniform_atlas.cpp / sprite_component.cpp /
+//                          sprite_sequence_playable.cpp) — Image::Load / Texture::CreateTexture /
+//                          Uniforms::Set* / IPlayable->Stop()/Play() 등
+//   - CMakeLists.txt     : 모듈 의존 *방향*의 권위 출처 (target_link_libraries)
+//
+//  [스코프 출처/제외 사유]
+//   - spec: docs/superpowers/specs/2026-05-24-topdown-shooter-design.md sec.1.4 / 1.6,
+//           docs/superpowers/specs/2026-05-26-playable-component-interface-design.md sec.1.6
+//   - 제외: 외부 베이스의 *조상*(Component/IRenderable/IRenderStateProvider)은 박스조차 생략
+//           (skill: 외부 조상은 transitively 확장 금지, 직속 베이스에서 정지).
+//           private static / 익명 ns 헬퍼 없음 (모듈이 작음).
+//
+//  [방향성]  sprite -> {scene,render,material,object,texture,playable} 단방향.
+//            resource_registry / text 는 sprite 를 *역으로* link 하지만 그들이 sprite 의
+//            소비자이며 sprite 는 그들을 모름 -> sprite 의존셋 내 사이클 없음 (note 노드 단언).
+//
+//  [렌더]  dot -Tsvg  2026-06-25-sprite-class.dot -o 2026-06-25-sprite-class.svg
+//          dot -Tpng -Gdpi=140 2026-06-25-sprite-class.dot -o 2026-06-25-sprite-class.png
+// =============================================================================
+digraph SpriteClass
+{
+    // --- Phase 4 / A1: 의존-레이어 다이어그램 3종 세트 ---
+    rankdir=BT;                 // P4: 최다 피참조(foundation)=상단 / 최다 의존(orchestrator)=하단
+    splines=line;               // P5: 직선 직교 라우팅
+    bgcolor="white";
+    graph [fontname="Helvetica", fontsize=11, nodesep=0.30, ranksep=1.7, compound=true];
+    node  [shape=plaintext, fontname="Helvetica", fontsize=10];
+    edge  [fontname="Helvetica", fontsize=9];
+
+    // =====================================================================
+    //  범례 (Legend) — 렌더된 예시 간선 (텍스트 표가 아님). 행은 invisible
+    //  constraint=true 간선으로 세로 적층 (skill: many-cluster 범례 가로 폭증 방지).
+    // =====================================================================
+    subgraph cluster_legend
+    {
+        label="범례 (Legend) — 실제 간선 스타일"; labeljust="l"; fontsize=12;
+        color="#999999"; style="rounded,dashed";
+
+        L_a [label="파생 D"];   L_b [label="기반 Base"];
+        L_c [label="실현 C"];   L_d [label="«interface»"];
+        L_e [label="소유자"];   L_f [label="부품(owns)"];
+        L_g [label="보유자"];   L_h [label="참조부품(refs)"];
+        L_i [label="사용처"];   L_j [label="피사용(uses)"];
+
+        L_a -> L_b [arrowhead=onormal, style=solid,  color="#1f4e79", constraint=false, label=" 상속(is-a)"];
+        L_c -> L_d [arrowhead=onormal, style=dashed,  color="#333333", constraint=false, label=" 실현(implements)"];
+        L_e -> L_f [dir=both, arrowtail=diamond,  arrowhead=vee, color="#7030a0", constraint=false, label=" 포함(unique_ptr/by-value)"];
+        L_g -> L_h [dir=both, arrowtail=odiamond, arrowhead=vee, color="#2e75b6", constraint=false, label=" 집약(비소유 ptr/vector)"];
+        L_i -> L_j [style=dashed, arrowhead=vee, color="#777777", constraint=false, label=" 의존(uses)"];
+
+        // 세로 적층 (invisible, constraint=true)
+        edge [style=invis, dir=none, constraint=true];
+        L_b -> L_c; L_d -> L_e; L_f -> L_g; L_h -> L_i;
+        edge [style=solid, constraint=true];   // 기본값 복귀
+    }
+
+    // =====================================================================
+    //  외부 의존 (타 모듈 / forward) — 모듈별 중첩 sub-cluster (각자 테두리)
+    //  를 바깥 external 밴드로 감싸 상단 rank 에 고정. P1(모듈 박스)을 외부
+    //  모듈에도 적용하되 nested cluster + invisible constraint 로 가로폭 억제.
+    //  박스 + 이름만; 직속 베이스만 표기하고 조상은 정지.
+    // =====================================================================
+    subgraph cluster_ext
+    {
+        label="외부 의존 모듈 (foundation) — sprite 가 의존하는 타 모듈"; labeljust="l";
+        fontsize=12; style="rounded,dotted"; color="#888888"; penwidth=1.5;
+        node [shape=box, style="filled,rounded", fillcolor="#f2f2f2", fontsize=9];
+
+        subgraph cluster_ext_render
+        {
+            label="render"; labeljust="l"; fontsize=10; style="rounded"; color="#9dc3e6";
+            MeshRenderer [label="Scene::MeshRenderer\n«base» : Component, IRenderable"];
+        }
+        subgraph cluster_ext_playable
+        {
+            label="playable"; labeljust="l"; fontsize=10; style="rounded"; color="#9dc3e6";
+            PlayableBase [label="Playable::PlayableBase\n«abstract base» : IPlayable, Component"];
+            IPlayable    [label="«interface»\nPlayable::IPlayable"];
+        }
+        subgraph cluster_ext_texture
+        {
+            label="texture"; labeljust="l"; fontsize=10; style="rounded"; color="#9dc3e6";
+            Texture [label="SJH::Texture  (RAII)\nTextureUPtr = unique_ptr<Texture>"];
+            Image   [label="SJH::Image\n+ Load(name, path)"];
+        }
+        subgraph cluster_ext_material
+        {
+            label="material"; labeljust="l"; fontsize=10; style="rounded"; color="#9dc3e6";
+            Material [label="SJH::Material"];
+            Uniforms [label="«free fns» Material::Uniforms\nSetVec4/Vec3/Float/Int/Texture"];
+        }
+        subgraph cluster_ext_object
+        {
+            label="object"; labeljust="l"; fontsize=10; style="rounded"; color="#9dc3e6";
+            Mesh [label="SJH::Mesh\nbillboard plane"];
+        }
+        subgraph cluster_ext_spdlog
+        {
+            label="spdlog (3rd party, PRIVATE)"; labeljust="l"; fontsize=10; style="rounded,dashed"; color="#cccccc";
+            spdlog [label="spdlog\nerror()/info() 로깅"];
+        }
+
+        // intra-module 세로 적층 (각 모듈 박스 내부 2개 타입을 세로로 — 가로폭 억제)
+        edge [style=invis, dir=none, constraint=true];
+        Texture -> Image;
+        Material -> Uniforms;
+        PlayableBase -> IPlayable;
+        // inter-module 2열 묶음 (A: render->texture->object / B: playable->material->spdlog)
+        MeshRenderer -> Texture;   Image -> Mesh;
+        IPlayable -> Material;      Uniforms -> spdlog;
+        edge [style=solid, constraint=true];
+    }
+
+    // =====================================================================
+    //  src/sprite — in-scope 코어 클래스 (UML 3-compartment)
+    // =====================================================================
+    subgraph cluster_sprite
+    {
+        label="src/sprite  (SJH::sprite — 등간격 NxM atlas + SpriteRenderer)"; labeljust="l";
+        fontsize=13; style="rounded"; color="#385723"; penwidth=2;
+
+        // ----- 자유 함수 (free fn) — 실제 간선을 originate 하므로 노드로 둠 -----
+        ComputeUVRect [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>&laquo;free fn&raquo;<br/>Sprite::ComputeUVRect</b><br/><font point-size="8"><i>uniform_atlas.{h,cpp}</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + ComputeUVRect(idx, cols, tileSize, atlasW, atlasH) : vec4<br align="left"/>
+  + ComputeUVRect(idx, cols, tileW, tileH, atlasW, atlasH) : vec4<br align="left"/>
+  <font color="#777777">// GL 호출 없는 순수 math (frameIdx -&gt; uMin,vMin,uSize,vSize)</font><br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        // ----- UniformAtlas -----
+        UniformAtlas [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>Sprite::UniformAtlas</b><br/><font point-size="8"><i>Fluent Builder (move-only)</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mTexture : TextureUPtr  <font color="#7030a0">(owns)</font><br align="left"/>
+  - mAtlasWidth / mAtlasHeight : int<br align="left"/>
+  - mTileSize / mTileHeight : int<br align="left"/>
+  - mCols / mRows : int<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + LoadFromPNG(path) : UniformAtlas&amp;<br align="left"/>
+  + SetGrid(cols, rows) / SetTileSize(px) : UniformAtlas&amp;<br align="left"/>
+  + GetUVRect(idx) : vec4<br align="left"/>
+  + IsValid() / FrameCount() / Release()<br align="left"/>
+  + TextureId() / GetTexture() : const Texture*<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        // ----- SpriteFrameClip (data POD) -----
+        SpriteFrameClip [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#fff2cc" align="center"><b>SpriteSequence::SpriteFrameClip</b><br/><font point-size="8"><i>«struct» (data POD)</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">startFrame, frameCount, fps</font></td></tr>
+</table>>];
+
+        // ----- SpriteRenderer -----
+        SpriteRenderer [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>Sprite::SpriteRenderer</b><br/><font point-size="8"><i>: Scene::MeshRenderer</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + atlas : UniformAtlas*  <font color="#2e75b6">(refs)</font><br align="left"/>
+  + frameIdx : int  <font color="#777777">(SpriteSequencePlayable 가 갱신)</font><br align="left"/>
+  + tint : vec4 / flipX : bool / size : vec2<br align="left"/>
+  + enableHit / enableDissolve : bool<br align="left"/>
+  + dissolveThreshold / OutlineThickness : float<br align="left"/>
+  + dissolveOutlineColor : vec3<br align="left"/>
+  + dissolveTex : const Texture*  <font color="#2e75b6">(refs)</font><br align="left"/>
+  - mEffectClock : float<br align="left"/>
+  <font color="#777777">// base(MeshRenderer): Mesh* / Material* (refs)</font><br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + SpriteRenderer(UniformAtlas*, Mesh*, Material*)<br align="left"/>
+  + Update(dt) override<br align="left"/>
+  <font color="#777777">// uUvRect/uTint/uFlipX/uRoll/uEnableHit/uDissolve* 송신</font><br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        // ----- SpriteSequencePlayable -----
+        SpriteSequencePlayable [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>SpriteSequence::SpriteSequencePlayable</b><br/><font point-size="8"><i>: Playable::PlayableBase</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mSpritePtr : SpriteRenderer*  <font color="#2e75b6">(refs)</font><br align="left"/>
+  - mOwnedClip : SpriteFrameClip  <font color="#7030a0">(owns by-value)</font><br align="left"/>
+  - mClipPtr : const SpriteFrameClip*  <font color="#2e75b6">(refs)</font><br align="left"/>
+  - mClips : map&lt;int, const SpriteFrameClip*&gt;  0..*<br align="left"/>
+  - mOnClipEnter : map&lt;int, vector&lt;IPlayable*&gt;&gt;  0..*<br align="left"/>
+  - mCurrentClipIdx : int<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + SpriteSequencePlayable(SpriteRenderer*, const Clip*)<br align="left"/>
+  + SpriteSequencePlayable(SpriteRenderer*, Clip)<br align="left"/>
+  + RegisterClip(idx, Clip*) : Self&amp;<br align="left"/>
+  + RegisterOnClipEnter(idx, IPlayable*) : Self&amp;<br align="left"/>
+  + PlayClip(idx) / CurrentClip()<br align="left"/>
+  # OnUpdate(dt) override  <font color="#777777">// elapsed-&gt;frameIdx</font><br align="left"/>
+  </font></td></tr>
+</table>>];
+    }
+
+    // =====================================================================
+    //  간선 (Edges)
+    //  A1: 구조 간선(상속/포함/집약) = constraint=true (레이아웃 골격)
+    //      의존 간선(uses)          = constraint=false (cross-cut, 비간섭)
+    // =====================================================================
+
+    // --- 상속 (빈 삼각형 실선, navy) : 구조 = constraint=true ---
+    edge [arrowhead=onormal, style=solid, color="#1f4e79", dir=forward, arrowtail=none, constraint=true];
+    SpriteRenderer         -> MeshRenderer  [label="is-a"];
+    SpriteSequencePlayable -> PlayableBase  [label="is-a"];
+
+    // --- 포함 composition (채운 다이아, purple, owns) : 구조 = constraint=true ---
+    edge [dir=both, arrowtail=diamond, arrowhead=vee, style=solid, color="#7030a0", constraint=true];
+    UniformAtlas           -> Texture          [label="mTexture (unique_ptr)"];
+    SpriteSequencePlayable -> SpriteFrameClip  [label="mOwnedClip (by-value)"];
+
+    // --- 집약 aggregation (빈 다이아, blue, 비소유) : 구조 = constraint=true ---
+    edge [dir=both, arrowtail=odiamond, arrowhead=vee, style=solid, color="#2e75b6", constraint=true];
+    SpriteRenderer         -> UniformAtlas      [label="atlas"];
+    SpriteRenderer         -> Texture           [label="dissolveTex (비소유)"];
+    SpriteSequencePlayable -> SpriteRenderer    [label="mSpritePtr"];
+    SpriteSequencePlayable -> SpriteFrameClip   [label="mClipPtr / mClips 0..*"];
+    SpriteSequencePlayable -> IPlayable         [label="mOnClipEnter 0..* (비소유)"];
+
+    // --- 의존 dependency (점선, gray, uses) : cross-cut = constraint=false ---
+    edge [dir=forward, style=dashed, arrowhead=vee, arrowtail=none, color="#777777", constraint=false];
+    // UniformAtlas.cpp 사용 간선
+    UniformAtlas   -> Image      [label="Image::Load (creates)"];
+    UniformAtlas   -> Texture    [label="Texture::CreateTexture (creates)"];
+    UniformAtlas   -> ComputeUVRect [label="GetUVRect 위임"];
+    UniformAtlas   -> spdlog     [label="error/info"];
+    // SpriteRenderer.cpp 사용 간선
+    SpriteRenderer -> Uniforms   [label="Uniforms::Set* (uniform 송신)"];
+    SpriteRenderer -> Material   [label="*Material (base 멤버 송신 대상)"];
+    SpriteRenderer -> UniformAtlas [label="atlas-&gt;GetUVRect(frameIdx)"];
+    // SpriteSequencePlayable.cpp 사용 간선
+    SpriteSequencePlayable -> SpriteRenderer [label="mSpritePtr-&gt;frameIdx 기록"];
+    SpriteSequencePlayable -> IPlayable      [label="sideEffect-&gt;Stop()/Play()"];
+    // 기반 베이스가 끌어오는 타입 (생성자 인자로 base 전달)
+    SpriteRenderer -> Mesh       [label="ctor -&gt; base(Mesh*)"];
+    SpriteRenderer -> Material   [label="ctor -&gt; base(Material*)"];
+
+    // =====================================================================
+    //  방향성 주석 (양방향/사이클 검토 결과)
+    // =====================================================================
+    note_dir [shape=note, style="filled", fillcolor="#fff2cc", fontsize=10, label=<
+<table border="0" cellspacing="2"><tr><td align="left">
+<b>의존 방향 (CMake target_link_libraries 기준)</b><br align="left"/>
+- SJH::sprite ──&gt; scene / render / material / object / texture / playable : <b>단방향 (PUBLIC)</b><br align="left"/>
+- SJH::sprite ──&gt; spdlog : <b>단방향 (PRIVATE — .cpp 로깅 전용)</b><br align="left"/>
+- resource_registry / text ──&gt; SJH::sprite : <b>역방향 (sprite 의 소비자)</b> — sprite 는 이들을 모름<br align="left"/>
+- sprite 의존셋 내 사이클: <b>없음</b> (foundation 모듈, 단방향 link 그래프)<br align="left"/>
+- 양방향(빨강 dir=both) 간선: <b>해당 없음</b><br align="left"/>
+</td></tr></table>>];
+
+    // note 노드를 sprite cluster 근처에 고정 (rank 힌트 대신 invisible constraint edge)
+    edge [style=invis, dir=none, constraint=true, color="#000000"];
+    SpriteSequencePlayable -> note_dir;
+}

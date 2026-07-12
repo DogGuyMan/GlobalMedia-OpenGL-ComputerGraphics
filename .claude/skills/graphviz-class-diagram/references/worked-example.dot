@@ -1,0 +1,345 @@
+// =============================================================================
+//  render-main-class.dot  (2026-06-24)
+//  src/render <-> apps/_MyApp_/main.cpp 클래스 의존 다이어그램
+//  - 간선: 상속(빈 삼각형) / 포함=composition(채운 다이아몬드) /
+//          집약=aggregation(빈 다이아몬드) / 의존=dependency(점선 화살표) /
+//          양방향(빨강 dir=both)
+//  - 노드: 멤버 변수 + 멤버 함수 상세 (UML 3-compartment)
+//  렌더: dot -Tsvg 2026-06-24-render-main-class.dot -o 2026-06-24-render-main-class.svg
+// =============================================================================
+digraph RenderMainClass
+{
+    rankdir=TB;
+    bgcolor="white";
+    graph [fontname="Helvetica", fontsize=11, nodesep=0.5, ranksep=0.9, splines=spline, compound=true];
+    node  [shape=plaintext, fontname="Helvetica", fontsize=10];
+    edge  [fontname="Helvetica", fontsize=9];
+
+    // ---------------------------------------------------------------------
+    //  범례 (Legend)
+    // ---------------------------------------------------------------------
+    subgraph cluster_legend
+    {
+        label="범례 (Legend)"; labeljust="l"; fontsize=12; color="#999999"; style="rounded,dashed";
+        L_a [label="파생"]; L_b [label="기반"];
+        L_c [label="소유자"]; L_d [label="부품"];
+        L_e [label="보유자"]; L_f [label="참조부품"];
+        L_g [label="사용처"]; L_h [label="피사용"];
+        L_a -> L_b [arrowhead=onormal, label="  상속(is-a)"];
+        L_c -> L_d [dir=both, arrowtail=diamond,  arrowhead=vee, color="#7030a0", label="  포함(by-value/unique_ptr)"];
+        L_e -> L_f [dir=both, arrowtail=odiamond, arrowhead=vee, color="#2e75b6", label="  집약(비소유 ptr/vector)"];
+        L_g -> L_h [style=dashed, arrowhead=vee, color="#777777", label="  의존(uses)"];
+    }
+
+    // =====================================================================
+    //  main.cpp (apps/_MyApp_)  -- Application 루트
+    // =====================================================================
+    subgraph cluster_app
+    {
+        label="apps/_MyApp_/main.cpp"; labeljust="l"; fontsize=13; style="rounded"; color="#c00000"; penwidth=2;
+
+        game_application [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#f4cccc" align="center"><b>game_application</b><br/><font point-size="8"><i>: sb7::application, Bootstrap::IClientBootstrap</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mPassIterator : <b>PassIterator</b><br align="left"/>
+  - mWorldPassPtr : WorldPass*  <font color="#2e75b6">(관찰)</font><br align="left"/>
+  - mPresentPassPtr : PostFxPass*  <font color="#2e75b6">(관찰)</font><br align="left"/>
+  - mScreenQuadMeshPtr : Mesh*<br align="left"/>
+  - mGrayscaleMatPtr / mPresentMatPtr : Material*<br align="left"/>
+  - mSceneFB : FramebufferUPtr<br align="left"/>
+  - mPostFXFBs : vector&lt;FramebufferUPtr&gt;<br align="left"/>
+  - mDefaultTarget : RenderTargetUPtr<br align="left"/>
+  - mCamera / mScreenCamera : Scene::Camera*<br align="left"/>
+  - mSkyboxRenderer : IRenderable*<br align="left"/>
+  - mStageFsm / mCtx / mImGuiStack ...<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + init() / startup() / render(t) override<br align="left"/>
+  + OnResourcesReady() / OnSceneSetup() / OnBeforeFirstFrame()<br align="left"/>
+  + shutdown() / onKey() / onResize() override<br align="left"/>
+  - FindFogMaterial() : Material*<br align="left"/>
+  - RebindFogUniforms() / TogglePause()<br align="left"/>
+  </font></td></tr>
+</table>>];
+    }
+
+    // =====================================================================
+    //  src/render  -- 역할 Pass (render_passable)
+    // =====================================================================
+    subgraph cluster_render_pass
+    {
+        label="src/render/render_passable"; labeljust="l"; fontsize=13; style="rounded"; color="#1f4e79"; penwidth=2;
+
+        IPassable [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#dae3f3" align="center"><b>&laquo;interface&raquo;<br/>IPassable</b></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + BeforeIndex : int = -1<br align="left"/>
+  + Enabled : bool = true<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Draw(DeviceContext&amp;, const Texture* before) = 0<br align="left"/>
+  + GetPassResult() : const Texture* = 0<br align="left"/>
+  + GetPassKey() : string = 0<br align="left"/>
+  + OnResize(w, h)<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        WorldPass [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#cfe2f3" align="center"><b>WorldPass</b><br/><font point-size="8"><i>: IPassable</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mProc : <b>RenderableProcessor</b><br align="left"/>
+  - mUploader : <b>LightUboUploader</b><br align="left"/>
+  - mActivePrograms : vector&lt;Program*&gt;<br align="left"/>
+  - mCamera : Scene::Camera*<br align="left"/>
+  - mClearsTarget : bool = true<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Draw() / GetPassResult() / GetPassKey()="World"<br align="left"/>
+  + SetActivePrograms(vector&lt;Program*&gt;)<br align="left"/>
+  + SetClearsTarget(bool) : WorldPass&amp;<br align="left"/>
+  - CollectFromActor(Actor&amp;, view, mask)<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        SkyboxPass [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#cfe2f3" align="center"><b>SkyboxPass</b><br/><font point-size="8"><i>: IPassable</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mSkybox : IRenderable*<br align="left"/>
+  - mCamera : Scene::Camera*<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Draw() / GetPassResult()<br align="left"/>
+  + GetPassKey() = "Skybox"<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        PostFxPass [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#cfe2f3" align="center"><b>PostFxPass</b><br/><font point-size="8"><i>: IPassable</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mEffect : Material*<br align="left"/>
+  - mOutput : Framebuffer*  <font color="#777777">(nullptr=present)</font><br align="left"/>
+  - mQuad : Mesh*<br align="left"/>
+  - mBackbuffer : RenderTarget*<br align="left"/>
+  - mKey : string<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Draw() / GetPassResult()<br align="left"/>
+  + GetPassKey() = mKey<br align="left"/>
+  + SetBackbuffer(RenderTarget*)<br align="left"/>
+  </font></td></tr>
+</table>>];
+    }
+
+    // =====================================================================
+    //  src/render  -- 코어 (IRenderable / Processor / DeviceContext / Light)
+    // =====================================================================
+    subgraph cluster_render_core
+    {
+        label="src/render (core)"; labeljust="l"; fontsize=13; style="rounded"; color="#385723"; penwidth=2;
+
+        PassIterator [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>PassIterator</b></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mPasses : vector&lt;unique_ptr&lt;IPassable&gt;&gt;  <font color="#7030a0">(소유)</font><br align="left"/>
+  + DebugPassIndex : int = -1<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Add(unique_ptr&lt;IPassable&gt;) : int<br align="left"/>
+  + Find(key) : IPassable*<br align="left"/>
+  + Keys() : vector&lt;string&gt;<br align="left"/>
+  + Execute(DeviceContext&amp;, RenderTarget&amp;)<br align="left"/>
+  + Resize(w,h) / Clear()<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        IRenderable [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>&laquo;interface&raquo;<br/>IRenderable</b><br/><font point-size="8"><i>: IRenderStateProvider</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Render(DeviceContext&amp;, const Camera&amp;) = 0<br align="left"/>
+  + QueueLayer() : int = 0<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        MeshRenderer [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>Scene::MeshRenderer</b><br/><font point-size="8"><i>: Component, IRenderable</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Mesh : Mesh* const<br align="left"/>
+  + Material : Material* const<br align="left"/>
+  + Visible : bool / QueueOffset : int<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Render(rec, cam) / QueueLayer()<br align="left"/>
+  + GetRenderStateBlock() : RenderStateBlock&amp;<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        RenderableProcessor [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>RenderableProcessor</b></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mWorld : vector&lt;WorldEntry{IRenderable*, layer, depth}&gt;<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Submit(IRenderable*, depth)<br align="left"/>
+  + Sort() / Clear() / Size()<br align="left"/>
+  + Process(DeviceContext&amp;, const Camera&amp;)<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        DeviceContext [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>DeviceContext</b><br/><font point-size="8"><i>(Meyer singleton)</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mBoundProgram : const Program*<br align="left"/>
+  - mLast : Pass::RenderStateBlock<br align="left"/>
+  - mStateInitialized : bool<br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Get() : DeviceContext&amp;<br align="left"/>
+  + UseProgram() / BindVAO() / BindTexture()<br align="left"/>
+  + BindTarget() / BeginFrame() / Clear()<br align="left"/>
+  + ApplyRenderStateBlock() / InvalidateStateCache()<br align="left"/>
+  + DrawIndexed() / DrawArrays()<br align="left"/>
+  </font></td></tr>
+</table>>];
+
+        LightUboUploader [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#e2efda" align="center"><b>LightUboUploader</b></td></tr>
+  <tr><td align="left"><font point-size="9">
+  - mLightBlockUbo : unique_ptr&lt;UniformBuffer&gt;  <font color="#7030a0">(소유)</font><br align="left"/>
+  </font></td></tr>
+  <tr><td align="left"><font point-size="9">
+  + Update(dir, points, spots, viewPos)<br align="left"/>
+  + BindTo(vector&lt;Program*&gt;)<br align="left"/>
+  </font></td></tr>
+</table>>];
+    }
+
+    // =====================================================================
+    //  Client Pass (apps - IPassable 구현, render 아님)
+    // =====================================================================
+    subgraph cluster_client
+    {
+        label="apps/_MyApp_ (client IPassable)"; labeljust="l"; fontsize=12; style="rounded,dashed"; color="#bf9000";
+
+        ParticlePass [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#fff2cc" align="center"><b>VFX::ParticlePass</b><br/><font point-size="8"><i>: IPassable</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">- mVFX : VFXSystem*<br align="left"/>- mWorldCam : Scene::Camera*</font></td></tr>
+  <tr><td align="left"><font point-size="9">+ Draw() / GetPassResult()=nullptr<br align="left"/>+ GetPassKey()="Particle"</font></td></tr>
+</table>>];
+
+        ImGuiPass [label=<
+<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+  <tr><td bgcolor="#fff2cc" align="center"><b>UI::ImGuiPass</b><br/><font point-size="8"><i>: IPassable</i></font></td></tr>
+  <tr><td align="left"><font point-size="9">+ Draw() (ImGui::Render)<br align="left"/>+ GetPassResult()=nullptr / GetPassKey()="ImGui"</font></td></tr>
+</table>>];
+    }
+
+    // =====================================================================
+    //  외부 의존 (forward / 타 모듈) -- 단순 노드
+    // =====================================================================
+    subgraph cluster_ext
+    {
+        label="외부 (타 모듈 / forward)"; labeljust="l"; fontsize=11; style="rounded,dotted"; color="#aaaaaa";
+        node [shape=box, style="filled,rounded", fillcolor="#f2f2f2", fontsize=9];
+        sb7app   [label="sb7::application"];
+        IClient  [label="Bootstrap::IClientBootstrap"];
+        Component [label="Scene::Component"];
+        IRSP     [label="IRenderStateProvider"];
+        Material [label="Material"];
+        Mesh     [label="Mesh"];
+        Framebuffer [label="Framebuffer"];
+        RenderTarget [label="RenderTarget"];
+        Program  [label="Program"];
+        Camera   [label="Scene::Camera"];
+        ResReg   [label="ResourceRegistry"];
+        UniformBuffer [label="UniformBuffer"];
+    }
+
+    // =====================================================================
+    //  간선 (Edges)
+    // =====================================================================
+
+    // --- 상속 (빈 삼각형) ---
+    edge [arrowhead=onormal, style=solid, color="#1f4e79", dir=forward, arrowtail=none];
+    game_application -> sb7app;
+    game_application -> IClient;
+    WorldPass  -> IPassable;
+    SkyboxPass -> IPassable;
+    PostFxPass -> IPassable;
+    ParticlePass -> IPassable;
+    ImGuiPass  -> IPassable;
+    MeshRenderer -> Component;
+    MeshRenderer -> IRenderable;
+    IRenderable  -> IRSP;
+
+    // --- 포함 composition (채운 다이아몬드, 소유) ---
+    edge [dir=both, arrowtail=diamond, arrowhead=vee, style=solid, color="#7030a0"];
+    game_application -> PassIterator   [label="mPassIterator"];
+    game_application -> Framebuffer    [label="mSceneFB / mPostFXFBs 0..*"];
+    game_application -> RenderTarget   [label="mDefaultTarget"];
+    PassIterator -> IPassable          [label="mPasses 0..* (unique_ptr)"];
+    WorldPass -> RenderableProcessor   [label="mProc"];
+    WorldPass -> LightUboUploader      [label="mUploader"];
+    LightUboUploader -> UniformBuffer  [label="mLightBlockUbo"];
+
+    // --- 집약 aggregation (빈 다이아몬드, 비소유 ptr/vector) ---
+    edge [dir=both, arrowtail=odiamond, arrowhead=vee, style=solid, color="#2e75b6"];
+    game_application -> WorldPass   [label="mWorldPassPtr (관찰)"];
+    game_application -> PostFxPass  [label="mPresentPassPtr (관찰)"];
+    RenderableProcessor -> IRenderable [label="mWorld 0..* (비소유)"];
+    WorldPass -> Program            [label="mActivePrograms 0..*"];
+
+    // --- 의존 dependency (점선) ---
+    edge [dir=forward, style=dashed, arrowhead=vee, arrowtail=none, color="#777777"];
+    // main 이 생성/조립하는 Pass + 사용 리소스
+    game_application -> SkyboxPass   [label="creates/Add"];
+    game_application -> ParticlePass [label="creates/Add"];
+    game_application -> ImGuiPass    [label="creates/Add"];
+    game_application -> DeviceContext [label="Get()/Execute"];
+    game_application -> ResReg       [label="자원 조회/생성"];
+    game_application -> Material     [label="mGrayscale/Present"];
+    game_application -> Mesh         [label="mScreenQuadMesh"];
+    game_application -> Camera       [label="mCamera/mScreenCamera"];
+    // Pass 내부 사용
+    PassIterator -> DeviceContext;
+    PassIterator -> RenderTarget;
+    WorldPass -> Camera;
+    WorldPass -> DeviceContext;
+    SkyboxPass -> IRenderable [label="mSkybox"];
+    SkyboxPass -> Camera;
+    PostFxPass -> Material;
+    PostFxPass -> Framebuffer;
+    PostFxPass -> Mesh;
+    PostFxPass -> RenderTarget;
+    PostFxPass -> DeviceContext;
+    MeshRenderer -> Mesh;
+    MeshRenderer -> Material;
+    RenderableProcessor -> DeviceContext;
+    RenderableProcessor -> Camera;
+    LightUboUploader -> Program;
+    DeviceContext -> Program;
+    DeviceContext -> RenderTarget;
+
+    // =====================================================================
+    //  방향성 주석 (양방향 검토 결과)
+    // =====================================================================
+    note_dir [shape=note, style="filled", fillcolor="#fff2cc", fontsize=10, label=<
+<table border="0" cellspacing="2"><tr><td align="left">
+<b>의존 방향 (양방향 검토)</b><br align="left"/>
+- main.cpp  ──&gt;  src/render : <b>단방향</b> (Application 이 render 를 소유/사용)<br align="left"/>
+- src/render ──&gt; main.cpp : <b>없음</b> (render 는 client 를 모름 = 계층 청결)<br align="left"/>
+- render 내부 사이클: <b>없음</b> (IPassable 추상에 구현이 단방향 의존)<br align="left"/>
+- 양방향(빨강 dir=both) 간선: <b>해당 없음</b><br align="left"/>
+</td></tr></table>>];
+}

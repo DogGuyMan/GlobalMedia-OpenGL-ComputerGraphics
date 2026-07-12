@@ -1,80 +1,241 @@
 /*
- * render-multipass-deps.dot - 3-6 Renderer & Multi Pass Rendering 의존 관계
+ * render-multipass-deps.dot - "버그잡는게임" 멀티패스 렌더 파이프라인 클래스 의존 다이어그램
+ *   (2026-07-12 갱신 - PassIterator / IPassable 아키텍처. 구 SceneRenderer/CameraStage/
+ *    ScreenQuadStage/MeshPassProcessor/PropertyBlockSetter/PipelineStateSetter/PassComponent 전부 삭제 반영.)
  *
- * 노드 + 관계선 (클래스 다이어그램 아님).
- * 관계: 소유(holds, 빨강 diamond) / is-a(파생, 주황 onormal) / uses(호출, 파랑 dashed)
+ * 목표/범위: apps/_MyApp_/main.cpp(game_application) <-> src/render 렌더 파이프라인.
+ *   game_application 이 PassIterator 하나만 보유하고, PassIterator 가 IPassable* 들을 소유/순회한다.
+ *
+ * 5 관계: 상속(navy onormal) / 실현(black dashed onormal) / 합성(purple diamond) /
+ *          집약(blue odiamond) / 의존(gray dashed vee). 빨강 = 아키텍처 경계 누출(gl* 직접 호출).
+ *
+ * 근거: 헤더(멤버=합성/집약) src/render/*.h + render_passable/*.impls.h,
+ *        소비 본문(의존=usage) main.cpp::render() + mesh_renderer.cpp,
+ *        링크 방향 src/render/CMakeLists.txt(app -> SJH::render -> foundation -> GL, 단방향 무순환).
+ *   전이 요소: 구 render-migration-plan-v5.dot 의 draw_ops.h 는 별도 파일로 실현되지 않음
+ *              (BindSamplers 가 mesh_renderer.cpp / renderable_processor.cpp 에 흡수) -> 노드 제외.
  *
  * 렌더: dot -Tsvg doc/diagrams/render-multipass-deps.dot -o doc/diagrams/render-multipass-deps.svg
+ *        dot -Tpng -Gdpi=140 doc/diagrams/render-multipass-deps.dot -o doc/diagrams/render-multipass-deps.png
  */
 digraph RenderMultiPassDeps
 {
-	rankdir = TB;
+	rankdir = BT;
+	splines = line;
+	compound = true;
 	bgcolor = "white";
 	fontname = "Helvetica";
 	labelloc = "t";
-	fontsize = 16;
-	label = "3-6  Renderer & Multi Pass Rendering  의존 관계";
-	nodesep = 0.4;
-	ranksep = 0.85;
-	node [shape = box, style = "rounded,filled", fontname = "Helvetica", fontsize = 11];
+	fontsize = 15;
+	label = "버그잡는게임 - 멀티패스 렌더 파이프라인 클래스 의존 (PassIterator / IPassable, 2026-07-12)";
+	nodesep = 0.35;
+	ranksep = 1.1;
+	node [shape = plaintext, fontname = "Helvetica", fontsize = 10];
 	edge [fontname = "Helvetica", fontsize = 9];
 
-	App [label = "game_application\n(Application · mStages 소유)", fillcolor = "#ffe6cc", penwidth = 2];
-	IRenderStage [label = "IRenderStage\n«추상 stage»", fillcolor = "#d6e8ff", penwidth = 2, style = "rounded,filled,dashed"];
+	// ======================= FOUNDATION (top = 최다 피의존) =======================
+	GL [shape = box, style = "filled", fillcolor = "#ffd6d6", penwidth = 2,
+	    label = "OpenGL (gl3w)\n«외부 GL API»"];
 
-	subgraph cluster_stage {
-		label = "IRenderStage 구현 (멀티패스 단계)";
-		style = "rounded,dashed"; color = "#cc8844"; fontsize = 11;
-		node [fillcolor = "#fff2e0"];
-		CameraStage [label = "CameraStage\n(Camera 위임)"];
-		ParticleStage [label = "ParticleStage\n(Effekseer 합성)"];
-		ScreenQuadStage [label = "ScreenQuadStage\n(backbuffer 합성)"];
+	subgraph cluster_foundation {
+		label = "foundation 모듈 (SJH::material / program / object / scene / buffer)";
+		style = "rounded,dashed"; color = "#8fa8c8"; fontsize = 10;
+		node [shape = box, style = "rounded,filled", fillcolor = "#dae8fc"];
+
+		IRenderStateProvider [label = "IRenderStateProvider\n«interface · material»", style = "rounded,filled,dashed"];
+		Material     [label = "Material\n(: IRenderStateProvider)\n+ Properties / GetPass / GetRenderStateBlock"];
+		RenderStateBlock [label = "Pass::RenderStateBlock\n«struct · Depth/Cull/Blend/Stencil»", fillcolor = "#e8e8e8"];
+		Program      [label = "Program\n+ GetLocation / BindUniformBlocks"];
+		Mesh         [label = "Mesh\n+ GetVAO / GetIndexCount"];
+		Camera       [label = "Scene::Camera\n+ GetView/Proj / GetTargetRenderTarget"];
+		Component    [label = "Scene::Component\n«abstract»", style = "rounded,filled,dashed"];
+		Actor        [label = "Scene::Actor\n(Actor 트리)"];
+		RenderTarget [label = "RenderTarget\n«abstract»", style = "rounded,filled,dashed"];
+		RenderTexture [label = "RenderTexture\n(sceneFB · PostFX FBO)"];
+		UniformBuffer [label = "UniformBuffer\n(LightBlock UBO)"];
 	}
 
-	SceneRenderer [label = "SceneRenderer\n(조명·수집·정렬 조율)", fillcolor = "#d6e8ff"];
-	MeshPassProcessor [label = "MeshPassProcessor\n(DrawCommand 발행)", fillcolor = "#d6e8ff"];
-	LightUniformDispatcher [label = "LightUniformDispatcher\n(조명 일괄 송신)", fillcolor = "#d6e8ff"];
+	// ======================= SJH::render (중간 = 파이프라인 본체) =======================
+	subgraph cluster_render {
+		label = "SJH::render 모듈";
+		style = "rounded"; color = "#4c8c4a"; fontsize = 11;
 
-	PropertyBlockSetter [label = "PropertyBlockSetter\n(uniform · texture)", fillcolor = "#e0f0ff"];
-	PipelineStateSetter [label = "PipelineStateSetter\n(GL state)", fillcolor = "#e0f0ff"];
-	DeviceContext [label = "DeviceContext\n«싱글톤» GL facade", fillcolor = "#ffd6d6", penwidth = 2];
+		IPassable [fillcolor = "#fff2cc", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#fff2cc"><I>&#171;interface&#187;</I><BR/><B>IPassable</B></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw(rec : DeviceContext&amp;, before : Texture*)<BR/>+ GetPassResult() : Texture* {const}<BR/>+ OnResize(w,h) / GetPassKey()<BR/># BeforeIndex : int / Enabled : bool</TD></TR>
+			</TABLE>>];
 
-	Camera [label = "Camera", fillcolor = "#f0e0ff"];
-	RenderTarget [label = "RenderTarget\n«추상»", fillcolor = "#f0e0ff", style = "rounded,filled,dashed"];
-	Framebuffer [label = "Framebuffer\n(sceneFB · PostFX)", fillcolor = "#f0e0ff"];
-	DefaultRenderTarget [label = "DefaultRenderTarget\n(backbuffer FBO 0)", fillcolor = "#f0e0ff"];
+		IRenderable [fillcolor = "#fff2cc", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#fff2cc"><I>&#171;interface : IRenderStateProvider&#187;</I><BR/><B>IRenderable</B></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Render(rec, cam) {const}<BR/>+ QueueLayer() / RenderQueue() / DrawOrder()</TD></TR>
+			</TABLE>>];
 
-	PassComponent [label = "PassComponent\n(PostFX 단계)", fillcolor = "#fff9c4"];
-	VFXSystem [label = "VFXSystem → Effekseer", fillcolor = "#ffe6cc"];
+		SkyboxPass [fillcolor = "#d5e8d4", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#d5e8d4"><B>SkyboxPass</B> <I>: IPassable</I></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mSkybox : IRenderable* / mCamera : Camera*</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw (sceneFB clear + skybox, background-first)</TD></TR>
+			</TABLE>>];
 
-	// ── 상속 (is-a) ──
-	edge [color = "#cc8844", arrowhead = onormal, style = solid];
-	CameraStage -> IRenderStage;
-	ParticleStage -> IRenderStage;
-	ScreenQuadStage -> IRenderStage;
-	SceneRenderer -> IRenderStage [label = "Render 경로 deprecated", style = dashed, color = "#cccccc", fontcolor = "#aaaaaa"];
-	DefaultRenderTarget -> RenderTarget;
-	Framebuffer -> RenderTarget;
+		WorldPass [fillcolor = "#d5e8d4", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#d5e8d4"><B>WorldPass</B> <I>: IPassable</I></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mProc : RenderableProcessor  (합성)<BR/>- mUploader : LightUboUploader  (합성)<BR/>- mCamera : Camera* / mActivePrograms : vector&lt;Program*&gt;</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw / CollectFromActor(DFS)<BR/>+ SetActivePrograms / SetClearsTarget : Self&amp;</TD></TR>
+			</TABLE>>];
 
-	// ── 소유 (holds) ──
-	edge [color = "#aa3333", arrowhead = diamond, style = solid, penwidth = 1.7, fontcolor = "#aa3333"];
-	App -> IRenderStage [label = "mStages vector"];
-	SceneRenderer -> MeshPassProcessor [label = "value"];
-	SceneRenderer -> LightUniformDispatcher [label = "value"];
-	ParticleStage -> VFXSystem [label = "raw*"];
-	Camera -> RenderTarget [label = "targetRT*"];
+		PostFxPass [fillcolor = "#d5e8d4", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#d5e8d4"><B>PostFxPass</B> <I>: IPassable</I></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mEffect : Material* / mOutput : RenderTexture*<BR/>- mQuad : Mesh* / mBackbuffer : RenderTarget*</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw (before -&gt; output blit; output=null -&gt; present)<BR/>+ SetBackbuffer</TD></TR>
+			</TABLE>>];
 
-	// ── 호출 (uses) ──
-	edge [color = "#4488cc", arrowhead = vee, style = dashed, penwidth = 1, fontcolor = "#4488cc"];
-	CameraStage -> SceneRenderer [label = "RenderWithCamera"];
-	MeshPassProcessor -> PropertyBlockSetter [label = "Set"];
-	MeshPassProcessor -> PipelineStateSetter [label = "Set"];
-	MeshPassProcessor -> DeviceContext [label = "Draw*"];
-	LightUniformDispatcher -> DeviceContext [label = "UseProgram"];
-	PropertyBlockSetter -> DeviceContext [label = "BindTexture"];
-	ScreenQuadStage -> DeviceContext [label = "BindTarget / Draw"];
-	ParticleStage -> DeviceContext [label = "BindTarget"];
-	DeviceContext -> RenderTarget [label = "Bind()"];
-	SceneRenderer -> Camera [label = "View / Proj / RT"];
-	SceneRenderer -> PassComponent [label = "수집 (screenCam)", color = "#cc88cc", fontcolor = "#cc88cc"];
+		RenderableProcessor [fillcolor = "#d5e8d4", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#d5e8d4"><B>RenderableProcessor</B></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mWorld : vector&lt;WorldEntry{IRenderable*, layer, depth}&gt;</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Submit / Sort()(stable) / Process(rc, cam)<BR/>+ SetQueueFilter (골든 per-queue 격리)</TD></TR>
+			</TABLE>>];
+
+		LightUboUploader [fillcolor = "#d5e8d4", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#d5e8d4"><B>LightUboUploader</B></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mLightBlockUbo : unique_ptr&lt;UniformBuffer&gt;  (합성)</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Update(lights) : std140 pack<BR/>+ BindTo(programs) : 공유 UBO 결속</TD></TR>
+			</TABLE>>];
+
+		MeshRenderer [fillcolor = "#dae8fc", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#dae8fc"><B>Scene::MeshRenderer</B><BR/><I>: Component, IRenderable</I></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Mesh* const / Material* const / Visible / QueueOffset</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Render(잎) : UseProgram / BindSamplers / DrawIndexed<BR/>+ QueueLayer / GetRenderStateBlock (Material 위임)</TD></TR>
+			</TABLE>>];
+
+		DeviceContext [fillcolor = "#f8cecc", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#f8cecc"><B>DeviceContext</B><BR/><I>&#171;싱글톤 · GL facade · gl* 유일 소유&#187;</I></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mBoundProgram / mLast : RenderStateBlock</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ UseProgram / BindVAO / BindTexture / BindTarget<BR/>+ BeginFrame / ApplyRenderStateBlock(dirty-check)<BR/>+ InvalidateStateCache / DrawIndexed</TD></TR>
+			</TABLE>>];
+	}
+
+	// ======================= apps/_MyApp_ (하단 = 오케스트레이터) =======================
+	subgraph cluster_app {
+		label = "apps/_MyApp_ (TopdownShooter)";
+		style = "rounded"; color = "#cc8844"; fontsize = 11;
+
+		App [fillcolor = "#ffe6cc", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#ffe6cc"><B>game_application</B><BR/><I>: sb7::application, IClientBootstrap</I></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mPassIterator : PassIterator  (합성 · 유일 진입점)<BR/>- mStageFsm / mCamera* / mSceneFB / mDefaultTarget<BR/>- mWorldPassPtr* / mPresentPassPtr* (비소유 캐시)</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ OnSceneSetup() : PassIterator 조립(Add)<BR/>+ render(dt) : uniform 갱신 -&gt; PassIterator.Execute</TD></TR>
+			</TABLE>>];
+
+		ParticlePass [fillcolor = "#fff2e0", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#fff2e0"><B>VFX::ParticlePass</B> <I>: SJH::IPassable</I></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mVFX : VFXSystem* / mWorldCam : Camera*</TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw (Effekseer -&gt; sceneFB) / GetPassResult=null</TD></TR>
+			</TABLE>>];
+
+		ImGuiPass [fillcolor = "#fff2e0", label = <
+			<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+			<TR><TD BGCOLOR="#fff2e0"><B>UI::ImGuiPass</B> <I>: SJH::IPassable</I></TD></TR>
+			<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Draw : InvalidateStateCache + ImGui::Render (종단)</TD></TR>
+			</TABLE>>];
+
+		VFXSystem [shape = box, style = "rounded,filled", fillcolor = "#ffe6cc", label = "VFXSystem\n-> Effekseer"];
+	}
+
+	// PassIterator 는 개념상 render 소유물이지만 app 이 값-보유하므로 경계에 배치.
+	PassIterator [fillcolor = "#fff2cc", label = <
+		<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3">
+		<TR><TD BGCOLOR="#fff2cc"><B>PassIterator</B> <I>«SJH::render · main 유일 진입점»</I></TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">- mPasses : vector&lt;unique_ptr&lt;IPassable&gt;&gt;  (소유)</TD></TR>
+		<TR><TD ALIGN="LEFT" BALIGN="LEFT">+ Add / Find(key) / Keys / Resize / Clear<BR/>+ Execute(rec, backbuffer) : before/GetPassResult 체이닝 + Enabled skip</TD></TR>
+		</TABLE>>];
+
+	// ========================================================================
+	// 관계 (A1: 구조 constraint=true = 레이아웃 골격 / 의존 constraint=false = 교차)
+	// ========================================================================
+
+	// -- 상속 (navy onormal) --
+	edge [color = "#1f4e79", arrowhead = onormal, style = solid, penwidth = 1.2, constraint = true];
+	IRenderable   -> IRenderStateProvider;
+	MeshRenderer  -> Component;
+	RenderTexture -> RenderTarget;
+
+	// -- 실현 (black dashed onormal) --
+	edge [color = "#333333", arrowhead = onormal, style = dashed, penwidth = 1.1, constraint = true];
+	SkyboxPass   -> IPassable;
+	WorldPass    -> IPassable;
+	PostFxPass   -> IPassable;
+	ParticlePass -> IPassable;
+	ImGuiPass    -> IPassable;
+	MeshRenderer -> IRenderable;
+	Material     -> IRenderStateProvider;
+
+	// -- 합성 (purple diamond, owns) --
+	edge [color = "#7030a0", dir = both, arrowtail = diamond, arrowhead = vee, style = solid, penwidth = 1.3, constraint = true, fontcolor = "#7030a0"];
+	App              -> PassIterator [label = "mPassIterator"];
+	PassIterator     -> IPassable    [label = "mPasses 0..*"];
+	WorldPass        -> RenderableProcessor [label = "mProc"];
+	WorldPass        -> LightUboUploader    [label = "mUploader"];
+	LightUboUploader -> UniformBuffer       [label = "mLightBlockUbo"];
+
+	// -- 집약 (blue odiamond, refs) --
+	edge [color = "#2e75b6", dir = both, arrowtail = odiamond, arrowhead = vee, style = solid, penwidth = 1.1, constraint = false, fontcolor = "#2e75b6"];
+	RenderableProcessor -> IRenderable [label = "WorldEntry 0..*"];
+	MeshRenderer        -> Mesh;
+	MeshRenderer        -> Material;
+	WorldPass           -> Camera [label = "mCamera*"];
+	SkyboxPass          -> Camera;
+	SkyboxPass          -> IRenderable [label = "mSkybox*"];
+	ParticlePass        -> Camera;
+	ParticlePass        -> VFXSystem;
+	PostFxPass          -> Material [label = "mEffect*"];
+	PostFxPass          -> Mesh     [label = "mQuad*"];
+	PostFxPass          -> RenderTexture [label = "mOutput*"];
+	PostFxPass          -> RenderTarget  [label = "mBackbuffer*"];
+	Camera              -> RenderTarget  [label = "targetRT*"];
+	Material            -> Program;
+	Material            -> RenderStateBlock;
+
+	// -- 의존 (gray dashed vee, uses) --
+	edge [color = "#777777", arrowhead = vee, style = dashed, penwidth = 1.0, dir = forward, constraint = false, fontcolor = "#777777"];
+	App                 -> DeviceContext [label = "Execute(DC::Get())"];
+	PassIterator        -> DeviceContext [label = "Execute 인자"];
+	WorldPass           -> Program [label = "SetActivePrograms"];
+	WorldPass           -> Actor   [label = "CollectFromActor"];
+	WorldPass           -> DeviceContext;
+	SkyboxPass          -> DeviceContext;
+	PostFxPass          -> DeviceContext;
+	ParticlePass        -> DeviceContext;
+	ImGuiPass           -> DeviceContext [label = "InvalidateStateCache"];
+	RenderableProcessor -> DeviceContext [label = "ApplyRenderStateBlock"];
+	LightUboUploader    -> Program [label = "BindTo"];
+	MeshRenderer        -> DeviceContext [label = "UseProgram/DrawIndexed"];
+	MeshRenderer        -> Program [label = "BindSamplers"];
+	DeviceContext       -> RenderTarget [label = "BindTarget/BeginFrame"];
+	DeviceContext       -> Program [label = "UseProgram"];
+
+	// -- 아키텍처 경계 누출 (bold red) : gl* 직접 호출은 DeviceContext 만 --
+	edge [color = "#D50000", arrowhead = vee, style = solid, penwidth = 2.6, dir = forward, constraint = false, fontcolor = "#D50000"];
+	DeviceContext -> GL [label = "gl* 유일 소유 (허용된 누출)"];
+
+	// ======================= 방향 단언 + 범례 =======================
+	NoteDir [shape = note, fillcolor = "#fffde7", style = filled, fontsize = 9,
+	         label = "단방향 무순환: app -> SJH::render -> foundation -> GL.\n역방향 링크 없음 (CMake link 그래프 확인).\nParticlePass/ImGuiPass 는 app 거주 - Engine 이\ngame_deps(Effekseer)/imgui 를 PUBLIC 합류하지 않도록."];
+
+	Legend [shape = plaintext, label = <
+		<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="2" CELLPADDING="3" BGCOLOR="#fafafa">
+		<TR><TD ALIGN="LEFT"><B>범례 (5 UML 관계 + 경계)</B></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#1f4e79">&#9651;&#8212; 상속 is-a</FONT>  /  <FONT COLOR="#333333">&#9651;&#8230; 실현 implements</FONT></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#7030a0">&#9670;&#8594; 합성 owns</FONT>  /  <FONT COLOR="#2e75b6">&#9671;&#8594; 집약 refs</FONT></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT COLOR="#777777">&#8594;&#8230; 의존 uses</FONT>  /  <FONT COLOR="#D50000"><B>&#8594; 경계 누출 gl* (DeviceContext 단독)</B></FONT></TD></TR>
+		<TR><TD ALIGN="LEFT"><FONT POINT-SIZE="8">노랑 = interface · 초록 = render Pass/코어 · 파랑 = foundation · 주황 = app · 분홍 = GL facade</FONT></TD></TR>
+		</TABLE>>];
 }
