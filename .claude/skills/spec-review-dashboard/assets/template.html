@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 치환: <title> 의 {{SPEC_NAME}} -->
+    <title>{{SPEC_NAME}} · Spec Review</title>
+    <style>
+      :root {
+        --bg: #fafafa; --surface: #ffffff; --border: #e5e7eb; --border-strong: #d1d5db;
+        --text: #0f172a; --text-2: #475569; --text-3: #94a3b8;
+        --accent: #2563eb; --accent-soft: #eff6ff;
+        --green: #16a34a; --green-soft: #dcfce7;
+        --amber: #d97706; --amber-soft: #fef3c7;
+        --red: #dc2626; --red-soft: #fee2e2;
+        --gray: #64748b; --gray-soft: #f1f5f9;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased; }
+      .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+      .page { max-width: 1120px; margin: 0 auto; padding: 40px 36px 56px; }
+
+      /* (a) 헤더 — 치환: SPEC_NAME/SPEC_DATE/BRANCH/STATUS_BADGE_TEXT + 배지색(STATUS_COLOR=green|amber) */
+      .header { display: flex; justify-content: space-between; align-items: flex-end;
+        padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+      .header .eyebrow { font-size: 11px; font-weight: 600; color: var(--text-3);
+        letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+      .header h1 { font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+      .header .meta { text-align: right; font-size: 12px; color: var(--text-3); line-height: 1.7; }
+      .header .meta strong { color: var(--text); font-weight: 600; }
+      .status-badge { display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-left: 10px; }
+      .status-dot { width: 6px; height: 6px; border-radius: 999px; }
+
+      section { margin-bottom: 26px; }
+      section > h2 { font-size: 13px; font-weight: 700; margin: 0 0 10px;
+        text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); }
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+      .table-wrap { overflow-x: auto; } /* 표 가로스크롤 — body 스크롤 유발 금지 */
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { padding: 9px 14px; text-align: left; border-top: 1px solid var(--border); }
+      thead th { border-top: none; font-size: 11px; color: var(--text-3); text-transform: uppercase;
+        letter-spacing: 0.05em; font-weight: 600; background: var(--gray-soft); }
+      td.num, th.num { text-align: right; }
+
+      /* 확신도 앵커: 🔵=green(실측) · 🟡=amber(개연) · 💭=red(판단/미검증) — 이모지 3종 외 사용 금지 */
+      .conf-badge { display: inline-block; padding: 2px 8px; border-radius: 5px; font-weight: 700; font-size: 12px; }
+      .conf-green { background: var(--green-soft); color: var(--green); }
+      .conf-amber { background: var(--amber-soft); color: var(--amber); }
+      .conf-red   { background: var(--red-soft); color: var(--red); }
+
+      .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+      .status-proposed   { background: var(--amber-soft); color: var(--amber); }
+      .status-accepted   { background: var(--green-soft); color: var(--green); }
+      .status-superseded { background: var(--gray-soft); color: var(--gray); }
+
+      /* (c) 옵션 비교표 — 추천 행 하이라이트 */
+      tr.row-recommended td { background: var(--accent-soft); }
+      tr.row-recommended td:first-child { border-left: 3px solid var(--accent); }
+
+      /* (d) Before/After — 반응형 2컬럼 */
+      .diagram-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .diagram-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+      .diagram-panel .panel-title { padding: 8px 14px; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--border); }
+      .diagram-panel.before .panel-title { color: var(--text-2); }
+      .diagram-panel.after .panel-title { color: var(--accent); background: var(--accent-soft); }
+      .svg-wrap { padding: 14px; overflow-x: auto; }
+      .svg-wrap svg { display: block; width: 100%; height: auto; max-width: 100%; }
+      .diagram-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text-2); margin-top: 10px; flex-wrap: wrap; }
+      .diagram-legend span { display: inline-flex; align-items: center; gap: 5px; }
+      .diagram-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+      /* (e) Lock 정합표 */
+      .verdict-consistent  { color: var(--green); font-weight: 700; }
+      .verdict-unrelated   { color: var(--gray); font-weight: 700; }
+      .verdict-conflicting { color: var(--red); font-weight: 700; }
+
+      /* (f) 신규 구조물 신고 — 없으면 이 section 전체를 삭제 */
+      .newstruct-note { margin-top: 10px; padding: 10px 14px; background: var(--gray-soft);
+        border-radius: 6px; font-size: 12px; color: var(--text-2); line-height: 1.6; }
+
+      /* (g) 수용 판정 푸터 — 이 블록 값은 AI가 채우지 않는다. 사용자 기입 전용 */
+      .verdict-footer { background: var(--surface); border: 2px dashed var(--border-strong); border-radius: 8px; padding: 18px 20px; }
+      .verdict-footer .choices { display: flex; gap: 22px; margin-bottom: 12px; }
+      .verdict-footer .choice { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; }
+      .verdict-footer .box { width: 16px; height: 16px; border: 1.5px solid var(--border-strong); border-radius: 3px; display: inline-block; }
+      .verdict-footer .reason-line { font-size: 13px; color: var(--text-3); border-bottom: 1px dashed var(--border-strong); padding-bottom: 6px; margin-top: 4px; }
+      .verdict-footer .owner-note { margin-top: 10px; font-size: 11px; color: var(--text-3); }
+
+      footer.page-footer { margin-top: 34px; font-size: 11px; color: var(--text-3); text-align: center; }
+
+      @media (max-width: 860px) {
+        .diagram-grid { grid-template-columns: 1fr; }
+        .header { flex-direction: column; align-items: flex-start; gap: 8px; }
+        .header .meta { text-align: left; }
+        .verdict-footer .choices { flex-direction: column; gap: 10px; }
+      }
+      @media print {
+        body { background: #fff; }
+        .page { max-width: none; padding: 0 12px; }
+        section { break-inside: avoid; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <!-- =========== (a) 헤더 =========== -->
+      <header class="header">
+        <div>
+          <div class="eyebrow">Spec Review · 수용 판정 대시보드</div>
+          <h1>{{SPEC_NAME}}</h1>
+        </div>
+        <div class="meta">
+          <!-- 배지색: proposed->STATUS_COLOR=amber / accepted->STATUS_COLOR=green -->
+          <div>검토일 <strong>{{SPEC_DATE}}</strong>
+            <span class="status-badge" style="background: var(--{{STATUS_COLOR}}-soft); color: var(--{{STATUS_COLOR}})">
+              <span class="status-dot" style="background: var(--{{STATUS_COLOR}})"></span>{{STATUS_BADGE_TEXT}}
+            </span>
+          </div>
+          <div>브랜치 <strong>{{BRANCH}}</strong></div>
+        </div>
+      </header>
+
+      <!-- =========== (b) 결정 요약 표 — <tr> 블록을 spec Decision Log의 D# 개수만큼 반복 =========== -->
+      <section>
+        <h2>결정 요약</h2>
+        <div class="card table-wrap">
+          <table>
+            <thead><tr><th>D#</th><th>결정</th><th>확신도</th><th>Status</th><th class="num">옵션 수</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="mono">{{D_ID_1}}</td>
+                <td>{{DECISION_ONE_LINER_1}}</td>
+                <td><span class="conf-badge conf-{{CONF_COLOR_1}}">{{CONF_EMOJI_1}}{{CONF_NUM_1}}</span></td>
+                <td><span class="status-tag status-{{STATUS_CLASS_1}}">{{STATUS_TEXT_1}}</span></td>
+                <td class="num mono">{{OPTION_COUNT_1}}</td>
+              </tr>
+              <!-- 반복: D_ID_2, D_ID_3 ... -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- =========== (c) 핵심 결정 옵션 비교표 — 트레이드오프 열 + 추천 행 row-recommended =========== -->
+      <section>
+        <h2>{{KEY_DECISION_ID}} — 옵션 비교</h2>
+        <div class="card table-wrap">
+          <table>
+            <thead><tr><th>옵션</th><th>설명</th><th>장점</th><th>단점</th><th>추천</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="mono">{{OPTION_A_ID}}</td><td>{{OPTION_A_DESC}}</td>
+                <td>{{OPTION_A_PROS}}</td><td>{{OPTION_A_CONS}}</td><td></td>
+              </tr>
+              <tr class="row-recommended">
+                <td class="mono">{{OPTION_B_ID}}</td><td>{{OPTION_B_DESC}}</td>
+                <td>{{OPTION_B_PROS}}</td><td>{{OPTION_B_CONS}}</td><td><strong>★ 추천</strong></td>
+              </tr>
+              <!-- 옵션 3개 이상이면 <tr> 반복, 추천 행에만 row-recommended -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- =========== (d) Before/After — .svg 의 <svg>...</svg> 내용을 그대로 인라인 임베드(img src 금지) =========== -->
+      <section>
+        <h2>구조 변화 — Before / After</h2>
+        <div class="diagram-grid">
+          <div class="diagram-panel before">
+            <div class="panel-title">Before</div>
+            <div class="svg-wrap">{{BEFORE_SVG_INLINE}}</div>
+          </div>
+          <div class="diagram-panel after">
+            <div class="panel-title">After</div>
+            <div class="svg-wrap">{{AFTER_SVG_INLINE}}</div>
+          </div>
+        </div>
+        <div class="diagram-legend">
+          <span><i style="background: var(--green)"></i>added</span>
+          <span><i style="background: var(--red)"></i>removed</span>
+          <span><i style="background: var(--amber)"></i>moved</span>
+        </div>
+      </section>
+
+      <!-- =========== (e) Lock 정합표 — architecture-design-workflow의 lock-conformance table을 그대로 옮김 =========== -->
+      <section>
+        <h2>Lock 정합표</h2>
+        <div class="card table-wrap">
+          <table>
+            <thead><tr><th>정본 D#</th><th>이 제안</th><th>판정</th><th>비고</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="mono">{{CANON_D_ID_1}}</td>
+                <td>{{THIS_PROPOSAL_1}}</td>
+                <td><span class="verdict-{{VERDICT_CLASS_1}}">{{VERDICT_TEXT_1}}</span></td>
+                <!-- conflicting인 경우만 번복 제안 문서 링크, 아니면 빈 칸 -->
+                <td>{{VERDICT_NOTE_1}}</td>
+              </tr>
+              <!-- 반복 -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- =========== (f) 신규 구조물 신고 — 신규 구조물이 없으면 이 section 전체를 삭제할 것 =========== -->
+      <section>
+        <h2>신규 구조물 신고 — {{NEW_STRUCT_NAME}}</h2>
+        <div class="card table-wrap">
+          <table>
+            <tbody>
+              <tr><td class="mono">⓪ 종류</td><td>{{NS_KIND}}</td></tr>
+              <tr><td class="mono">① 구현자 수</td><td>{{NS_IMPL_COUNT}} — <span class="mono">{{NS_IMPL_GREP}}</span></td></tr>
+              <tr><td class="mono">② 소비자 수</td><td>{{NS_CONSUMER_COUNT}} — <span class="mono">{{NS_CONSUMER_GREP}}</span></td></tr>
+              <tr><td class="mono">③ 삭제 테스트</td><td>{{NS_DELETE_TEST}}</td></tr>
+              <tr><td class="mono">④ 계획 문서 관계</td><td>{{NS_PLAN_RELATION}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="newstruct-note">
+          <span class="conf-badge conf-green">🔵 실측</span> {{NS_MEASURED_NOTE}}
+          &nbsp;·&nbsp;
+          <span class="conf-badge conf-red">💭 판단</span> {{NS_JUDGMENT_NOTE}}
+        </div>
+      </section>
+
+      <!-- =========== (g) 수용 판정 푸터 — 값은 항상 비워서 산출. AI가 체크/사유를 채우면 규율 위반 =========== -->
+      <section>
+        <h2>수용 판정 — 사용자 기입란</h2>
+        <div class="verdict-footer">
+          <div class="choices">
+            <span class="choice"><span class="box"></span>승인</span>
+            <span class="choice"><span class="box"></span>보류</span>
+            <span class="choice"><span class="box"></span>번복</span>
+          </div>
+          <div class="reason-line">사유: &nbsp;</div>
+          <div class="owner-note"><strong>판정 주체 = 사용자.</strong> 이 칸은 AI가 채우지 않는다.</div>
+        </div>
+      </section>
+
+      <footer class="page-footer">{{SPEC_NAME}} · spec-review-dashboard · reviewed {{SPEC_DATE}}</footer>
+    </div>
+  </body>
+</html>

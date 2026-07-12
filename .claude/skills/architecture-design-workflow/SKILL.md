@@ -1,6 +1,6 @@
 ---
 name: architecture-design-workflow
-description: Apply when undertaking a multi-step architecture or refactor effort that deserves a real design process — not a one-line fix. Use whenever the user wants to redesign a subsystem, migrate an architecture (monolith→modular, OOP→ECS/DOD), benchmark reference implementations before adopting a pattern, incrementally migrate a legacy module, or asks to "design this properly", "write a spec/plan", or "think through the architecture first". Drives a 4-phase chain (brainstorm → evaluate → plan → dispatch), an explicit Decision Log with status tags (proposed/accepted/superseded) and a lock-conformance table against canonical decisions, and option-table-with-recommendation decisions. Trigger when a change is big enough that traceability of decisions matters, or when a new proposal must be checked against existing locked decisions.
+description: Apply when undertaking a multi-step architecture or refactor effort that deserves a real design process — not a one-line fix. Use whenever the user wants to redesign a subsystem, migrate an architecture (monolith→modular, OOP→ECS/DOD), benchmark reference implementations before adopting a pattern, incrementally migrate a legacy module, or asks to "design this properly", "write a spec/plan", or "think through the architecture first". Drives a 4-phase chain (brainstorm → evaluate → plan → dispatch), an explicit Decision Log with status tags (proposed/accepted/superseded) and numeric confidence anchors, a lock-conformance table against canonical decisions, option-table-with-recommendation decisions, and — for any spec that changes code structure — a mandatory Before/After diagram pair. Trigger when a change is big enough that traceability of decisions matters, when a new proposal must be checked against existing locked decisions, or when a decision needs a confidence anchor or a structural change needs a Before/After diagram.
 ---
 
 # Architecture Design Workflow
@@ -41,13 +41,15 @@ Ask the user only the *real* decisions (ones you can't resolve from the code or 
 A design document always carries a decision-log table. This is the core of traceability for the whole session and what the next step references most often.
 
 ```markdown
-| ID | Decision | Chosen option | Rationale | Status |
-|----|----------|---------------|-----------|--------|
-| D-1 | ... | A1 | ... | proposed |
-| D-2 | ... | B2 | ... | accepted |
+| ID | Decision | Chosen option | Rationale | Status | Confidence |
+|----|----------|---------------|-----------|--------|------------|
+| D-1 | ... | A1 | ... | proposed | 🔵 92 |
+| D-2 | ... | B2 | ... | accepted | 🟡 75 |
 ```
 
 `Status` is one of `proposed / accepted / superseded(by D-#)`. A decision is recorded as `proposed` the moment it is made, and promoted to `accepted` only after user confirmation AND verification (build / visual check / golden test). Early recording is good — *statusless* early recording is the bug. In As-Built blocks the Korean tags `[제안됨]` → `[검증됨 <commit-hash>]` serve the same two states (a date suffix on `[제안됨]` is optional — the repo's existing bare-tag convention is the canonical form); an untagged block is read as `proposed`.
+
+`Confidence` is `🔵/🟡/💭` + a 0-100 integer (e.g. `🔵 92`). The tier is decided by EVIDENCE TYPE, not by the number — 🔵 (anchor ≥90) requires a file:line or doc citation read this session; 🟡 (60–89) is convention-level knowledge — an option table is mandatory; 💭 (<60) means WITHHOLD and run a tool first (see confidence-and-sourcing §1.5). The number is a within-anchor nuance, never a substitute for the evidence.
 
 ## Lock-conformance table
 
@@ -70,7 +72,7 @@ At session start, identify (or ask the user for) the authority ranking of the de
 0. Higher-level context (if a decomposed sub-project, note its position)
 1. Motivation (why now, problem diagnosis)
 2. Core decisions (D-1, D-2 ...) — table
-3. Before/After diagram (mermaid)
+3. Before/After diagram (Graphviz pair — format: graphviz-class-diagram Before/After mode; see the mandatory section below)
 4. Changes — file-by-file
 5. Design-principle consistency assessment
 6. Verification method (build/test/visual regression)
@@ -90,6 +92,12 @@ At session start, identify (or ask the user for) the authority ranking of the de
 
 ### Commit message
 One-line summary + what/why. Referencing a decision ID in the body links it back to the spec.
+
+## Before/After structure diagram (mandatory for architecture-changing specs)
+
+Any spec that changes code structure (module/class/ownership/layer) MUST ship a Graphviz pair — `<spec-name>-before.dot` and `<spec-name>-after.dot` (+ rendered .svg) stored NEXT TO the spec, with changed nodes/edges visually highlighted. This is UNCONDITIONAL — confidence does not waive it (a confident misjudgment is exactly what the pair exposes). Format rules live in graphviz-class-diagram's Before/After mode.
+
+For user review, also emit the one-page HTML review dashboard (skill: `spec-review-dashboard`) — decisions, confidence anchors, Before/After SVGs, conformance table in one screen; prose-heavy review docs are the anti-pattern.
 
 ## How to apply
 

@@ -17,6 +17,8 @@
 !.claude/skills/graphviz-class-diagram/**
 !.claude/skills/lossless-handoff/
 !.claude/skills/lossless-handoff/**
+!.claude/skills/spec-review-dashboard/
+!.claude/skills/spec-review-dashboard/**
 
 ########### vcpkg local files ###########
 vcpkg_installed/

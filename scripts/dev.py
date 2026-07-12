@@ -725,6 +725,7 @@ GLOBAL_SKILLS = (
     "confidence-and-sourcing",
     "design-decision-discipline",
     "graphviz-class-diagram",
+    "spec-review-dashboard",
     "response-quality-calibration",
     "modular-build-discipline",
     "socratic-tutor",
