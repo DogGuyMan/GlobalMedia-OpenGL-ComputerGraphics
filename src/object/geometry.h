@@ -127,7 +127,7 @@ namespace SJH
         /// @param back_face @c true 이면 법선 내향 반전.
         MeshData Sphere(double us, double ue, int uRes,
                         double vs, double ve, int vRes,
-                        float radius = 1.0f, bool back_face = false);
+                        float radius = 0.5f, bool back_face = false);
 
         /// @brief Assimp @c aiMesh -> @c MeshData 변환.
         /// @details position / normal / texCoord(채널 0) 채널을 그대로 복사하고

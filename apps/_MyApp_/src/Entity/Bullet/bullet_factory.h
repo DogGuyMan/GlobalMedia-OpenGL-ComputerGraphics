@@ -38,6 +38,8 @@
 #include "resource_registry/resource_registry.h"
 #include "common/render_enums.h" // SJH::PrimitiveTopology
 #include <box2d/box2d.h>
+#include <glm/fwd.hpp>
+#include <glm/gtc/constants.hpp>
 #include <memory>
 #include <glm/glm.hpp>
 
@@ -108,12 +110,7 @@ namespace TopdownShooter::Entity::Bullet
             constexpr char kBulletMeshKey[] = "bullet_debug_sphere";
             SJH::Mesh* mesh = reg.FindMesh(kBulletMeshKey);
             if (mesh == nullptr)
-            {
-                constexpr double kTwoPi = 6.283185307179586; // 2pi - 경도 한 바퀴 (M_PI 의존 회피)
-                SJH::MeshData data = SJH::Geometry::Sphere(0.0, kTwoPi, 16, 0.0, 1.0, 8, BULLET_RADIUS);
-                mesh = reg.RegisterMesh(kBulletMeshKey,
-                                        SJH::Mesh::Create(data.vertices, data.indices, SJH::PrimitiveTopology::Triangles));
-            }
+                mesh = reg.RegisterMesh(kBulletMeshKey,SJH::Mesh::CreateSphere());
 
             // 공유 Material (Magenta 1,0,1 단색, Opaque pass)
             constexpr char kBulletMatKey[] = "bullet_debug_mat";
@@ -129,11 +126,15 @@ namespace TopdownShooter::Entity::Bullet
                 }
             }
 
+	    auto meshactor = std::make_unique<SJH::Scene::Actor>("BulletMesh");
+	    meshactor->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
+	    meshactor->GetTransform().Scale = glm::vec3(BULLET_RADIUS);
+
             // Slang Phase 2 T5 - UBO 셰이더(simple.vs/fs) R1 육안 게이트 PoC 활성화.
             //   prog 가 HasUniformBlocks()==true 라 MeshPassProcessor 의 useUbo 분기 진입.
             //   baseColor (Vec4s) -> MaterialBlock std140 으로 자동 주입 (T4 결정 2).
             if (prog != nullptr && mesh != nullptr && mat != nullptr)
-                actor->AddComponent<SJH::Scene::MeshRenderer>(mesh, mat);
+                actor->AddChild(std::move(meshactor));
         }
 
         return actor;

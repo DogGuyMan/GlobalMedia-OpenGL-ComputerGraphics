@@ -57,6 +57,8 @@ namespace SJH
 
         /// @brief 평면(quad) 메시 생성 - 원점 중심 단위 XY 평면(z=0) 1x1 사각형. 평면 메시 + 포스트프로세스 화면 quad 겸용.
         static MeshUPtr CreatePlane();
+        
+	static MeshUPtr CreateSphere();
 
         /// @brief NDC clip-space 화면 가득 quad - SP4 post-processing 용.
         /// @details position 이 NDC (-1..1) 직접 좌표, postprocess.vs 가 model/view/proj 우회.

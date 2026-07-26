@@ -164,7 +164,7 @@ namespace TopdownShooter::Bootstrap
 			skyboxMat->Properties.Textures["noise_tex"] = {noiseTex, 1};
 			skyboxMat->Properties.Floats["u_time"] = 0.0f;
 
-			auto *skyboxMesh = reg.RegisterMesh("mesh_skybox", SJH::Mesh::CreateBox());
+			auto *skyboxMesh = reg.RegisterMesh("mesh_skybox", SJH::Mesh::CreateSphere());
 			// actor 생성은 Pure factory. SkyboxPass 가 그릴 수 있게 MeshRenderer 를 반환(skyboxMat 는 mr->Material 로 도출).
 			auto *skyboxActor = dir.Root().AddChild(SJH::Scene::CreateSkyboxActor("MatrixSkybox", skyboxMesh, skyboxMat, 50.0f));
 			return skyboxActor->GetComponent<SJH::Scene::MeshRenderer>();

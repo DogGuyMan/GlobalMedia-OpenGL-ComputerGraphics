@@ -19,6 +19,7 @@
 #include "mesh.h"
 #include "object/geometry.h"
 #include "diagnostics/gl_validate.h" // Cat A - CheckIndices
+#include <glm/gtc/constants.hpp>
 
 namespace SJH
 {
@@ -76,6 +77,14 @@ namespace SJH
         // 도형 데이터 생성은 SJH::Geometry 책임 - engine 빌더에 위임.
         MeshData data = Geometry::Plane();
         return Create(data.vertices, data.indices, PrimitiveTopology::Triangles);
+    }
+
+    MeshUPtr Mesh::CreateSphere() 
+    {
+	SJH::MeshData data = SJH::Geometry::Sphere(
+		0.0, glm::two_pi<float>(), 16, 
+		0.0, 1.0, 8);
+	return Create(data.vertices, data.indices, PrimitiveTopology::Triangles);
     }
 
     MeshUPtr Mesh::CreateScreenQuad()
