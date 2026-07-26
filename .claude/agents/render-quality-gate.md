@@ -42,11 +42,15 @@ cppcheck --enable=warning,style --error-exitcode=1 \
 ### Gate 4: 골든 이미지 회귀 (렌더 출력이 바뀔 수 있는 변경이면 필수)
 render-test-debug 의 결과 재확인:
 ```bash
+cmake --build --preset ninja-golden --target tests   # ← 빠뜨리면 옛 바이너리를 검증한다
 ctest --test-dir build_ninja-golden -R "골든" --output-on-failure
 ```
 - 판정 임계 = `kChannelDiffThreshold=0` (**비트동일**). "≤ 5%" 같은 여유 없음
 - 게임 빌드(`build_ninja`)에는 골든 ctest 가 **등록되지 않는다** — 거기서 GREEN 을 받아
   본 게이트를 PASS 로 보고하면 위양성이다. 반드시 `build_ninja-golden` 인지 확인할 것
+- 재빌드 없이 ctest 만 돌린 결과도 PASS 로 쓰지 말 것 (stale 바이너리 = 위양성)
+- Release 검증이 필요하면 `ninja-release-golden`(같은 REF 공유).
+  `msvc-golden` 계열은 REF 가 macOS 캡처라 크기 불일치로 FAIL — PASS 판정 근거로 쓰지 말 것
 - 게이트를 못 돌렸으면 PASS 가 아니라 **NOT-RUN(사유)** 으로 보고
 
 ### Gate 5: Mutation Testing (변경된 파일만)

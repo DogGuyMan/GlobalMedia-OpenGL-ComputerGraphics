@@ -15,7 +15,12 @@
 
 - [ ] 빌드 확인 (`cmake --build --preset ninja --target _MyApp_` 등)
 - [ ] `ctest --test-dir build_ninja --output-on-failure` (해당 시 — smoke/gpu/CPU 단위. 골든은 미포함)
-- [ ] 골든 이미지 비교 통과 (렌더링 출력이 바뀌는 변경이면 **필수** — `ctest --test-dir build_ninja-golden -R "골든"`, 프리셋 `ninja-golden` 전유)
+- [ ] 골든 이미지 비교 통과 (렌더링 출력이 바뀌는 변경이면 **필수** — 프리셋 `ninja-golden` 전유. Release 검증은 `ninja-release-golden`)
+  ```bash
+  cmake --preset ninja-golden && cmake --build --preset ninja-golden --target tests
+  ctest --test-dir build_ninja-golden -R "골든" --output-on-failure
+  ```
+  - [ ] 골든 REF(`test/golden/*.png`)를 갱신했다면 **이 PR 안에** 포함했는가 (원인 커밋과 분리 금지 — 분리하면 원인 커밋이 게이트 RED 로 남는다)
 - [ ] 육안 검증 (GUI 실행 확인)
 - [ ] 기타:
 

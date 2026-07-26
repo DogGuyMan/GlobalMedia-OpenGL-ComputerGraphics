@@ -27,7 +27,8 @@ python3 scripts/dev.py all debug _MyApp_
 - 주의: 실행은 반드시 `build_ninja/apps/_MyApp_` 로 `cd` 후 실행 — Why: 리소스를 상대경로로 로드하기 때문.
 - 주의: `apps/CMakeLists.txt` 에서 데모 타겟은 한 번에 소수만 주석 해제 — Why: 컨벤션(현재 `_MyApp_` 단독 활성). 빌드 실패 시 가장 먼저 확인할 곳.
 - 주의: `shaders_slang/`·메시·패스·GL상태를 건드렸으면 빌드 GREEN 으로 끝내지 말고 골든 게이트(`cmake --preset ninja-golden && cmake --build --preset ninja-golden --target tests && ctest --test-dir build_ninja-golden -R "골든"`)까지 돌릴 것 — Why: Slang varying 이름 불일치처럼 **빌드는 통과하고 런타임에만 터지는** 계열이 있고, 렌더 회귀는 컴파일러가 안 잡는다. 상세·함정은 [`test/CLAUDE.md`](../../test/CLAUDE.md).
-- 주의: 게임 빌드(`build_ninja`)의 `_MyApp_` 는 **골든을 캡처하지 않는다** — Why: 캡처 진입점(`capture_application`)은 컴파일 정의 `SJH_GOLDEN_CAPTURE` 로만 선택되고, 그 정의는 프리셋 `ninja-golden` 전유다. `SJH_GOLDEN_CAPTURE=1 ./_MyApp_` 같은 **환경 변수 방식은 2026-07-26 폐기** — 실행해도 창만 뜨고 아무 PNG 도 안 생긴다(조용한 실패).
+- 주의: 게임 빌드(`build_ninja`)의 `_MyApp_` 는 **골든을 캡처하지 않는다** — Why: 캡처 진입점(`capture_application`)은 컴파일 정의 `SJH_GOLDEN_CAPTURE` 로만 선택되고, 그 정의는 golden 프리셋 전유다(`ninja-golden` 정본 · `ninja-release-golden` · `msvc-golden`/`msvc-2022-golden`). `SJH_GOLDEN_CAPTURE=1 ./_MyApp_` 같은 **환경 변수 방식은 2026-07-26 폐기** — 실행해도 창만 뜨고 아무 PNG 도 안 생긴다(조용한 실패).
+- 주의: 골든은 3줄이 한 세트(configure → build → ctest) — Why: `ctest` 는 빌드하지 않으므로 `--target tests` 를 빠뜨리면 **옛 바이너리를 검증하고 GREEN** 을 준다. 게임 빌드와 다른 디렉토리라 평소 개발 빌드로는 최신화되지 않는다(재빌드 실측 ~36초).
 
 ## Cross-module deps
 - 의존: `project_deps` + `game_deps`(box2d/Effekseer/FMOD/assimp/spdlog) + `SJH::engine` 우산(PRIVATE).

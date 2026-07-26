@@ -32,10 +32,11 @@
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
+            "description": "MSVC 공통.",
             "cacheVariables": {
                 "CMAKE_POLICY_VERSION_MINIMUM": "3.5",
-                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL",
+                "VCPKG_TARGET_TRIPLET": "x64-windows"
             }
         },
         {
@@ -58,7 +59,16 @@
             "name": "ninja-golden",
             "inherits": "ninja",
             "displayName": "Ninja Debug (골든 캡처 게이트)",
-            "description": "_MyApp_ 를 capture_application 진입점으로 빌드하고 골든 ctest 체인을 등록한다. build_ninja 와 별도 디렉토리라 게임 빌드와 공존. ★ base-ninja 가 아니라 ninja 를 상속하는 이유 = 게이트가 검증하는 바이너리가 실제 게임 빌드와 동일 설정이어야 하기 때문 - ninja 에 캐시 변수가 추가되면 자동 전파된다(드리프트 방지). 여기 cacheVariables 는 캡처 전용 델타만 둘 것.",
+            "cacheVariables": {
+                "SJH_GOLDEN_CAPTURE": "ON",
+                "ENABLE_TESTING": "ON",
+                "VCPKG_MANIFEST_FEATURES": "golden"
+            }
+        },
+        {
+            "name": "ninja-release-golden",
+            "inherits": "ninja-release",
+            "displayName": "Ninja Release (골든 캡처 게이트)",
             "cacheVariables": {
                 "SJH_GOLDEN_CAPTURE": "ON",
                 "ENABLE_TESTING": "ON",
@@ -78,15 +88,40 @@
             "displayName": "MSVC (Visual Studio 2022, v143)",
             "generator": "Visual Studio 17 2022",
             "toolset": "v143"
+        },
+        {
+            "name": "msvc-golden",
+            "inherits": "msvc",
+            "displayName": "MSVC 2019 (골든 캡처 게이트)",
+            "binaryDir": "${sourceDir}/build_msvc-golden",
+            "cacheVariables": {
+                "SJH_GOLDEN_CAPTURE": "ON",
+                "ENABLE_TESTING": "ON",
+                "VCPKG_MANIFEST_FEATURES": "golden"
+            }
+        },
+        {
+            "name": "msvc-2022-golden",
+            "inherits": "msvc-2022",
+            "displayName": "MSVC 2022 (골든 캡처 게이트)",
+            "binaryDir": "${sourceDir}/build_msvc-golden",
+            "cacheVariables": {
+                "SJH_GOLDEN_CAPTURE": "ON",
+                "ENABLE_TESTING": "ON",
+                "VCPKG_MANIFEST_FEATURES": "golden"
+            }
         }
     ],
     "buildPresets": [
         { "name": "ninja",         "configurePreset": "ninja" },
         { "name": "ninja-release", "configurePreset": "ninja-release" },
         { "name": "ninja-golden",  "configurePreset": "ninja-golden" },
+        { "name": "ninja-release-golden", "configurePreset": "ninja-release-golden" },
         { "name": "msvc",          "configurePreset": "msvc",      "configuration": "Debug" },
         { "name": "msvc-release",  "configurePreset": "msvc",      "configuration": "Release" },
         { "name": "msvc-2022",         "configurePreset": "msvc-2022", "configuration": "Debug" },
-        { "name": "msvc-2022-release", "configurePreset": "msvc-2022", "configuration": "Release" }
+        { "name": "msvc-2022-release", "configurePreset": "msvc-2022", "configuration": "Release" },
+        { "name": "msvc-golden",       "configurePreset": "msvc-golden",      "configuration": "Debug" },
+        { "name": "msvc-2022-golden",  "configurePreset": "msvc-2022-golden", "configuration": "Debug" }
     ]
 }

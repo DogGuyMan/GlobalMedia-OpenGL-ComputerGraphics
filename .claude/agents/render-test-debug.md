@@ -52,10 +52,19 @@ ctest --test-dir build_ninja -R "test_gl_state_snapshot" -V
 # 캡처 + 비교가 한 체인. 별도 캡처 명령이 필요 없다 (ctest 픽스처가 순서 보장).
 #   golden_capture(FIXTURES_SETUP) -> _MyApp_ 가 고정-dt 180프레임 후 PNG 14장 생성 후 자동 종료
 #   골든 전수 비교(FIXTURES_REQUIRED) -> OpenCV absdiff 로 test/golden/ REF 와 대조
+# ★ 3줄이 한 세트. build 를 빠뜨리면 ctest 가 옛 바이너리를 검증하고 GREEN 을 준다(stale 검증).
 cmake --preset ninja-golden
 cmake --build --preset ninja-golden --target tests
 ctest --test-dir build_ninja-golden -R "골든" --output-on-failure
 ```
+
+프리셋 선택:
+
+| 프리셋 | 쓸 때 | REF 호환 |
+|---|---|---|
+| `ninja-golden` | **기본** — 이걸 쓴다 | 정본 (REF 가 이 조합의 캡처본) |
+| `ninja-release-golden` | 최적화가 렌더를 바꿨는지 의심될 때 | Debug 캡처와 14/14 비트동일(2026-07-26 실측) |
+| `msvc-golden` / `msvc-2022-golden` | Windows 로컬 조사 | ❌ REF 가 macOS 2560x1440 캡처 — 크기 불일치로 FAIL |
 
 판정:
 - ctest PASS → **PASS** (판정 임계 `kChannelDiffThreshold=0` = 비트동일)

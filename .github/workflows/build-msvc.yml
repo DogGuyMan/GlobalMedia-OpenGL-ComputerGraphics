@@ -7,68 +7,40 @@ on:
     branches: [main]
   workflow_dispatch:
 
-jobs:
-  build:
-    runs-on: windows-latest
+# ============================================================================
+# 러너 이미지 고정 이유 (windows-latest 아님)
+#   CMakePresets 의 msvc-2022 계열이 generator "Visual Studio 17 2022" 를 못 박고 있다.
+#   windows-latest 는 이미지가 굴러가면서 VS 메이저가 바뀌면 그 generator 를 못 찾는다
+#   (실측 2026-07-26: "could not find any instance of Visual Studio" 로 실패).
+#   generator 를 못 박은 프리셋을 쓰는 한 이미지도 못 박는 게 맞다.
+# ============================================================================
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - configuration: Debug
-            build_preset: msvc-2022
-          - configuration: Release
-            build_preset: msvc-2022-release
+jobs:
+  # --------------------------------------------------------------------------
+  # Effekseer 사전 빌드 — lib/windows/ 에 커밋돼 있지 않은 유일한 의존
+  #   커밋본 lib/windows = glfw3 / sb7 뿐. Effekseer .lib 4종은 여기서 만들어
+  #   artifact 로 넘긴다(헤더 include/Effekseer 141개는 이미 커밋돼 있어 불필요).
+  #   box2d / assimp / spdlog 는 vcpkg manifest 로 이관돼 extern/ 에서 제거됐다
+  #   -> 구 빌드 스텝은 삭제(경로 부재로 하드 실패하던 원인).
+  # --------------------------------------------------------------------------
+  extern:
+    name: Prebuild Effekseer (Windows)
+    runs-on: windows-2022
 
     steps:
-      - name: Checkout
+      - name: Checkout (with submodules)
         uses: actions/checkout@v4
         with:
           submodules: true
 
-      - name: Build Box2D (Release + Debug)
-        if: matrix.configuration == 'Release'
-        shell: cmd
-        run: |
-          set BOX2D_DIR=%GITHUB_WORKSPACE%\extern\box2d
-          set BOX2D_BUILD=%GITHUB_WORKSPACE%\build_extern\box2d
-          set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
-
-          if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
-
-          cmake -S "%BOX2D_DIR%" -B "%BOX2D_BUILD%" ^
-              -G "Visual Studio 17 2022" ^
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
-              -DBOX2D_BUILD_TESTBED=OFF ^
-              -DBOX2D_BUILD_UNIT_TESTS=OFF ^
-              -DBOX2D_BUILD_DOCS=OFF
-          if errorlevel 1 exit /b 1
-
-          cmake --build "%BOX2D_BUILD%" --config Release
-          if errorlevel 1 exit /b 1
-          for /R "%BOX2D_BUILD%" %%f in (box2d.lib) do (
-              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\box2d.lib" >nul
-          )
-
-          cmake --build "%BOX2D_BUILD%" --config Debug
-          if errorlevel 1 exit /b 1
-          for /R "%BOX2D_BUILD%" %%f in (box2d.lib) do (
-              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\box2d_d.lib" >nul
-          )
-
-          exit /b 0
-
       - name: Build Effekseer (Release + Debug)
-        if: matrix.configuration == 'Release'
         shell: cmd
         run: |
           set EFK_DIR=%GITHUB_WORKSPACE%\extern\Effekseer
           set EFK_BUILD=%GITHUB_WORKSPACE%\build_extern\effekseer
           set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
-          set INCLUDE_DIR=%GITHUB_WORKSPACE%\build_extern\output\include
 
           if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
-          if not exist "%INCLUDE_DIR%\Effekseer" mkdir "%INCLUDE_DIR%\Effekseer"
 
           cmake -S "%EFK_DIR%" -B "%EFK_BUILD%" ^
               -G "Visual Studio 17 2022" ^
@@ -106,133 +78,60 @@ jobs:
               echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\EffekseerRendererGL_d.lib" >nul
           )
 
-          REM Effekseer 공개 헤더만 복사 (.h)
-          for /R "%EFK_DIR%\Dev\Cpp\Effekseer" %%f in (*.h) do (
-              xcopy /Y "%%f" "%INCLUDE_DIR%\Effekseer\" >nul
-          )
-          for /R "%EFK_DIR%\Dev\Cpp\EffekseerRendererGL" %%f in (*.h) do (
-              xcopy /Y "%%f" "%INCLUDE_DIR%\Effekseer\" >nul
-          )
-
           exit /b 0
 
-      - name: Build assimp (Release + Debug)
-        if: matrix.configuration == 'Release'
-        shell: cmd
+      - name: Verify all 4 libs produced
+        shell: pwsh
         run: |
-          set ASSIMP_DIR=%GITHUB_WORKSPACE%\extern\assimp
-          set ASSIMP_BUILD=%GITHUB_WORKSPACE%\build_extern\assimp
-          set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
-          set INCLUDE_DIR=%GITHUB_WORKSPACE%\build_extern\output\include
+          $dir = "$env:GITHUB_WORKSPACE\build_extern\output\windows"
+          $want = @('Effekseer.lib','Effekseer_d.lib','EffekseerRendererGL.lib','EffekseerRendererGL_d.lib')
+          $missing = $want | Where-Object { -not (Test-Path "$dir\$_") }
+          if ($missing) { throw "Effekseer 산출물 누락: $($missing -join ', ')" }
+          Get-ChildItem $dir | Format-Table Name, Length
 
-          if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
-          if not exist "%INCLUDE_DIR%\assimp" mkdir "%INCLUDE_DIR%\assimp"
-
-          cmake -S "%ASSIMP_DIR%" -B "%ASSIMP_BUILD%" ^
-              -G "Visual Studio 17 2022" ^
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
-              -DBUILD_SHARED_LIBS=OFF ^
-              -DASSIMP_BUILD_TESTS=OFF ^
-              -DASSIMP_BUILD_ASSIMP_TOOLS=OFF ^
-              -DASSIMP_BUILD_SAMPLES=OFF ^
-              -DASSIMP_INSTALL=OFF ^
-              -DASSIMP_WARNINGS_AS_ERRORS=OFF ^
-              -DASSIMP_BUILD_ZLIB=ON
-          if errorlevel 1 exit /b 1
-
-          cmake --build "%ASSIMP_BUILD%" --config Release
-          if errorlevel 1 exit /b 1
-          for /R "%ASSIMP_BUILD%" %%f in (assimp*.lib) do (
-              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\assimp.lib" >nul
-          )
-          for /R "%ASSIMP_BUILD%" %%f in (zlibstatic.lib) do (
-              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\zlibstatic.lib" >nul
-          )
-
-          cmake --build "%ASSIMP_BUILD%" --config Debug
-          if errorlevel 1 exit /b 1
-          for /R "%ASSIMP_BUILD%" %%f in (assimp*.lib) do (
-              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\assimp_d.lib" >nul
-          )
-          for /R "%ASSIMP_BUILD%" %%f in (zlibstaticd.lib) do (
-              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\zlibstatic_d.lib" >nul
-          )
-
-          REM assimp 소스 헤더 복사
-          for /R "%ASSIMP_DIR%\include\assimp" %%f in (*.h *.hpp *.inl) do (
-              xcopy /Y "%%f" "%INCLUDE_DIR%\assimp\" >nul
-          )
-          REM assimp 빌드 생성 헤더 복사 (config.h, revision.h)
-          for /R "%ASSIMP_BUILD%\include\assimp" %%f in (*.h) do (
-              xcopy /Y "%%f" "%INCLUDE_DIR%\assimp\" >nul
-          )
-
-          exit /b 0
-
-      - name: Build spdlog (Release + Debug)
-        if: matrix.configuration == 'Release'
-        shell: cmd
-        run: |
-          set SPDLOG_DIR=%GITHUB_WORKSPACE%\extern\spdlog
-          set SPDLOG_BUILD=%GITHUB_WORKSPACE%\build_extern\spdlog
-          set OUTPUT_DIR=%GITHUB_WORKSPACE%\build_extern\output\windows
-          set INCLUDE_DIR=%GITHUB_WORKSPACE%\build_extern\output\include
-
-          if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
-          if not exist "%INCLUDE_DIR%\spdlog" mkdir "%INCLUDE_DIR%\spdlog"
-
-          cmake -S "%SPDLOG_DIR%" -B "%SPDLOG_BUILD%" ^
-              -G "Visual Studio 17 2022" ^
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
-              -DSPDLOG_BUILD_EXAMPLE=OFF ^
-              -DSPDLOG_BUILD_TESTS=OFF ^
-              -DSPDLOG_BUILD_BENCH=OFF
-          if errorlevel 1 exit /b 1
-
-          cmake --build "%SPDLOG_BUILD%" --config Release
-          if errorlevel 1 exit /b 1
-          for /R "%SPDLOG_BUILD%" %%f in (spdlog.lib) do (
-              echo %%f | findstr /I "Release" >nul && copy /Y "%%f" "%OUTPUT_DIR%\spdlog.lib" >nul
-          )
-
-          cmake --build "%SPDLOG_BUILD%" --config Debug
-          if errorlevel 1 exit /b 1
-          for /R "%SPDLOG_BUILD%" %%f in (spdlogd.lib) do (
-              echo %%f | findstr /I "Debug" >nul && copy /Y "%%f" "%OUTPUT_DIR%\spdlog_d.lib" >nul
-          )
-
-          REM spdlog 헤더 복사 (.h/.hpp/.inl, fmt/bundled/fmt.license.rst 제외)
-          for /R "%SPDLOG_DIR%\include\spdlog" %%f in (*.h *.hpp *.inl) do (
-              xcopy /Y "%%f" "%INCLUDE_DIR%\spdlog\" >nul
-          )
-
-          exit /b 0
-
-      - name: Upload new extern libs artifact (for lib/windows/)
-        if: matrix.configuration == 'Release'
+      - name: Upload Effekseer libs
         uses: actions/upload-artifact@v4
         with:
-          name: extern-new-libs-windows
-          path: |
-            build_extern/output/windows/box2d.lib
-            build_extern/output/windows/box2d_d.lib
-            build_extern/output/windows/Effekseer.lib
-            build_extern/output/windows/Effekseer_d.lib
-            build_extern/output/windows/EffekseerRendererGL.lib
-            build_extern/output/windows/EffekseerRendererGL_d.lib
-            build_extern/output/windows/assimp.lib
-            build_extern/output/windows/assimp_d.lib
-            build_extern/output/windows/zlibstatic.lib
-            build_extern/output/windows/zlibstatic_d.lib
-            build_extern/output/windows/spdlog.lib
-            build_extern/output/windows/spdlog_d.lib
+          name: effekseer-libs-windows
+          path: build_extern/output/windows/
 
-      - name: Upload new extern headers artifact (for include/)
-        if: matrix.configuration == 'Release'
-        uses: actions/upload-artifact@v4
+  # --------------------------------------------------------------------------
+  # 게임 빌드 (msvc-2022)
+  # --------------------------------------------------------------------------
+  build:
+    name: Game build (${{ matrix.configuration }})
+    needs: extern
+    runs-on: windows-2022
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - configuration: Debug
+            build_preset: msvc-2022
+          - configuration: Release
+            build_preset: msvc-2022-release
+
+    steps:
+      # CMake 가 extern/ 을 참조하지 않으므로 서브모듈 불필요(체크아웃 단축).
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Effekseer libs into lib/windows
+        uses: actions/download-artifact@v4
         with:
-          name: extern-new-headers
-          path: build_extern/output/include/
+          name: effekseer-libs-windows
+          path: lib/windows
+
+      # 프리셋은 $env{VCPKG_ROOT} 를 참조하는데 GitHub 러너는 VCPKG_INSTALLATION_ROOT
+      # 로 노출한다. 미승격 시 toolchain 경로가 "/scripts/buildsystems/vcpkg.cmake" 로
+      # 해석돼 configure 가 죽는다(실측 2026-07-26).
+      # ※ expression 의 env: 컨텍스트는 러너 환경변수를 못 읽으므로 GITHUB_ENV 로 승격해야 한다.
+      - name: Export VCPKG_ROOT
+        shell: pwsh
+        run: |
+          if (-not $env:VCPKG_INSTALLATION_ROOT) { throw "VCPKG_INSTALLATION_ROOT 미설정 - 러너에 vcpkg 없음" }
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Configure
         run: cmake --preset msvc-2022
@@ -245,3 +144,73 @@ jobs:
         with:
           name: build-msvc-${{ matrix.configuration }}
           path: build_msvc/apps/**/${{ matrix.configuration }}/
+
+  # --------------------------------------------------------------------------
+  # 골든 캡처 빌드 (msvc-2022-golden) — *빌드 검증 전용*, 게이트 실행 아님
+  # --------------------------------------------------------------------------
+  # 왜 빌드만 하는가:
+  #   1) test/golden/*.png REF 는 macOS 2560x1440(Retina) 캡처본이다. Windows 는
+  #      1280x720 을 뱉으므로 golden_compare 의 sizeMatch 에서 반드시 FAIL 한다.
+  #      플랫폼별 REF 세트가 생기기 전까지 비교는 의미가 없다.
+  #   2) GitHub-hosted 러너에는 GL 4.1 Core 컨텍스트가 없어 캡처 자체가 못 돈다.
+  # 그래서 이 잡이 지키는 것 = "capture_application 진입점과 golden_compare 가
+  #   MSVC 에서 컴파일/링크된다". macOS 에서만 돌던 골든 코드가 Windows 빌드를
+  #   깨뜨리는 회귀를 잡는다.
+  #
+  # 왜 msvc-2022-golden 인가 (msvc-golden 아님):
+  #   msvc-golden 은 generator "Visual Studio 16 2019" 를 상속하는데 windows-2022
+  #   이미지에는 VS2019 가 없다(v142 툴셋만 옵션 제공). VS2019 검증이 필요하면
+  #   self-hosted 러너를 붙여야 한다.
+  build-golden:
+    name: Golden capture build (MSVC 2022)
+    needs: extern
+    runs-on: windows-2022
+
+    # vcpkg 바이너리 캐시를 워크스페이스 안 고정 경로로 옮긴다.
+    #   기본값은 %LOCALAPPDATA%\vcpkg\archives 지만, actions/cache 의 path: 는
+    #   러너 환경변수를 전개하지 못한다(${{ env.X }} 는 workflow env 만 본다).
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg_cache
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Effekseer libs into lib/windows
+        uses: actions/download-artifact@v4
+        with:
+          name: effekseer-libs-windows
+          path: lib/windows
+
+      - name: Export VCPKG_ROOT
+        shell: pwsh
+        run: |
+          if (-not $env:VCPKG_INSTALLATION_ROOT) { throw "VCPKG_INSTALLATION_ROOT 미설정 - 러너에 vcpkg 없음" }
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # msvc-2022-golden 은 VCPKG_MANIFEST_FEATURES=golden 으로 opencv4 를 끌어온다.
+      # x64-windows-static 소스 빌드라 매우 무겁다 -> 바이너리 아카이브 캐시 필수.
+      # (VCPKG_DEFAULT_BINARY_CACHE 는 디렉토리가 *미리 존재*해야 vcpkg 가 수용한다.)
+      - name: Prepare vcpkg binary cache dir
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path "$env:VCPKG_DEFAULT_BINARY_CACHE" | Out-Null
+
+      - name: Cache vcpkg binary archives
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}\vcpkg_cache
+          key: vcpkg-msvc-golden-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: |
+            vcpkg-msvc-golden-
+
+      - name: Configure (msvc-2022-golden)
+        run: cmake --preset msvc-2022-golden
+
+      - name: Build
+        run: cmake --build --preset msvc-2022-golden
+
+      - name: Upload capture build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-msvc-golden
+          path: build_msvc-golden/apps/**/Debug/

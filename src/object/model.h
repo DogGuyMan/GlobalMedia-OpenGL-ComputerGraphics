@@ -23,6 +23,7 @@
 #include "object/mesh.h"
 #include "texture/texture.h"   // TextureUPtr - 모델이 보유하는 텍스처 lifetime
 #include "material/material.h"
+#include <vector>              // std::vector 직접 사용 - 구 mesh.h 전이 포함에 의존했음
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>

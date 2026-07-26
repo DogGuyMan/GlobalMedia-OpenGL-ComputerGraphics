@@ -18,13 +18,16 @@ cmake --build --preset ninja --target tests
 ctest --test-dir build_ninja --output-on-failure
 
 # 렌더 출력이 바뀌는 변경(셰이더/메시/패스/GL상태)의 정본 검증 = 골든 게이트
-# ★ 전용 프리셋 ninja-golden (별도 build dir). 게임 빌드(build_ninja)의 _MyApp_ 는
-#   골든을 캡처하지 않으므로 build_ninja 에는 골든 ctest 가 아예 등록되지 않는다.
+# ★ 전용 프리셋 (별도 build dir). 게임 빌드(build_ninja)의 _MyApp_ 는 골든을 캡처하지
+#   않으므로 build_ninja 에는 골든 ctest 가 아예 등록되지 않는다.
 #   빌드 GREEN 도, `ctest --test-dir build_ninja` 통과도 렌더 회귀를 못 잡는다.
+# ★ 3줄이 한 세트 — build 를 빠뜨리면 ctest 가 옛 바이너리를 검증하고 GREEN 을 준다.
 cmake --preset ninja-golden
 cmake --build --preset ninja-golden --target tests
 ctest --test-dir build_ninja-golden -R "골든" --output-on-failure
 ```
+
+골든 프리셋 4종 = `ninja-golden`(정본) · `ninja-release-golden`(Release, Debug 캡처와 14/14 비트동일 실측) · `msvc-golden`/`msvc-2022-golden`(Windows — REF 가 macOS 2560x1440 캡처라 크기 불일치로 FAIL, 캡처 생성 용도). build dir·REF 호환표는 [`test/CLAUDE.md`](../test/CLAUDE.md).
 
 전체 프리셋(msvc/msvc-2022 등) 및 개발 CLI(`python3 scripts/dev.py <서브커맨드>` — 구 `shell/` 통합) 목록은 `doc/CLAUDE-extended.md` 참조.
 
