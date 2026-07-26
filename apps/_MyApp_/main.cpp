@@ -33,11 +33,11 @@
 #include "Spawns/WorldTextInstance.h"
 
 #include "Audio/FmodStudioPlayable.h"
+#include "Bootstrap/Constants.h"
 #include "Bootstrap/actor_factory.h"
 #include "Entity/Components/LifeComponents.h"
-#include "Stage/Components/StageStateComponent.h"
-#include "Bootstrap/Constants.h"
 #include "Stage/Components/GameContextComponent.h"
+#include "Stage/Components/StageStateComponent.h"
 #include "Stage/Constants.h"
 #include "Stage/Stage.h"
 #include "Stage/State/StageState.Impl.h"
@@ -95,14 +95,6 @@ namespace TopdownShooter
 
 		void startup() override // ! 모듈화 대상 (boot 진입점 = AppRunner boot; capture 트리거는 test 모듈로)
 		{
-			// GU0 capture 모드 활성화 -- SJH_GOLDEN_CAPTURE 환경 변수 존재 시.
-			// GL 컨텍스트 생성 직후, 부트 시퀀스 전에 설정.
-			mCaptureMode = (std::getenv("SJH_GOLDEN_CAPTURE") != nullptr);
-			if (mCaptureMode)
-			{
-				spdlog::info("[GoldenCapture] capture 모드 활성화 -- 고정-dt 1/60, 180 프레임 후 PNG 저장 후 종료.");
-				std::srand(42); // 결정적 시뮬을 위한 고정 시드
-			}
 
 			// A1 -- GLFW window 정보 캐시 (hook 들이 공유).
 			mFbInfo = SJH::GetFramebufferInfo(window);
@@ -197,7 +189,7 @@ namespace TopdownShooter
 					mFogMatPtr->Properties.Ints["uFogMode"] = Playable::FOG_MODE;
 				}
 				// grayscale 공유 Material - HpGrayscalePostFX SSOT + PassDebugLayer read-only 표시용 캡처.
-				// ! 리펙토링 대상 -> Playable::VIGNETTE_COLOR를 왜 명시적으로 넣는것이지? 
+				// ! 리펙토링 대상 -> Playable::VIGNETTE_COLOR를 왜 명시적으로 넣는것이지?
 				// 	! 쉐이더 자체에서 값을 빨간색으로 고정시키면 될 것 같고, 이 쉐이더는 당연히 확장성은 Slang으로 처리하기 때문에
 				//	! 추후 비네팅 함수를 외부로 분리하고, 오직 HPGrayScale의 구체 쉐이더 클래스만 구체화 하는식으로 해결할 수 있고,
 				//	! 아래의 코드가 굳이 필요하지 않아보인다.
@@ -205,7 +197,6 @@ namespace TopdownShooter
 				mGrayscaleMatPtr = reg.FindSharedMaterial(std::string("mat_pass_") + Playable::PASS_GRAYSCALE_VIGNETTING);
 				if (mGrayscaleMatPtr)
 					mGrayscaleMatPtr->Properties.Vec3s["uVignetteColor"] = Playable::VIGNETTE_COLOR; // vec3 초기값(InitFloats 밖).
-				
 
 				RebindFogUniforms(mFogMatPtr); // fog uDepth(unit1) = sceneFB depth 텍스처 바인딩.
 
@@ -274,7 +265,6 @@ namespace TopdownShooter
 				mStage = worldScene.StageActor;
 				auto *stageState = mStage->AddComponent<Stage::Components::StageState>();
 				stageState->SetCurrent(Stage::EStageStatus::Title);
-
 
 				mFxRoot = dir.Root().AddChild(std::make_unique<SJH::Scene::Actor>(ACTOR_FX_ROOT));
 				VFX::SetSpawnContext(mFxRoot, &vfxs);
@@ -369,15 +359,10 @@ namespace TopdownShooter
 
 		void render(double currentTime) override // ! 모듈화 대상 (매프레임 렌더 루프 = capture 가 override 로 재사용하는 핵심)
 		{
-			// GU0 capture 모드 -- 고정-dt 1/60 로 결정적 시뮬.
-			// capture 모드에서는 currentTime 인자를 무시하고 프레임 번호 기반 가상 시간을 사용.
-			double effectiveTime = currentTime;
+			// 프레임 시각/dt 결정 -- 기본은 실시간(가변 dt). 파생(capture_application)이
+			// OnFrameTiming 을 override 해 고정-dt 가상 클럭으로 대체한다(결정적 시뮬).
 			float dt = static_cast<float>(SJH::DeltaTime(currentTime));
-			if (mCaptureMode)
-			{
-				effectiveTime = mCaptureFrame / 60.0;
-				dt = 1.0f / 60.0f;
-			}
+			OnFrameTiming(currentTime, dt);
 
 			int fbW = 0, fbH = 0;
 			glfwGetFramebufferSize(window, &fbW, &fbH);
@@ -429,9 +414,9 @@ namespace TopdownShooter
 				mCtx->waveCtrl->SweepDespawned();
 
 			// 스카이박스 시간(u_time) 동기화 — 위치는 셰이더가 view 이동 제거로 자동 처리.
-			// capture 모드에서는 effectiveTime(프레임 번호 기반 가상 시간) 사용 -> 결정적 시뮬.
+			// 소스 = OnFrameTiming 통과 후의 currentTime (캡처 시엔 가상 클럭 -> 결정적 시뮬).
 			if (mSkyboxMat)
-				mSkyboxMat->Properties.Floats[UNI_SKYBOX_TIME] = static_cast<float>(effectiveTime);
+				mSkyboxMat->Properties.Floats[UNI_SKYBOX_TIME] = static_cast<float>(currentTime);
 
 			// 경고 벽(warning_wall) 시간(uTime) 동기화 — U 스크롤. ★ 소스 = GameSystems 게임 클럭
 			//   (CombatPlay tick 동안만 누적, Title/Pause/GameOver freeze). 월클럭 effectiveTime 을 쓰면
@@ -458,93 +443,22 @@ namespace TopdownShooter
 
 			// stages 실행 - PassIterator 가 before/GetPassResult 체이닝으로 순회(현재 BeforeIndex=-1 -> before=nullptr, 사전배선 사용).
 			mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
-
-			// GU1 capture 모드 -- 180 프레임 도달 시 3 변형 렌더+캡처 후 종료.
-			// 골든 캡처: readback+orchestration 은 SJH::Diagnostics(frame_capture/pass_capture) 로 이관됨.
-			//   앱은 트리거(env)+고정-dt drive + 변형 LIST 구성만 담당(render 루프 wiring).
-			if (mCaptureMode)
-			{
-				if (mCaptureFrame == 180)
-				{
-					// test/golden/ 디렉토리 생성 보장 -- 실행 cwd 기준(build_ninja/apps/_MyApp_/).
-					const std::string outDir = "test/golden";
-					std::filesystem::create_directories(outDir);
-
-					// G1(전체): ImGui 프레임 재빌드(PassDebugLayer 만 제외)가 필요해 별도 처리.
-					if (mPassDebugLayerPtr)
-						mPassDebugLayerPtr->Enabled = false;
-					ImGui_ImplGlfwGL3_NewFrame();
-					mImGuiStack.RenderAll(mShowEditor);
-					mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
-					SJH::Diagnostics::CaptureBackbufferToPng(outDir + "/golden_full.png", fbW, fbH);
-					if (mPassDebugLayerPtr)
-						mPassDebugLayerPtr->Enabled = true;
-
-					// 나머지 변형은 데이터주도 runner. Keys() 마지막="ImGui" -> size()-2 = ImGui 직전(present 까지).
-					const int presentStop = static_cast<int>(mPassIterator.Keys().size()) - 2;
-					std::vector<SJH::Diagnostics::CaptureVariant> variants = {
-					    // G2: ImGui 제외 (Skybox/World/Particle/PostFX/present 만).
-					    {"golden_no_imgui", {}, presentStop, INT_MIN, INT_MAX,
-					     SJH::Diagnostics::CaptureVariant::Backbuffer},
-					    // G3: World/Particle 제외 (Skybox/PostFX/present 만).
-					    {"golden_skybox", {{"World", false}, {"Particle", false}}, presentStop, INT_MIN,
-					     INT_MAX, SJH::Diagnostics::CaptureVariant::Backbuffer},
-					};
-
-					// GG-A: PostFX 누적 골든. 스테이지 0..N-1 enable, 나머지 postfx off (기본 off 라 명시).
-					//   N=1 gamma / N=2 +sharpening / ... / N=8 +sobel. 순서 의존 효과 관찰(depth_debug 제외).
-					static const char *kPostFx[] = {
-					    Playable::PASS_GAMMA, Playable::PASS_SHARPENING, Playable::PASS_BLOOM,
-					    Playable::PASS_FOG, Playable::PASS_GRAYSCALE_VIGNETTING, Playable::PASS_INVERT,
-					    Playable::PASS_BLURRING, Playable::PASS_SOBEL};
-					constexpr int kPostFxN = 8;
-					for (int n = 1; n <= kPostFxN; ++n)
-					{
-						SJH::Diagnostics::CaptureVariant v;
-						v.outName = "golden_postfx_" + std::to_string(n) + "_" + kPostFx[n - 1];
-						for (int i = 0; i < kPostFxN; ++i)
-							v.passOverride.emplace_back(kPostFx[i], i < n); // 0..n-1 enable, 나머지 off
-						v.stopAtPass = presentStop; // present 까지, ImGui 제외
-						v.target = SJH::Diagnostics::CaptureVariant::Backbuffer;
-						variants.push_back(std::move(v));
-					}
-
-					// GG-B: World RenderQueue별 raw FBO 골든(D1 - PostFX 전). WorldFbo 대상 = mSceneFB.
-					//   ★ 필터는 순수 RenderQueue(material 의도)로 한다 - queueLayer(=base+DrawOrder offset)
-					//     는 음수 DrawOrder(플레이어 레이어 -1/-2/-3 -> 2449/2448/2447)가 인접 큐로 새서
-					//     부적합. IRenderable::RenderQueue() 가 순수값(AlphaTest=2450) 반환 -> 전 레이어 포집.
-					//   SkyboxPass 유지(mSceneFB clear + 배경), Particle 제외(큐 격리). Skybox 는 별도 패스라
-					//     WorldPass 큐 비어 제외. Title 엔 불릿 없어 Opaque 는 배경만(향후 CombatPlay 대비).
-					const struct
-					{
-						const char *name;
-						int         lo, hi;
-					} kWorldQueue[] = {
-					    {"golden_world_opaque", 2000, 2001},      // 순수 Opaque (Title: 불릿 없음 -> 배경만)
-					    {"golden_world_alphatest", 2450, 2451},   // 순수 AlphaTest (플레이어 전 레이어, offset 무관)
-					    {"golden_world_transparent", 3000, 3002}, // Transparent(3000) + TransparentDepthWrite(3001)
-					};
-					for (const auto &wq : kWorldQueue)
-					{
-						SJH::Diagnostics::CaptureVariant v;
-						v.outName = wq.name;
-						v.passOverride.emplace_back("Particle", false); // 파티클 제외 (큐 격리)
-						v.worldQueueMin = wq.lo;
-						v.worldQueueMax = wq.hi; // [lo, hi) 대역 - QueueOffset 포함
-						v.target = SJH::Diagnostics::CaptureVariant::WorldFbo; // mSceneFB (PostFX 전)
-						variants.push_back(std::move(v));
-					}
-					SJH::Diagnostics::RunCaptureVariants(mPassIterator, SJH::DeviceContext::Get(),
-					                                     *mDefaultTarget, mSceneFB.get(), mWorldPassPtr,
-					                                     variants, outDir, fbW, fbH);
-
-					// glfwSetWindowShouldClose 로 sb7 run 루프 정상 종료 (GLFW 3.0.4 는 GLFW_TRUE 대신 1).
-					glfwSetWindowShouldClose(window, 1);
-				}
-				++mCaptureFrame;
-			}
 		}
 
+	  protected:
+		/**
+		 * @brief 프레임 시각/dt 를 파생이 재정의할 수 있게 하는 확장점 (Template Method 의 hook).
+		 * @param currentTime [in,out] sb7 이 넘긴 절대 시각(초). 파생이 가상 클럭으로 교체 가능.
+		 * @param dt          [in,out] @c SJH::DeltaTime 이 계산한 가변 dt. 파생이 고정 dt 로 교체 가능.
+		 * @details 기본 구현은 no-op -- 게임은 실시간 가변 dt 를 그대로 쓴다.
+		 *          두 값은 서로 독립이라 한쪽만 바꿔서는 결정적 시뮬이 성립하지 않는다
+		 *          (가상 클럭을 @c DeltaTime 에 흘려도 첫 프레임 dt 가 0 이 됨) -- 그래서 둘 다 out 파라미터.
+		 */
+		virtual void OnFrameTiming(double & /*currentTime*/, float & /*dt*/)
+		{
+		}
+
+	  public:
 		void shutdown() override // ! 모듈화 대상 (자원/씬 정리 = boot 의 역순)
 		{
 			ImGui_ImplGlfwGL3_Shutdown();
@@ -621,57 +535,55 @@ namespace TopdownShooter
 				mScreenCamera->Aspect = static_cast<float>(w) / static_cast<float>(h);
 		}
 
-	  private:
-		// ── 캡처 모드 멤버 (GU0) ────────────────────────────────────────────────────
-		/// SJH_GOLDEN_CAPTURE 환경 변수 설정 시 capture 모드 활성화.
-		bool mCaptureMode = false; // ! 모듈화 대상 (capture 전용 상태 → test/ 캡처 모듈; AppRunner 아님)
-		/// capture 모드에서 누적된 렌더 프레임 수. 180 도달 후 PNG 저장 + 종료.
-		int mCaptureFrame = 0; // ! 모듈화 대상 (capture 전용 상태 → test/ 캡처 모듈; AppRunner 아님)
-
+	  protected:
 		// ── 멤버 ────────────────────────────────────────────────────────────────────
-		SJH::FramebufferInfo mFbInfo{}; ///< startup 캐시 -- 3 hook 이 공유하는 window/fb 크기/비율. // ! 모듈화 대상 (창/fb 정보 = boot+render 공유 상태)
+		// protected 인 이유 = 파생 capture_application 이 파이프라인(PassIterator / sceneFB /
+		// defaultTarget / WorldPass / ImGui 스택)을 *그대로* 캡처 대상으로 삼기 때문.
+		// 외부 공개는 아니다 -- 캡처 이외 소비자는 여전히 접근 불가.
+		SJH::FramebufferInfo mFbInfo{};       ///< startup 캐시 -- 3 hook 이 공유하는 window/fb 크기/비율. // ! 모듈화 대상 (창/fb 정보 = boot+render 공유 상태)
 		SJH::RenderTargetUPtr mDefaultTarget; // ! 모듈화 대상 (backbuffer 렌더 타깃 = 파이프라인 출력)
 		// SP-RenderStage 완성 — Application 이 stages 컬렉션을 명시 순서로 순회.
 		SJH::PassIterator mPassIterator;            ///< 모든 Pass 소유(unique_ptr) + 코스 순서 실행 + Find(key) 조회. // ! 모듈화 대상 (전 패스 소유 = 렌더 파이프라인 본체)
 		SJH::WorldPass *mWorldPassPtr = nullptr;    ///< worldCam WorldPass(비소유 관찰, 소유=PassIterator) - 매 프레임 SetActivePrograms 주입. // ! 모듈화 대상 (매프레임 SetActivePrograms 주입점 = 렌더루프 결합)
 		SJH::PostFxPass *mPresentPassPtr = nullptr; ///< present PostFxPass(passthrough, output=nullptr, 비소유 관찰) - 매 프레임 SetBackbuffer 주입. // ! 모듈화 대상 (매프레임 SetBackbuffer 주입점 = 렌더루프 결합)
 		SJH::Mesh *mScreenQuadMeshPtr = nullptr;    ///< PostFxPass blit 용 screen quad (비소유, 소유=ResourceRegistry). // ! 모듈화 대상 (PostFX blit mesh = 파이프라인 자원)
-		SJH::Material *mGrayscaleMatPtr = nullptr;  ///< grayscale_vignetting 공유 Material (HpGrayscalePostFX 와 SSOT 공유, 소유=ResourceRegistry). // ! 모듈화 대상 (PostFX 머티리얼 = 파이프라인 자원)
-		SJH::Material *mPresentMatPtr = nullptr;    ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry). // ! 모듈화 대상 (present 머티리얼 = 파이프라인 자원)
-		SJH::Material *mFogMatPtr = nullptr;    ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry). // ! 모듈화 대상 (present 머티리얼 = 파이프라인 자원)
 
-		SJH::RenderTextureUPtr mSceneFB; // ! 모듈화 대상 (씬 렌더 FBO + depth(fog) = 파이프라인 중간 출력)
+		SJH::Material *mGrayscaleMatPtr = nullptr; ///< grayscale_vignetting 공유 Material (HpGrayscalePostFX 와 SSOT 공유, 소유=ResourceRegistry). // ! 모듈화 대상 (PostFX 머티리얼 = 파이프라인 자원)
+		SJH::Material *mPresentMatPtr = nullptr;   ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry). // ! 모듈화 대상 (present 머티리얼 = 파이프라인 자원)
+		SJH::Material *mFogMatPtr = nullptr;       ///< present passthrough Material ("mat_pass_present", 소유=ResourceRegistry). // ! 모듈화 대상 (present 머티리얼 = 파이프라인 자원)
+
+		SJH::RenderTextureUPtr mSceneFB;                // ! 모듈화 대상 (씬 렌더 FBO + depth(fog) = 파이프라인 중간 출력)
 		std::vector<SJH::RenderTextureUPtr> mPostFXFBs; ///< 효과별 중간 FBO (POSTFX_PROGRAM_CONFIGS 와 1:1, 소유). resize 동기. // ! 모듈화 대상 (PostFX 중간 FBO = 파이프라인 자원)
 
 		// ImGui
-		ImGuiContext *mImGuiCtx = nullptr; // ! 모듈화 대상 (ImGui 컨텍스트 = UI 레이어)
-		UI::ImGuiLayerStack mImGuiStack; // ! 모듈화 대상 (ImGui 레이어 스택 = UI)
+		ImGuiContext *mImGuiCtx = nullptr;             // ! 모듈화 대상 (ImGui 컨텍스트 = UI 레이어)
+		UI::ImGuiLayerStack mImGuiStack;               // ! 모듈화 대상 (ImGui 레이어 스택 = UI)
 		UI::IImGuiLayer *mPassDebugLayerPtr = nullptr; // PassDebugLayer raw 포인터 (비소유 — 스택이 소유). capture G1 일시 비활성화용. // ! 모듈화 대상 (디버그 UI + capture G1 토글 결합)
-		bool mShowEditor = true; // ! 모듈화 대상 (에디터 토글 상태 = UI/입력)
+		bool mShowEditor = true;                       // ! 모듈화 대상 (에디터 토글 상태 = UI/입력)
 
 		// 씬 오브젝트
 		SJH::Material *mSkyboxMat = nullptr;         ///< skybox Material (비소유, 소유=ResourceRegistry). // ! 모듈화 대상 (매프레임 u_time 주입점 = 렌더루프 결합)
 		SJH::IRenderable *mSkyboxRenderer = nullptr; ///< skybox MeshRenderer(IRenderable) - SkyboxPass 주입용(비소유). // ! 모듈화 대상 (SkyboxPass 주입 대상 = 파이프라인)
-		SJH::Scene::Actor *mSpriteActor = nullptr; // ! 모듈화 대상 (플레이어 = 씬 상태)
-		SJH::Scene::Actor *mFxRoot = nullptr; // 단발 시퀀스 전용 부모 (sweep 대상) // ! 모듈화 대상 (FX 부모 = 씬 상태)
+		SJH::Scene::Actor *mSpriteActor = nullptr;   // ! 모듈화 대상 (플레이어 = 씬 상태)
+		SJH::Scene::Actor *mFxRoot = nullptr;        // 단발 시퀀스 전용 부모 (sweep 대상) // ! 모듈화 대상 (FX 부모 = 씬 상태)
 		SJH::Scene::Actor *mStage = nullptr;
-		SJH::Scene::Camera *mCamera = nullptr; // ! 모듈화 대상 (world 카메라 = 렌더 입력)
-		SJH::Scene::Camera *mScreenCamera = nullptr; // ! 모듈화 대상 (화면 카메라 = 렌더 입력)
+		SJH::Scene::Camera *mCamera = nullptr;                              // ! 모듈화 대상 (world 카메라 = 렌더 입력)
+		SJH::Scene::Camera *mScreenCamera = nullptr;                        // ! 모듈화 대상 (화면 카메라 = 렌더 입력)
 		SJH::KeyboardInput<Controller::PlayerController::Action> mKeyboard; // ! 모듈화 대상 (입력 = 게임루프)
-		SJH::MouseInput mMouse; // ! 모듈화 대상 (입력 = 게임루프)
+		SJH::MouseInput mMouse;                                             // ! 모듈화 대상 (입력 = 게임루프)
 
 		// Stage FSM (Hybrid) — render() 의 게임로직 Update 를 State 가 게이트.
-		std::unique_ptr<Stage::StageStateMachine> mStageFsm; // ! 모듈화 대상 (게임로직 FSM = 루프 드라이브)
+		std::unique_ptr<Stage::StageStateMachine> mStageFsm;     // ! 모듈화 대상 (게임로직 FSM = 루프 드라이브)
 		Stage::Components::GameContextComponent *mCtx = nullptr; // 비소유 — Root 의 GameContext actor 가 소유 // ! 모듈화 대상 (게임 컨텍스트 와이어링 = 상태)
 
 		// ! 모듈화 대상 — 위 mFbInfo~mCtx 의존 멤버 전체(렌더 타깃 · PassIterator · PostFX 자원 · 씬 ·
 		//   시스템(GameSystems) · ImGui 스택 · Stage FSM)는 "부트 + 렌더루프" 단위로 추출 예정.
 		//   golden capture 가 main 무침투로 이 파이프라인을 재사용하기 위한 모듈화 경계.
-		//   (capture 전용 mCaptureMode / mCaptureFrame 은 test/ 캡처 모듈로 별도 분리.)
+		//   (capture 전용 상태/로직은 아래 capture_application 파생으로 이미 분리 완료.)
 
 		// fog material 의 uDepth 를 현재 mSceneFB depth 텍스처(unit 1)로 (재)바인딩. fog 미생성 시 guard no-op.
 		// startup + resize 직후 호출 — sceneFB 재생성 시 dangling 방지 (D2).
-		void RebindFogUniforms(SJH::Material* mFogMatPtr) // ! 모듈화 대상 (fog uDepth 재바인딩 = 파이프라인 보조, resize 시 호출)
+		void RebindFogUniforms(SJH::Material *mFogMatPtr) // ! 모듈화 대상 (fog uDepth 재바인딩 = 파이프라인 보조, resize 시 호출)
 		{
 			if (!mFogMatPtr || !mSceneFB || !mSceneFB->GetDepthAttachment())
 				return;
@@ -696,6 +608,158 @@ namespace TopdownShooter
 		}
 	};
 
+	/**
+	 * @brief 골든 이미지 캡처 전용 애플리케이션 (GU0/GU1) -- 게임 앱의 파이프라인을 그대로 상속.
+	 *
+	 * @details
+	 *  ### 책임
+	 *  - 결정적 시뮬 강제 -- 고정-dt 1/60 가상 클럭(@c OnFrameTiming) + 고정 난수 시드(@c startup).
+	 *  - 180 프레임 도달 시 변형별 렌더+PNG 캡처 후 창 종료(@c render 꼬리).
+	 *
+	 *  ### 비-책임
+	 *  - [X] 씬/파이프라인 조립 -- 전부 @c game_application 상속(부트 3 hook 미재정의).
+	 *  - [X] readback / PNG 인코딩 / 변형 실행 -- @c SJH::Diagnostics (frame_capture / pass_capture).
+	 *
+	 *  ### 설계 근거
+	 *  파생을 택한 이유 = 골든의 검증 대상이 *실제 게임 앱* 이어야 하기 때문. 형제 클래스로 두면
+	 *  부트 3 hook 과 렌더 루프를 복제하게 되고, 그 순간 골든은 프로덕션 경로가 아닌 사본을 찍는다.
+	 *  대신 게임 쪽에는 캡처 코드가 한 줄도 남지 않는다(런타임 mCaptureMode 분기 -> 클래스 선택으로 대체).
+	 *
+	 * @note 활성화 = 진입점이 @c SJH_GOLDEN_CAPTURE 환경 변수를 보고 이 클래스를 인스턴스화.
+	 *       ctest 픽스처 golden_capture 가 그 환경 변수를 세팅한다(test/CMakeLists.txt).
+	 */
+	class capture_application : public game_application
+	{
+	  public:
+		void startup() override
+		{
+			// 부트 시퀀스 *전* 에 결정적 시드 고정 -- 씬 조립이 rand 를 쓰더라도 재현 가능해야 한다.
+			spdlog::info("[GoldenCapture] capture 모드 -- 고정-dt 1/60, {} 프레임 후 PNG 저장 후 종료.", kCaptureAtFrame);
+			std::srand(42);
+			game_application::startup();
+		}
+
+		void render(double currentTime) override
+		{
+			// 게임 프레임을 그대로 1회 실행 (파이프라인 무침투) -> 그 결과 백버퍼/FBO 를 캡처.
+			game_application::render(currentTime);
+			if (mCaptureFrame == kCaptureAtFrame)
+				CaptureAllVariants();
+			++mCaptureFrame;
+		}
+
+	  protected:
+		/// @brief 실시간 클럭을 프레임 번호 기반 가상 클럭으로 교체 -- 매 실행 동일 픽셀 보장.
+		void OnFrameTiming(double &currentTime, float &dt) override
+		{
+			currentTime = mCaptureFrame / 60.0;
+			dt = 1.0f / 60.0f;
+		}
+
+	  private:
+		/// 캡처 시점 프레임 번호. 씬이 정착(FX/트윈 안정)한 뒤여야 골든이 안정적.
+		static constexpr int kCaptureAtFrame = 180;
+		/// capture 모드에서 누적된 렌더 프레임 수.
+		int mCaptureFrame = 0;
+
+		// GU1 -- 변형별 렌더+캡처 후 종료. readback+orchestration 은 SJH::Diagnostics 로 이관됨.
+		//   이 클래스는 트리거 + 변형 LIST 구성만 담당.
+		void CaptureAllVariants()
+		{
+			int fbW = 0, fbH = 0;
+			glfwGetFramebufferSize(window, &fbW, &fbH);
+			// test/golden/ 디렉토리 생성 보장 -- 실행 cwd 기준(build_ninja/apps/_MyApp_/).
+			const std::string outDir = "test/golden";
+			std::filesystem::create_directories(outDir);
+
+			// G1(전체): ImGui 프레임 재빌드(PassDebugLayer 만 제외)가 필요해 별도 처리.
+			if (mPassDebugLayerPtr)
+				mPassDebugLayerPtr->Enabled = false;
+			ImGui_ImplGlfwGL3_NewFrame();
+			mImGuiStack.RenderAll(mShowEditor);
+			mPassIterator.Execute(SJH::DeviceContext::Get(), *mDefaultTarget);
+			SJH::Diagnostics::CaptureBackbufferToPng(outDir + "/golden_full.png", fbW, fbH);
+			if (mPassDebugLayerPtr)
+				mPassDebugLayerPtr->Enabled = true;
+
+			// 나머지 변형은 데이터주도 runner. Keys() 마지막="ImGui" -> size()-2 = ImGui 직전(present 까지).
+			const int presentStop = static_cast<int>(mPassIterator.Keys().size()) - 2;
+			std::vector<SJH::Diagnostics::CaptureVariant> variants = {
+			    // G2: ImGui 제외 (Skybox/World/Particle/PostFX/present 만).
+			    {"golden_no_imgui", {}, presentStop, INT_MIN, INT_MAX, SJH::Diagnostics::CaptureVariant::Backbuffer},
+			    // G3: World/Particle 제외 (Skybox/PostFX/present 만).
+			    {"golden_skybox", {{"World", false}, {"Particle", false}}, presentStop, INT_MIN, INT_MAX, SJH::Diagnostics::CaptureVariant::Backbuffer},
+			};
+
+			// GG-A: PostFX 누적 골든. 스테이지 0..N-1 enable, 나머지 postfx off (기본 off 라 명시).
+			//   N=1 gamma / N=2 +sharpening / ... / N=8 +sobel. 순서 의존 효과 관찰(depth_debug 제외).
+			static const char *kPostFx[] = {
+			    Playable::PASS_GAMMA, Playable::PASS_SHARPENING, Playable::PASS_BLOOM,
+			    Playable::PASS_FOG, Playable::PASS_GRAYSCALE_VIGNETTING, Playable::PASS_INVERT,
+			    Playable::PASS_BLURRING, Playable::PASS_SOBEL};
+			constexpr int kPostFxN = 8;
+			for (int n = 1; n <= kPostFxN; ++n)
+			{
+				SJH::Diagnostics::CaptureVariant v;
+				v.outName = "golden_postfx_" + std::to_string(n) + "_" + kPostFx[n - 1];
+				for (int i = 0; i < kPostFxN; ++i)
+					v.passOverride.emplace_back(kPostFx[i], i < n); // 0..n-1 enable, 나머지 off
+				v.stopAtPass = presentStop;                         // present 까지, ImGui 제외
+				v.target = SJH::Diagnostics::CaptureVariant::Backbuffer;
+				variants.push_back(std::move(v));
+			}
+
+			// GG-B: World RenderQueue별 raw FBO 골든(D1 - PostFX 전). WorldFbo 대상 = mSceneFB.
+			//   ★ 필터는 순수 RenderQueue(material 의도)로 한다 - queueLayer(=base+DrawOrder offset)
+			//     는 음수 DrawOrder(플레이어 레이어 -1/-2/-3 -> 2449/2448/2447)가 인접 큐로 새서
+			//     부적합. IRenderable::RenderQueue() 가 순수값(AlphaTest=2450) 반환 -> 전 레이어 포집.
+			//   SkyboxPass 유지(mSceneFB clear + 배경), Particle 제외(큐 격리). Skybox 는 별도 패스라
+			//     WorldPass 큐 비어 제외. Title 엔 불릿 없어 Opaque 는 배경만(향후 CombatPlay 대비).
+			const struct
+			{
+				const char *name;
+				int lo, hi;
+			} kWorldQueue[] = {
+			    {"golden_world_opaque", 2000, 2001},      // 순수 Opaque (Title: 불릿 없음 -> 배경만)
+			    {"golden_world_alphatest", 2450, 2451},   // 순수 AlphaTest (플레이어 전 레이어, offset 무관)
+			    {"golden_world_transparent", 3000, 3002}, // Transparent(3000) + TransparentDepthWrite(3001)
+			};
+			for (const auto &wq : kWorldQueue)
+			{
+				SJH::Diagnostics::CaptureVariant v;
+				v.outName = wq.name;
+				v.passOverride.emplace_back("Particle", false); // 파티클 제외 (큐 격리)
+				v.worldQueueMin = wq.lo;
+				v.worldQueueMax = wq.hi;                               // [lo, hi) 대역 - QueueOffset 포함
+				v.target = SJH::Diagnostics::CaptureVariant::WorldFbo; // mSceneFB (PostFX 전)
+				variants.push_back(std::move(v));
+			}
+			SJH::Diagnostics::RunCaptureVariants(mPassIterator, SJH::DeviceContext::Get(),
+			                                     *mDefaultTarget, mSceneFB.get(), mWorldPassPtr,
+			                                     variants, outDir, fbW, fbH);
+
+			// glfwSetWindowShouldClose 로 sb7 run 루프 정상 종료 (GLFW 3.0.4 는 GLFW_TRUE 대신 1).
+			glfwSetWindowShouldClose(window, 1);
+		}
+	};
+
+/**
+ * @brief 진입점이 인스턴스화할 애플리케이션 -- 빌드 모드로 결정(런타임 분기 아님).
+ * @details
+ *  @c SJH_GOLDEN_CAPTURE 정의 = 골든 캡처 빌드(프리셋 @c ninja-golden, 루트
+ *  @c option(SJH_GOLDEN_CAPTURE) -> apps/_MyApp_/CMakeLists.txt 가 PRIVATE define).
+ *  게임 빌드에는 이 별칭이 @c game_application 이므로 캡처 진입 경로 자체가 존재하지 않는다.
+ *
+ * @note @c capture_application 정의 자체는 두 모드 모두에서 컴파일된다(#ifdef 로 가리지 않음).
+ *       Why: 게임 빌드에서도 캡처 코드가 컴파일 검증을 받아야 조용히 썩지 않는다.
+ *       미참조라 링커가 걷어내므로 게임 실행 파일 비용은 사실상 0.
+ */
+#if defined SJH_GOLDEN_CAPTURE
+	using entry_application = capture_application;
+#else
+	using entry_application = game_application;
+#endif
+
 } // namespace TopdownShooter
 
-DECLARE_MAIN(TopdownShooter::game_application);
+DECLARE_MAIN(TopdownShooter::entry_application);

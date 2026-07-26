@@ -9,6 +9,13 @@ project(OpenGL-ComputerGraphics VERSION 0.1.0 LANGUAGES C CXX)
 # cmake/Doxygen.cmake 의 find_package(Doxygen QUIET) 가 조용히 스킵.
 option(SJH_OPENGL_BUILD_DOCS "Enable Doxygen doc target" ON)
 
+# 골든 이미지 캡처 빌드 모드. ON 이면 _MyApp_ 의 진입점이 capture_application 으로 바뀐다
+# (고정-dt 1/60 가상 클럭 + 180 프레임 후 PNG 14장 저장 후 종료). 씬/파이프라인은 게임과 동일 -
+# 진입점 인스턴스화만 다르므로 골든은 항상 *실제 게임 경로* 를 찍는다.
+#   활성화 = 전용 프리셋: cmake --preset ninja-golden   (별도 build dir 라 게임 빌드와 공존)
+#   OFF 인 빌드에는 골든 ctest(golden_capture / 골든 전수 비교) 가 등록되지 않는다 - test/CMakeLists.txt.
+option(SJH_GOLDEN_CAPTURE "Build _MyApp_ as the golden-image capture app" OFF)
+
 # ______ Python 보조 스크립트 경로 등록 (Slang.cmake 등이 사용) ______
 # scripts/CMakeLists.txt 가 SJH_<NAME>_SCRIPT 변수들을 부모 scope 로 export.
 # Slang.cmake 보다 *먼저* 호출되어야 SJH_SLANG_COMPILE_SCRIPT 가 정의됨.

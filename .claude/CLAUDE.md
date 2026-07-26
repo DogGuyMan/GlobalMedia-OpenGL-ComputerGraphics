@@ -16,6 +16,14 @@ cd build_ninja/apps/_MyApp_ && ./_MyApp_   # 리소스 상대경로라 cd 필수
 cmake --preset ninja -DENABLE_TESTING=ON
 cmake --build --preset ninja --target tests
 ctest --test-dir build_ninja --output-on-failure
+
+# 렌더 출력이 바뀌는 변경(셰이더/메시/패스/GL상태)의 정본 검증 = 골든 게이트
+# ★ 전용 프리셋 ninja-golden (별도 build dir). 게임 빌드(build_ninja)의 _MyApp_ 는
+#   골든을 캡처하지 않으므로 build_ninja 에는 골든 ctest 가 아예 등록되지 않는다.
+#   빌드 GREEN 도, `ctest --test-dir build_ninja` 통과도 렌더 회귀를 못 잡는다.
+cmake --preset ninja-golden
+cmake --build --preset ninja-golden --target tests
+ctest --test-dir build_ninja-golden -R "골든" --output-on-failure
 ```
 
 전체 프리셋(msvc/msvc-2022 등) 및 개발 CLI(`python3 scripts/dev.py <서브커맨드>` — 구 `shell/` 통합) 목록은 `doc/CLAUDE-extended.md` 참조.
@@ -38,6 +46,7 @@ ctest --test-dir build_ninja --output-on-failure
 - stb_image 단일 owner = `src/texture/image.cpp` 한 곳만 `STB_IMAGE_IMPLEMENTATION`. Why: 중복 정의 시 링크 에러. 직접 `stbi_*` 호출 금지 — `SJH::Image::Load` 위임.
 - ESC 키는 sb7.h run 루프가 하드와이어드 종료 폴링. 주의: 인게임 액션에 ESC 못 씀(Pause 등은 다른 키/클릭 UI). Why: sb7 수정 금지 규율(`extern/sb7code` 절대 불변).
 - 주석·문서는 한국어. 코드 주석 = Doxygen + ASCII/한글만(특수문자 0).
+- 검증 도구는 **만들기 전에 [`test/CLAUDE.md`](../test/CLAUDE.md) 확인** — 골든 비교기·GL 픽스처·CPU 테스트 120종이 이미 있다. 주의: OpenCV 는 **C++ 링크 전용**(vcpkg)이라 `import cv2` 는 실패하지만 게이트는 정상 동작. Why: 언어 스코프 프로브(`import X`)로 도구 부재를 단정하면 기존 유틸을 중복 구현하게 됨 — 도구 유무는 소비자(CMake/테스트)에서 확인할 것.
 
 ## Cross-module deps
 

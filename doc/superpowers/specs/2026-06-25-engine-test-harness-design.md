@@ -15,7 +15,7 @@
 
 게임 엔진 리팩토링 과정을 위한 **강건한 회귀 안전망 + 적대적 검증** 환경 구축. 현 브랜치 HEAD(`7949a65` "Multipass 모듈 리팩토링")가 가장 안정적인 빌드로 판단되어 **모범 동작 oracle** 로 고정한다.
 
-리서치 근거(`doc/Tdd/`): `catch2_pipeline_korean.md`(Catch2+CTest 코어 #1 권고), `<ENV_SETUP_PLAN_v2>/v3.md`(gate-0 결정성·2-Track), Wang et al. survey(arXiv 2307.07221 — test-oracle 문제·differential testing). + 본 저장소 실측(폐기 `test/` git `094362d`, blast-radius 분석).
+리서치 근거(`doc/tdd/`): `catch2_pipeline_korean.md`(Catch2+CTest 코어 #1 권고), `<ENV_SETUP_PLAN_v2>/v3.md`(gate-0 결정성·2-Track), Wang et al. survey(arXiv 2307.07221 — test-oracle 문제·differential testing). + 본 저장소 실측(폐기 `test/` git `094362d`, blast-radius 분석).
 
 핵심 통찰: 이 프로젝트는 macOS-primary(GL 4.1 Core/NSGL)라 리서치가 전제한 Linux EGL/llvmpipe 가 안 통한다. 그래서 **결정성 위험 0 인 순수 CPU 로직을 먼저** 친다(D1/D3). 골든 이미지(GPU)는 성격이 완전히 달라 별도 트랙·별도 plan(D1·§9). ⚙ *단 이 "macOS-GL 헤드리스 난점" 전제 자체가 backend-volatile — Metal/Vulkan 백엔드 교체 시 해소될 수 있음(§11·D9).*
 

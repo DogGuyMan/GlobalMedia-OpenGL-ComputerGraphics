@@ -1,5 +1,7 @@
 # Effekseer Diagnostics Implementation Plan
 
+> ⚠️ **2026-07-26 정정 (원문 보존)** — 본 문서가 인용한 main.cpp include 블록의 `VfxSpawnLayer.h` 는 커밋 `beafa3f`(VFX Task 책임 이동)에서 **삭제**됐다. 해당 include 두 줄은 archival 규약(`doc/CLAUDE.md` Gotchas — 선두 세그먼트를 `<>` placeholder 로)에 따라 `<apps>/...` 로 표기한다. 원문 경로는 그대로 읽히면서 문서 경로 감사의 broken 오탐만 사라진다. 나머지 본문은 당시 기록으로 그대로 둔다.
+
 > ⚠ 2026-06 시점 문서 (archival) — 코드 경로는 작성 당시 기준.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -321,7 +323,7 @@ git commit -m "feat(vfx): EffekseerPlayable::OnPlay 핸들 lifecycle 진단 배�
 
 #include "apps/_MyApp_/src/Spawns/OneShotSweeper.h"
 #include "apps/_MyApp_/src/Spawns/VfxInstance.h"
-#include "apps/_MyApp_/src/UI/VfxSpawnLayer.h"
+#include "<apps>/_MyApp_/src/UI/VfxSpawnLayer.h"   // 커밋 beafa3f 에서 삭제됨(당시엔 존재)
 ```
 
 을 다음으로 교체(진단 헤더 1줄 추가):
@@ -332,7 +334,7 @@ git commit -m "feat(vfx): EffekseerPlayable::OnPlay 핸들 lifecycle 진단 배�
 #include "diagnostics/effekseer_diagnostics.h"   // VFX 텍스처 로드 검증
 #include "apps/_MyApp_/src/Spawns/OneShotSweeper.h"
 #include "apps/_MyApp_/src/Spawns/VfxInstance.h"
-#include "apps/_MyApp_/src/UI/VfxSpawnLayer.h"
+#include "<apps>/_MyApp_/src/UI/VfxSpawnLayer.h"   // 커밋 beafa3f 에서 삭제됨(당시엔 존재)
 ```
 
 - [ ] **Step 2: 로드 루프에 텍스처 검증 추가**

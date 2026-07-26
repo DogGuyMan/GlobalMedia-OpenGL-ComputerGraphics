@@ -13,7 +13,7 @@ drift(낡음) 판정은 mtime 휴리스틱이라 사람 검토가 전제다 — 
   [Heuristic] drift SUPERSEDED 후보 — mtime 기반 추정. 판단 필요.
 
 사용:
-  python3 scripts/audit_docs.py                                # 기본 scope (doc/handoffs + doc/superpowers/specs)
+  python3 scripts/audit_docs.py                                # 기본 scope (doc/superpowers/plans + specs)
   python3 scripts/audit_docs.py --scope .claude doc/superpowers/plans
   python3 scripts/audit_docs.py --json /tmp/audit_report.json  # 구조화 전체 결과 저장
   python3 scripts/audit_docs.py --quiet                        # 콘솔 요약 억제 (액션 리스트만)
@@ -246,8 +246,11 @@ def print_action_list(report):
 
 def main():
     parser = argparse.ArgumentParser(description="마크다운 문서의 경로 참조 존재 검증 + drift 후보 보고 (문서를 수정하지 않음)")
-    parser.add_argument("--scope", nargs="+", default=["doc/handoffs", "doc/superpowers/specs"],
-                        help="감사 대상 디렉토리/파일 (레포 루트 상대). 기본: doc/handoffs doc/superpowers/specs")
+    # 기본 scope 에서 doc/handoffs 는 제외한다 — 핸드오프는 "아직 없는 파일을 이렇게 만들어라" 식의
+    # 의도적 예시 경로를 포함하므로 green 화 자체가 부적절한 디렉토리(정책 정본 = doc/CLAUDE.md Gotchas).
+    # .github/workflows/docs-validation.yml 의 CI scope 및 .husky/pre-commit 의 제외 규칙과 동일 정책.
+    parser.add_argument("--scope", nargs="+", default=["doc/superpowers/plans", "doc/superpowers/specs"],
+                        help="감사 대상 디렉토리/파일 (레포 루트 상대). 기본: doc/superpowers/plans doc/superpowers/specs")
     parser.add_argument("--json", metavar="PATH", help="구조화 전체 결과 JSON 출력 경로")
     parser.add_argument("--quiet", action="store_true", help="콘솔 요약 억제")
     args = parser.parse_args()

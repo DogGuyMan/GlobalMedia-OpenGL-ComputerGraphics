@@ -1,5 +1,7 @@
 # 테스트 확장 계획 — 추가 CPU + GPU 테스트 (2026-06-27)
 
+> ⚠️ **2026-07-26 정정 (원문 보존)** — 본 문서에 나오는 `SJH_GOLDEN_CAPTURE=1 ./_MyApp_` 실행과 `ctest --test-dir build_ninja -R golden` 은 *당시* 절차이며 현재는 **폐기**됐다. 골든 캡처가 런타임 환경 변수 -> 컴파일 정의로 바뀌어 프리셋 `ninja-golden`(빌드 디렉토리 `build_ninja-golden`) 전유가 됐고, 게임 빌드의 `_MyApp_` 는 골든을 캡처하지 않는다(실행해도 창만 뜨는 조용한 실패). 현행 절차 = `test/CLAUDE.md`. 아래 본문은 당시 기록으로 그대로 둔다.
+
 > **근거 문서**: `ENV_SETUP_PLAN_v3.md`(골든 회귀 PoC Phase 0~3), `catch2_pipeline_korean.md`(Catch2+Mull+골든+퍼징 5단계).
 > **조사 방법**: 18개 코어 모듈(`src/<module>/`) 공개 헤더 전수 + 기존 5 테스트 대조 (Explore 읽기전용 조사).
 > **상태**: 계획 — 아래 §6 결정 잠금 후 spec/plan 정형화. `doc/` = .gitignore 로컬.
@@ -72,7 +74,7 @@
 - **B2 verify**: ctest `add_test` 가 `SJH_GOLDEN_CAPTURE=1 _MyApp_` 실행 → 3 PNG 생성(`build_ninja/apps/_MyApp_/test/golden/`) → repo `test/golden/` 와 비교 → exit 0/1. (단일 `verify` 경로, v3 1.5.)
 - **B3 갱신 게이트**(v3 1.3, 비협상): 에이전트 자동 덮어쓰기 **금지**, `/golden-update` 사람 승인. (CITYWALK §5.4 컴파일러-출력 오라클 문제 회피.)
 - **B4 사각지대 명시**(v3 1.6): 골든은 GL 상태누수·성능·비가시 동작파손 못잡음 → Track C 보완.
-- ⚠ `scripts/crossver_verify.sh`(Track A 차분)는 현 트리에 없음 — game/test-harness 브랜치 로컬, 통합 시 동반.
+- ⚠ `<scripts>/crossver_verify.sh`(Track A 차분)는 현 트리에 없음 — game/test-harness 브랜치 로컬, 통합 시 동반. (부재가 확정적이라 archival placeholder 표기 — `doc/CLAUDE.md` Gotchas.)
 
 **★HANDOFF #B**: B green = CPU→GPU 성격전환 → 필수 분리(메모리 `plan-handoff-boundary-markup`).
 
@@ -95,7 +97,7 @@
 > 사용자 결정 "적대적 검증 보류" 유지. 별도 effort + 무거운 툴체인.
 
 - **Mull `gitDiffRef` 뮤테이션 게이트**: CPU 테스트가 실제 mutant 죽이는지(테스트 품질) 검증. Clang+Mull(`-fpass-plugin=mull-ir-frontend-N`) + `mull.yml`(excludePaths=Catch2/third_party, GPU 골든 제외). PR 변경라인만 뮤테이션(실험적). catch2_pipeline §2.
-- **RapidCheck**(`rapidcheck/catch.h`) 프로퍼티 + **libFuzzer**: BMFont XML 파서가 1순위 퍼징 후보 → 크래시→`[regression]` Catch2 케이스.
+- **RapidCheck**(`<rapidcheck>/catch.h` — 미도입 외부 라이브러리 헤더라 placeholder) 프로퍼티 + **libFuzzer**: BMFont XML 파서가 1순위 퍼징 후보 → 크래시→`[regression]` Catch2 케이스.
 - **LLM 보조 테스트 초안**(Qwen-Coder), Mull 점수로 게이트 — 최후, 사람 감독.
 
 ---

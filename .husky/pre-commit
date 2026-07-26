@@ -3,7 +3,12 @@
 # 활성화: `git config core.hooksPath .husky` (1회, 로컬 git config — 리포별 설정이며 팀원 각자 실행 필요).
 set -uo pipefail
 
-staged_md=$(git diff --cached --name-only --diff-filter=ACM -- '*.md')
+# 감사 제외 = doc/handoffs/ — .github/workflows/docs-validation.yml 의 CI scope 와 동일 정책.
+# Why: 핸드오프는 "아직 없는 파일을 이렇게 만들어라" 식의 의도적 예시 경로를 포함한다(스모크용).
+#      green 화 자체가 부적절한 디렉토리 — 정책 정본은 doc/CLAUDE.md Gotchas.
+# 주의: 훅이 CI 보다 *엄격* 하면 CI 가 통과시킬 커밋을 로컬에서 막는다(순수 손해).
+#      반대 방향(훅이 더 느슨)은 CI 가 최종 게이트라 안전 — 그래서 제외는 CI 쪽에 맞춘다.
+staged_md=$(git diff --cached --name-only --diff-filter=ACM -- '*.md' | grep -v '^doc/handoffs/' || true)
 if [ -z "$staged_md" ]; then
   exit 0
 fi

@@ -1,9 +1,11 @@
 # 테스트 확장 설계 — 추가 CPU + GPU 테스트 (spec)
 
+> ⚠️ **2026-07-26 정정 (원문 보존)** — 본 문서에 나오는 `SJH_GOLDEN_CAPTURE=1 ./_MyApp_` 실행과 `ctest --test-dir build_ninja -R golden` 은 *당시* 절차이며 현재는 **폐기**됐다. 골든 캡처가 런타임 환경 변수 -> 컴파일 정의로 바뀌어 프리셋 `ninja-golden`(빌드 디렉토리 `build_ninja-golden`) 전유가 됐고, 게임 빌드의 `_MyApp_` 는 골든을 캡처하지 않는다(실행해도 창만 뜨는 조용한 실패). 현행 절차 = `test/CLAUDE.md`. 아래 본문은 당시 기록으로 그대로 둔다.
+
 > ⚠ 2026-06 시점 문서 (archival) — 코드 경로는 작성 당시 기준.
 
 > **날짜** 2026-06-27 · **base** game/remove-unused(315269a, CPU 28 통합 GREEN) · **상태** 작성 중(Phase 단락별)
-> **계획 모근거** [`doc/Tdd/2026-06-27-test-expansion-plan.md`](../../Tdd/2026-06-27-test-expansion-plan.md) · **연구근거** doc/Tdd v3 + catch2_pipeline
+> **계획 모근거** [`doc/tdd/2026-06-27-test-expansion-plan.md`](../../tdd/2026-06-27-test-expansion-plan.md) · **연구근거** doc/tdd v3 + catch2_pipeline
 > ⚠ `doc/` = .gitignore 로컬.
 
 ## 0. 범위 + LOCKED 결정

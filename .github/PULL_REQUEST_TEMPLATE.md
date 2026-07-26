@@ -14,8 +14,8 @@
 <!-- 어떻게 검증했는지 체크/기술. 해당 없는 항목은 지우거나 "N/A — 이유" 로 남길 것 -->
 
 - [ ] 빌드 확인 (`cmake --build --preset ninja --target _MyApp_` 등)
-- [ ] `ctest --test-dir build_ninja --output-on-failure` (해당 시 — smoke/gpu/golden/golden_compare)
-- [ ] 골든 이미지 비교 통과 (해당 시 — 렌더링 출력이 바뀌는 변경)
+- [ ] `ctest --test-dir build_ninja --output-on-failure` (해당 시 — smoke/gpu/CPU 단위. 골든은 미포함)
+- [ ] 골든 이미지 비교 통과 (렌더링 출력이 바뀌는 변경이면 **필수** — `ctest --test-dir build_ninja-golden -R "골든"`, 프리셋 `ninja-golden` 전유)
 - [ ] 육안 검증 (GUI 실행 확인)
 - [ ] 기타:
 

@@ -41,13 +41,6 @@
 #include "scene/scene.h"
 #include "texture/image.h"
 #include "texture/texture.h"
-
-// -- BuildStage (구 StageBuilder 흡수) 의존 --------------------------------------
-// #include "Stage/Constants.h"                      // ARENA_HALF_EXTENT / WALL_THICKNESS
-// #include "Stage/Stage.h"                          // EStageStatus
-// #include "Stage/Components/StageStateComponent.h" // Stage::Components::StageState
-// #include "Stage/Components/MaterialTimeComponent.h" // Stage::Components::MaterialTime
-// #include "Stage/Factories/wall_factory.h"         // Stage::Factories::CreateWallActor (inline)
 #include "GameSystems.h"           // GameSystems::Get().VFX() (Orbit VFX)
 #include "VFX/EffekseerPlayable.h" // VFX::EffekseerPlayable (Orbit loop)
 
@@ -315,9 +308,13 @@ namespace TopdownShooter::Bootstrap
 			// 벽 4개 모두 동일 타일링 -> 공유 wallMat 직접 사용 (인스턴스 clone 불필요).
 			const float tile = wallH * 2.0f;
 			SJH::Uniforms::SetVec2(*wallMat, "uvScale", glm::vec2(arena * 2.0f / tile, wallH * 2.0f / tile));
-			// uTime 은 공유 wallMat 에 한 번만 구동 (MaterialTime 은 값 세팅이라 하나로 충분).
-			// 아무래도 마테리얼 타임이 아니라. 그냥 Wall
-			// !! stage->AddComponent<Stage::Components::MaterialTime>(wallMat);
+			// uTime 은 공유 wallMat 하나만 구동하면 충분 (벽 4개가 같은 Material 인스턴스를 공유).
+			// 구동 주체 = main.cpp 렌더 루프. FindSharedMaterial("stage_wall") 로 조회해
+			//   GameSystems 게임 클럭을 매 프레임 주입한다 (여기서는 배선하지 않는다).
+			// Why per-actor Component 가 아닌가: 구 Stage::Components::MaterialTime 은 커밋 1c7850f
+			//   (World-Stage 의존 사이클 절단)에서 삭제됐다. Bootstrap 이 Stage 컴포넌트를 부착하면
+			//   Bootstrap -> Stage 의존이 되살아난다. 게임 클럭 소스라 Title/Pause/GameOver 에서
+			//   스크롤이 자동 freeze 되는 이점도 있다 (월클럭이면 정지 중에도 흐른다).
 
 			auto spawnWall = [&](const char *name, glm::vec2 center, float yRot) {
 				const bool horizontal = (static_cast<int>(yRot) % 180) == 0;

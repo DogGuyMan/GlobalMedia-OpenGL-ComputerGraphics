@@ -1,5 +1,7 @@
 # Resume Handoff — StageBuilder → WorldSceneBuilder 흡수 + Bootstrap↔Stage 사이클 절단
 
+> ⚠️ **2026-07-26 정정 (원문 보존)** — 본 문서에 나오는 `SJH_GOLDEN_CAPTURE=1 ./_MyApp_` 실행과 `ctest --test-dir build_ninja -R golden` 은 *당시* 절차이며 현재는 **폐기**됐다. 골든 캡처가 런타임 환경 변수 -> 컴파일 정의로 바뀌어 프리셋 `ninja-golden`(빌드 디렉토리 `build_ninja-golden`) 전유가 됐고, 게임 빌드의 `_MyApp_` 는 골든을 캡처하지 않는다(실행해도 창만 뜨는 조용한 실패). 현행 절차 = `test/CLAUDE.md`. 아래 본문은 당시 기록으로 그대로 둔다.
+
 > ⚠ **이 문서가 있는 `doc/` 는 gitignored(로컬 전용)** — 다른 머신엔 안 감. same-machine 재개 전용.
 > 다른 머신 인계 시 이 내용을 복사해 전달할 것. 미커밋 코드 백업 = `doc/handoffs/2026-07-09/cycle-break-uncommitted.patch`.
 
@@ -87,13 +89,18 @@
   중립 이동, 또는 (c) dormant로 두고 "include 금지" 주석. 근본 = pickup 팩토리가 Stage 컴포넌트에 의존하는 한
   Bootstrap 거주는 latent 사이클.
 
-### 2. `MaterialTime` 삭제 — CombatPlay 벽 스크롤 소실 (우선순위 中)
+### 2. ~~`MaterialTime` 삭제 — CombatPlay 벽 스크롤 소실~~ ✅ **해결됨 (2026-07-26)**
 - `Stage/Components/MaterialTimeComponent.h` **삭제됨**(코드 참조 0, 빌드 GREEN).
 - **효과**: 벽 PoliceTape의 `uTime` 스크롤 애니메이션이 **CombatPlay에서 안 흐름**.
 - **골든 무영향**: 골든은 Title 캡처 + Title에선 Director freeze(D5)라 uTime이 어차피 0 → bit-동일 유지.
 - **결정 필요**: 전투 중 벽 스크롤을 되살릴지. 원하면 main에서
   `mStage->AddComponent<...MaterialTime>(wallMat)` 대신 **다른 방식** 필요(컴포넌트가 삭제됐으므로 재도입 or
   render loop에서 직접 `stage_wall` 머티리얼 uTime 갱신). 의도된 드롭이면 그대로.
+- ✅ **해결 (2026-07-26 실측)**: 위 두 후보 중 **"render loop에서 직접 갱신"** 이 채택됐다. main.cpp 렌더
+  루프가 `FindSharedMaterial("stage_wall")` 로 조회해 `GameSystems::GameTime()` 을 매 프레임 주입한다.
+  컴포넌트 재도입이 아니므로 Bootstrap->Stage 의존도 되살아나지 않고, 게임 클럭 소스라
+  Title/Pause/GameOver 에서 스크롤이 자동 freeze 된다(월클럭 대비 이점). WorldSceneBuilder.cpp 에
+  남아 있던 죽은 `AddComponent<MaterialTime>` 주석도 같은 날 정리됨. **재론 불필요.**
 
 ### 3. `StageConfig.h` — 깨진 고아 (우선순위 中)
 - `apps/_MyApp_/src/Stage/StageConfig.h` = 삭제된 `CreateStageActor`의 입력 PoD.

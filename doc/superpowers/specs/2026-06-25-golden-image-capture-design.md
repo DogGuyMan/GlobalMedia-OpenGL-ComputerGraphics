@@ -1,5 +1,7 @@
 # 골든 이미지 캡처 설계 — Track B Phase 2 (샘플 생성)
 
+> ⚠️ **2026-07-26 정정 (원문 보존)** — 본 문서에 나오는 `SJH_GOLDEN_CAPTURE=1 ./_MyApp_` 실행과 `ctest --test-dir build_ninja -R golden` 은 *당시* 절차이며 현재는 **폐기**됐다. 골든 캡처가 런타임 환경 변수 -> 컴파일 정의로 바뀌어 프리셋 `ninja-golden`(빌드 디렉토리 `build_ninja-golden`) 전유가 됐고, 게임 빌드의 `_MyApp_` 는 골든을 캡처하지 않는다(실행해도 창만 뜨는 조용한 실패). 현행 절차 = `test/CLAUDE.md`. 아래 본문은 당시 기록으로 그대로 둔다.
+
 > **날짜** 2026-06-25 · **base** `7949a65` (game/main HEAD = oracle, 안정) · **상태** 설계 확정 → /writing-plans 대기
 > **범위** 결정적 골든 **샘플 3장 생성**만. 비교(FLIP)·ctest 게이트·CI 는 후속 별도.
 > ⚠ `doc/` = .gitignore 로컬 (커밋 안 됨). Track A(테스트 하네스)와 별개 effort.

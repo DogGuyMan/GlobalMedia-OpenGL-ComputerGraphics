@@ -55,6 +55,16 @@
             }
         },
         {
+            "name": "ninja-golden",
+            "inherits": "ninja",
+            "displayName": "Ninja Debug (골든 캡처 게이트)",
+            "description": "_MyApp_ 를 capture_application 진입점으로 빌드하고 골든 ctest 체인을 등록한다. build_ninja 와 별도 디렉토리라 게임 빌드와 공존. ★ base-ninja 가 아니라 ninja 를 상속하는 이유 = 게이트가 검증하는 바이너리가 실제 게임 빌드와 동일 설정이어야 하기 때문 - ninja 에 캐시 변수가 추가되면 자동 전파된다(드리프트 방지). 여기 cacheVariables 는 캡처 전용 델타만 둘 것.",
+            "cacheVariables": {
+                "SJH_GOLDEN_CAPTURE": "ON",
+                "ENABLE_TESTING": "ON"
+            }
+        },
+        {
             "name": "msvc",
             "inherits": "base-msvc",
             "displayName": "MSVC (Visual Studio 2019, v142)",
@@ -72,6 +82,7 @@
     "buildPresets": [
         { "name": "ninja",         "configurePreset": "ninja" },
         { "name": "ninja-release", "configurePreset": "ninja-release" },
+        { "name": "ninja-golden",  "configurePreset": "ninja-golden" },
         { "name": "msvc",          "configurePreset": "msvc",      "configuration": "Debug" },
         { "name": "msvc-release",  "configurePreset": "msvc",      "configuration": "Release" },
         { "name": "msvc-2022",         "configurePreset": "msvc-2022", "configuration": "Debug" },

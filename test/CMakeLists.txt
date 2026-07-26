@@ -34,7 +34,9 @@ add_custom_target(tests DEPENDS
 # 골든 이미지 비교 게이트 (Phase B) -- capture(GPU) -> compare(CPU) ctest 체인
 # ============================================================================
 # 비교는 순수 CPU(OpenCV imgcodecs PNG 로드/쓰기 + absdiff). GL/SJH 모듈 미링크.
-# 캡처(GPU)는 기존 _MyApp_ capture 모드(env SJH_GOLDEN_CAPTURE=1) 재사용.
+# 캡처(GPU)는 _MyApp_ 골든 캡처 빌드(-DSJH_GOLDEN_CAPTURE=ON, 프리셋 ninja-golden) 를 실행.
+#   -> 캡처는 이제 *빌드 모드* 다. 게임 빌드의 _MyApp_ 는 캡처하지 않으므로(그냥 창이 떠서
+#      ctest 가 영원히 대기) 골든 ctest 등록 자체를 SJH_GOLDEN_CAPTURE 로 게이트한다.
 find_package(OpenCV REQUIRED) # OpenCV_LIBS / OpenCV_INCLUDE_DIRS (core + imgcodecs)
 
 # 캡처 산출 dir(cwd=build/apps/_MyApp_ 기준 test/golden) / 커밋 골든 dir / diff 아티팩트 dir.
@@ -53,16 +55,21 @@ target_compile_definitions(golden_compare PRIVATE
     SJH_GOLDEN_ARTIFACT_DIR="${SJH_GOLDEN_ARTIFACT_DIR}")
 
 # B-2. ctest 픽스처 체인 ------------------------------------------------------
-# 1) golden_capture: _MyApp_ 를 SJH_GOLDEN_CAPTURE=1 로 실행 -> 캡처 PNG 생성.
-#    FIXTURES_SETUP GOLDEN 으로 비교 케이스보다 먼저 실행 보장.
-add_test(NAME golden_capture COMMAND $<TARGET_FILE:_MyApp_>)
-set_tests_properties(golden_capture PROPERTIES
-    ENVIRONMENT "SJH_GOLDEN_CAPTURE=1"
-    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/apps/_MyApp_"
-    FIXTURES_SETUP GOLDEN)
+# 골든 캡처 빌드에서만 등록. 게임 빌드(-DSJH_GOLDEN_CAPTURE=OFF)에서는 _MyApp_ 가 캡처하지 않아
+# 체인이 성립하지 않는다 -> 조용히 통과시키는 대신 아예 등록하지 않는다(위양성 GREEN 방지).
+if(SJH_GOLDEN_CAPTURE)
+    # 1) golden_capture: 캡처 빌드 _MyApp_ 실행 -> 180 프레임 후 PNG 14장 생성 후 자동 종료.
+    #    FIXTURES_SETUP GOLDEN 으로 비교 케이스보다 먼저 실행 보장.
+    add_test(NAME golden_capture COMMAND $<TARGET_FILE:_MyApp_>)
+    set_tests_properties(golden_capture PROPERTIES
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/apps/_MyApp_"
+        FIXTURES_SETUP GOLDEN)
 
-# 2) golden_compare 의 3 케이스([golden]) -> FIXTURES_REQUIRED GOLDEN (캡처 후 비교).
-catch_discover_tests(golden_compare PROPERTIES FIXTURES_REQUIRED GOLDEN)
+    # 2) golden_compare 의 케이스([golden]) -> FIXTURES_REQUIRED GOLDEN (캡처 후 비교).
+    catch_discover_tests(golden_compare PROPERTIES FIXTURES_REQUIRED GOLDEN)
+else()
+    message(STATUS "골든 ctest 미등록 (게임 빌드) -- 게이트 실행은 `cmake --preset ninja-golden`")
+endif()
 
 # ENABLE_TESTING 시 _MyApp_(capture) + golden_compare 빌드 의존을 tests 우산에 합류.
 add_dependencies(tests golden_compare _MyApp_)

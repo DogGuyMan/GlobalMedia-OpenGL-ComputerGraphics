@@ -10,6 +10,8 @@ add_subdirectory(Text)        # <- 추가 (MyApp::Text — GameSystems 가 의�
 add_subdirectory(Spawns)
 add_subdirectory(Playable)   # 연출 foundation — PlayableDirector (Spawns/Entity 뒤)
 add_subdirectory(HUD)        # <- 추가 (MyApp::HUD — 체력바, Bootstrap 앞)
+add_subdirectory(Render)     # <- 이동 (MyApp::Render — PostFX 제어. 향후 MyApp::Playable 의존 예정이라 Playable 뒤)
+add_subdirectory(UI)         # <- 추가 (MyApp::UI — ImGui 레이어 + vendored 백엔드. Playable/Render 뒤)
 
 # M5 CL3 — GameSystems 싱글톤 (Audio + VFX + Physics 집계)
 add_library(myapp_gamesystems STATIC
@@ -52,4 +54,6 @@ target_link_libraries(myapp_client INTERFACE
     MyApp::Playable # 연출 foundation — PlayableDirector
     MyApp::HUD      # <- 추가 (체력바)
     MyApp::Bootstrap # Warmup 보일러플레이트 추출 빌더 (WorldScene/Player/Audio)
+    MyApp::Render   # <- 추가 (PostProcessController — PostFX 체인 제어)
+    MyApp::UI       # <- 추가 (ImGui 레이어 + vendored GLFW 백엔드 + <imgui_impl_glfw_gl3.h> include 전파)
 )
