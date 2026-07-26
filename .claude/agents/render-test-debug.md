@@ -10,7 +10,7 @@ model: sonnet
 ## 입력
 - 리팩토링된 worktree (보통 `.worktrees/refactor-<branch>/`)
 - 기존 단위 테스트: `test/test_<x>.cpp` (Catch2 v3)
-- (선택) 골든 이미지: `test/golden/<scene>.png` — 디렉토리 미존재 시 이 단계 skip
+- 골든 이미지 REF: `test/golden/*.png` (14장, 2560x1440) — 실행은 프리셋 `ninja-golden` 전유
 - (선택) `test/support/gl_state_snapshot` 으로 캡처한 GL 상태 스냅샷
 
 ## 검증 단계
@@ -43,34 +43,32 @@ ctest --test-dir build_ninja -R "test_gl_state_snapshot" -V
 - diff 가 존재하나 의도된 GL 상태 변경 → WARNING (PR 코멘트)
 - diff 가 의도 외 → FAIL
 
-### 3. (선택) 골든 이미지 비교
+### 3. 골든 이미지 비교 (렌더 출력이 바뀔 수 있는 변경이면 필수)
 
-`test/golden/` 디렉토리가 존재할 때만. 디렉토리 미존재 시 본 단계 skip + 보고.
+골든은 **전용 빌드 모드**다. 게임 빌드(`build_ninja`)에는 골든 ctest 가 아예 등록되지 않으므로
+`ctest --test-dir build_ninja` 가 100% GREEN 이어도 렌더 회귀를 전혀 보지 않는다.
 
 ```bash
-# 캡처 (별도 test_golden_<scene> 타겟 가정 — golden-capture.md 참조)
-./build_ninja/test/test_golden_<scene> \
-    --capture-png build_ninja/test/render_output/<scene>.png
-
-# FLIP 비교 (도구 설치된 환경)
-if command -v flip >/dev/null; then
-  flip --reference test/golden/<scene>.png \
-       --test build_ninja/test/render_output/<scene>.png \
-       --basename /tmp/diff_<scene> \
-       --output-csv > /tmp/flip_result.csv
-else
-  # ImageMagick fallback
-  compare -metric AE \
-      test/golden/<scene>.png \
-      build_ninja/test/render_output/<scene>.png /dev/null 2>&1
-fi
+# 캡처 + 비교가 한 체인. 별도 캡처 명령이 필요 없다 (ctest 픽스처가 순서 보장).
+#   golden_capture(FIXTURES_SETUP) -> _MyApp_ 가 고정-dt 180프레임 후 PNG 14장 생성 후 자동 종료
+#   골든 전수 비교(FIXTURES_REQUIRED) -> OpenCV absdiff 로 test/golden/ REF 와 대조
+cmake --preset ninja-golden
+cmake --build --preset ninja-golden --target tests
+ctest --test-dir build_ninja-golden -R "골든" --output-on-failure
 ```
 
 판정:
-- weighted median ≤ 0.05 → **PASS**
-- 0.05 < weighted median ≤ 0.10 → **WARNING** (PR 코멘트만, 머지 가능)
-- weighted median > 0.10 → **FAIL** (즉시 회귀로 보고)
-- FLIP 미설치 + ImageMagick AE 픽셀 차이 ≥ 100,000 → 사람 escalate
+- ctest PASS → **PASS** (판정 임계 `kChannelDiffThreshold=0` = 비트동일)
+- ctest FAIL → diff 아티팩트(`build_ninja-golden/test/golden_artifacts/`)의 **채널차 크기**로 성격 판단.
+  구조적 오류면 255 급, 서브픽셀/보간 차이면 수십. 차이 **픽셀 수**로 판단하지 말 것
+  (서브픽셀 시프트만으로 38% 가 나온다)
+- 골든 REF 를 의도적으로 갱신해야 하는 변경이면 **그 변경과 같은 커밋에** REF 를 넣을 것.
+  나중 커밋으로 미루면 원인 커밋이 게이트 RED 로 남고 추적자가 엉뚱한 커밋을 지목한다
+
+금지:
+- `SJH_GOLDEN_CAPTURE=1 ./_MyApp_` (환경 변수 방식은 2026-07-26 폐기 — 게임 빌드에서 실행하면
+  에러 없이 창만 뜨는 **조용한 실패**다)
+- FLIP / ImageMagick `compare` (본 저장소 하네스는 OpenCV absdiff 단일 경로. 미설치이며 불필요)
 
 ### 4. (선택) spdlog 출력 캡처 (로그 회귀)
 
@@ -91,11 +89,11 @@ fi
 - Diff bytes: <n>
 - Verdict: PASS / WARNING / FAIL / SKIPPED
 
-## 3. Golden Image (if test/golden/ exists)
-- Tool: FLIP / ImageMagick / SKIPPED
-- weighted median (FLIP): <value>
-- AE count (ImageMagick): <n>
-- Verdict: PASS / WARNING / FAIL / SKIPPED
+## 3. Golden Image (ctest, preset ninja-golden)
+- Command: `ctest --test-dir build_ninja-golden -R "골든"`
+- Result: <n>/<n> passed
+- 실패 시 diff 아티팩트 경로 + 최대 채널차: <path> / <0..255>
+- Verdict: PASS / FAIL / NOT-RUN(사유)
 
 ## 4. Log Output Capture (if applicable)
 - spdlog_capture diff: identical / different

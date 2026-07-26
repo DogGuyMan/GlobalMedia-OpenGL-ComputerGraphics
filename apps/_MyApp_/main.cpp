@@ -63,6 +63,7 @@
 #include "diagnostics/frame_capture.h"
 #include "diagnostics/pass_capture.h"
 
+#include <algorithm>
 #include <climits>
 #include <cstdlib>
 #include <cstring>
@@ -74,6 +75,12 @@
 
 namespace TopdownShooter
 {
+	/// @brief present(passthrough) Pass 의 등록 키.
+	/// @details 등록(@c OnSceneSetup)과 골든 캡처의 정지 인덱스 조회(@c capture_application)가
+	///          공유하는 SSOT. 두 곳이 문자열 리터럴을 각자 들고 있으면 한쪽만 바뀌었을 때
+	///          캡처가 조용히 어긋난다 -- 이름 조회로 위치 의존을 없앤 의미가 사라지므로 상수화.
+	constexpr const char *kPresentPassKey = "present";
+
 	class game_application : public sb7::application, public Bootstrap::IClientBootstrap
 	{
 	  public:
@@ -238,7 +245,7 @@ namespace TopdownShooter
 				}
 
 				// 5) present(passthrough, output=nullptr) - 마지막 활성 효과 결과를 backbuffer 로 합성. 매 프레임 SetBackbuffer.
-				auto present = std::make_unique<SJH::PostFxPass>(mPresentMatPtr, nullptr, mScreenQuadMeshPtr, "present");
+				auto present = std::make_unique<SJH::PostFxPass>(mPresentMatPtr, nullptr, mScreenQuadMeshPtr, kPresentPassKey);
 				mPresentPassPtr = present.get(); // move 전 캡처.
 				mPassIterator.Add(std::move(present));
 
@@ -682,8 +689,22 @@ namespace TopdownShooter
 			if (mPassDebugLayerPtr)
 				mPassDebugLayerPtr->Enabled = true;
 
-			// 나머지 변형은 데이터주도 runner. Keys() 마지막="ImGui" -> size()-2 = ImGui 직전(present 까지).
-			const int presentStop = static_cast<int>(mPassIterator.Keys().size()) - 2;
+			// 나머지 변형은 데이터주도 runner. present 까지만 실행(=ImGui 제외)하는 정지 인덱스를
+			//   *이름으로* 조회한다. 구 `Keys().size() - 2` 는 "마지막 Pass 는 ImGui" 라는 위치
+			//   가정이라, PassIterator 끝에 Pass 를 추가하면 컴파일 에러 없이 캡처 지점이 어긋나
+			//   골든만 조용히 바뀌었다(R3). 이름 조회는 Pass 개수/순서 변화에 영향받지 않는다.
+			const std::vector<std::string> passKeys = mPassIterator.Keys();
+			const auto presentIt = std::find(passKeys.begin(), passKeys.end(), kPresentPassKey);
+			if (presentIt == passKeys.end())
+			{
+				// 조용한 오캡처보다 시끄러운 중단이 낫다 -- golden_full 만 남고 나머지 13장이
+				//   미생성되어 golden_compare 가 확실히 FAIL 한다.
+				spdlog::error("[GoldenCapture] Pass '{}' 미등록 -- 변형 캡처 중단(골든 무효). 등록 Pass {}개",
+				              kPresentPassKey, passKeys.size());
+				glfwSetWindowShouldClose(window, 1);
+				return;
+			}
+			const int presentStop = static_cast<int>(std::distance(passKeys.begin(), presentIt));
 			std::vector<SJH::Diagnostics::CaptureVariant> variants = {
 			    // G2: ImGui 제외 (Skybox/World/Particle/PostFX/present 만).
 			    {"golden_no_imgui", {}, presentStop, INT_MIN, INT_MAX, SJH::Diagnostics::CaptureVariant::Backbuffer},

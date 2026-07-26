@@ -35,29 +35,33 @@ add_custom_target(tests DEPENDS
 # ============================================================================
 # 비교는 순수 CPU(OpenCV imgcodecs PNG 로드/쓰기 + absdiff). GL/SJH 모듈 미링크.
 # 캡처(GPU)는 _MyApp_ 골든 캡처 빌드(-DSJH_GOLDEN_CAPTURE=ON, 프리셋 ninja-golden) 를 실행.
-#   -> 캡처는 이제 *빌드 모드* 다. 게임 빌드의 _MyApp_ 는 캡처하지 않으므로(그냥 창이 떠서
-#      ctest 가 영원히 대기) 골든 ctest 등록 자체를 SJH_GOLDEN_CAPTURE 로 게이트한다.
-find_package(OpenCV REQUIRED) # OpenCV_LIBS / OpenCV_INCLUDE_DIRS (core + imgcodecs)
-
-# 캡처 산출 dir(cwd=build/apps/_MyApp_ 기준 test/golden) / 커밋 골든 dir / diff 아티팩트 dir.
-set(SJH_GOLDEN_CAPTURED_DIR "${CMAKE_BINARY_DIR}/apps/_MyApp_/test/golden")
-set(SJH_GOLDEN_REF_DIR      "${CMAKE_SOURCE_DIR}/test/golden")
-# 주의: golden_compare 는 실행파일명이므로 같은 이름 디렉토리를 artifact 경로로 쓰면 안 됨.
-set(SJH_GOLDEN_ARTIFACT_DIR "${CMAKE_BINARY_DIR}/test/golden_artifacts")
-
-add_executable(golden_compare golden_compare/golden_compare.cpp)
-target_link_libraries(golden_compare PRIVATE Catch2::Catch2WithMain ${OpenCV_LIBS})
-target_include_directories(golden_compare PRIVATE ${OpenCV_INCLUDE_DIRS})
-target_compile_features(golden_compare PRIVATE cxx_std_17)
-target_compile_definitions(golden_compare PRIVATE
-    SJH_GOLDEN_CAPTURED_DIR="${SJH_GOLDEN_CAPTURED_DIR}"
-    SJH_GOLDEN_REF_DIR="${SJH_GOLDEN_REF_DIR}"
-    SJH_GOLDEN_ARTIFACT_DIR="${SJH_GOLDEN_ARTIFACT_DIR}")
-
-# B-2. ctest 픽스처 체인 ------------------------------------------------------
-# 골든 캡처 빌드에서만 등록. 게임 빌드(-DSJH_GOLDEN_CAPTURE=OFF)에서는 _MyApp_ 가 캡처하지 않아
-# 체인이 성립하지 않는다 -> 조용히 통과시키는 대신 아예 등록하지 않는다(위양성 GREEN 방지).
+#
+# ★ 블록 전체가 SJH_GOLDEN_CAPTURE 게이트 안에 있다. 게이트하는 대상이 셋:
+#   (1) ctest 등록 -- 게임 빌드의 _MyApp_ 는 캡처하지 않아 체인이 성립하지 않는다.
+#       조용히 통과시키는 대신 아예 등록하지 않는다(위양성 GREEN 방지).
+#   (2) golden_compare 빌드 -- 게임 빌드에서는 실행할 테스트가 0건이라 순수 낭비(11MB).
+#   (3) find_package(OpenCV REQUIRED) -- 이게 밖에 있으면 골든을 쓰지도 않는 게임 빌드가
+#       OpenCV 미설치 환경에서 -DENABLE_TESTING=ON 만으로 configure 실패한다.
+#       골든은 OpenCV 의 *유일한* 소비자이므로 의존도 게이트 안에 가둔다.
 if(SJH_GOLDEN_CAPTURE)
+    find_package(OpenCV REQUIRED) # OpenCV_LIBS / OpenCV_INCLUDE_DIRS (core + imgcodecs)
+
+    # 캡처 산출 dir(cwd=build/apps/_MyApp_ 기준 test/golden) / 커밋 골든 dir / diff 아티팩트 dir.
+    set(SJH_GOLDEN_CAPTURED_DIR "${CMAKE_BINARY_DIR}/apps/_MyApp_/test/golden")
+    set(SJH_GOLDEN_REF_DIR      "${CMAKE_SOURCE_DIR}/test/golden")
+    # 주의: golden_compare 는 실행파일명이므로 같은 이름 디렉토리를 artifact 경로로 쓰면 안 됨.
+    set(SJH_GOLDEN_ARTIFACT_DIR "${CMAKE_BINARY_DIR}/test/golden_artifacts")
+
+    add_executable(golden_compare golden_compare/golden_compare.cpp)
+    target_link_libraries(golden_compare PRIVATE Catch2::Catch2WithMain ${OpenCV_LIBS})
+    target_include_directories(golden_compare PRIVATE ${OpenCV_INCLUDE_DIRS})
+    target_compile_features(golden_compare PRIVATE cxx_std_17)
+    target_compile_definitions(golden_compare PRIVATE
+        SJH_GOLDEN_CAPTURED_DIR="${SJH_GOLDEN_CAPTURED_DIR}"
+        SJH_GOLDEN_REF_DIR="${SJH_GOLDEN_REF_DIR}"
+        SJH_GOLDEN_ARTIFACT_DIR="${SJH_GOLDEN_ARTIFACT_DIR}")
+
+    # B-2. ctest 픽스처 체인 --------------------------------------------------
     # 1) golden_capture: 캡처 빌드 _MyApp_ 실행 -> 180 프레임 후 PNG 14장 생성 후 자동 종료.
     #    FIXTURES_SETUP GOLDEN 으로 비교 케이스보다 먼저 실행 보장.
     add_test(NAME golden_capture COMMAND $<TARGET_FILE:_MyApp_>)
@@ -67,12 +71,14 @@ if(SJH_GOLDEN_CAPTURE)
 
     # 2) golden_compare 의 케이스([golden]) -> FIXTURES_REQUIRED GOLDEN (캡처 후 비교).
     catch_discover_tests(golden_compare PROPERTIES FIXTURES_REQUIRED GOLDEN)
-else()
-    message(STATUS "골든 ctest 미등록 (게임 빌드) -- 게이트 실행은 `cmake --preset ninja-golden`")
-endif()
 
-# ENABLE_TESTING 시 _MyApp_(capture) + golden_compare 빌드 의존을 tests 우산에 합류.
-add_dependencies(tests golden_compare _MyApp_)
+    # 골든 체인 구성요소(비교기 + 캡처 앱)를 tests 우산에 합류.
+    #   게임 빌드에서는 둘 다 불필요하므로 이 의존도 게이트 안에 둔다(`--target tests` 가
+    #   테스트와 무관한 게임 실행 파일을 끌어오지 않게).
+    add_dependencies(tests golden_compare _MyApp_)
+else()
+    message(STATUS "골든 게이트 미구성 (게임 빌드) -- OpenCV/golden_compare 빌드 생략. 실행은 `cmake --preset ninja-golden`")
+endif()
 
 # test_smoke 는 소스 정착 시에만 (현재 디렉토리 미존재 — 부재해도 빌드 진행)
 if(EXISTS ${CMAKE_SOURCE_DIR}/smoke/CMakeLists.txt)

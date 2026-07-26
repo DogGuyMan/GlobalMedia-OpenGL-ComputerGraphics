@@ -15,7 +15,7 @@ model: sonnet
 
 ## 의사결정 매트릭스
 
-| 빌드 | 테스트 | FLIP | clang-tidy | MS | 결정 |
+| 빌드 | 테스트 | 골든 | clang-tidy | MS | 결정 |
 |---|---|---|---|---|---|
 | PASS | PASS | ≤ 0.05 | 0 errors | ≥ 60% | **MERGE** |
 | PASS | PASS | ≤ 0.10 | 0 errors | ≥ 40% | **MERGE + warning 코멘트** |
@@ -70,7 +70,7 @@ cp .worktrees/<refactor-branch>/architect_report.md doc/failed_runs/<timestamp>/
 ## Evidence (4 sub-agents)
 - Architect: <link to report>
 - Refactorer: <files changed, build status>
-- Test-Debug: FLIP=<value>, verdict=<...>
+- Test-Debug: 골든=<n/n passed | NOT-RUN>, verdict=<...>
 - Quality-Gate: MS=<%>, clang-tidy=<errors>
 
 ## Rationale

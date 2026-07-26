@@ -1,6 +1,6 @@
 ---
 name: render-quality-gate
-description: 코드 품질 게이트 — clang-tidy / cppcheck / mutation testing / FLIP threshold를 종합 측정한다. 코드를 수정하지 않는다. D 논문의 Quality Gate + A 논문의 mutation testing.
+description: 코드 품질 게이트 — clang-tidy / cppcheck / mutation testing / 골든 이미지 ctest를 종합 측정한다. 코드를 수정하지 않는다. D 논문의 Quality Gate + A 논문의 mutation testing.
 tools: Read, Bash, Grep, Glob
 model: sonnet
 ---
@@ -39,10 +39,15 @@ cppcheck --enable=warning,style --error-exitcode=1 \
   $(git diff --name-only HEAD~1 -- '*.cpp')
 ```
 
-### Gate 4: 골든 이미지 회귀 (test/golden/ 존재 시)
+### Gate 4: 골든 이미지 회귀 (렌더 출력이 바뀔 수 있는 변경이면 필수)
 render-test-debug 의 결과 재확인:
-- FLIP weighted median ≤ 0.05 (또는 ImageMagick fallback)
-- `test/golden/` 디렉토리 미존재 시 본 게이트 SKIPPED 로 보고
+```bash
+ctest --test-dir build_ninja-golden -R "골든" --output-on-failure
+```
+- 판정 임계 = `kChannelDiffThreshold=0` (**비트동일**). "≤ 5%" 같은 여유 없음
+- 게임 빌드(`build_ninja`)에는 골든 ctest 가 **등록되지 않는다** — 거기서 GREEN 을 받아
+  본 게이트를 PASS 로 보고하면 위양성이다. 반드시 `build_ninja-golden` 인지 확인할 것
+- 게이트를 못 돌렸으면 PASS 가 아니라 **NOT-RUN(사유)** 으로 보고
 
 ### Gate 5: Mutation Testing (변경된 파일만)
 
@@ -86,7 +91,7 @@ mull-runner --output-format=json \
 | 1 | Build + Tests | PASS | 142/142 |
 | 2 | clang-tidy bugprone | PASS | 0 |
 | 3 | cppcheck | PASS | - |
-| 4 | FLIP regression | PASS | wm=0.012 |
+| 4 | 골든 이미지 회귀 | PASS | ctest 2/2, 비트동일 |
 | 5 | Mutation Score | PASS | 67% (28/42 killed, 6 non-activating) |
 | 6 | Cost cap | OK | $3.40 / $10 |
 
@@ -111,4 +116,4 @@ mull-runner --output-format=json \
 - **코드 수정 금지**
 - **FAIL을 PASS로 둔갑 금지** — 사용자의 anti-hallucination CLAUDE.md를 따른다
 - **mutation score 100%에 안심하지 마라** — A §8: non-activating 제외가 진짜 blind spot 가릴 수 있음. 항상 위 detail 형식으로 모든 항목 보고
-- **임의 임계값 완화 금지** — 본 게이트의 임계값(60% MS, FLIP 0.05 등)은 사용자가 CLAUDE.md에서 명시적으로 변경한 경우만 다른 값 사용
+- **임의 임계값 완화 금지** — 본 게이트의 임계값(60% MS, 골든 채널차 0 등)은 사용자가 CLAUDE.md에서 명시적으로 변경한 경우만 다른 값 사용

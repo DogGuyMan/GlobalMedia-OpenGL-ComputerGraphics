@@ -12,9 +12,17 @@
         "stb",
         "catch2",
         "nlohmann-json",
-        "imgui",
-        { "name": "opencv4", "default-features": false, "features": ["png"] }
+        "imgui"
     ],
+    "$comment-features": "opencv4 는 골든 비교기(test/golden_compare) 의 유일 소비자라 기본 의존에서 뺐다. 기본 의존에 두면 골든을 쓰지도 않는 게임 빌드가 매번 opencv 를 설치/빌드한다(무거움). 프리셋 ninja-golden 이 VCPKG_MANIFEST_FEATURES=golden 으로 켠다.",
+    "features": {
+        "golden": {
+            "description": "Golden image comparison gate (OpenCV imgcodecs + absdiff)",
+            "dependencies": [
+                { "name": "opencv4", "default-features": false, "features": ["png"] }
+            ]
+        }
+    },
     "overrides": [
         { "name": "box2d", "version": "2.4.1" },
         { "name": "assimp", "version": "5.4.3" },
